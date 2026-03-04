@@ -388,6 +388,18 @@ function initThemeSettings() {
     // 【修改】如果有显示则用 flex，不显示则用 none (彻底消失)
     if(statusBar) statusBar.style.display = isShowTime ? 'flex' : 'none';
 
+   // === [加回这里] 读取全面屏设置 ===
+    const fsToggle = document.getElementById('fullscreen-mode-toggle');
+    const isFullscreen = savedTheme.isFullScreen === true; // 默认 false
+    if (fsToggle) fsToggle.checked = isFullscreen;
+    
+    // 应用样式
+    if (isFullscreen) {
+        document.body.classList.add('fullscreen-mode');
+    } else {
+        document.body.classList.remove('fullscreen-mode');
+    }
+
 
 
     // 5. 字体大小
@@ -568,6 +580,25 @@ function saveThemeConfig() {
 
     theme.textColor = document.getElementById('theme-color-picker').value;
     theme.showStatusBarTime = document.getElementById('show-statusbar-time-toggle').checked;
+     theme.isFullScreen = document.getElementById('fullscreen-mode-toggle').checked;
+    
+     // === 修改开始：加入浏览器原生全屏 API 调用 ===
+    const docEl = document.documentElement;
+    if (theme.isFullScreen) {
+        document.body.classList.add('fullscreen-mode');
+        // 尝试请求浏览器全屏（主要针对安卓和PC，iOS Safari不支持此API但支持上面的meta标签配置）
+        if (docEl.requestFullscreen) {
+            docEl.requestFullscreen().catch((err) => {
+                console.log("全屏请求被拦截或不支持:", err);
+            });
+        }
+    } else {
+        document.body.classList.remove('fullscreen-mode');
+        // 退出全屏
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch((err) => {});
+        }
+    }
 
     const fontSource = document.getElementById('font-source-select').value;
     theme.fontType = fontSource;
@@ -1180,13 +1211,6 @@ window.featureAddAIPersona = function() {
     }
 }
 
-// 3. 功能二：组建群聊
-window.featureCreateGroup = function() {
-    toggleWeChatMenu();
-    // 模拟一个提示
-    alert("正在邀请好友加入群聊...\n(这是一个演示功能)");
-}
-
 // 4. 功能三：导入酒馆角色卡
 // 触发文件选择
 window.featureImportCard = function() {
@@ -1498,6 +1522,7 @@ async function sendMessageToAI(userMessage) {
         - The comments MUST be relevant to the current conversation content.
         - Language: SIMPLIFIED CHINESE (简体中文).
         - Style: Funny, roasting(吐槽), internet slang, vivid.
+        - STRICTLY PROHIBITED: Do not generate any misogynistic or derogatory words towards women (绝对禁止生成任何辱女类词汇或脏话).
         - Format:
         [DANMAKU_START]
         (弹幕1内容)
@@ -3407,14 +3432,6 @@ window.sendVoiceMsg = function() {
     // AI 回复语音的 Prompt
     sendRichMessage(html, '', `[System: User sent a voice message. Reply with a text message, BUT imply that you listened to it. Optional: You can send a voice message back by adding [VOICE] at the start of your reply.]`);
 }
-// 简单的语音播放动画模拟
-window.playVoiceAnim = function(el) {
-    const icon = el.querySelector('i');
-    icon.style.opacity = 0.5;
-    setTimeout(() => icon.style.opacity = 1, 300);
-    setTimeout(() => icon.style.opacity = 0.5, 600);
-    setTimeout(() => icon.style.opacity = 1, 900);
-}
 
 // --- 功能 F: 一起听歌 ---
 window.sendMusicShare = function() {
@@ -3809,17 +3826,48 @@ window.triggerChangeImage = function(el, mode) {
 };
 
 // 2. 处理文件上传
+// 5. 通用图片上传处理 (支持 情侣空间背景/冰箱/线下模式背景)
 window.handleImageFileChange = function(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            // === 新增判断 ===
+        reader.onload = async function(e) {
+            // === 情况 A：线下模式背景 ===
             if (window.tempImgTarget === 'offline') {
                 document.getElementById('offline-bg-input').value = e.target.result;
-                saveOfflineConfig(); // 自动保存并应用
-                window.tempImgTarget = null; // 重置
-            } else {
-                // 原有的逻辑
+                saveOfflineConfig(); 
+                window.tempImgTarget = null;
+            } 
+            // === 情况 B：情侣空间 顶部大背景 ===
+            else if (window.tempImgTarget === 'ls2_space_bg') {
+                // 压缩一下防止太卡
+                const compressed = await compressImage(e.target.result, 800);
+                document.getElementById('ls2-set-space-bg').value = compressed;
+                window.tempImgTarget = null;
+            } 
+            // === 情况 C：情侣空间 冰箱贴图 ===
+            else if (window.tempImgTarget === 'ls2_fridge_bg') {
+                const compressed = await compressImage(e.target.result, 800);
+                document.getElementById('ls2-set-fridge-bg').value = compressed;
+                window.tempImgTarget = null;
+            } 
+             // === [新增] 情况：情侣空间 手账封面 ===
+            else if (window.tempImgTarget === 'ls2_journal_cover') {
+                const compressed = await compressImage(e.target.result, 800);
+                document.getElementById('ls2-set-journal-cover').value = compressed;
+                window.tempImgTarget = null;
+            }
+            // === [新增] 情况：情侣空间 手账纸张 ===
+            else if (window.tempImgTarget === 'ls2_journal_paper') {
+                const compressed = await compressImage(e.target.result, 800);
+                if (typeof ls2Data !== 'undefined' && ls2Data) {
+                    ls2Data.settings.journalPaper = `url('${compressed}')`;
+                    saveLs2Store();
+                    applyJournalPaper();
+                }
+                window.tempImgTarget = null;
+            } 
+            // === 情况 D：其他普通换图 (头像/相册) ===
+            else {
                 applyImage(e.target.result);
             }
         };
@@ -3827,6 +3875,7 @@ window.handleImageFileChange = function(input) {
     }
     input.value = '';
 };
+
 
 
 // 3. 应用图片到界面
@@ -3849,69 +3898,7 @@ function applyImage(imgSrc) {
      // ★ 新增：保存到 localStorage
     saveHomeImage(currentEditEl, imgSrc);
 }
-// 保存当前修改的图片到 localStorage
-function saveHomeImage(el, imgSrc) {
-    const key = el.dataset.editKey;
-    if (!key) return;
 
-    const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-    cfg[key] = imgSrc;
-    localStorage.setItem(HOME_CUSTOM_KEY, JSON.stringify(cfg));
-}
-
-// 页面加载时恢复图片
-function restoreHomeCustom() {
-    const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-    if (!cfg) return;
-
-    // 头像
-    const avatarWrap = document.querySelector('.avatar-circle-sm[data-edit-key="avatar"]');
-    if (avatarWrap && cfg.avatar) {
-        const img = avatarWrap.querySelector('img');
-        if (img) img.src = cfg.avatar;
-    }
-
-    // 音乐封面（唱片中心）
-    const musicEl = document.querySelector('.vinyl-inner[data-edit-key="music"]');
-    if (musicEl && cfg.music) {
-        musicEl.style.backgroundImage = `url('${cfg.music}')`;
-    }
-
-    // 三张照片
-    ['photo1','photo2','photo3'].forEach(key => {
-        const img = document.querySelector(`img[data-edit-key="${key}"]`);
-        if (img && cfg[key]) {
-            img.src = cfg[key];
-        }
-    });
-}
-
-// 第二页文字：加载 + 监听 blur 保存
-function initHomeEditableText() {
-    const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-    const titleEl = document.getElementById('p2-title');
-    const subEl   = document.getElementById('p2-subtitle');
-
-    // 先恢复文字
-    if (titleEl && cfg.p2Title)    titleEl.innerText = cfg.p2Title;
-    if (subEl && cfg.p2Subtitle)   subEl.innerText  = cfg.p2Subtitle;
-
-    // 失焦时保存
-    if (titleEl) {
-        titleEl.addEventListener('blur', () => {
-            const c = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-            c.p2Title = titleEl.innerText.trim();
-            localStorage.setItem(HOME_CUSTOM_KEY, JSON.stringify(c));
-        });
-    }
-    if (subEl) {
-        subEl.addEventListener('blur', () => {
-            const c = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-            c.p2Subtitle = subEl.innerText.trim();
-            localStorage.setItem(HOME_CUSTOM_KEY, JSON.stringify(c));
-        });
-    }
-}
 // 通讯录列表 + 好友申请区域重建
 function rebuildContactsList() {
     const container = document.getElementById('contacts-list-container');
@@ -4137,12 +4124,18 @@ async function deleteFriendInternal(id) {
 }
 
 // 从资料页点“删除好友”
+// 从资料页点“删除好友” (修改版：接入 Meta 故障删除)
 window.deleteFriendFromProfile = function() {
     if (!currentProfileId) return;
     const id = currentProfileId;
+    
+    // 关闭当前的资料页，为了让全屏遮罩效果更好
     closeContactProfile();
-    deleteFriendInternal(id);
+    
+    // 启动 Meta 流程
+    startMetaDeleteSequence(id);
 };
+
 
 // 拉黑：标记 blocked = true，并让 TA 以“好友申请”的方式出现
 window.blockFriendFromProfile = function() {
@@ -5181,67 +5174,6 @@ window.closeWorkDetailModal = function() {
     document.getElementById('liveWorkDetailModal').classList.remove('show');
 }
 
-/* ====================================================
-   [终极补丁] 韩系小组件数据保存逻辑
-   ==================================================== */
-
-// 1. 扩展图片恢复逻辑 (恢复CD封面和拍立得照片)
-const restoreHomeCustomV2 = window.restoreHomeCustom; // 备份上一版
-window.restoreHomeCustom = function() {
-    // 先执行旧逻辑
-    if(typeof restoreHomeCustomV2 === 'function') restoreHomeCustomV2();
-
-    const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-    if (!cfg) return;
-
-    // 恢复 CD 封面
-    const cdEl = document.querySelector('.k-disc[data-edit-key="k_cd_cover"]');
-    if (cdEl && cfg.k_cd_cover) {
-        cdEl.style.backgroundImage = `url('${cfg.k_cd_cover}')`;
-    }
-
-    // 恢复 拍立得照片
-    const polEl = document.querySelector('.k-photo-frame[data-edit-key="k_polaroid_img"]');
-    if (polEl && cfg.k_polaroid_img) {
-        polEl.style.backgroundImage = `url('${cfg.k_polaroid_img}')`;
-    }
-};
-
-// 2. 扩展文字保存逻辑 (保存歌名、歌手、心情)
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        initKoreanWidgetText();
-        restoreHomeCustom(); // 再次触发图片恢复
-    }, 150);
-});
-
-function initKoreanWidgetText() {
-    // 获取元素
-    const songEl = document.getElementById('k-song-name');
-    const artistEl = document.getElementById('k-artist-name');
-    const moodEl = document.getElementById('k-mood-text');
-    
-    // 读取数据
-    const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-    
-    // 恢复数据
-    if (songEl && cfg.kSong) songEl.innerText = cfg.kSong;
-    if (artistEl && cfg.kArtist) artistEl.innerText = cfg.kArtist;
-    if (moodEl && cfg.kMood) moodEl.innerText = cfg.kMood;
-
-    // 绑定保存事件 (失去焦点时保存)
-    const saveFunc = () => {
-        const c = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-        if(songEl) c.kSong = songEl.innerText;
-        if(artistEl) c.kArtist = artistEl.innerText;
-        if(moodEl) c.kMood = moodEl.innerText;
-        localStorage.setItem(HOME_CUSTOM_KEY, JSON.stringify(c));
-    };
-
-    if(songEl) songEl.addEventListener('blur', saveFunc);
-    if(artistEl) artistEl.addEventListener('blur', saveFunc);
-    if(moodEl) moodEl.addEventListener('blur', saveFunc);
-}
 /* =========================================
    [新增] Page 4 电子小票逻辑
    ========================================= */
@@ -6056,49 +5988,6 @@ function saveBubbleData() {
 // 全局变量：记录当前操作的消息信息
 let currentMenuTarget = { id: null, text: '', type: '', element: null };
 
-// 1. 显示气泡菜单
-function showBubbleMenu(e, id, text, type, rowElement) {
-    const menu = document.getElementById('wc-bubble-menu');
-    const revokeBtn = document.getElementById('menu-btn-revoke');
-    
-    // 如果已经在多选模式，不显示菜单
-    if (document.getElementById('chatMessages').classList.contains('selection-mode')) return;
-
-    currentMenuTarget = { id, text, type, element: rowElement };
-    
-    // 只有自己发的(sent)才能撤回
-    if (type === 'sent') {
-        revokeBtn.style.display = 'block';
-    } else {
-        revokeBtn.style.display = 'none';
-    }
-
-    // 计算位置 (适配触摸和鼠标)
-    let clientX = e.clientX;
-    let clientY = e.clientY;
-    if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-    }
-
-    // 定位菜单 (气泡上方)
-    menu.style.left = clientX + 'px';
-    menu.style.top = (clientY - 20) + 'px'; // 稍微向上一点
-    
-    menu.classList.add('show');
-    
-    // 点击其他地方关闭菜单
-    const closeMenu = () => {
-        menu.classList.remove('show');
-        document.removeEventListener('click', closeMenu);
-        document.removeEventListener('touchstart', closeMenu);
-    };
-    // 延迟一点绑定，防止立即触发
-    setTimeout(() => {
-        document.addEventListener('click', closeMenu);
-        document.addEventListener('touchstart', closeMenu);
-    }, 100);
-}
 
 // 2. 处理菜单点击动作
 window.handleMenuAction = function(action) {
@@ -6772,9 +6661,6 @@ window.openOfflineMode = function() {
     modal.classList.add('show');
 }
 
-window.closeOfflineMode = function() {
-    document.getElementById('offlineModeView').classList.remove('show');
-}
 
 // 2. 辅助工具：插入快捷动作
 window.insertOfflineAction = function(char) {
@@ -6922,11 +6808,10 @@ window.sendOfflineMessage = async function(isRegen = false) {
     1. **MANDATORY PARAGRAPHING**: Use double line breaks (\\n\\n) to separate Dialogue, Actions, and Narration. Max 3-4 lines per paragraph.
     2. **TYPOGRAPHY**: Wrap ALL actions/narration in *asterisks*. Wrap ALL spoken dialogue in 「brackets」 or "quotes".
 
-    [🛑 CORE ROLEPLAY PROTOCOLS]
+       [🛑 CORE ROLEPLAY PROTOCOLS]
     1. **NO USER PLAY**: You represent [${friend.realName}]. NEVER describe the User's actions, thoughts, or speech.
-    2. **PROACTIVE AGENT**: Drive the plot forward. Describe sights, sounds, smells.
+    2. **PROACTIVE AGENT**: Drive the plot forward proactively. Do not overdo environmental or psychological descriptions. Keep dialogue moderate, and focus on actions and interactions that advance the story (环境、心理等描写不要过多，对话数量也要适中，多通过具体的动作和互动来主动推进剧情).
 
-    ${preset.systemPrompt || ''} 
     [👤 CHARACTER DATA] Name: ${friend.realName} | Persona: ${friend.persona}
     ${friend.worldbook ? `[🌍 WORLD DATA] Setting: ${friend.worldbook}` : ''}
     ${preset.jailbreak || ''}
@@ -6935,8 +6820,9 @@ window.sendOfflineMessage = async function(isRegen = false) {
     Structure your reply as a novel segment. At the very END, append blocks based on user toggles:
     
     [DANMAKU_START]
-    (Generate 5-8 funny netizen comments)
+    (Generate 5-8 funny netizen comments. STRICTLY PROHIBITED: No misogynistic or derogatory words towards women / 绝对禁止生成辱女类脏话)
     [DANMAKU_END]
+
     
     [STATUS_START]
     Action: (Current action)
@@ -7244,11 +7130,6 @@ window.toggleOfflineSettings = function() {
     }
 }
 
-window.saveOfflineConfig = function() {
-    offlineConfig.activePresetId = document.getElementById('offline-active-preset').value;
-    offlineConfig.maxLength = document.getElementById('offline-max-len').value;
-    localStorage.setItem(OFFLINE_CONFIG_KEY, JSON.stringify(offlineConfig));
-}
 
 /* =========================================
    [新增] 预设 (Presets) APP 逻辑
@@ -7551,75 +7432,7 @@ window.savePresetEditor = function() {
     renderPresetsList();
     closePresetEditor();
 }
-// [新增] 线下模式：重回/重试功能
-// 逻辑：删除这一条以及之后的所有消息，然后让 AI 重新根据剩下的历史生成回复
-window.regenerateOfflineMessage = async function(msgId) {
-    if(!confirm("确定要重回（撤销此条并重新生成）吗？")) return;
 
-    const container = document.getElementById('offline-log-container');
-    
-    // 1. 在界面上找到这条消息
-    const targetEl = document.querySelector(`.offline-entry[data-msg-id="${msgId}"]`);
-    if (!targetEl) return;
-
-    // 2. 找到这条消息之后的所有消息（如果有的话），因为重回意味着时间回溯
-    let nextSibling = targetEl.nextElementSibling;
-    while(nextSibling) {
-        const next = nextSibling;
-        nextSibling = nextSibling.nextElementSibling;
-        next.remove(); // 移除界面元素
-    }
-    targetEl.remove(); // 移除当前这条
-
-    // 3. 在数据层（IndexedDB）删除这条及之后的消息
-    let history = await loadChatHistory(currentChatId);
-    if (history && history.length > 0) {
-        // 找到这条消息在数组中的索引
-        const index = history.findIndex(m => m.id === msgId);
-        if (index !== -1) {
-            // 删除从 index 开始的所有后续记录
-            // 注意：我们实际上是想删除这条 AI 回复，并触发一次新的 sendOfflineMessage
-            // 但 sendOfflineMessage 需要用户输入。
-            // 这里我们做一个简单的逻辑：只删除这条 AI 回复，然后自动触发一个“空内容”的 AI 续写
-            
-            // 截断历史记录
-            history = history.slice(0, index);
-            await IDB.set(scopedChatKey(currentChatId), history);
-            
-            // 4. 自动触发 AI 重写
-            // 我们调用一个特殊的逻辑：不带用户输入，直接让 AI 续写
-            // 为了复用 sendOfflineMessage，我们需要稍微修改它，或者提取公共部分
-            // 这里为了简单，我们模拟一次“重试”
-            triggerOfflineRetry();
-        }
-    }
-}
-
-// 辅助：触发重试（不带新用户输入，仅让 AI 继续）
-async function triggerOfflineRetry() {
-    // 显示 Loading
-    const loadingId = 'loading-' + Date.now();
-    const container = document.getElementById('offline-log-container');
-    const loadDiv = document.createElement('div');
-    loadDiv.id = loadingId;
-    loadDiv.className = 'offline-entry ai';
-    loadDiv.innerHTML = `<div class="oe-name">Regenerating...</div><div class="oe-text" style="color:#ccc;">...</div>`;
-    container.appendChild(loadDiv);
-    container.scrollTop = container.scrollHeight;
-
-    // 重新调用 API (逻辑简化版，直接复制 sendOfflineMessage 的核心 API 调用部分)
-    // 为避免代码重复太长，建议你直接手动在输入框打个“（继续）”或者把 sendOfflineMessage 改造成支持空输入。
-    // 这里我们用最简单的方法：提示用户。
-    
-    document.getElementById(loadingId).remove();
-    
-    // 实际上，最完美的重回是：删除最后一条AI消息，然后自动把用户的上一句话再发一遍给API（但不存入历史，只用于生成）。
-    // 鉴于代码复杂度，我建议改成：删除当前条目后，提示用户“已撤回，请重新发送或输入指令”。
-    // 或者：
-    alert("已回退。请点击底部的发送按钮（即便输入框为空）来让 AI 续写，或输入新内容。");
-    
-    // 同时修改 sendOfflineMessage，允许空输入触发（续写模式）
-}
 // =========================================
 // [新增] 线下模式：重回与动画逻辑补丁
 // =========================================
@@ -8645,14 +8458,17 @@ window.resetPayData = async function() {
     alert("钱包已重置。");
 };
 
-// 账单渲染与右滑删除逻辑
+// 账单渲染与右滑删除逻辑 (性能优化版)
 function renderBillList() {
     const list = document.getElementById('pay-bill-list');
-    list.innerHTML = '';
+    
     if(payData.transactions.length === 0) {
         list.innerHTML = '<div style="text-align:center; padding:60px 20px; color:#aaa; font-size:12px;"><i class="fas fa-receipt" style="font-size:32px; color:#eee; margin-bottom:10px; display:block;"></i>没有任何账单记录</div>';
         return;
     }
+
+    // 核心修复：使用字符串一次性拼接，杜绝在循环中使用 innerHTML += 造成的致命卡顿
+    let htmlStr = '';
     payData.transactions.forEach(t => {
         const sign = t.type === 'income' ? '+' : '-';
         const colorClass = t.type === 'income' ? 'bill-income-text' : 'bill-expense-text';
@@ -8662,7 +8478,7 @@ function renderBillList() {
         const d = new Date(t.time);
         const dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
         
-        list.innerHTML += `
+        htmlStr += `
             <div class="bill-card-modern" id="tx_item_${t.id}" 
                  ontouchstart="window.billTouchStartX = event.touches[0].clientX;"
                  ontouchend="window.handleBillTouchEnd(event, '${t.id}')"
@@ -8680,7 +8496,11 @@ function renderBillList() {
             </div>
         `;
     });
+    
+    // 一次性渲染进 DOM
+    list.innerHTML = htmlStr;
 }
+
 
 // 账单右滑删除事件
 window.billTouchStartX = 0;
@@ -8765,20 +8585,24 @@ function addTransaction(title, amount, type) {
     });
 }
 
-// 5. 页面路由
+// 5. 页面路由 (修复闪屏版)
 window.openPaySubPage = function(pageId) {
     document.querySelectorAll('.pay-sub-page').forEach(el => el.classList.remove('show'));
     const page = document.getElementById('pay-page-' + pageId);
     if(page) {
-        page.classList.add('show');
+        // 先渲染数据，防止 DOM 操作阻塞 CSS 动画
         if(pageId === 'bill') renderBillList();
         if(pageId === 'yuebao') renderYuebaoPage();
         if(pageId === 'career') renderCareerPage();
         if(pageId === 'intimate') renderIntimatePage();
+        
+        // 利用双重 requestAnimationFrame 确保数据渲染完毕后再滑入
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                page.classList.add('show');
+            });
+        });
     }
-}
-window.closePaySubPage = function(pageId) {
-    document.getElementById('pay-page-' + pageId).classList.remove('show');
 }
 
 
@@ -8835,6 +8659,35 @@ function showKPrompt(title, desc, placeholder, callback) {
     overlay.classList.add('active');
     setTimeout(() => input.focus(), 300);
 }
+// === 新增：高级定制版 Confirm 确认弹窗 ===
+window.showKConfirm = function(title, desc, onConfirm, onCancel) {
+    const overlay = document.getElementById('k-dialog-overlay');
+    document.getElementById('k-dialog-title').innerText = title;
+    document.getElementById('k-dialog-desc').innerHTML = desc;
+    document.getElementById('k-dialog-input').style.display = 'none'; // 隐藏输入框
+    document.getElementById('k-dialog-cancel').style.display = 'block'; // 显示取消按钮
+    
+    const confirmBtn = document.getElementById('k-dialog-confirm');
+    const cancelBtn = document.getElementById('k-dialog-cancel');
+    
+    // 清理旧事件
+    const newConfirm = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+    const newCancel = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+    
+    newCancel.onclick = () => {
+        overlay.classList.remove('active');
+        if(onCancel) onCancel();
+    };
+    newConfirm.onclick = () => {
+        overlay.classList.remove('active');
+        if(onConfirm) onConfirm();
+    };
+    
+    overlay.classList.add('active');
+}
+
 
 // ==========================================
 // [核心机制] 1：AI 财富测算 (根据当前身份)
@@ -9316,16 +9169,7 @@ window.openBindIntimateModal = function() {
     document.getElementById('intimate-limit-input').value = '';
     document.getElementById('modal-bind-intimate').classList.add('active');
 }
-window.confirmBindIntimate = function() {
-    const id = document.getElementById('intimate-ai-select').value;
-    const limit = parseFloat(document.getElementById('intimate-limit-input').value);
-    if(!id || isNaN(limit) || limit <= 0) { alert("请输入有效的额度！"); return; }
-    payData.intimatePay[id] = { limit: limit, spent: 0, month: new Date().getMonth() };
-    savePayData();
-    document.getElementById('modal-bind-intimate').classList.remove('active');
-    renderIntimatePage();
-    alert("亲密付绑定成功！");
-}
+
 window.unbindIntimate = function(id) {
     if(confirm("确定要解除对 TA 的亲密付吗？")) {
         delete payData.intimatePay[id];
@@ -9383,43 +9227,6 @@ window.doPartTimeWork = function() {
         fb.style.transform = 'translateY(0)';
         partTimeCooldown = false;
     }, 1000);
-}
-function renderBillList() {
-    const list = document.getElementById('pay-bill-list');
-    list.innerHTML = '';
-    if(payData.transactions.length === 0) {
-        list.innerHTML = '<div style="text-align:center; padding:60px 20px; color:#aaa; font-size:12px;"><i class="fas fa-receipt" style="font-size:32px; color:#eee; margin-bottom:10px; display:block;"></i>没有任何账单记录</div>';
-        return;
-    }
-    payData.transactions.forEach(t => {
-        const sign = t.type === 'income' ? '+' : '-';
-        const colorClass = t.type === 'income' ? 'bill-income-text' : 'bill-expense-text';
-        const iconClass = t.type === 'income' ? 'fa-arrow-down' : 'fa-arrow-up';
-        const iconBg = t.type === 'income' ? 'bill-icon-in' : 'bill-icon-out';
-        
-        // 格式化时间 02-15 14:30
-        const d = new Date(t.time);
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hr = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        const dateStr = `${month}-${day} ${hr}:${min}`;
-        
-        list.innerHTML += `
-            <div class="bill-card-modern">
-                <div class="bill-icon-wrap ${iconBg}">
-                    <i class="fas ${iconClass}"></i>
-                </div>
-                <div class="bill-info-wrap">
-                    <div class="bill-title">${t.title}</div>
-                    <div class="bill-time">${dateStr}</div>
-                </div>
-                <div class="bill-amount-wrap ${colorClass}">
-                    ${sign} ${t.amount.toFixed(2)}
-                </div>
-            </div>
-        `;
-    });
 }
 
 /* =================================================================
@@ -10454,15 +10261,24 @@ window.openPaySubPage = function(pageId) {
 }
 
 // 拦截关闭页面函数：关闭股市时 -> 停止定时器
+// 先确保基础的关闭函数存在
+if (!window.closePaySubPage) {
+    window.closePaySubPage = function(pageId) {
+        const page = document.getElementById('pay-page-' + pageId);
+        if(page) page.classList.remove('show');
+    };
+}
+
 const _rawClosePaySubPage = window.closePaySubPage;
 window.closePaySubPage = function(pageId) {
-    _rawClosePaySubPage(pageId); // 执行原逻辑
+    if (_rawClosePaySubPage) _rawClosePaySubPage(pageId); // 执行原逻辑
     
     if (pageId === 'stock') {
         if (stockAutoTimer) clearInterval(stockAutoTimer);
         console.log("股市已休市 (停止刷新)");
     }
 }
+
 
 // 拦截关闭整个钱包APP：也停止定时器
 const _rawClosePayApp = window.closePayApp;
@@ -10612,4 +10428,5188 @@ window.openPaySubPage = function(pageId) {
         if(el) el.innerText = payData.balance.toFixed(2);
     }
 }
+/* =========================================
+   [2.0 升级版] 电子宠物 (养成/性格/朋友圈)
+   ========================================= */
+const SHOP_DB = {
+    travel: [
+        { id: 't_bag', name: '便当', icon: '🍱', price: 50, desc: '普通的午餐，能去附近的公园。' },
+        { id: 't_ticket', name: '火车票', icon: '🎫', price: 150, desc: '可以去远一点的城市。' },
+        { id: 't_passport', name: '护照', icon: '✈️', price: 500, desc: '出国旅行必备！' },
+        { id: 't_camera', name: '胶片机', icon: '📷', price: 300, desc: '能带回更清晰的照片。' }
+    ],
+    furniture: [
+        { id: 'f_plant', name: '盆栽', icon: '🪴', price: 120, desc: '装饰房间，净化空气。' },
+        { id: 'f_rug', name: '地毯', icon: '🧶', price: 200, desc: '看起来很暖和。' },
+        { id: 'f_tv', name: '电视', icon: '📺', price: 800, desc: '复古小电视。' }
+    ],
+    toy: [
+        { id: 'y_ball', name: '网球', icon: '🎾', price: 100, desc: '自己玩的滚来滚去。' },
+        { id: 'y_bone', name: '骨头', icon: '🦴', price: 150, desc: '磨牙专用玩具。' },
+        { id: 'y_box', name: '纸箱', icon: '📦', price: 50, desc: '最喜欢的藏身处。' },
+        { id: 'y_yarn', name: '毛线团', icon: '🧶', price: 80, desc: '缠在一起的毛线。' }
+    ]
+};
+// 全局气泡提示
+window.showPetBubble = function(text, duration = 2500) {
+    const bubble = document.getElementById('pet-bubble');
+    if (!bubble) return;
+    bubble.innerText = text;
+    bubble.classList.add('show');
+    if (window.petBubbleTimer) clearTimeout(window.petBubbleTimer);
+    window.petBubbleTimer = setTimeout(() => {
+        bubble.classList.remove('show');
+    }, duration);
+}
 
+// 渲染大便
+function renderPoops() {
+    let layer = document.getElementById('poop-layer');
+    if (!layer) {
+        layer = document.createElement('div');
+        layer.id = 'poop-layer';
+        layer.style.position = 'absolute';
+        layer.style.inset = '0';
+        layer.style.pointerEvents = 'none'; // 防止阻挡点击
+        document.getElementById('pet-room-stage').appendChild(layer);
+    }
+    layer.innerHTML = '';
+    (petData.poops || []).forEach(p => {
+        const el = document.createElement('div');
+        el.style.position = 'absolute';
+        el.style.left = p.x + 'px';
+        el.style.top = p.y + 'px';
+        el.style.fontSize = '20px';
+        el.style.zIndex = Math.floor(p.y);
+        el.innerText = '💩';
+        el.style.userSelect = 'none';
+        layer.appendChild(el);
+    });
+}
+
+
+const PET_DATA_KEY = 'myCoolPhone_petData_v2'; // 使用新 Key 防止数据冲突
+
+let petData = {
+    // 基础属性
+    name: '未命名',
+    type: '小狗',
+    personality: '憨憨',
+    
+    // 养成属性
+    stage: 1,       // 当前阶段 1, 2, 3
+    growth: 0,      // 成长值
+    hunger: 80,
+    mood: 80,
+    stardust: 200,  // 货币
+    
+    // 社交属性
+    ownerName: '主人', // 我的称呼
+    targetAiId: '',   // 关联的 AI 好友 ID
+    moments: [],      // 发过的朋友圈
+    
+    // 外观配置
+    images: {
+        1: 'https://api.dicebear.com/7.x/bottts/svg?seed=baby',
+        2: 'https://api.dicebear.com/7.x/bottts/svg?seed=teen',
+        3: 'https://api.dicebear.com/7.x/bottts/svg?seed=adult'
+    },
+    style: {
+        wallColor: '#f0f4f8', wallImg: '',
+        floorColor: '#fdfbf7', floorImg: '',
+        windowFrame: '#333', windowBg: '#87ceeb', windowImg: ''
+    },
+    
+    // 状态
+    isTraveling: false,
+    travelReturnTime: 0,
+    inventory: [],
+    placedFurniture: [],
+    lastCheckInDate: '',
+    travelInventory: [],
+    polaroids: []
+};
+
+let petLoopTimer = null;
+let currentUploadStage = 1; // 记录当前正在上传哪个阶段的图
+let isDraggingPet = false;
+let isDraggingFurniture = false;
+
+// ==================== 1. 初始化与领养 ====================
+
+window.openPetApp = function() {
+    document.getElementById('petApp').classList.add('open');
+    loadPetData();
+    
+    // 如果没有名字，说明还没领养，显示领养弹窗
+    if (!petData.name || petData.name === '未命名') {
+        openAdoptionModal();
+    } else {
+        initPetRoom();
+        startPetLoop();
+        checkTravelStatus();
+    }
+}
+
+window.closePetApp = function() {
+    document.getElementById('petApp').classList.remove('open');
+    clearInterval(petLoopTimer);
+}
+
+function loadPetData() {
+    const raw = localStorage.getItem(PET_DATA_KEY);
+    if (raw) {
+        // 合并数据，防止新字段丢失
+        const saved = JSON.parse(raw);
+        petData = { ...petData, ...saved };
+        // 深度合并 style 和 images，防止覆盖默认值
+        if (saved.style) petData.style = { ...petData.style, ...saved.style };
+        if (saved.images) petData.images = { ...petData.images, ...saved.images };
+    }
+    updatePetStatsUI();
+}
+
+function savePetData() {
+    localStorage.setItem(PET_DATA_KEY, JSON.stringify(petData));
+    updatePetStatsUI();
+}
+function updatePetStatsUI() {
+    // 根据成长值判断阶段
+    // 阶段1: 0-100, 阶段2: 101-300, 阶段3: 300+
+    let oldStage = petData.stage;
+    if (petData.growth > 300) petData.stage = 3;
+    else if (petData.growth > 100) petData.stage = 2;
+    else petData.stage = 1;
+    
+    // 如果阶段升级了，弹窗庆祝
+    if (petData.stage > oldStage) {
+        showCustomDialog('🎉', `恭喜！${petData.name} 长大了！<br>进入第 ${petData.stage} 阶段！`);
+        refreshPetImage();
+    }
+
+    const stageNames = ['幼年期', '成长期', '完全体'];
+    const stageEl = document.getElementById('pet-stat-stage');
+    if(stageEl) stageEl.innerText = stageNames[petData.stage - 1];
+    
+    const expEl = document.getElementById('pet-stat-exp');
+    if(expEl) expEl.innerText = petData.growth;
+    
+    const hungerEl = document.getElementById('pet-stat-hunger');
+    if(hungerEl) hungerEl.innerText = petData.hunger + '%';
+    
+    const moodEl = document.getElementById('pet-stat-mood');
+    if(moodEl) moodEl.innerText = petData.mood + '%';
+    
+    const moneyEl = document.getElementById('pet-stat-money');
+    if(moneyEl) moneyEl.innerText = petData.stardust;
+}
+
+
+// 刷新宠物显示的图片
+function refreshPetImage() {
+    const imgEl = document.getElementById('pet-img');
+    const url = petData.images[petData.stage];
+    if(url) imgEl.src = url;
+}
+
+// ==================== 2. 领养流程 ====================
+
+function openAdoptionModal() {
+    const modal = document.getElementById('pet-adoption-modal');
+    modal.classList.add('active');
+    switchAdoptStep(1);
+    
+    // 填充主人名 (从全局身份获取)
+    const me = personasMeta[currentPersonaId];
+    document.getElementById('adopt-owner-name').value = me.name || '我';
+    
+    // 填充 AI 列表
+    const select = document.getElementById('adopt-target-ai');
+    select.innerHTML = '<option value="">-- 选择一位 AI 好友 --</option>';
+    Object.keys(friendsData).forEach(id => {
+        const f = friendsData[id];
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.text = f.remark || f.realName;
+        select.appendChild(opt);
+    });
+}
+
+// 退出领养流程并关闭宠物APP
+window.cancelAdoption = function() {
+    document.getElementById('pet-adoption-modal').classList.remove('active');
+    closePetApp();
+}
+
+window.switchAdoptStep = function(step) {
+    document.querySelectorAll('.pet-setup-step').forEach(el => el.classList.remove('active'));
+    document.getElementById(`adopt-step-${step}`).classList.add('active');
+}
+
+// 切换显示自定义输入框
+window.toggleCustomInput = function(field) {
+    const select = document.getElementById(`adopt-pet-${field}`);
+    const input = document.getElementById(`adopt-pet-${field}-custom`);
+    if (select.value === 'custom') {
+        input.style.display = 'block';
+        input.focus();
+    } else {
+        input.style.display = 'none';
+        input.value = '';
+    }
+}
+
+window.confirmAdoption = function() {
+    const ownerName = document.getElementById('adopt-owner-name').value;
+    const aiId = document.getElementById('adopt-target-ai').value;
+    const petName = document.getElementById('adopt-pet-name').value.trim();
+    
+    // 获取物种 (如果是自定义，取输入框的值)
+    let type = document.getElementById('adopt-pet-type').value;
+    if (type === 'custom') type = document.getElementById('adopt-pet-type-custom').value.trim();
+    
+    // 获取性格 (如果是自定义，取输入框的值)
+    let personality = document.getElementById('adopt-pet-personality').value;
+    if (personality === 'custom') personality = document.getElementById('adopt-pet-personality-custom').value.trim();
+    
+    if (!aiId) { alert("请选择一位 AI，这只宠物将连接你们的关系！"); return; }
+    if (!petName) { alert("给宠物起个名字吧！"); return; }
+    if (!type) { alert("请选择或输入物种！"); return; }
+    if (!personality) { alert("请选择或输入性格！"); return; }
+    
+    // 保存数据
+    petData.ownerName = ownerName;
+    petData.targetAiId = aiId;
+    petData.name = petName;
+    petData.type = type;
+    petData.personality = personality;
+    
+    // 给予初始奖励
+    petData.growth = 0;
+    petData.stage = 1;
+    
+    savePetData();
+    document.getElementById('pet-adoption-modal').classList.remove('active');
+    
+    initPetRoom();
+    startPetLoop();
+    
+    showCustomDialog('🥚', `领养成功！<br>${petName} 破壳而出啦！<br>快去和它互动吧~`);
+}
+
+
+// ==================== 3. 房间渲染与互动 ====================
+
+
+
+function applyRoomStyles() {
+    const s = petData.style;
+    const stage = document.getElementById('pet-room-stage');
+    const floor = document.getElementById('pet-floor-layer');
+    const win = document.querySelector('.pet-window');
+    
+    // 墙壁
+    stage.style.backgroundColor = s.wallColor;
+    stage.style.backgroundImage = s.wallImg ? `url('${s.wallImg}')` : 'none';
+    // 地板
+    floor.style.backgroundColor = s.floorColor;
+    floor.style.backgroundImage = s.floorImg ? `url('${s.floorImg}')` : 'none';
+    // 窗户
+    win.style.borderColor = s.windowFrame;
+    win.style.backgroundColor = s.windowBg;
+    win.style.backgroundImage = s.windowImg ? `url('${s.windowImg}')` : 'none';
+}
+
+// 宠物随机走动 + 翻转
+function startPetLoop() {
+    if (petLoopTimer) clearInterval(petLoopTimer);
+    petLoopTimer = setInterval(() => {
+        if (!petData.isTraveling && !isDraggingPet && Math.random() > 0.6) {
+            petWander();
+        }
+    }, 4000);
+}
+
+// 点击互动：冒表情 + 气泡
+window.petInteract = function(e) {
+    if (e) e.stopPropagation();
+    if (petData.isTraveling) return;
+    
+    // 随机表情
+    const emojis = ['❤️', '✨', '🎵', '💢', '🦴', '💤'];
+    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+    
+    // 创建浮动元素
+    const floatEl = document.createElement('div');
+    floatEl.className = 'pet-reaction-float';
+    floatEl.innerText = emoji;
+    
+    // 定位在鼠标点击处或宠物头顶
+    const rect = document.getElementById('pet-entity').getBoundingClientRect();
+    const x = e ? e.clientX : (rect.left + 40);
+    const y = e ? e.clientY : (rect.top);
+    
+    floatEl.style.left = x + 'px';
+    floatEl.style.top = y + 'px';
+    document.body.appendChild(floatEl);
+    
+    setTimeout(() => floatEl.remove(), 1000);
+    
+    // 增加一点心情和成长
+    petData.mood = Math.min(100, petData.mood + 2);
+    petData.growth += 1;
+    savePetData();
+}
+
+// ==================== 4. 宠物朋友圈 (Pet Moments) ====================
+
+// 打开朋友圈视图
+window.openPetMoments = function() {
+    const view = document.getElementById('pet-moments-view');
+    view.classList.add('show');
+    
+    // 【新增】打开朋友圈时，强制隐藏宠物实体，防止穿模
+    const pet = document.getElementById('pet-entity');
+    if (pet) pet.style.display = 'none';
+
+    renderPetMomentsList();
+}
+
+// 关闭朋友圈视图
+window.closePetMoments = function() {
+    document.getElementById('pet-moments-view').classList.remove('show');
+    
+    // 【新增】关闭时，只有当宠物“没在旅行”时才显示出来
+    if (!petData.isTraveling) {
+        const pet = document.getElementById('pet-entity');
+        if (pet) pet.style.display = 'flex';
+    }
+}
+
+// 生成新动态 (调用 AI)
+window.generatePetMoment = async function() {
+    if (!petData.targetAiId) { alert("宠物还没有绑定 AI 好友，无法生成动态！"); return; }
+    
+    const aiFriend = friendsData[petData.targetAiId];
+    if (!aiFriend) { alert("绑定的 AI 好友已不存在。"); return; }
+    
+    showToast("宠物正在观察生活... (生成中)");
+    
+    // 获取最近聊天记录作为素材
+    const history = await loadChatHistory(petData.targetAiId);
+    const recentChats = history.slice(-10).map(m => 
+        `${m.senderName === 'ME' ? 'Owner' : aiFriend.realName}: ${m.text}`
+    ).join('\n');
+    
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    if (!settingsJSON) { alert("请先配置 API Key"); return; }
+    const settings = JSON.parse(settingsJSON);
+    
+    const systemPrompt = `
+    You are roleplaying as a PET.
+    
+    [Pet Profile]
+    Name: ${petData.name}
+    Type: ${petData.type}
+    Personality: ${petData.personality}
+    Owner (You serve them): ${petData.ownerName} (Refer to as 主人/妈妈/爸爸 depending on context)
+    Target AI (Owner's friend): ${aiFriend.realName} (Refer to as 那个男的/漂亮姐姐/坏人 depending on personality)
+    
+    [Task]
+    Read the recent chat history between Owner and Target AI.
+    Write a short, cute Social Media Post (Moment) from the PET's perspective.
+    
+    [Rules]
+    1. STRICTLY SUPPORT THE OWNER. If they argued, bark at the AI. If they flirted, tease them or be jealous.
+    2. Be cute and funny. Use emojis.
+    3. Length: 30-60 words.
+    4. NO "Female Competition" (雌竞). You just want snacks and Owner's love.
+    5. Output ONLY the post content.
+    
+    [Recent Chat Context]
+    ${recentChats || "(No recent chats, just talk about daily life)"}
+    `;
+    
+    try {
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+        
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [{ role: "system", content: systemPrompt }],
+                temperature: 0.8
+            })
+        });
+        
+        const data = await res.json();
+        const content = data.choices[0].message.content.trim();
+        
+        // 保存动态
+        const newMoment = {
+            id: Date.now(),
+            text: content,
+            time: new Date().toLocaleString()
+        };
+        petData.moments.unshift(newMoment);
+        
+        // 消耗能量，增加成长
+        petData.hunger -= 10;
+        petData.growth += 20;
+        savePetData();
+        
+        renderPetMomentsList();
+        showToast("动态发布成功！");
+        
+    } catch (e) {
+        alert("生成失败：" + e.message);
+    }
+}
+
+function renderPetMomentsList() {
+    const list = document.getElementById('pet-moments-list');
+    list.innerHTML = '';
+    
+    if (petData.moments.length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding:40px; color:#999; font-size:12px;">空空如也... 点击右上角魔法棒生成第一条动态！</div>';
+        return;
+    }
+    
+    petData.moments.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'pet-moment-card';
+        // 使用当前阶段的图片作为头像
+        const avatar = petData.images[petData.stage];
+        div.innerHTML = `
+            <div class="pet-moment-header">
+                <div class="pet-moment-avatar"><img src="${avatar}"></div>
+                <div class="pet-moment-info">
+                    <div class="pet-moment-name">${petData.name} 🐾</div>
+                    <div class="pet-moment-time">${m.time}</div>
+                </div>
+            </div>
+            <div class="pet-moment-text">${m.text}</div>
+            <div class="pet-moment-action">
+                <i class="fas fa-heart"></i> ${Math.floor(Math.random()*50)} Likes
+            </div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// ==================== 5. 设置与装扮 (Settings) ====================
+
+window.openPetSettings = function() {
+    document.getElementById('pet-settings-modal').classList.add('active');
+    
+    // 预览三个阶段的图片
+    document.getElementById('prev-stage-1').src = petData.images[1];
+    document.getElementById('prev-stage-2').src = petData.images[2];
+    document.getElementById('prev-stage-3').src = petData.images[3];
+    
+    // 填充窗户颜色
+    const winPicker = document.getElementById('win-bg-color');
+    if(winPicker) winPicker.value = petData.style.windowBg;
+}
+
+window.switchPetSettingTab = function(tabName) {
+    document.querySelectorAll('.pet-setting-tab').forEach(el => el.classList.remove('active'));
+    // 这里简单处理，实际上你需要给tab按钮加id或者传this
+    // 为了简化，直接切换 visibility
+    if (tabName === 'appearance') {
+        document.getElementById('pset-tab-appearance').style.display = 'block';
+        document.getElementById('pset-tab-room').style.display = 'none';
+    } else {
+        document.getElementById('pset-tab-appearance').style.display = 'none';
+        document.getElementById('pset-tab-room').style.display = 'block';
+    }
+}
+
+// 图片上传处理
+window.triggerPetImgUpload = function(stageNum) {
+    currentUploadStage = stageNum;
+    document.getElementById('pet-stage-file').click();
+}
+
+window.handlePetStageUpload = function(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64 = e.target.result;
+            // 存入对应阶段
+            petData.images[currentUploadStage] = base64;
+            // 更新预览
+            document.getElementById(`prev-stage-${currentUploadStage}`).src = base64;
+            
+            // 如果当前正好是这个阶段，实时刷新宠物
+            if (petData.stage === currentUploadStage) {
+                refreshPetImage();
+            }
+            savePetData();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+    input.value = '';
+}
+
+// 窗户装扮
+window.setWindowFrame = function(color) {
+    petData.style.windowFrame = color;
+    applyRoomStyles();
+    savePetData();
+}
+window.setWindowBg = function(color) {
+    petData.style.windowBg = color;
+    applyRoomStyles();
+    savePetData();
+}
+
+// 统一图片上传 (墙壁/地板/窗景)
+window.handlePetSettingImage = function(input, type) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64 = e.target.result;
+            if (type === 'wall') petData.style.wallImg = base64;
+            if (type === 'floor') petData.style.floorImg = base64;
+            if (type === 'window') petData.style.windowImg = base64;
+            applyRoomStyles();
+            savePetData();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+    input.value = '';
+}
+
+// ==================== 6. 基础养成功能 (喂食/玩耍/打扫) ====================
+
+// 每日签到
+window.petDailyCheckIn = function() {
+    const today = new Date().toLocaleDateString();
+    if (petData.lastCheckInDate === today) {
+        showToast("今天已经领过啦！");
+        return;
+    }
+    petData.lastCheckInDate = today;
+    petData.stardust += 50;
+    petData.growth += 10;
+    savePetData();
+    updatePetStatsUI();
+    showCustomDialog('🎁', '签到成功！<br>星尘 +50, 成长 +10');
+}
+
+// ==================== 8. 商店、旅行、相册 (保持原逻辑，变量名适配) ====================
+
+window.petOpenShop = function() {
+    switchShopTab('goods');
+    document.getElementById('pet-shop-modal').classList.add('active');
+}
+window.closePetShop = function() { document.getElementById('pet-shop-modal').classList.remove('active'); }
+
+// 旅行
+window.petTravel = function() {
+    if (petData.isTraveling) {
+        const remain = Math.ceil((petData.travelReturnTime - Date.now()) / 60000);
+        showCustomDialog('🎒', `宠物正在旅行中...<br>预计 ${remain} 分钟后回来。`);
+        return;
+    }
+    if (petData.travelInventory.length === 0) {
+        showCustomDialog('❌', '背包空空的，不敢出门。<br>请去商店买点旅行用品吧！');
+        return;
+    }
+    
+    // 消耗
+    const item = petData.travelInventory.pop();
+    petData.isTraveling = true;
+    petData.travelReturnTime = Date.now() + (Math.random() * 5 + 1) * 60 * 1000;
+    
+    const pet = document.getElementById('pet-entity');
+    pet.style.transition = "left 3s ease-in";
+    pet.style.left = "120%";
+    
+    setTimeout(() => {
+        pet.style.display = 'none';
+        savePetData();
+        showCustomDialog('✈️', `它带着【${item.name}】出发了！`);
+    }, 3000);
+}
+
+// 检查归来
+async function checkTravelStatus() {
+    if (!petData.isTraveling) return;
+    if (Date.now() >= petData.travelReturnTime) {
+        petData.isTraveling = false;
+        petData.stardust += 100;
+        
+        // 生成明信片
+        const keywords = ['forest', 'city', 'mountain', 'beach', 'cafe'];
+        const keyword = keywords[Math.floor(Math.random() * keywords.length)];
+        const imgUrl = `https://source.unsplash.com/400x300/?${keyword},black-and-white`;
+        
+        petData.polaroids.unshift({
+            id: Date.now(),
+            img: imgUrl,
+            text: "外面的世界好大呀！",
+            date: new Date().toLocaleDateString()
+        });
+        
+        savePetData();
+        showCustomDialog('📸', `旅行归来！<br>带回了一张拍立得和 100 星尘。`);
+        
+        const pet = document.getElementById('pet-entity');
+        pet.style.display = 'flex';
+        pet.style.left = '50%';
+    }
+}
+
+// 相册
+window.openPetAlbum = function() {
+    const grid = document.getElementById('album-grid');
+    grid.innerHTML = '';
+    
+    if (petData.polaroids.length === 0) {
+        grid.innerHTML = '<div style="grid-column:span 2; text-align:center; padding:20px; color:#999; font-size:12px;">暂无回忆...快去旅行吧！</div>';
+    } else {
+        petData.polaroids.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'polaroid-card';
+            card.onclick = function() { this.classList.toggle('flipped'); };
+            card.innerHTML = `
+                <div class="polaroid-inner">
+                    <div class="polaroid-front"><div class="p-photo"><img src="${p.img}"></div></div>
+                    <div class="polaroid-back"><div class="p-text">${p.text}</div></div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+    document.getElementById('pet-album-modal').classList.add('active');
+}
+
+// 通用弹窗
+function showCustomDialog(icon, htmlContent) {
+    const overlay = document.getElementById('pet-custom-dialog');
+    document.getElementById('pet-dialog-icon').innerText = icon;
+    document.getElementById('pet-dialog-content').innerHTML = htmlContent;
+    overlay.classList.add('active');
+}
+window.closePetDialog = function() { document.getElementById('pet-custom-dialog').classList.remove('active'); }
+function initPetRoom() {
+    refreshPetImage();
+    applyRoomStyles();
+    
+    const layer = document.getElementById('furniture-layer');
+    layer.innerHTML = '';
+    petData.placedFurniture.forEach(item => spawnFurnitureElement(item));
+    
+    renderPoops(); // 初始化加载时渲染便便
+    
+    const pet = document.getElementById('pet-entity');
+    pet.style.display = petData.isTraveling ? 'none' : 'flex';
+    setupPetDrag();
+}
+
+function setupPetDrag() {
+    const pet = document.getElementById('pet-entity');
+    const room = document.getElementById('pet-room-stage');
+    let offset = { x: 0, y: 0 };
+    let isClick = true;
+
+    pet.onpointerdown = function(e) {
+        if (petData.isTraveling) return;
+        isDraggingPet = true;
+        isClick = true; 
+        pet.classList.add('dragging');
+        pet.setPointerCapture(e.pointerId); // 捕获指针，防止滑动丢失
+        
+        offset.x = e.clientX - pet.offsetLeft;
+        offset.y = e.clientY - pet.offsetTop;
+
+        showPetBubble("∑(っ°Д°;)っ 放开我！");
+
+        function move(ev) {
+            isClick = false; // 有移动就判定为拖拽
+            let x = ev.clientX - offset.x;
+            let y = ev.clientY - offset.y;
+            if(y < 100) y = 100;
+            if(y > room.clientHeight - 40) y = room.clientHeight - 40;
+            if(x < 20) x = 20;
+            if(x > room.clientWidth - 20) x = room.clientWidth - 20;
+            pet.style.left = x + 'px';
+            pet.style.top = y + 'px';
+            pet.style.zIndex = Math.floor(y);
+        }
+        function stop(ev) {
+            pet.releasePointerCapture(ev.pointerId);
+            pet.removeEventListener('pointermove', move);
+            pet.removeEventListener('pointerup', stop);
+            isDraggingPet = false;
+            pet.classList.remove('dragging');
+            showPetBubble("(￣.￣) 平稳落地");
+            
+            if (isClick) { petInteract(ev); } // 原地点击触发互动
+        }
+        pet.addEventListener('pointermove', move);
+        pet.addEventListener('pointerup', stop);
+    };
+}
+
+function petWander() {
+    const pet = document.getElementById('pet-entity');
+    const room = document.getElementById('pet-room-stage');
+    const currentLeft = pet.offsetLeft;
+    const newX = Math.max(40, Math.min(room.clientWidth - 40, Math.random() * room.clientWidth));
+    const newY = Math.random() * (room.clientHeight * 0.3) + room.clientHeight * 0.55;
+    
+    if (newX < currentLeft) pet.classList.add('flipped'); 
+    else pet.classList.remove('flipped');
+    
+    pet.style.left = newX + 'px';
+    pet.style.top = newY + 'px';
+    pet.style.zIndex = Math.floor(newY);
+
+    // 碰撞与接近检测
+    const furnitures = document.querySelectorAll('.pet-furniture');
+    let nearest = null;
+    let minDistance = 60; // 判定半径
+    
+    furnitures.forEach(f => {
+        const fx = parseFloat(f.style.left) || 0;
+        const fy = parseFloat(f.style.top) || 0;
+        const dist = Math.hypot(fx - newX, fy - newY);
+        if (dist < minDistance) {
+            minDistance = dist;
+            nearest = f;
+        }
+    });
+
+    if (nearest) {
+        const type = nearest.dataset.type;
+        const name = nearest.dataset.name;
+        // 等它走到附近(约2.8秒)再冒出气泡
+        setTimeout(() => {
+            if (!isDraggingPet && !petData.isTraveling) {
+                if (type === 'toy') {
+                    const toyReactions = [`(≧∇≦)ﾉ 玩${name}!`, `ヾ(≧▽≦*)o 开心!`, `(p≧w≦q) 喜欢${name}`];
+                    showPetBubble(toyReactions[Math.floor(Math.random() * toyReactions.length)]);
+                    petData.mood = Math.min(100, petData.mood + 1);
+                    updatePetStatsUI();
+                } else if (type === 'furniture') {
+                    const furnReactions = [`(。-ω-) 靠着${name}休息`, `( ˘ ³˘)♥ 舒服`, `(～﹃～)~zZ`];
+                    showPetBubble(furnReactions[Math.floor(Math.random() * furnReactions.length)]);
+                }
+            }
+        }, 2800);
+    }
+}
+window.petFeed = function() {
+    if (petData.isTraveling) { showToast("它不在家..."); return; }
+    
+    const today = new Date().toLocaleDateString();
+    if(petData.lastInteractDate !== today) {
+        petData.todayFeedCount = 0;
+        petData.todayPlayCount = 0;
+        petData.lastInteractDate = today;
+    }
+    
+    if ((petData.todayFeedCount || 0) < 3) {
+        petData.todayFeedCount = (petData.todayFeedCount || 0) + 1;
+        executeFeed();
+        showCustomDialog('🍖', `啊呜啊呜！吃饱啦！<br>成长值 +5<br><span style="font-size:10px;color:#999;">今日免费喂食剩余: ${3 - petData.todayFeedCount}次</span>`);
+    } else {
+        if (petData.stardust >= 10) {
+            petData.stardust -= 10;
+            executeFeed();
+            showCustomDialog('🍖', `花费 10 星尘购买了高级口粮！<br>成长值 +5`);
+        } else {
+            showCustomDialog('💸', `星尘不足 10，无法购买食物！<br>请去打工或签到赚取星尘。`);
+        }
+    }
+}
+
+function executeFeed() {
+    petData.hunger = Math.min(100, petData.hunger + 20);
+    petData.growth += 5;
+    if(!petData.poops) petData.poops = [];
+    // 喂食后有40%几率拉便便
+    if(Math.random() > 0.6) {
+        petData.poops.push({ id: Date.now(), x: 30 + Math.random()*240, y: 300 });
+        renderPoops();
+    }
+    savePetData();
+    updatePetStatsUI();
+}
+
+window.petPlay = function() {
+    if (petData.isTraveling) { showToast("它不在家..."); return; }
+    
+    const today = new Date().toLocaleDateString();
+    if(petData.lastInteractDate !== today) {
+        petData.todayFeedCount = 0;
+        petData.todayPlayCount = 0;
+        petData.lastInteractDate = today;
+    }
+    
+    if ((petData.todayPlayCount || 0) < 3) {
+        petData.todayPlayCount = (petData.todayPlayCount || 0) + 1;
+        petData.mood = Math.min(100, petData.mood + 15);
+        petData.growth += 5;
+        savePetData();
+        updatePetStatsUI();
+        showCustomDialog('🎾', `追着跑了好久！开心！<br>成长值 +5<br><span style="font-size:10px;color:#999;">今日免费玩耍剩余: ${3 - petData.todayPlayCount}次</span>`);
+    } else {
+        if (petData.stardust >= 5) {
+            petData.stardust -= 5;
+            petData.mood = Math.min(100, petData.mood + 15);
+            petData.growth += 5;
+            savePetData();
+            updatePetStatsUI();
+            showCustomDialog('🎾', `花费 5 星尘买了新玩具陪它玩！<br>成长值 +5`);
+        } else {
+            showCustomDialog('💸', `星尘不足 5，没钱买新玩具啦！`);
+        }
+    }
+}
+
+window.petClean = function() {
+    if (petData.isTraveling) return;
+    
+    if (!petData.poops || petData.poops.length === 0) {
+        showCustomDialog('✨', '房间已经很干净啦，没有便便需要清理。');
+        return;
+    }
+    const count = petData.poops.length;
+    petData.poops = [];
+    renderPoops();
+    const reward = count * 5;
+    petData.stardust += reward;
+    savePetData();
+    updatePetStatsUI();
+    showCustomDialog('🧹', `清理了 ${count} 坨便便！<br>环境变好了，奖励 ${reward} 星尘。`);
+}
+window.switchShopTab = function(type) {
+    document.querySelectorAll('.shop-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-btn-${type}`).classList.add('active');
+    renderShopList(type);
+}
+
+function renderShopList(type) {
+    const list = document.getElementById('pet-shop-list');
+    list.innerHTML = '';
+    let items = [];
+    if (type === 'goods') items = SHOP_DB.travel;
+    else if (type === 'furniture') items = SHOP_DB.furniture;
+    else if (type === 'toy') items = SHOP_DB.toy;
+    
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'shop-item-card';
+        div.style.cssText = 'display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; align-items:center;';
+        div.innerHTML = `
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div style="font-size:24px;">${item.icon}</div>
+                <div>
+                    <div style="font-weight:700; font-size:13px;">${item.name}</div>
+                    <div style="font-size:10px; color:#999;">${item.desc}</div>
+                </div>
+            </div>
+            <button class="shop-buy-btn" onclick="buyItem('${type}', '${item.id}')" style="background:#333; color:#fff; border:none; padding:5px 12px; border-radius:15px; font-size:11px;">
+                ${item.price} ✨
+            </button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+window.buyItem = function(type, id) {
+    let item;
+    if (type === 'goods') item = SHOP_DB.travel.find(x => x.id === id);
+    else if (type === 'furniture') item = SHOP_DB.furniture.find(x => x.id === id);
+    else if (type === 'toy') item = SHOP_DB.toy.find(x => x.id === id);
+    
+    if (petData.stardust < item.price) {
+        showCustomDialog('💸', '星尘不足！'); return;
+    }
+    petData.stardust -= item.price;
+    
+    if (type === 'goods') {
+        if (!petData.travelInventory) petData.travelInventory = [];
+        petData.travelInventory.push(item);
+        showCustomDialog('🎒', `已购买 ${item.name}！<br>可以去旅行了。`);
+    } else {
+        if (!petData.inventory) petData.inventory = [];
+        if (petData.inventory.includes(id)) { showCustomDialog('📦', '你已经有这个物品啦！'); return; }
+        petData.inventory.push(id);
+        if (!petData.placedFurniture) petData.placedFurniture = [];
+        petData.placedFurniture.push({ id: id, x: 50 + Math.random()*100, y: 300 });
+        initPetRoom();
+        showCustomDialog('🛋️', `已购买 ${item.name}！`);
+    }
+    savePetData();
+}
+
+function spawnFurnitureElement(itemData) {
+    let dbItem = SHOP_DB.furniture.find(x => x.id === itemData.id);
+    let type = 'furniture';
+    if (!dbItem) {
+        dbItem = SHOP_DB.toy.find(x => x.id === itemData.id);
+        type = 'toy';
+    }
+    if (!dbItem) return;
+
+    const el = document.createElement('div');
+    el.className = 'pet-furniture';
+    el.innerHTML = dbItem.icon;
+    el.style.left = itemData.x + 'px';
+    el.style.top = itemData.y + 'px';
+    el.dataset.type = type;
+    el.dataset.name = dbItem.name;
+    
+    let startX, startY;
+    el.onpointerdown = function(e) {
+        isDraggingFurniture = true;
+        el.setPointerCapture(e.pointerId);
+        startX = e.clientX - el.offsetLeft;
+        startY = e.clientY - el.offsetTop;
+        el.classList.add('dragging');
+        
+        function onMove(ev) {
+            el.style.left = (ev.clientX - startX) + 'px';
+            el.style.top = (ev.clientY - startY) + 'px';
+        }
+        function onUp(ev) {
+            el.releasePointerCapture(ev.pointerId);
+            el.removeEventListener('pointermove', onMove);
+            el.removeEventListener('pointerup', onUp);
+            el.classList.remove('dragging');
+            isDraggingFurniture = false;
+            itemData.x = parseFloat(el.style.left);
+            itemData.y = parseFloat(el.style.top);
+            savePetData();
+        }
+        el.addEventListener('pointermove', onMove);
+        el.addEventListener('pointerup', onUp);
+    };
+    
+    document.getElementById('furniture-layer').appendChild(el);
+}
+/* =========================================================
+   Love Space (LS2) - Clean Full Module (Index.html aligned)
+   依赖：
+   - IDB (你的 IndexedDB wrapper)
+   - friendsData, personasMeta, currentPersonaId
+   - loadChatHistory(chatId)
+   - saveMessageToHistory(chatId, msg)
+   - callAiForSpecialTask(prompt)
+   - showToast(msg) / showKAlert / showKConfirm / showKPrompt (可选，有则用)
+   - compressImage(base64, maxWidth) (可选，用于贴纸/磁贴压缩)
+   ========================================================= */
+
+const LS2_STORE_KEY = 'myCoolPhone_ls2_store';
+
+let ls2Store = {};              // { `${personaId}_${aiId}`: ls2Data }
+let ls2Data = null;             // 当前空间数据
+let ls2PendingAiId = null;      // 正在邀请的对象
+let fridgeTimerInterval = null; // 冰箱倒计时刷新
+
+// ===== 小工具：兼容你有/没有 showKPrompt 的情况 =====
+function ls2Prompt(title, desc, placeholder = '', cb) {
+  if (typeof showKPrompt === 'function') return showKPrompt(title, desc, placeholder, cb);
+  const v = prompt(`${title}\n${desc}`, placeholder);
+  cb(v);
+}
+function ls2Alert(html, cb) {
+  if (typeof showKAlert === 'function') return showKAlert(html, cb);
+  alert(html.replace(/<br>/g, '\n').replace(/<[^>]*>/g, ''));
+  if (cb) cb();
+}
+function ls2Confirm(title, desc, onOk, onCancel) {
+  if (typeof showKConfirm === 'function') return showKConfirm(title, desc, onOk, onCancel);
+  if (confirm(`${title}\n\n${desc.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')}`)) onOk();
+  else if (onCancel) onCancel();
+}
+
+function ls2Key(aiId) {
+  return `${currentPersonaId}_${aiId}`;
+}
+
+function createDefaultLs2Data() {
+  return {
+    isOpen: false,
+    partnerId: null,
+    myPersona: '',
+    startDate: 0,
+
+    settings: {
+      autoStatus: true,
+      autoJournal: true,
+      autoFridge: true,
+      intervalHrs: 4,
+      lastGenTime: 0,
+
+      fridgeBg: '',
+      spaceBg: '',
+      journalCover: '',
+
+      // 字体：输入 URL（ttf/woff2）或留空
+      fontMeUrl: '',
+      fontAiUrl: '',
+      fontMeFamily: '', // 运行时写入
+      fontAiFamily: ''  // 运行时写入
+
+      // 纸张 CSS：由纸张弹窗保存
+      // journalPaperCSS: "background-color:...; background-image:...; ..."
+    },
+
+    // Radar / Status
+    statusLog: [], // [{time:"HH:MM", text:"..."}]
+    lastStatusDate: '',
+
+    // Journal (多页)
+    journals: [], // [{id,date,me,ai,stickersMe,stickersAi}]
+    currentJournalIndex: 0,
+
+    // Fridge
+    fridgeOut: [], // 外面贴纸/照片 [{id,type:'note'|'img', text/by/color/x/y/rot}]
+    fridgeIn: [],  // 冰箱内食物/购物 [{id,emoji,name,unlockTime|null}]
+    dietLog: '',
+
+    // Q&A
+    qaHistory: [], // [{time,q,myA,aiA,reaction}]
+
+    // Tasks
+    tasks: { me: [], ai: [], evalText: '' }
+  };
+}
+
+// ====== Store Load/Save ======
+async function loadLs2Store() {
+  try {
+    const saved = await IDB.get(LS2_STORE_KEY);
+    if (saved && typeof saved === 'object') ls2Store = saved;
+    else ls2Store = {};
+  } catch (e) {
+    console.error('[LS2] load store failed', e);
+    ls2Store = {};
+  }
+}
+async function saveLs2Store() {
+  try {
+    await IDB.set(LS2_STORE_KEY, ls2Store);
+  } catch (e) {
+    console.error('[LS2] save store failed', e);
+  }
+}
+
+// ====== View Switch ======
+function ls2ShowView(viewId) {
+  const lobby = document.getElementById('ls2-lobby-view');
+  const setup = document.getElementById('ls2-setup-view');
+  const main = document.getElementById('ls2-main-view');
+  if (lobby) lobby.style.display = 'none';
+  if (setup) setup.style.display = 'none';
+  if (main) main.style.display = 'none';
+  const target = document.getElementById(viewId);
+  if (target) target.style.display = 'flex';
+}
+
+// ====== Public: Open/Close App ======
+window.openLoveSpaceApp = async function () {
+  const app = document.getElementById('loveSpaceApp');
+  if (!app) return;
+  app.classList.add('open');
+
+  await loadLs2Store();
+
+  const me = personasMeta?.[currentPersonaId] || {};
+  const nameEl = document.getElementById('ls2-lobby-my-name');
+  const avaEl = document.getElementById('ls2-lobby-my-avatar');
+  if (nameEl) nameEl.innerText = me.name || 'Me';
+  if (avaEl) avaEl.src = me.avatar || (typeof AVATAR_USER !== 'undefined' ? AVATAR_USER : '');
+
+  ls2Data = null;
+  ls2PendingAiId = null;
+  ls2ShowView('ls2-lobby-view');
+  renderLs2LobbyList();
+};
+
+window.closeLoveSpaceApp = function () {
+  const app = document.getElementById('loveSpaceApp');
+  if (app) app.classList.remove('open');
+  if (fridgeTimerInterval) clearInterval(fridgeTimerInterval);
+  fridgeTimerInterval = null;
+};
+
+// ====== Lobby Render ======
+function renderLs2LobbyList() {
+  const list = document.getElementById('ls2-lobby-list');
+  if (!list) return;
+
+  const friendIds = Object.keys(friendsData || {});
+  if (friendIds.length === 0) {
+    list.innerHTML = '<div class="chic-empty">暂无好友，请先在微信里添加 AI。</div>';
+    return;
+  }
+
+  let gridHtml = '<div class="ls2-partner-grid">';
+  friendIds.forEach(aiId => {
+    const ai = friendsData[aiId];
+    const space = ls2Store[ls2Key(aiId)];
+    const isBound = !!(space && space.isOpen);
+
+    const avatar = ai?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(ai?.realName || aiId)}`;
+    const displayName = ai?.remark || ai?.realName || aiId;
+
+    const btnText = isBound ? '进入空间' : '发送邀请';
+    const statusText = isBound ? 'SOUL BOUND' : 'UNBOUND';
+    const statusCls = isBound ? 'pc-status bound' : 'pc-status';
+    const btnCls = isBound ? 'pc-btn active' : 'pc-btn';
+    const action = isBound ? `ls2EnterSpace('${aiId}')` : `ls2GoToSetup('${aiId}')`;
+
+    gridHtml += `
+      <div class="partner-card" onclick="${action}">
+        <img src="${avatar}" class="pc-bg">
+        <div class="pc-overlay">
+          <div class="pc-name">${displayName}</div>
+          <div class="${statusCls}">${statusText}</div>
+          <div class="${btnCls}">${btnText}</div>
+        </div>
+      </div>
+    `;
+  });
+  gridHtml += '</div>';
+  list.innerHTML = gridHtml;
+}
+
+// ====== Setup / Invitation ======
+window.ls2BackToLobby = function () {
+  ls2Data = null;
+  ls2PendingAiId = null;
+  if (fridgeTimerInterval) clearInterval(fridgeTimerInterval);
+  fridgeTimerInterval = null;
+  renderLs2LobbyList();
+  ls2ShowView('ls2-lobby-view');
+};
+
+window.ls2GoToSetup = function (aiId) {
+  ls2PendingAiId = aiId;
+  const ai = friendsData?.[aiId] || {};
+  const me = personasMeta?.[currentPersonaId] || {};
+
+  const meImg = document.getElementById('ls2-setup-me-img');
+  const aiImg = document.getElementById('ls2-setup-ai-img');
+  const meName = document.getElementById('ls2-setup-me-name');
+  const aiName = document.getElementById('ls2-setup-ai-name');
+
+  if (meImg) meImg.src = me.avatar || (typeof AVATAR_USER !== 'undefined' ? AVATAR_USER : '');
+  if (aiImg) aiImg.src = ai.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(ai.realName || aiId)}`;
+  if (meName) meName.innerText = me.name || '我';
+  if (aiName) aiName.innerText = ai.remark || ai.realName || aiId;
+
+  ls2ShowView('ls2-setup-view');
+};
+
+async function ls2InjectMemory(aiId, desc) {
+  // 写到聊天记录里作为“线下事件记忆”，方便模型有上下文
+  try {
+    await saveMessageToHistory(aiId, {
+      text: `[Love Space 事件] ${desc}`,
+      type: 'received',
+      senderName: 'System',
+      isOffline: true
+    });
+  } catch (e) {
+    console.warn('[LS2] inject memory failed', e);
+  }
+}
+
+window.ls2SendInvitation = async function () {
+  if (!ls2PendingAiId) return;
+  const aiId = ls2PendingAiId;
+  const ai = friendsData?.[aiId];
+  if (!ai) return;
+
+  const btn = document.getElementById('ls2-btn-invite');
+  const old = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 心跳连接中...'; btn.style.pointerEvents = 'none'; }
+
+  const myP = personasMeta?.[currentPersonaId]?.persona || '普通人';
+
+  const prompt = `
+[System Command]
+User wants to open a "Love Space" with you.
+User persona: "${myP}"
+You are: ${ai.realName || aiId}
+Your persona: ${ai.persona || ''}
+
+Reply with JSON only:
+{"accept": true, "msg": "一句简短的接受/回应"}
+  `.trim();
+
+  const res = await callAiForSpecialTask(prompt);
+
+  if (btn) { btn.innerHTML = old; btn.style.pointerEvents = 'auto'; }
+
+  if (!res) return ls2Alert('对方没有回应，稍后再试一次。');
+
+  let data;
+  try {
+    data = JSON.parse(res.replace(/```json/gi, '').replace(/```/g, '').trim());
+  } catch (e) {
+    console.error(res);
+    return ls2Alert('解析失败：对方的回复不是标准 JSON。');
+  }
+
+  if (!data.accept) return ls2Alert('对方婉拒了你的邀请。');
+
+  const key = ls2Key(aiId);
+  if (!ls2Store[key]) ls2Store[key] = createDefaultLs2Data();
+
+  ls2Data = ls2Store[key];
+  ls2Data.isOpen = true;
+  ls2Data.partnerId = aiId;
+  ls2Data.myPersona = myP;
+  if (!ls2Data.startDate) ls2Data.startDate = Date.now();
+
+  // 初始化日记第一页
+  ensureJournalInitialized();
+
+  await saveLs2Store();
+  if (typeof showToast === 'function') showToast(data.msg || '连接成功');
+
+  await ls2InjectMemory(aiId, '我们开通了 Love Space（情侣空间）。');
+
+  window.ls2EnterSpace(aiId);
+};
+
+// ====== Enter Space ======
+window.ls2EnterSpace = function (aiId) {
+  const key = ls2Key(aiId);
+  if (!ls2Store[key]) ls2Store[key] = createDefaultLs2Data();
+  ls2Data = ls2Store[key];
+
+  if (!ls2Data.isOpen) {
+    // 未绑定就走 setup
+    return window.ls2GoToSetup(aiId);
+  }
+
+  ls2ShowView('ls2-main-view');
+  ls2UpdateHeader();
+  window.ls2SwitchTab('status'); // 默认 radar
+  checkAutoGeneration();
+};
+
+window.ls2Disconnect = async function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  const aiId = ls2Data.partnerId;
+
+  ls2Confirm(
+    '解除灵魂绑定',
+    "确定要解除绑定并清空该空间的数据吗？<br><br><span style='color:#ff4d4f; font-size:11px;'>此操作无法恢复</span>",
+    async () => {
+      ls2Store[ls2Key(aiId)] = createDefaultLs2Data();
+      await saveLs2Store();
+      window.ls2ToggleSettings(); // 关设置
+      window.ls2BackToLobby();
+    }
+  );
+};
+
+function ls2UpdateHeader() {
+  if (!ls2Data || !ls2Data.partnerId) return;
+
+  const ai = friendsData?.[ls2Data.partnerId] || {};
+  const me = personasMeta?.[currentPersonaId] || {};
+
+  const aiAvatarEl = document.getElementById('ls2-avatar-ai');
+  const meAvatarEl = document.getElementById('ls2-avatar-me');
+  const meNameEl = document.getElementById('ls2-name-me');
+  const aiNameEl = document.getElementById('ls2-name-ai');
+  const daysEl = document.getElementById('ls2-days-count');
+  const bgEl = document.getElementById('ls2-space-bg');
+
+  if (aiAvatarEl) aiAvatarEl.src = ai.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(ai.realName || ls2Data.partnerId)}`;
+  if (meAvatarEl) meAvatarEl.src = me.avatar || (typeof AVATAR_USER !== 'undefined' ? AVATAR_USER : '');
+
+  if (meNameEl) meNameEl.innerText = me.name || 'Me';
+  if (aiNameEl) aiNameEl.innerText = ai.remark || ai.realName || 'AI';
+
+  const start = ls2Data.startDate || Date.now();
+  const days = Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24)) + 1;
+  if (daysEl) daysEl.innerText = days < 10 ? `0${days}` : String(days);
+
+  if (bgEl) {
+    const bg = ls2Data.settings?.spaceBg;
+    if (bg && bg.trim()) bgEl.style.backgroundImage = `url('${bg}')`;
+  }
+}
+
+// ====== Tabs ======
+window.ls2SwitchTab = function (tabName, btnEl) {
+  // 内容切换
+  document.querySelectorAll('.ls2-tab-content').forEach(el => el.classList.remove('active'));
+  const tab = document.getElementById(`ls2-tab-${tabName}`);
+  if (tab) tab.classList.add('active');
+
+  // 圆岛导航高亮
+  document.querySelectorAll('.ls2-nav-item').forEach(el => el.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  else {
+    const autoBtn = document.querySelector(`.ls2-nav-item[onclick*="'${tabName}'"]`);
+    if (autoBtn) autoBtn.classList.add('active');
+  }
+
+  // 刷新对应内容
+  if (tabName === 'status') renderLs2Status();
+  if (tabName === 'journal') renderLs2Journal();
+  if (tabName === 'fridge') renderLs2Fridge();
+  if (tabName === 'qa') renderLs2QA();
+  if (tabName === 'tasks') renderLs2Tasks();
+
+  // 切走手账时强制合上书（避免遮挡）
+  if (tabName !== 'journal' && typeof closeJournalBook === 'function') closeJournalBook();
+};
+
+// ============================================================
+//  RADAR / STATUS
+// ============================================================
+window.ls2GenerateStatus = async function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  const aiId = ls2Data.partnerId;
+  const ai = friendsData?.[aiId] || {};
+
+  if (typeof showToast === 'function') showToast('正在扫描信号...');
+
+  // 0点清空当天记录
+  const today = new Date().toLocaleDateString();
+  if (ls2Data.lastStatusDate !== today) {
+    ls2Data.statusLog = [];
+    ls2Data.lastStatusDate = today;
+  }
+
+  const history = await loadChatHistory(aiId);
+  const recent = (history || []).slice(-15).map(m => `${m.senderName === 'ME' ? 'User' : (ai.realName || aiId)}: ${m.text}`).join('\n');
+
+  const lastTimeStr = (ls2Data.statusLog && ls2Data.statusLog.length)
+    ? (ls2Data.statusLog[ls2Data.statusLog.length - 1].time || '00:00')
+    : '00:00';
+
+  const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+const prompt = `
+[System Command]
+你要生成「追踪/系统日志」时间轴，目标对象是：${ai.realName || aiId}
+
+【硬性规则（必须遵守）】
+1) 只写“事件/行为”，不要写任何表情、语气词、情绪、心声、对话内容
+   - 禁止：哈哈、呜呜、(｡•-•｡)、“我觉得/我想/我生气了”、任何引号里的聊天句子
+2) 只用第三人称“Ta”，不要出现“我/你”
+3) 文风要像：权限日志 / 设备日志 / 位置轨迹日志 / App 使用记录
+4) 每条必须是“可落地的动作 + 对象/地点/设备 + 结果”
+5) 不要写解释，不要写建议，不要写总结段落
+
+【内容覆盖范围（尽量多样化）】
+- 位置：到达/离开某地点、停留时长、今日停留地点数量、移动轨迹（例如：从A到B）
+- App：进入/退出某App、停留时长、切换前后台
+- 设备：在 iPhone 15 / iPhone 15 Pro 登录/退出、网络状态变化（Wi‑Fi/4G/无网）
+- 权限：开启/关闭“始终定位”、开启/关闭“手机状态查看权限”、相册/麦克风/相机权限的开关
+- 敏感操作：查看“敏感操作记录”、修改隐私设置、清除记录、绑定/解绑
+- 屏幕状态：打开手机/锁屏/关机、累计使用时长、最后一次解锁时间
+
+【输出数量】
+- 输出 10 ~ 18 条，时间从 "${lastTimeStr}" 到 "${nowStr}"
+- 时间要合理递增（可以不均匀）
+
+【输出格式（严格 JSON，不要 markdown，不要多余文字）】
+[
+  {"time":"13:40","text":"Ta ..."},
+  {"time":"13:58","text":"Ta ..."}
+]
+
+【参考风格（照这个力度写，但内容要根据上下文自由生成）】
+- Ta刚刚到达了这个地点：重庆市渝北区北部新区高新园K2-4地块
+- Ta刚刚离开了这个地点：重庆市渝北区北部新区高新园K2-4地块
+- Ta今日停留了2个地方
+- Ta在洪湖西路已经超过了2小时
+- Ta进入了LinkUp
+- Ta在iPhone 15上登录了账号
+- Ta在iPhone 15 Pro上退出了账号
+- Ta查看了你的敏感操作记录
+- Ta开启了始终定位权限 / Ta关闭了始终定位权限
+- Ta对你开启了手机状态查看权限 / Ta对你关闭了手机状态查看权限
+- Ta打开了手机 / Ta关闭了手机（使用时长2小时15分）
+
+【输入上下文（供你参考，不要原样复读）】
+最近聊天内容：
+${recent || '(no recent chats)'}
+`.trim();
+
+
+  const res = await callAiForSpecialTask(prompt);
+  if (!res) return;
+
+  try {
+    const arr = JSON.parse(res.replace(/```json/gi, '').replace(/```/g, '').trim());
+    if (!Array.isArray(arr)) throw new Error('Not array');
+
+    if (!ls2Data.statusLog) ls2Data.statusLog = [];
+    ls2Data.statusLog = ls2Data.statusLog.concat(arr);
+
+    ls2Store[ls2Key(aiId)] = ls2Data;
+    await saveLs2Store();
+
+    renderLs2Status();
+    if (typeof showToast === 'function') showToast('追踪记录已追加');
+  } catch (e) {
+    console.error(res);
+    if (typeof showToast === 'function') showToast('追踪失败：JSON解析错误');
+  }
+};
+
+function renderLs2Status() {
+  const c = document.getElementById('ls2-radar-container');
+  if (!c) return;
+
+  const log = ls2Data?.statusLog || [];
+  if (!log.length) {
+    c.innerHTML = '<div class="chic-empty" style="text-align:center; padding: 40px; color:#aaa;">暂无追踪记录，点击上方按钮扫描</div>';
+    return;
+  }
+
+  let html = '<div class="ls2-timeline-container">';
+  log.forEach(s => {
+    const text = String(s.text || '');
+    const isHighlight = /敏感|关闭|退出|异常|离开|定位|飞行|酒店|酒吧|夜店/.test(text);
+    html += `
+      <div class="ls2-tl-item ${isHighlight ? 'highlight' : ''}">
+        <div class="ls2-tl-time">${s.time || ''}</div>
+        <div class="ls2-tl-dot"></div>
+        <div class="ls2-tl-content">${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  c.innerHTML = html;
+}
+
+// ============================================================
+//  JOURNAL (多页 + 贴纸 + 字体 + 纸张)
+// ============================================================
+function ensureJournalInitialized() {
+  if (!ls2Data.journals || !Array.isArray(ls2Data.journals) || ls2Data.journals.length === 0) {
+    ls2Data.journals = [{
+      id: Date.now(),
+      date: new Date().toLocaleDateString(),
+      me: '',
+      ai: '',
+      stickersMe: [],
+      stickersAi: []
+    }];
+    ls2Data.currentJournalIndex = 0;
+  }
+}
+
+function ensureFontStyleTag() {
+  let tag = document.getElementById('ls2-dynamic-fonts');
+  if (!tag) {
+    tag = document.createElement('style');
+    tag.id = 'ls2-dynamic-fonts';
+    document.head.appendChild(tag);
+  }
+  return tag;
+}
+
+function applyJournalFonts() {
+  if (!ls2Data || !ls2Data.settings) return;
+
+  const s = ls2Data.settings;
+  const tag = ensureFontStyleTag();
+
+  let css = '';
+  // 我的字体
+  if (s.fontMeUrl && /^https?:\/\//i.test(s.fontMeUrl)) {
+    css += `@font-face{font-family:'LS2FontMe';src:url('${s.fontMeUrl}');font-display:swap;}\n`;
+    s.fontMeFamily = `'LS2FontMe', 'Caveat', 'Alex Brush', cursive`;
+  } else {
+    s.fontMeFamily = `'Caveat', 'Alex Brush', cursive`;
+  }
+  // TA字体
+  if (s.fontAiUrl && /^https?:\/\//i.test(s.fontAiUrl)) {
+    css += `@font-face{font-family:'LS2FontAi';src:url('${s.fontAiUrl}');font-display:swap;}\n`;
+    s.fontAiFamily = `'LS2FontAi', 'Caveat', 'Alex Brush', cursive`;
+  } else {
+    s.fontAiFamily = `'Caveat', 'Alex Brush', cursive`;
+  }
+
+  tag.innerHTML = css;
+
+  const meEl = document.getElementById('ls2-journal-me');
+  const aiEl = document.getElementById('ls2-journal-ai');
+  if (meEl) { meEl.style.fontFamily = s.fontMeFamily; meEl.style.fontSize = '20px'; }
+  if (aiEl) { aiEl.style.fontFamily = s.fontAiFamily; aiEl.style.fontSize = '20px'; }
+}
+
+function applyJournalPaper() {
+  const paperEl = document.getElementById('journal-paper');
+  if (!paperEl) return;
+
+  // 不要把 className 清空（你的 CSS 需要 paper-texture 等）
+  // 只覆盖 style
+  paperEl.style.removeProperty('background');
+  paperEl.style.removeProperty('backgroundImage');
+  paperEl.style.removeProperty('backgroundSize');
+  paperEl.style.removeProperty('backgroundColor');
+
+  const css = ls2Data?.settings?.journalPaperCSS || '';
+  if (css) paperEl.style.cssText += ';' + css;
+}
+
+window.openJournalBook = function () {
+  const cover = document.getElementById('journal-cover');
+  if (cover) cover.classList.add('opened');
+  applyJournalPaper();
+};
+
+window.closeJournalBook = function () {
+  const cover = document.getElementById('journal-cover');
+  if (cover) cover.classList.remove('opened');
+};
+
+window.switchJournalTab = function (tab) {
+  const tabs = document.querySelectorAll('.j-tab');
+  const mePage = document.getElementById('j-page-me');
+  const aiPage = document.getElementById('j-page-ai');
+
+  if (tabs && tabs.length >= 2) {
+    tabs[0].classList.remove('active');
+    tabs[1].classList.remove('active');
+  }
+
+  if (tab === 'me') {
+    if (tabs[0]) tabs[0].classList.add('active');
+    if (mePage) mePage.style.display = 'flex';
+    if (aiPage) aiPage.style.display = 'none';
+  } else {
+    if (tabs[1]) tabs[1].classList.add('active');
+    if (mePage) mePage.style.display = 'none';
+    if (aiPage) aiPage.style.display = 'flex';
+  }
+
+  renderLs2Journal(); // 切页后重绘贴纸（贴纸分 me/ai）
+};
+
+window.journalPrevPage = function () {
+  ensureJournalInitialized();
+  if (ls2Data.currentJournalIndex > 0) {
+    ls2Data.currentJournalIndex--;
+    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+    saveLs2Store();
+    renderLs2Journal();
+  } else {
+    if (typeof showToast === 'function') showToast('已经是第一页啦');
+  }
+};
+
+window.journalNextPage = function () {
+  ensureJournalInitialized();
+  if (ls2Data.currentJournalIndex < ls2Data.journals.length - 1) {
+    ls2Data.currentJournalIndex++;
+    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+    saveLs2Store();
+    renderLs2Journal();
+  } else {
+    if (typeof showToast === 'function') showToast('已经是最后一页啦');
+  }
+};
+
+window.journalNewPage = function () {
+  ensureJournalInitialized();
+  ls2Data.journals.push({
+    id: Date.now(),
+    date: new Date().toLocaleDateString(),
+    me: '',
+    ai: '',
+    stickersMe: [],
+    stickersAi: []
+  });
+  ls2Data.currentJournalIndex = ls2Data.journals.length - 1;
+
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  saveLs2Store();
+  renderLs2Journal();
+  if (typeof showToast === 'function') showToast('已开启新的一天日记');
+};
+
+// 保存手账文本（你 HTML 的 onblur 会调用）
+window.ls2SaveJournalData = function () {
+  ensureJournalInitialized();
+  const idx = ls2Data.currentJournalIndex || 0;
+  const j = ls2Data.journals[idx];
+
+  const meEl = document.getElementById('ls2-journal-me');
+  const aiEl = document.getElementById('ls2-journal-ai');
+  if (meEl) j.me = meEl.value || '';
+  if (aiEl) j.ai = aiEl.value || '';
+
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  saveLs2Store();
+};
+
+// 生成 TA 的日记
+window.ls2GenerateJournal = async function (isAuto = false) {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  ensureJournalInitialized();
+
+  const aiId = ls2Data.partnerId;
+  const ai = friendsData?.[aiId] || {};
+
+  if (!isAuto && typeof showToast === 'function') showToast('正在生成 TA 的日记...');
+
+  const history = await loadChatHistory(aiId);
+  const recent = (history || []).slice(-20).map(m => `${m.senderName === 'ME' ? 'Her(User)' : 'Me'}: ${m.text}`).join('\n');
+
+    const idx = ls2Data.currentJournalIndex || 0;
+  const j = ls2Data.journals[idx];
+  
+  // 提取今天你这页上的照片和贴纸内容，扔给AI
+  let userStickersInfo = (j.stickersMe || []).map(s => {
+      if (s.type === 'note') return `贴了张便利贴写着："${s.content}"`;
+      if (s.type === 'img') return `贴了一张照片（照片描述：${s.desc || '一张照片'}）`;
+      return '';
+  }).filter(Boolean).join('；');
+
+  const prompt = `
+[System Command]
+Roleplay: You are ${ai.realName || aiId}
+Persona: ${ai.persona || ''}
+
+Task:
+Write a diary entry for today.
+- Language: Chinese
+- First person "我"
+- 100-200 words
+
+[Context of User's Diary Today]
+User's diary text: "${j.me || '无记录'}"
+User added to their diary page: ${userStickersInfo || '没有贴其他东西'}
+
+[Instruction]
+Generate YOUR diary for today. You can react to what the user wrote or the photos they attached, or talk about recent chats.
+Recent chats:
+${recent || '(no recent chats)'}
+
+At the end of your diary, if you want to attach some stickers or photos of your own as annotations, use this EXACT format on a new line:
+[STICKER: shape=shape-heart, color=#ffcccc, text=想你！]
+(Available shapes: shape-rect, shape-square, shape-rounded, shape-circle, shape-heart, shape-star)
+[PHOTO: desc=一张看海的照片]
+
+Do not use markdown code blocks, just output the text and the tags.
+  `.trim();
+
+  const res = await callAiForSpecialTask(prompt);
+  if (!res) return;
+
+  let diary = res.replace(/```/g, '').trim();
+
+  // 解析AI生成的异形便利贴与图片
+  const stickerRegex = /$$STICKER:\s*shape=(.*?),\s*color=(.*?),\s*text=(.*?)$$/gi;
+  const photoRegex = /$$PHOTO:\s*desc=(.*?)$$/gi;
+
+  let match;
+  if (!j.stickersAi) j.stickersAi = [];
+
+  while ((match = stickerRegex.exec(diary)) !== null) {
+      j.stickersAi.push({
+          id: Date.now() + Math.random(),
+          type: 'note',
+          shape: match.trim(),
+          bg: match.trim(),
+          content: match.trim(),
+          x: 20 + Math.random() * 50,
+          y: 20 + Math.random() * 50,
+          rot: Math.random() * 20 - 10,
+          scale: 1
+      });
+  }
+  while ((match = photoRegex.exec(diary)) !== null) {
+      j.stickersAi.push({
+          id: Date.now() + Math.random(),
+          type: 'img',
+          shape: 'shape-rect',
+          content: 'https://images.unsplash.com/photo-1518134346374-184f9d21cea2?q=80&w=300&auto=format&fit=crop', // 给AI用的网图占位
+          desc: match.trim(),
+          hasBorder: true,
+          x: 20 + Math.random() * 50,
+          y: 20 + Math.random() * 50,
+          rot: Math.random() * 20 - 10,
+          scale: 1
+      });
+  }
+
+  diary = diary.replace(stickerRegex, '').replace(photoRegex, '').trim();
+
+  ls2Data.journals[idx].ai = diary;
+  ls2Store[ls2Key(aiId)] = ls2Data;
+  await saveLs2Store();
+
+  if (!isAuto) {
+    renderLs2Journal();
+    if (typeof showToast === 'function') showToast('日记已更新');
+  } else {
+    await ls2InjectMemory(aiId, 'TA写完了今天的日记。');
+  }
+};
+
+
+// 贴纸弹窗入口（你 HTML 的工具栏会调用）
+window.ls2AddJournalSticker = function () {
+    const modal = document.getElementById('ls2-sticker-modal');
+    if (!modal) return;
+
+    // reset
+    const text = document.getElementById('ls2-sticker-text');
+    const preview = document.getElementById('ls2-sticker-preview');
+    const border = document.getElementById('ls2-sticker-border');
+    const color = document.getElementById('ls2-sticker-color');
+    const shape = document.getElementById('ls2-sticker-shape');
+
+    if (text) text.value = '';
+    if (preview) { preview.style.backgroundImage = 'none'; preview.dataset.src = ''; }
+    if (border) border.checked = false;
+    if (color) color.value = '#fff4e6';
+    if (shape) shape.value = 'shape-rect';
+    
+    const bgPreview = document.getElementById('ls2-sticker-bg-preview');
+    if(bgPreview) { bgPreview.style.display = 'none'; bgPreview.style.backgroundImage = 'none'; }
+    const bgVal = document.getElementById('ls2-sticker-bg-val');
+    if(bgVal) bgVal.value = '';
+    const imgDesc = document.getElementById('ls2-sticker-img-desc');
+    if(imgDesc) imgDesc.value = '';
+
+    window.ls2SwitchStickerTab('text');
+    modal.classList.add('active');
+};
+
+
+window.ls2SwitchStickerTab = function (type) {
+  const btnText = document.getElementById('tab-sticker-text');
+  const btnImg = document.getElementById('tab-sticker-img');
+  const pText = document.getElementById('sticker-panel-text');
+  const pImg = document.getElementById('sticker-panel-img');
+  const modal = document.getElementById('ls2-sticker-modal');
+
+  if (!modal) return;
+  modal.dataset.mode = type;
+
+  if (btnText) btnText.className = type === 'text' ? 'tab-btn active' : 'tab-btn';
+  if (btnImg) btnImg.className = type === 'img' ? 'tab-btn active' : 'tab-btn';
+  if (pText) pText.style.display = type === 'text' ? 'block' : 'none';
+  if (pImg) pImg.style.display = type === 'img' ? 'block' : 'none';
+};
+
+window.ls2SetStickerColor = function (color) {
+  const el = document.getElementById('ls2-sticker-color');
+  if (el) el.value = color;
+};
+
+window.ls2HandleStickerFile = async function (input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    let base64 = e.target.result;
+    try {
+      if (typeof compressImage === 'function') base64 = await compressImage(base64, 400);
+    } catch {}
+    const preview = document.getElementById('ls2-sticker-preview');
+    if (preview) {
+      preview.style.backgroundImage = `url('${base64}')`;
+      preview.dataset.src = base64;
+    }
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+};
+
+window.ls2ConfirmAddSticker = function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  ensureJournalInitialized();
+
+  const modal = document.getElementById('ls2-sticker-modal');
+  const mode = modal?.dataset?.mode || 'text';
+  const shape = document.getElementById('ls2-sticker-shape')?.value || 'shape-rect';
+
+  const isMeTab = document.querySelectorAll('.j-tab')?.[0]?.classList.contains('active');
+  const idx = ls2Data.currentJournalIndex || 0;
+  const j = ls2Data.journals[idx];
+
+  const sticker = {
+    id: Date.now(),
+    type: mode === 'img' ? 'img' : 'note',
+    x: 40,
+    y: 35,
+    rot: Math.random() * 10 - 5,
+    shape,
+    hasBorder: false
+  };
+
+    sticker.scale = 1; // 默认缩放比例
+  if (sticker.type === 'note') {
+    const txt = (document.getElementById('ls2-sticker-text')?.value || '').trim();
+    if (!txt) return ls2Alert('请输入文字内容');
+    sticker.content = txt;
+    sticker.bg = document.getElementById('ls2-sticker-color')?.value || '#fff4e6';
+    sticker.bgImg = document.getElementById('ls2-sticker-bg-val')?.value || '';
+  } else {
+    const src = document.getElementById('ls2-sticker-preview')?.dataset?.src || '';
+    if (!src) return ls2Alert('请选择图片');
+    sticker.content = src;
+    sticker.desc = document.getElementById('ls2-sticker-img-desc')?.value || '一张照片';
+    sticker.hasBorder = !!document.getElementById('ls2-sticker-border')?.checked;
+  }
+
+
+  if (isMeTab) {
+    if (!j.stickersMe) j.stickersMe = [];
+    j.stickersMe.push(sticker);
+  } else {
+    if (!j.stickersAi) j.stickersAi = [];
+    j.stickersAi.push(sticker);
+  }
+
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  saveLs2Store();
+  renderLs2Journal();
+
+  modal?.classList.remove('active');
+};
+
+window.ls2DelSticker = function (stickerId) {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  ensureJournalInitialized();
+
+  const isMeTab = document.querySelectorAll('.j-tab')?.[0]?.classList.contains('active');
+  const idx = ls2Data.currentJournalIndex || 0;
+  const j = ls2Data.journals[idx];
+
+  if (isMeTab) j.stickersMe = (j.stickersMe || []).filter(s => String(s.id) !== String(stickerId));
+  else j.stickersAi = (j.stickersAi || []).filter(s => String(s.id) !== String(stickerId));
+
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  saveLs2Store();
+  renderLs2Journal();
+};
+
+
+// 纸张弹窗
+window.openPaperModal = function () {
+  const modal = document.getElementById('ls2-paper-modal');
+  const list = document.getElementById('paper-preview-list');
+  if (!modal || !list) return;
+
+  list.innerHTML = '';
+
+  const papers = [
+    { name: '纯白相纸', css: 'background-color:#fff; background-image:none;' },
+    { name: '方格笔记', css: 'background-color:#fff; background-image:linear-gradient(#e5e5e5 1px, transparent 1px),linear-gradient(90deg,#e5e5e5 1px, transparent 1px); background-size:20px 20px;' },
+    { name: '横线信笺', css: 'background-color:#fff; background-image:repeating-linear-gradient(transparent, transparent 23px, #e5e5e5 24px); background-size:100% 100%;' },
+    { name: '点阵手账', css: 'background-color:#fff; background-image:radial-gradient(#ccc 1.5px, transparent 1.5px); background-size:20px 20px;' },
+    { name: '复古羊皮', css: 'background-color:#f8f1e5; background-image:url("https://www.transparenttextures.com/patterns/aged-paper.png"); background-size:auto;' }
+  ];
+
+  papers.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'paper-preview-item';
+    div.innerHTML = `<div class="paper-preview-name">${p.name}</div>`;
+    div.style.cssText += p.css;
+
+    div.onclick = () => {
+      if (!ls2Data.settings) ls2Data.settings = {};
+      ls2Data.settings.journalPaperCSS = p.css;
+      ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+      saveLs2Store();
+      applyJournalPaper();
+      modal.classList.remove('active');
+    };
+    list.appendChild(div);
+  });
+
+  modal.classList.add('active');
+};
+
+// 渲染手账页（最终唯一版本）
+function renderLs2Journal() {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  ensureJournalInitialized();
+
+  // 封面
+  const cover = document.getElementById('journal-cover');
+  const coverBg = ls2Data.settings?.journalCover;
+  if (cover && coverBg) {
+    cover.style.backgroundImage = `url('${coverBg}')`;
+    cover.style.backgroundSize = 'cover';
+    cover.style.backgroundPosition = 'center';
+  }
+
+  applyJournalFonts();
+  applyJournalPaper();
+
+  const idx = ls2Data.currentJournalIndex || 0;
+  const j = ls2Data.journals[idx];
+
+  const dateEl = document.getElementById('journal-date-display');
+  if (dateEl) dateEl.innerText = j.date || '';
+
+  const meEl = document.getElementById('ls2-journal-me');
+  const aiEl = document.getElementById('ls2-journal-ai');
+  if (meEl) meEl.value = j.me || '';
+  if (aiEl) aiEl.value = j.ai || '';
+
+  // 贴纸
+  const container = document.getElementById('ls2-journal-stickers');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const isMeTab = document.querySelectorAll('.j-tab')?.[0]?.classList.contains('active');
+  const stickers = isMeTab ? (j.stickersMe || []) : (j.stickersAi || []);
+
+  stickers.forEach(s => {
+    const el = document.createElement('div');
+    el.className = `ls2-note type-${s.type}`;
+    el.style.left = (s.x || 40) + '%';
+    el.style.top = (s.y || 35) + '%';
+    
+    const scale = s.scale || 1;
+    el.style.transform = `rotate(${s.rot || 0}deg) scale(${scale})`;
+    el.style.transformOrigin = 'center center';
+
+        const delBtn = `<div class="note-control-btn note-del-btn" onclick="ls2DelSticker('${s.id}'); event.stopPropagation();"><i class="fas fa-times"></i></div>`;
+    const scaleBtns = `
+      <div class="note-control-btn scale-up-btn" onclick="ls2ScaleNote('${s.id}', 0.1); event.stopPropagation();"><i class="fas fa-search-plus"></i></div>
+      <div class="note-control-btn scale-down-btn" onclick="ls2ScaleNote('${s.id}', -0.1); event.stopPropagation();"><i class="fas fa-search-minus"></i></div>
+    `;
+
+
+    const shapeClass = s.shape || 'shape-rect';
+    let innerStyle = ``;
+        let innerHtml = '';
+    // 彻底去掉便利贴和照片上的胶带装饰
+    const tapeHtml = ''; 
+
+
+    if (s.type === 'note') {
+      if (s.bgImg) {
+          innerStyle += `background-image:url('${s.bgImg}'); background-size:cover; background-position:center; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.8);`;
+      } else {
+          innerStyle += `background-color:${s.bg || '#fff4e6'}; color:#333;`;
+      }
+      const fontF = isMeTab ? (ls2Data.settings.fontMeFamily || '') : (ls2Data.settings.fontAiFamily || '');
+      innerStyle += `font-family:${fontF}; font-size:18px; padding:15px;`;
+      innerHtml = `<span>${String(s.content || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+    } else {
+      el.style.width = '110px';
+      el.style.height = '110px';
+      if (s.hasBorder) {
+          innerStyle += `background:#fff; padding:6px;`;
+          innerHtml = `<img src="${s.content}" style="width:100%;height:100%;display:block;object-fit:cover;border-radius:inherit;">`;
+      } else {
+          innerHtml = `<img src="${s.content}" style="width:100%;height:100%;display:block;object-fit:contain;border-radius:inherit;">`;
+      }
+    }
+
+    el.innerHTML = `
+      ${delBtn}${scaleBtns}
+      <div class="sticker-inner ${shapeClass}" style="${innerStyle}">
+          ${innerHtml}
+      </div>
+    `;
+
+    ls2MakeDraggablePercent(el, s, document.getElementById('journal-paper'), () => {
+      ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+      saveLs2Store();
+    });
+
+    container.appendChild(el);
+  });
+
+}
+
+// 拖拽（百分比定位）
+function ls2MakeDraggablePercent(el, dataObj, boundsEl, onSave) {
+  let startX = 0, startY = 0;
+  el.onpointerdown = (e) => {
+     const ctrlBtn = e.target.closest('.note-control-btn');
+    if (ctrlBtn) return;
+
+    el.setPointerCapture(e.pointerId);
+    startX = e.clientX - el.offsetLeft;
+    startY = e.clientY - el.offsetTop;
+    el.style.zIndex = 999;
+
+    const onMove = (ev) => {
+      const px = ((ev.clientX - startX) / boundsEl.clientWidth) * 100;
+      const py = ((ev.clientY - startY) / boundsEl.clientHeight) * 100;
+
+      el.style.left = Math.max(0, Math.min(90, px)) + '%';
+      el.style.top = Math.max(0, Math.min(90, py)) + '%';
+    };
+
+    const onUp = (ev) => {
+      try { el.releasePointerCapture(ev.pointerId); } catch {}
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.style.zIndex = 50;
+
+      dataObj.x = parseFloat(el.style.left);
+      dataObj.y = parseFloat(el.style.top);
+
+      if (onSave) onSave();
+    };
+
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+  };
+}
+
+// ============================================================
+//  FRIDGE
+// ============================================================
+window.ls2ToggleFridgeDoor = function () {
+  const door = document.getElementById('ls2-fridge-door');
+  const inside = document.getElementById('ls2-fridge-inner');
+  if (!door || !inside) return;
+
+  if (door.classList.contains('open')) {
+    door.classList.remove('open');
+    inside.style.display = 'none';
+  } else {
+    door.classList.add('open');
+    setTimeout(() => {
+      inside.style.display = 'flex';
+      renderFridgeInside();
+      startFridgeTimer();
+    }, 400);
+  }
+};
+
+window.ls2AddFridgeItem = function (type) {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  if (!ls2Data.fridgeOut) ls2Data.fridgeOut = [];
+
+  const aiId = ls2Data.partnerId;
+  const ai = friendsData?.[aiId] || {};
+
+  if (type === 'note' || type === 'buy') {
+    const title = type === 'buy' ? '喊TA买菜' : '贴留言';
+    const desc = type === 'buy' ? '写下你想让TA买的食材/物品：' : '写一张便利贴：';
+
+    ls2Prompt(title, desc, '输入内容...', async (text) => {
+      text = (text || '').trim();
+      if (!text) return;
+
+      ls2Data.fridgeOut.push({
+        id: Date.now(),
+        type: 'note',
+        text,
+        by: 'me',
+        color: ['pink', 'blue', 'white'][Math.floor(Math.random() * 3)],
+        x: 20 + Math.random() * 50,
+        y: 10 + Math.random() * 60,
+        rot: Math.random() * 20 - 10
+      });
+
+      // buy：同时投递到 fridgeIn（30~90秒解锁）
+      if (type === 'buy') {
+        if (!ls2Data.fridgeIn) ls2Data.fridgeIn = [];
+        ls2Data.fridgeIn.push({
+          id: Date.now() + 1,
+          emoji: '🛍️',
+          name: text,
+          unlockTime: Date.now() + (Math.random() * 60000 + 30000)
+        });
+
+        // 同时给微信AI一条“你看到冰箱清单了”的提示（可选）
+        try {
+          if (typeof sendMessageToAI === 'function') {
+            sendMessageToAI(`[System: User left a grocery list on the fridge: "${text}". Reply briefly as ${ai.realName || 'you'} and say when you will buy it.]`);
+          }
+        } catch {}
+      }
+
+      ls2Store[ls2Key(aiId)] = ls2Data;
+      await saveLs2Store();
+      renderLs2Fridge();
+      if (typeof showToast === 'function') showToast(type === 'buy' ? '清单已贴上，等待TA送达' : '留言已贴上');
+    });
+  }
+
+  if (type === 'magnet') {
+    const fileInput = document.getElementById('global-img-changer');
+    if (!fileInput) return;
+
+    // 这里不强行劫持你的全局 handleImageFileChange
+    // 用一次性 onchange 来拿到图片，完事还原
+    const prev = fileInput.onchange;
+    fileInput.onchange = async (e) => {
+      try {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+          let base64 = evt.target.result;
+          try {
+            if (typeof compressImage === 'function') base64 = await compressImage(base64, 300);
+          } catch {}
+
+          ls2Data.fridgeOut.push({
+            id: Date.now(),
+            type: 'img',
+            text: base64,
+            x: 30 + Math.random() * 40,
+            y: 10 + Math.random() * 60,
+            rot: Math.random() * 20 - 10
+          });
+
+          ls2Store[ls2Key(aiId)] = ls2Data;
+          await saveLs2Store();
+          renderLs2Fridge();
+          if (typeof showToast === 'function') showToast('照片磁贴已贴上');
+        };
+        reader.readAsDataURL(f);
+      } finally {
+        fileInput.value = '';
+        fileInput.onchange = prev;
+      }
+    };
+
+    fileInput.click();
+  }
+};
+
+window.ls2DelFridgeItem = function (id) {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  ls2Data.fridgeOut = (ls2Data.fridgeOut || []).filter(x => x.id !== id);
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  saveLs2Store();
+  renderLs2Fridge();
+};
+
+function renderLs2Fridge() {
+  const door = document.getElementById('ls2-fridge-door');
+  const stage = document.getElementById('ls2-fridge-surface');
+  if (!door || !stage || !ls2Data) return;
+
+  // door bg
+  const bg = ls2Data.settings?.fridgeBg;
+  if (bg && bg.trim()) door.style.backgroundImage = `url('${bg}')`;
+
+  stage.innerHTML = '';
+  (ls2Data.fridgeOut || []).forEach(n => {
+    const el = document.createElement('div');
+    el.style.position = 'absolute';
+    el.style.left = (n.x || 30) + '%';
+    el.style.top = (n.y || 30) + '%';
+    el.style.transform = `rotate(${n.rot || 0}deg)`;
+    el.style.pointerEvents = 'auto';
+
+    if (n.type === 'note') {
+      el.className = `ls2-note crooked ${n.color || 'white'}`;
+      const who = n.by === 'me' ? 'Me' : (friendsData?.[ls2Data.partnerId]?.realName || 'TA');
+      el.innerHTML = `
+        <div style="font-size:10px; color:#aaa; margin-bottom:6px;">${who}</div>
+        <div>${String(n.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <i class="fas fa-trash note-del" onclick="ls2DelFridgeItem(${n.id}); event.stopPropagation();"></i>
+      `;
+    } else {
+      el.innerHTML = `
+        <img src="${n.text}" class="f-magnet-img" style="width:90px;border-radius:12px;box-shadow:0 6px 15px rgba(0,0,0,0.12);display:block;">
+        <i class="fas fa-times note-del" style="position:absolute; bottom:-10px; right:-10px; background:#fff; border-radius:50%; padding:2px;" onclick="ls2DelFridgeItem(${n.id}); event.stopPropagation();"></i>
+      `;
+    }
+
+    ls2MakeDraggablePercent(el, n, door, async () => {
+      ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+      await saveLs2Store();
+    });
+
+    stage.appendChild(el);
+  });
+}
+
+function renderFridgeInside() {
+  const s1 = document.getElementById('f-shelf-1');
+  const s2 = document.getElementById('f-shelf-2');
+  const s3 = document.getElementById('f-shelf-3');
+  if (!s1 || !s2 || !s3) return;
+
+  s1.innerHTML = '';
+  s2.innerHTML = '';
+  s3.innerHTML = '';
+
+  const arr = ls2Data?.fridgeIn || [];
+  arr.forEach((item, idx) => {
+    const locked = item.unlockTime && Date.now() < item.unlockTime;
+    const shelf = idx % 3 === 0 ? s1 : (idx % 3 === 1 ? s2 : s3);
+
+    if (locked) {
+      const sec = Math.ceil((item.unlockTime - Date.now()) / 1000);
+      shelf.insertAdjacentHTML('beforeend', `
+        <div class="f-item" style="opacity:.5;filter:grayscale(100%);position:relative;">
+          ${item.emoji || '🍎'}
+          <div class="f-item-timer">${sec}s</div>
+        </div>
+      `);
+    } else {
+      shelf.insertAdjacentHTML('beforeend', `
+        <div class="f-item" title="${(item.name||'').replace(/"/g,'&quot;')}" onclick="ls2EatFood(${item.id})">${item.emoji || '🍎'}</div>
+      `);
+    }
+  });
+}
+
+function startFridgeTimer() {
+  if (fridgeTimerInterval) clearInterval(fridgeTimerInterval);
+  fridgeTimerInterval = setInterval(async () => {
+    // 只有打开门才刷新，省资源
+    const inside = document.getElementById('ls2-fridge-inner');
+    if (!inside || inside.style.display === 'none') return;
+
+    let changed = false;
+    (ls2Data.fridgeIn || []).forEach(item => {
+      if (item.unlockTime && Date.now() >= item.unlockTime) {
+        item.unlockTime = null;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+      await saveLs2Store();
+    }
+    renderFridgeInside();
+  }, 1000);
+}
+
+window.ls2EatFood = async function (id) {
+  if (!ls2Data) return;
+  ls2Data.fridgeIn = (ls2Data.fridgeIn || []).filter(x => x.id !== id);
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  await saveLs2Store();
+  renderFridgeInside();
+  if (typeof showToast === 'function') showToast('吃掉啦');
+};
+
+// 饮食记录
+window.ls2LogDiet = async function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  const input = document.getElementById('my-diet-input');
+  const box = document.getElementById('diet-ai-reaction');
+  if (!input || !box) return;
+
+  const text = (input.value || '').trim();
+  if (!text) return;
+
+  const ai = friendsData?.[ls2Data.partnerId] || {};
+  box.style.display = 'block';
+  box.innerText = 'AI正在计算热量...';
+
+  const prompt = `
+[System Command]
+You are ${ai.realName || 'TA'}.
+User diet log: "${text}"
+Return JSON only:
+{"calories": 500, "comment":"一句简短吐槽/夸奖/提醒"}
+  `.trim();
+
+  const res = await callAiForSpecialTask(prompt);
+  if (!res) return;
+
+  try {
+    const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+    box.innerHTML = `<b>预估热量: ${data.calories} kcal</b><br>${String(data.comment || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}`;
+    ls2Data.dietLog = (ls2Data.dietLog || '') + `[我] ${text} (${data.calories}kcal)\n`;
+    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+    await saveLs2Store();
+  } catch (e) {
+    box.innerText = '计算失败（JSON解析错误）';
+  }
+};
+
+window.ls2CheckAiDiet = async function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  const box = document.getElementById('diet-ai-reaction');
+  if (!box) return;
+
+  const ai = friendsData?.[ls2Data.partnerId] || {};
+  box.style.display = 'block';
+  box.innerText = '正在查岗 TA 今天吃了什么...';
+
+  const prompt = `
+[System Command]
+You are ${ai.realName || 'TA'}.
+Generate a fake but plausible diet log for today consistent with persona.
+Return JSON only:
+{"diet":"...", "calories": 1200}
+  `.trim();
+
+  const res = await callAiForSpecialTask(prompt);
+  if (!res) return;
+
+  try {
+    const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+    box.innerHTML = `<b>${ai.realName || 'TA'} 的饮食查岗:</b><br>${String(data.diet||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}<br><span style="color:#aaa;font-size:10px;">预估热量: ${data.calories} kcal</span>`;
+    ls2Data.dietLog = (ls2Data.dietLog || '') + `[TA] ${data.diet}\n`;
+    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+    await saveLs2Store();
+  } catch {}
+};
+
+// ============================================================
+//  Q&A
+// ============================================================
+window.ls2GenerateQA = async function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  const aiId = ls2Data.partnerId;
+  const ai = friendsData?.[aiId] || {};
+
+  // 先让 AI 出题
+  if (typeof showToast === 'function') showToast('正在抽取今日灵魂拷问...');
+  const qPrompt = `
+[System Command]
+You are a relationship Q&A generator.
+Create ONE deep but daily-life-feeling question for a couple.
+Return JSON only: {"q":"..."}
+  `.trim();
+  const qRes = await callAiForSpecialTask(qPrompt);
+  if (!qRes) return;
+
+  let q = '今天你最想对我说的一句话是什么？';
+  try {
+    const data = JSON.parse(qRes.replace(/```json/gi,'').replace(/```/g,'').trim());
+    if (data.q) q = String(data.q).trim();
+  } catch {}
+
+  // 问用户回答
+  ls2Prompt('今日灵魂拷问', q, '我：', async (myA) => {
+    myA = (myA || '').trim();
+    if (!myA) return;
+
+    // AI 回答 + reaction
+    const aPrompt = `
+[System Command]
+You are ${ai.realName || aiId}. Persona: ${ai.persona || ''}
+Question: "${q}"
+User answer: "${myA}"
+Now give your answer (as ${ai.realName||'TA'}) and then a short reaction sentence.
+Return JSON only:
+{"aiA":"...", "reaction":"..."}
+    `.trim();
+
+    const aRes = await callAiForSpecialTask(aPrompt);
+    let aiA = '';
+    let reaction = '';
+    try {
+      const data = JSON.parse(aRes.replace(/```json/gi,'').replace(/```/g,'').trim());
+      aiA = (data.aiA || '').trim();
+      reaction = (data.reaction || '').trim();
+    } catch {
+      aiA = '这个问题…我想认真回答你。';
+      reaction = '你刚才那句话，我记下了。';
+    }
+
+    const entry = {
+      time: Date.now(),
+      q, myA, aiA, reaction
+    };
+    if (!ls2Data.qaHistory) ls2Data.qaHistory = [];
+    ls2Data.qaHistory.unshift(entry);
+
+    ls2Store[ls2Key(aiId)] = ls2Data;
+    await saveLs2Store();
+    renderLs2QA();
+
+    await ls2InjectMemory(aiId, `完成了一次 Q&A：${q}`);
+  });
+};
+
+function renderLs2QA() {
+  const container = document.getElementById('ls2-qa-container');
+  const history = document.getElementById('ls2-qa-history');
+  if (!container || !history) return;
+
+  const arr = ls2Data?.qaHistory || [];
+  if (!arr.length) {
+    container.innerHTML = '';
+    history.innerHTML = '<div class="chic-empty" style="padding:20px; text-align:center;">暂无问答记录</div>';
+    return;
+  }
+
+  const top = arr[0];
+  container.innerHTML = `
+    <div class="qa-card-flat">
+      <div class="qa-q-text">${top.q}</div>
+      <div class="qa-answer-row"><div class="qa-a-label">我</div><div class="qa-a-text">${top.myA}</div></div>
+      <div class="qa-answer-row"><div class="qa-a-label">TA</div><div class="qa-a-text">${top.aiA}</div></div>
+      <div class="qa-reaction">"${top.reaction || ''}"</div>
+    </div>
+  `;
+
+  history.innerHTML = '';
+  arr.slice(1).forEach(i => {
+    history.innerHTML += `
+      <div class="qa-history-item">
+        <div class="qa-hi-q" style="font-size:12px;font-weight:bold;color:#111;margin-bottom:4px;">${i.q}</div>
+        <div class="qa-hi-a" style="font-size:11px;color:#666;">我: ${i.myA}<br>TA: ${i.aiA}</div>
+      </div>
+    `;
+  });
+}
+
+// ============================================================
+//  TASKS
+// ============================================================
+window.ls2AddTask = function (who) {
+  if (!ls2Data || !ls2Data.partnerId) return;
+
+  ls2Prompt('添加清单', who === 'me' ? '写一条你今天要做的事：' : '写一条TA要做的事：', '例如：喝水 8 杯', async (text) => {
+    text = (text || '').trim();
+    if (!text) return;
+
+    const task = {
+      id: Date.now(),
+      desc: text,
+      current: 0,
+      max: 1
+    };
+
+    if (!ls2Data.tasks) ls2Data.tasks = { me: [], ai: [], evalText: '' };
+    ls2Data.tasks[who] = ls2Data.tasks[who] || [];
+    ls2Data.tasks[who].unshift(task);
+
+    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+    await saveLs2Store();
+    renderLs2Tasks();
+  });
+};
+
+window.ls2DelTask = async function (who, id) {
+  if (!ls2Data?.tasks) return;
+  ls2Data.tasks[who] = (ls2Data.tasks[who] || []).filter(t => t.id !== id);
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  await saveLs2Store();
+  renderLs2Tasks();
+};
+
+window.ls2TaskTick = async function (who, id) {
+  const list = ls2Data?.tasks?.[who] || [];
+  const t = list.find(x => x.id === id);
+  if (!t) return;
+
+  if (t.current < t.max) t.current++;
+  else t.current = t.max;
+
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  await saveLs2Store();
+  renderLs2Tasks();
+};
+
+window.ls2GenerateAITask = async function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  const ai = friendsData?.[ls2Data.partnerId] || {};
+
+  if (typeof showToast === 'function') showToast('正在为 TA 生成今日清单...');
+
+  const prompt = `
+[System Command]
+You are ${ai.realName || 'TA'}.
+Persona: ${ai.persona || ''}
+
+Generate 3 daily tasks for yourself (realistic).
+Return JSON only:
+[
+  {"desc":"...", "max":1},
+  {"desc":"...", "max":2},
+  {"desc":"...", "max":1}
+]
+  `.trim();
+
+  const res = await callAiForSpecialTask(prompt);
+  if (!res) return;
+
+  try {
+    const arr = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+    if (!Array.isArray(arr)) throw new Error('not array');
+
+    if (!ls2Data.tasks) ls2Data.tasks = { me: [], ai: [], evalText: '' };
+    ls2Data.tasks.ai = arr.map(it => ({
+      id: Date.now() + Math.random(),
+      desc: String(it.desc || '').trim(),
+      current: 0,
+      max: Math.max(1, parseInt(it.max, 10) || 1)
+    })).filter(x => x.desc);
+
+    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+    await saveLs2Store();
+    renderLs2Tasks();
+  } catch (e) {
+    console.error(res);
+    if (typeof showToast === 'function') showToast('生成失败：JSON解析错误');
+  }
+};
+
+window.ls2EvalTasks = async function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  const ai = friendsData?.[ls2Data.partnerId] || {};
+
+  const meTasks = (ls2Data.tasks?.me || []).map(t => `${t.desc} (${t.current}/${t.max})`).join('\n') || '(无)';
+  const aiTasks = (ls2Data.tasks?.ai || []).map(t => `${t.desc} (${t.current}/${t.max})`).join('\n') || '(无)';
+
+  const prompt = `
+[System Command]
+You are a daily couple coach.
+User tasks:
+${meTasks}
+
+Partner(${ai.realName || 'TA'}) tasks:
+${aiTasks}
+
+Write a short end-of-day evaluation (Chinese), cute but not too long.
+Return JSON only: {"text":"..."}
+  `.trim();
+
+  const res = await callAiForSpecialTask(prompt);
+  if (!res) return;
+
+  try {
+    const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+    if (!ls2Data.tasks) ls2Data.tasks = { me: [], ai: [], evalText: '' };
+    ls2Data.tasks.evalText = data.text || '今天也辛苦啦。';
+
+    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+    await saveLs2Store();
+    renderLs2Tasks();
+
+    await ls2InjectMemory(ls2Data.partnerId, '生成了一份日结报告。');
+  } catch {
+    if (typeof showToast === 'function') showToast('日结报告解析失败');
+  }
+};
+
+function renderLs2Tasks() {
+  const meBox = document.getElementById('ls2-tasks-me');
+  const aiBox = document.getElementById('ls2-tasks-ai');
+  const evalText = document.getElementById('ls2-task-eval-text');
+  if (!meBox || !aiBox || !evalText) return;
+
+  const tasks = ls2Data?.tasks || { me: [], ai: [], evalText: '' };
+
+  const renderOne = (who) => {
+    const list = tasks[who] || [];
+    if (!list.length) return '<div class="chic-empty">暂无数据</div>';
+    return list.map(t => `
+      <div class="flat-task-item">
+        <div style="flex:1;">
+          <div class="fti-desc">${t.desc}</div>
+          <div class="fti-prog">${t.current}/${t.max}</div>
+        </div>
+        <div class="fti-actions">
+          <div class="fti-btn ${t.current >= t.max ? 'done' : ''}" onclick="ls2TaskTick('${who}', ${t.id})">
+            <i class="fas ${t.current >= t.max ? 'fa-check' : 'fa-plus'}"></i>
+          </div>
+          <i class="fas fa-times fti-del" onclick="ls2DelTask('${who}', ${t.id})"></i>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  meBox.innerHTML = renderOne('me');
+  aiBox.innerHTML = renderOne('ai');
+  evalText.innerText = tasks.evalText || '等待日结...';
+}
+
+// ============================================================
+//  SETTINGS MODAL
+// ============================================================
+window.ls2ToggleSettings = function () {
+  const m = document.getElementById('ls2-settings-modal');
+  if (!m || !ls2Data) return;
+
+  const isActive = m.classList.contains('active');
+  if (isActive) {
+    m.classList.remove('active');
+    return;
+  }
+
+  // fill values
+  const spaceBg = document.getElementById('ls2-set-space-bg');
+  const fridgeBg = document.getElementById('ls2-set-fridge-bg');
+  const coverBg = document.getElementById('ls2-set-journal-cover');
+
+  const fontMe = document.getElementById('ls2-set-font-me');
+  const fontAi = document.getElementById('ls2-set-font-ai');
+
+  const tStatus = document.getElementById('ls2-set-status');
+  const tJournal = document.getElementById('ls2-set-journal');
+  const tFridge = document.getElementById('ls2-set-fridge');
+  const interval = document.getElementById('ls2-set-interval');
+
+  if (spaceBg) spaceBg.value = ls2Data.settings?.spaceBg || '';
+  if (fridgeBg) fridgeBg.value = ls2Data.settings?.fridgeBg || '';
+  if (coverBg) coverBg.value = ls2Data.settings?.journalCover || '';
+
+  if (fontMe) fontMe.value = ls2Data.settings?.fontMeUrl || '';
+  if (fontAi) fontAi.value = ls2Data.settings?.fontAiUrl || '';
+
+  if (tStatus) tStatus.checked = !!ls2Data.settings?.autoStatus;
+  if (tJournal) tJournal.checked = !!ls2Data.settings?.autoJournal;
+  if (tFridge) tFridge.checked = !!ls2Data.settings?.autoFridge;
+  if (interval) interval.value = ls2Data.settings?.intervalHrs || 4;
+
+  m.classList.add('active');
+};
+
+window.ls2SaveSettingsBtn = async function () {
+  if (!ls2Data || !ls2Data.partnerId) return;
+  if (!ls2Data.settings) ls2Data.settings = {};
+
+  const spaceBg = document.getElementById('ls2-set-space-bg');
+  const fridgeBg = document.getElementById('ls2-set-fridge-bg');
+  const coverBg = document.getElementById('ls2-set-journal-cover');
+
+  const fontMe = document.getElementById('ls2-set-font-me');
+  const fontAi = document.getElementById('ls2-set-font-ai');
+
+  const tStatus = document.getElementById('ls2-set-status');
+  const tJournal = document.getElementById('ls2-set-journal');
+  const tFridge = document.getElementById('ls2-set-fridge');
+  const interval = document.getElementById('ls2-set-interval');
+
+  if (spaceBg) ls2Data.settings.spaceBg = spaceBg.value.trim();
+  if (fridgeBg) ls2Data.settings.fridgeBg = fridgeBg.value.trim();
+  if (coverBg) ls2Data.settings.journalCover = coverBg.value.trim();
+
+  if (fontMe) ls2Data.settings.fontMeUrl = fontMe.value.trim();
+  if (fontAi) ls2Data.settings.fontAiUrl = fontAi.value.trim();
+
+  ls2Data.settings.autoStatus = !!tStatus?.checked;
+  ls2Data.settings.autoJournal = !!tJournal?.checked;
+  ls2Data.settings.autoFridge = !!tFridge?.checked;
+  ls2Data.settings.intervalHrs = parseFloat(interval?.value) || 4;
+
+  ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+  await saveLs2Store();
+
+  // 立即应用 UI
+  ls2UpdateHeader();
+  renderLs2Journal();
+  renderLs2Fridge();
+
+  // 关闭弹窗
+  const m = document.getElementById('ls2-settings-modal');
+  if (m) m.classList.remove('active');
+
+  if (typeof showToast === 'function') showToast('设置已保存');
+};
+
+// ============================================================
+//  AUTO GENERATION (00:00 / interval)
+// ============================================================
+function checkAutoGeneration() {
+  if (!ls2Data || !ls2Data.partnerId) return;
+
+  // 示例：只做“跨日自动生成 TA 日记”
+  const today = new Date().toLocaleDateString();
+  if (!ls2Data.settings) ls2Data.settings = {};
+  const last = ls2Data.settings.lastJournalDate || '';
+
+  if (ls2Data.settings.autoJournal && last !== today) {
+    ls2Data.settings.lastJournalDate = today;
+    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+    saveLs2Store();
+
+    // 静默生成
+    window.ls2GenerateJournal(true);
+  }
+}
+
+// ============================================================
+//  INIT HOOK (optional)
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // LoveSpace 本身不强制初始化，openLoveSpaceApp 时会 load store
+  // 但可以预加载一次避免第一次点开卡顿
+  // loadLs2Store().catch(()=>{});
+});
+// === [新增] 处理底图上传与清除 ===
+window.ls2HandleStickerBgFile = function(input) {
+    if (input.files && input.files[0]) { // 修正：必须是 files[0]
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            let base64 = e.target.result;
+            if (typeof compressImage === 'function') base64 = await compressImage(base64, 400);
+            const preview = document.getElementById('ls2-sticker-bg-preview');
+            const val = document.getElementById('ls2-sticker-bg-val');
+            if (preview && val) {
+                preview.style.backgroundImage = `url('${base64}')`;
+                preview.style.display = 'block';
+                val.value = base64;
+            }
+        };
+        reader.readAsDataURL(input.files[0]); // 修正：必须是 files[0]
+    }
+    input.value = '';
+}
+
+window.ls2ClearStickerBg = function() {
+    const preview = document.getElementById('ls2-sticker-bg-preview');
+    const val = document.getElementById('ls2-sticker-bg-val');
+    if (preview && val) {
+        preview.style.display = 'none';
+        preview.style.backgroundImage = 'none';
+        val.value = '';
+    }
+}
+
+// === [新增] 处理贴纸放大缩小 ===
+window.ls2ScaleNote = function(stickerId, diff) {
+    if (!ls2Data || !ls2Data.partnerId) return;
+    
+    const isMeTab = document.querySelectorAll('.j-tab')?.[0]?.classList.contains('active'); 
+    const idx = ls2Data.currentJournalIndex || 0;
+    const j = ls2Data.journals[idx];
+    
+    const stickers = isMeTab ? (j.stickersMe || []) : (j.stickersAi || []);
+    // 【核心修复】加上 String() 转换，防止浮点数精度丢失找不到贴纸
+    const s = stickers.find(x => String(x.id) === String(stickerId));
+    
+    if (s) {
+        s.scale = (s.scale || 1) + diff;
+        if (s.scale < 0.3) s.scale = 0.3; // 限制最小缩放比例
+        if (s.scale > 4) s.scale = 4;     // 限制最大缩放比例
+        ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+        saveLs2Store();
+        renderLs2Journal();
+    }
+}
+
+/* =========================================
+   [ARCADE] 游戏大厅与全局控制 (微调版)
+   ========================================= */
+let gameAiId = null; 
+
+window.openGameApp = function() {
+    const app = document.getElementById('gameApp');
+    if(!app) return;
+    app.classList.add('open');
+    
+    const select = document.getElementById('gc-ai-selector');
+    select.innerHTML = '';
+    const ids = Object.keys(friendsData);
+    if(ids.length === 0) {
+        select.innerHTML = '<option value="">无好友</option>';
+        alert("请先去微信添加一个 AI 好友！");
+        return;
+    }
+    
+    ids.forEach(id => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.text = friendsData[id].remark || friendsData[id].realName;
+        if(id === currentChatId) opt.selected = true; 
+        select.appendChild(opt);
+    });
+    
+    gameAiId = select.value;
+    backToGameLobby();
+}
+
+window.closeGameApp = function() {
+    document.getElementById('gameApp').classList.remove('open');
+}
+
+window.switchGamePartner = function() {
+    gameAiId = document.getElementById('gc-ai-selector').value;
+    backToGameLobby();
+}
+
+window.openSubGame = function(gameId) {
+    if(!gameAiId) return alert("请先选择对手！");
+    document.querySelectorAll('.gc-view').forEach(el => el.classList.remove('active'));
+    document.getElementById(`gc-view-${gameId}`).classList.add('active');
+        // === 新增：为对战类游戏填充双方头像 ===
+    if(gameId === 'truth' || gameId === 'emoji') {
+        const ai = friendsData[gameAiId];
+        const me = personasMeta[currentPersonaId] || {};
+        const avaMe = me.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200';
+        const avaAi = ai.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${ai.realName}`;
+        
+        if(gameId === 'truth') {
+            document.getElementById('g1-me-avatar').src = avaMe;
+            document.getElementById('g1-ai-avatar').src = avaAi;
+            document.getElementById('g1-ai-name').innerText = ai.remark || ai.realName;
+        }
+        if(gameId === 'emoji') {
+            document.getElementById('g2-me-avatar').src = avaMe;
+            document.getElementById('g2-ai-avatar').src = avaAi;
+            document.getElementById('g2-ai-name').innerText = ai.remark || ai.realName;
+        }
+    }
+
+    // 隐藏全局的大厅头部和玩伴选择区
+    const header = document.querySelector('#gameApp .gc-header');
+    const selector = document.querySelector('#gameApp .gc-player-select');
+    if (header) header.style.display = 'none';
+    if (selector) selector.style.display = 'none';
+    
+    // 初始化复位
+    if(gameId === 'truth') g1_reset();
+    if(gameId === 'emoji') g2_reset();
+    if(gameId === 'suitcase') g3_reset();
+    if(gameId === 'roulette') g4_reset();
+    if(gameId === 'turf') g5_reset();
+    
+    // 新增游戏复位
+    if(gameId === 'dice') g6_reset();
+    if(gameId === 'claw') g7_reset();
+    if(gameId === 'chess') g8_reset();
+    if(gameId === 'cards') g9_reset();
+    if(gameId === 'memory') g10_reset();
+    if(gameId === 'jump') g11_reset();
+}
+
+
+window.backToGameLobby = function() {
+    document.querySelectorAll('.gc-view').forEach(el => el.classList.remove('active'));
+    document.getElementById('gc-view-lobby').classList.add('active');
+    
+    // 回到大厅时恢复显示头部和选择区
+    const header = document.querySelector('#gameApp .gc-header');
+    const selector = document.querySelector('#gameApp .gc-player-select');
+    if (header) header.style.display = 'flex';
+    if (selector) selector.style.display = 'flex';
+}
+
+
+
+/* =========================================
+   [GAME 1] 午夜真心话 (双回合版)
+   ========================================= */
+let g1_truthData = null;
+
+function g1_reset() {
+    document.getElementById('g1-round-tag').innerText = "Round 1: TA 的秘密";
+    document.getElementById('g1-r1-area').style.display = 'block';
+    document.getElementById('g1-r2-area').style.display = 'none';
+    
+    document.getElementById('g1-cards-area').style.display = 'none';
+    document.getElementById('g1-r1-result').style.display = 'none';
+    document.getElementById('g1-start-btn').style.display = 'block';
+    document.getElementById('g1-start-btn').innerText = "让 TA 出题";
+    
+    document.getElementById('g1-r2-result').style.display = 'none';
+    document.getElementById('g1-my-q0').value = '';
+    document.getElementById('g1-my-q1').value = '';
+    document.getElementById('g1-my-q2').value = '';
+}
+
+window.g1_generate = async function() {
+    const ai = friendsData[gameAiId];
+    const btn = document.getElementById('g1-start-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 构思小秘密中...';
+    btn.disabled = true;
+
+    const prompt = `
+    [System Command: Two Truths and a Lie]
+    You are ${ai.realName}. Persona: ${ai.persona}
+    Task: Write 3 short statements about your little secrets, embarrassing moments, or romantic preferences.
+    - 2 must be TRUE (consistent with your persona).
+    - 1 must be a FAKE LIE (plausible but false).
+    - Tone: Teasing, cute, or slightly arrogant. Language: Chinese.
+    - Output strictly in JSON format. "lieIndex" is 0, 1, or 2.
+    {"statements": ["fact 1", "fact 2", "fact 3"], "lieIndex": 1, "taunt": "猜错要受惩罚哦~"}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.innerHTML = "让 TA 出题";
+    btn.disabled = false;
+
+    if(!res) return;
+    try {
+        const jsonStr = res.replace(/```json/gi,'').replace(/```/g,'').trim();
+        g1_truthData = JSON.parse(jsonStr);
+        
+        btn.style.display = 'none';
+        
+        const area = document.getElementById('g1-cards-area');
+        area.innerHTML = `<div style="font-size:13px; font-weight:700; text-align:center; color:#ff7e67;">"${g1_truthData.taunt}"</div>`;
+        
+        g1_truthData.statements.forEach((stmt, idx) => {
+            area.innerHTML += `<div class="g1-card" onclick="g1_guess(${idx}, this)">${stmt}</div>`;
+        });
+        area.style.display = 'flex';
+
+    } catch(e) { showToast("AI 害羞了，请重试。"); }
+}
+
+window.g1_guess = function(idx, cardEl) {
+    const cards = document.querySelectorAll('.g1-card');
+    cards.forEach(c => c.style.pointerEvents = 'none');
+    cardEl.classList.add('selected');
+
+    const resultBox = document.getElementById('g1-r1-result');
+    resultBox.style.display = 'block';
+
+    if (idx === g1_truthData.lieIndex) {
+        resultBox.innerHTML = `<span style="color:#07c160; font-size:16px; font-weight:bold;">🎉 猜对啦！</span><br><br>看来你很了解 TA 嘛！确实那句是骗人的。`;
+    } else {
+        resultBox.innerHTML = `<span style="color:#ff4d4f; font-size:16px; font-weight:bold;">💔 猜错咯！</span><br><br>你居然信了？真正的谎言其实是第 ${g1_truthData.lieIndex + 1} 句。`;
+    }
+    // 进入下一回合的按钮
+    resultBox.innerHTML += `<br><br><button class="gc-btn-secondary" style="border-color:#111; color:#111;" onclick="g1_startRound2()">轮到我出题 <i class="fas fa-arrow-right"></i></button>`;
+}
+
+window.g1_startRound2 = function() {
+    document.getElementById('g1-round-tag').innerText = "Round 2: 我的秘密";
+    document.getElementById('g1-r1-area').style.display = 'none';
+    document.getElementById('g1-r2-area').style.display = 'block';
+}
+
+window.g1_submitMyTurn = async function() {
+    const q0 = document.getElementById('g1-my-q0').value.trim();
+    const q1 = document.getElementById('g1-my-q1').value.trim();
+    const q2 = document.getElementById('g1-my-q2').value.trim();
+    
+    const lieRadio = document.querySelector('input[name="g1_my_lie"]:checked');
+    const lieIdx = lieRadio ? parseInt(lieRadio.value) : -1;
+    
+    if(!q0 || !q1 || !q2) { showToast("请填满 3 句话哦！"); return; }
+    
+    const btn = document.getElementById('g1-submit-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> TA 正在认真分析你...';
+    btn.disabled = true;
+
+    const ai = friendsData[gameAiId];
+    const prompt = `
+    [System Command: Two Truths and a Lie - AI Guessing]
+    You are ${ai.realName}. User provided 3 statements about themselves:
+    1. ${q0}
+    2. ${q1}
+    3. ${q2}
+    One of them is a lie. Make a guess which one it is (0, 1, or 2). Explain your reasoning playfully or affectionately based on your persona.
+    Return JSON ONLY: {"guessIndex": 0, "reason": "Your cute/funny reasoning"}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.style.display = 'none';
+
+    try {
+        const jsonStr = res.replace(/```json/gi,'').replace(/```/g,'').trim();
+        const data = JSON.parse(jsonStr);
+        const resultBox = document.getElementById('g1-r2-result');
+        resultBox.style.display = 'block';
+        
+        const aiGuess = data.guessIndex;
+        if(aiGuess === lieIdx) {
+            resultBox.innerHTML = `<b style="color:#07c160; font-size:16px;">🔍 糟糕，TA 居然识破了你！</b><br><br>${ai.realName}: "${data.reason}"<br><br><span style="color:#999; font-size:11px;">(TA 正确指出了第 ${aiGuess+1} 句是假的)</span>`;
+        } else {
+            resultBox.innerHTML = `<b style="color:#ff4d4f; font-size:16px;">🤡 哈哈，成功骗过 TA！</b><br><br>${ai.realName}: "${data.reason}"<br><br><span style="color:#999; font-size:11px;">(TA 选择了第 ${aiGuess+1} 句，但其实第 ${lieIdx+1} 句才是谎言)</span>`;
+        }
+        resultBox.innerHTML += `<br><br><button class="gc-btn-secondary" onclick="g1_reset()">再来一局</button>`;
+    } catch(e) { 
+        showToast("TA 晕头转向了，重试一次吧"); 
+        btn.style.display = 'block'; btn.innerHTML = '发送给 TA 验证'; btn.disabled = false;
+    }
+}
+
+/* =========================================
+   [GAME 2] 脑电波同频 Emoji (双回合版)
+   ========================================= */
+let g2_answer = "";
+
+function g2_reset() {
+    document.getElementById('g2-round-tag').innerText = "Round 1: 接收 TA 的电波";
+    document.getElementById('g2-r1-area').style.display = 'block';
+    document.getElementById('g2-r2-area').style.display = 'none';
+    
+    document.getElementById('g2-emoji-display').innerText = "❓❓❓";
+    document.getElementById('g2-taunt').innerText = "";
+    document.getElementById('g2-guess-input').value = "";
+    
+    document.getElementById('g2-guess-area').style.display = 'none';
+    document.getElementById('g2-r1-result').style.display = 'none';
+    document.getElementById('g2-start-btn').style.display = 'block';
+    document.getElementById('g2-start-btn').innerText = '连接 TA 的脑电波';
+    
+    document.getElementById('g2-r2-result').style.display = 'none';
+    document.getElementById('g2-my-emoji-input').value = '';
+    
+    const sendBtn = document.getElementById('g2-send-btn');
+    if(sendBtn) { sendBtn.style.display = 'block'; sendBtn.innerHTML = '发射'; sendBtn.disabled = false; }
+}
+
+window.g2_generate = async function() {
+    const ai = friendsData[gameAiId];
+    const btn = document.getElementById('g2-start-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送信号中...';
+    btn.disabled = true;
+
+    const prompt = `
+    [System Command: Emoji Charades]
+    You are ${ai.realName}. 
+    Task: Think of a word related to dating, food, romance, or a internet meme (e.g., 电影院, 珍珠奶茶, 吃火锅, 晚安).
+    Describe it using EXACTLY 3 to 4 Emojis.
+    Return strict JSON:
+    {"emojis": "🍿🎬🥤", "word": "看电影", "taunt": "提示：是我们周末经常做的事哦。"}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.style.display = 'none'; 
+
+    if(!res) { btn.style.display='block'; btn.innerHTML='重新接收'; btn.disabled=false; return; }
+    try {
+        const jsonStr = res.replace(/```json/gi,'').replace(/```/g,'').trim();
+        const data = JSON.parse(jsonStr);
+        g2_answer = data.word;
+        
+        document.getElementById('g2-emoji-display').innerText = data.emojis;
+        document.getElementById('g2-taunt').innerText = `"${data.taunt}"`;
+        
+        document.getElementById('g2-guess-area').style.display = 'flex';
+        document.getElementById('g2-r1-result').style.display = 'none';
+        document.getElementById('g2-guess-input').value = "";
+
+    } catch(e) { showToast("解析失败"); btn.style.display='block'; btn.innerHTML='重新接收'; btn.disabled=false; }
+}
+
+window.g2_guess = async function() {
+    const guess = document.getElementById('g2-guess-input').value.trim();
+    if(!guess || !g2_answer) return;
+
+    const resultBox = document.getElementById('g2-r1-result');
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 正在让 TA 判定...';
+
+    const ai = friendsData[gameAiId];
+    const prompt = `
+    [System: Judge the game]
+    You are ${ai.realName}. The correct answer was: "${g2_answer}". User guessed: "${guess}".
+    If meaning is close enough, they win. If wrong, they lose.
+    Reply with strict JSON: {"isCorrect": true/false, "comment": "Your cute/teasing response."}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    try {
+        const jsonStr = res.replace(/```json/gi,'').replace(/```/g,'').trim();
+        const data = JSON.parse(jsonStr);
+        
+        if (data.isCorrect) {
+            resultBox.innerHTML = `<span style="color:#07c160; font-weight:bold;">✨ 脑电波连上了！</span><br>标准答案: ${g2_answer}<br><br>${ai.realName}: "${data.comment}"`;
+        } else {
+            resultBox.innerHTML = `<span style="color:#ff4d4f; font-weight:bold;">🥀 完全没有默契！</span><br>标准答案是: ${g2_answer}<br><br>${ai.realName}: "${data.comment}"`;
+        }
+        resultBox.innerHTML += `<br><br><button class="gc-btn-secondary" style="border-color:#111; color:#111;" onclick="g2_startRound2()">换我发信号 <i class="fas fa-arrow-right"></i></button>`;
+    } catch(e) { resultBox.innerHTML = `答案是：${g2_answer}。`; }
+}
+
+window.g2_startRound2 = function() {
+    document.getElementById('g2-round-tag').innerText = "Round 2: 发送我的电波";
+    document.getElementById('g2-r1-area').style.display = 'none';
+    document.getElementById('g2-r2-area').style.display = 'block';
+}
+
+window.g2_submitMyTurn = async function() {
+    const input = document.getElementById('g2-my-emoji-input').value.trim();
+    if(!input) { showToast("先输入 Emoji 哦！"); return; }
+    
+    const btn = document.getElementById('g2-send-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    const ai = friendsData[gameAiId];
+    const prompt = `
+    [System Command: Emoji Charades - AI Guessing]
+    You are ${ai.realName}. User sent you these emojis to guess a word/activity: "${input}".
+    Guess what they mean. Make it cute or funny. 
+    Return JSON ONLY: {"guess": "Your guess (short)", "comment": "Your playful reaction to these emojis"}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.style.display = 'none';
+
+    try {
+        const jsonStr = res.replace(/```json/gi,'').replace(/```/g,'').trim();
+        const data = JSON.parse(jsonStr);
+        const resultBox = document.getElementById('g2-r2-result');
+        resultBox.style.display = 'block';
+        
+        resultBox.innerHTML = `
+            <div style="text-align:center; margin-bottom:15px; background:#fcfcfc; padding:15px; border-radius:12px; border:1px solid #eee;">
+                <div style="font-size:11px; color:#888;">TA 的猜测是：</div>
+                <div style="font-size:20px; font-weight:800; color:#111; margin:5px 0;">${data.guess}</div>
+                <div style="font-size:13px; color:#ff7e67; margin-top:10px;">"${data.comment}"</div>
+            </div>
+            <div style="font-size:11px; color:#999; text-align:center; margin-bottom:10px;">你觉得 TA 猜得准吗？</div>
+            <div style="display:flex; gap:10px;">
+                <button class="gc-btn-secondary" onclick="g2_judgeAIGuess(true)" style="border-color:#07c160; color:#07c160; background:#f4fbf6;">算你对吧</button>
+                <button class="gc-btn-secondary" onclick="g2_judgeAIGuess(false)" style="border-color:#ff4d4f; color:#ff4d4f; background:#fff5f5;">错得离谱</button>
+            </div>
+        `;
+    } catch(e) { 
+        showToast("TA 没看懂你的信号"); 
+        btn.style.display='block'; btn.innerHTML='发射'; btn.disabled=false;
+    }
+}
+
+window.g2_judgeAIGuess = function(isCorrect) {
+    const resultBox = document.getElementById('g2-r2-result');
+    if(isCorrect) {
+        resultBox.innerHTML = `<span style="color:#07c160; font-weight:bold; font-size:16px;">🎉 默契满分！TA 猜对啦！</span><br><br><button class="gc-btn-secondary" onclick="g2_reset()" style="margin-top:10px;">再来一局</button>`;
+    } else {
+        resultBox.innerHTML = `<span style="color:#ff4d4f; font-weight:bold; font-size:16px;">🥀 TA 完全不懂你在发什么！</span><br><br><button class="gc-btn-secondary" onclick="g2_reset()" style="margin-top:10px;">再来一局</button>`;
+    }
+}
+
+/* =========================================
+   [GAME 3] 平行宇宙逃亡 (韩系高定互动版)
+   ========================================= */
+let g3_items = [];    
+let g3_backpack = []; 
+let g3_scenarioData = "";
+
+function g3_reset() {
+    g3_items = [];
+    g3_backpack = [];
+    g3_scenarioData = "";
+    document.getElementById('g3-setup-area').style.display = 'block';
+    document.getElementById('g3-game-area').style.display = 'none';
+    
+    document.getElementById('g3-ending-btn').style.display = 'none';
+    document.getElementById('g3-ending-box').style.display = 'none';
+    
+    document.getElementById('g3-items-grid').innerHTML = '';
+    document.getElementById('g3-ai-dialogue').style.display = 'none';
+    document.getElementById('g3-bp-count').innerText = "0 / 4";
+    
+    for(let i=0; i<4; i++) {
+        const slot = document.getElementById(`g3-slot-${i}`);
+        if(slot) {
+            slot.className = 'g3-k-slot';
+            slot.innerHTML = '';
+            slot.removeAttribute('data-owner');
+        }
+    }
+}
+
+// 1. 生成剧本
+window.g3_generateScenario = async function() {
+    const ai = friendsData[gameAiId];
+    const btn = document.getElementById('g3-start-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SCANNING...';
+    btn.disabled = true;
+
+    const prompt = `
+    [System Command]
+    Generating a survival game scenario.
+    Context: User and ${ai.realName} are trapped in a Parallel Universe crisis.
+    1. Create a Crisis Name & Description (Short, tense, Chinese).
+    2. Generate 6 survival items (Emoji + Name). 3 useful, 3 weird/useless.
+    Return JSON:
+    {
+      "scenario": "例如：丧尸围城，我们被困在超市仓库...",
+      "items": [
+        {"id":0, "name": "平底锅", "emoji": "🍳"},
+        ...
+      ]
+    }
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.innerHTML = 'INITIALIZE';
+    btn.disabled = false;
+
+    if(!res) { showToast("信号连接失败"); return; }
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        g3_scenarioData = data.scenario;
+        g3_items = data.items.slice(0, 6);
+
+        document.getElementById('g3-setup-area').style.display = 'none';
+        document.getElementById('g3-game-area').style.display = 'flex';
+        document.getElementById('g3-scenario').innerText = g3_scenarioData;
+        
+        // AI 开场白
+        const dialogue = document.getElementById('g3-ai-dialogue');
+        const ava = ai.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${ai.realName}`;
+        dialogue.innerHTML = `
+            <div class="g3-k-avatar"><img src="${ava}"></div>
+            <div class="g3-k-bubble">看来我们要在这里活下去了... 地上有东西，你先挑！</div>
+        `;
+        dialogue.style.display = 'flex';
+        
+        const grid = document.getElementById('g3-items-grid');
+        grid.innerHTML = '';
+        g3_items.forEach((item) => {
+            grid.innerHTML += `
+                <div class="g3-k-card" id="g3-card-${item.id}" onclick="g3_userPick(${item.id})">
+                    <div class="g3-emoji">${item.emoji}</div>
+                    <div class="g3-name">${item.name}</div>
+                </div>
+            `;
+        });
+    } catch(e) { showToast("数据解析错误"); g3_reset(); }
+}
+
+// 2. 玩家挑选 -> AI 挑选 (带理由)
+window.g3_userPick = async function(itemId) {
+    const ai = friendsData[gameAiId];
+    const card = document.getElementById(`g3-card-${itemId}`);
+    
+    if(!card || card.classList.contains('picked')) return; 
+    if (g3_backpack.length >= 4) return; 
+
+    // --- 玩家回合 ---
+    const selectedItem = g3_items.find(i => i.id === itemId);
+    g3_backpack.push({ owner: 'ME', item: selectedItem });
+    card.classList.add('picked');
+    updateG3Backpack();
+    
+    if (g3_backpack.length >= 4) {
+        finishG3Picking();
+        return;
+    }
+
+    // --- AI 回合 ---
+    document.getElementById('g3-items-grid').style.pointerEvents = 'none';
+    const dialogue = document.querySelector('#g3-ai-dialogue .g3-k-bubble');
+    dialogue.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 正在思考...`;
+
+    const remainingItems = g3_items.filter(i => !g3_backpack.some(b => b.item.id === i.id));
+    const remainStr = remainingItems.map(i => `${i.id}:${i.name}`).join(', ');
+
+    const prompt = `
+    [System Command]
+    Roleplay: ${ai.realName}. Crisis: ${g3_scenarioData}.
+    User just picked: [${selectedItem.name}].
+    Remaining items: ${remainStr}.
+    
+    Task:
+    1. React to User's choice (Tsundere/Sweet/Funny based on persona).
+    2. Pick ONE item for yourself.
+    3. Give a REASON why you picked it.
+    
+    Return JSON: {"reaction": "...", "pickId": 123, "reason": "..."}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    
+    try {
+        let aiPick;
+        let replyText = "";
+        
+        if (!res) throw new Error("API Fail");
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        aiPick = g3_items.find(i => i.id === data.pickId) || remainingItems[0];
+        replyText = `${data.reaction} 那我就拿【${aiPick.name}】吧，${data.reason}`;
+        
+        // AI 拿取
+        g3_backpack.push({ owner: 'AI', item: aiPick });
+        const aiCard = document.getElementById(`g3-card-${aiPick.id}`);
+        if(aiCard) aiCard.classList.add('picked');
+        updateG3Backpack();
+
+        dialogue.innerText = replyText;
+        
+    } catch(e) { 
+        // 兜底：随机拿一个
+        const aiPick = remainingItems[0];
+        g3_backpack.push({ owner: 'AI', item: aiPick });
+        document.getElementById(`g3-card-${aiPick.id}`).classList.add('picked');
+        updateG3Backpack();
+        dialogue.innerText = "我随便拿了这个，快走吧！";
+    }
+
+    if (g3_backpack.length >= 4) {
+        finishG3Picking();
+    } else {
+        document.getElementById('g3-items-grid').style.pointerEvents = 'auto';
+    }
+}
+
+function updateG3Backpack() {
+    document.getElementById('g3-bp-count').innerText = `${Math.min(g3_backpack.length, 4)} / 4`;
+    g3_backpack.forEach((slotData, index) => {
+        if(index >= 4) return;
+        const slotEl = document.getElementById(`g3-slot-${index}`);
+        if(slotEl) {
+            slotEl.className = 'g3-k-slot filled';
+            slotEl.innerHTML = slotData.item.emoji;
+            slotEl.setAttribute('data-owner', slotData.owner === 'ME' ? 'ME' : 'TA');
+        }
+    });
+}
+
+function finishG3Picking() {
+    const ai = friendsData[gameAiId];
+    document.querySelector('#g3-ai-dialogue .g3-k-bubble').innerText = "背包装满了！准备出发！";
+    const endingBtn = document.getElementById('g3-ending-btn');
+    if(endingBtn) endingBtn.style.display = 'block';
+}
+
+// 3. 生成结局
+window.g3_generateEnding = async function() {
+    const btn = document.getElementById('g3-ending-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CALCULATING...';
+    btn.disabled = true;
+
+    const itemsStr = g3_backpack.map(b => `${b.owner==='ME'?'User':friendsData[gameAiId].realName}: ${b.item.name}`).join('; ');
+    const prompt = `
+    [System Command]
+    Write a short Ending Story (100 words).
+    Scenario: ${g3_scenarioData}
+    Items Used: ${itemsStr}
+    Describe how they used these items to survive (or fail funnily).
+    Return JSON: {"text": "..."}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.style.display = 'none';
+    
+    const endingBox = document.getElementById('g3-ending-box');
+    endingBox.style.display = 'block';
+    
+    try {
+        const text = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).text;
+        endingBox.innerHTML = `<b>【最终结局】</b><br>${text}<br><br><span style="font-size:10px;color:#aaa;">点击上方返回重新开始</span>`;
+    } catch(e) {
+        endingBox.innerHTML = "你们居然活下来了... (生成失败)";
+    }
+}
+
+
+/* =========================================
+   [GAME 4] 脸红心跳扭蛋机 (独立小剧场版)
+   ========================================= */
+let g4_isTwisting = false;
+let g4_currentPersona = null; // 存储当前抽到的人设
+
+// 1. 扭动逻辑
+window.g4_twist = function() {
+    if(g4_isTwisting) return;
+    g4_isTwisting = true;
+
+    // 视觉动画
+    const knob = document.querySelector('.g4-k-knob');
+    const glass = document.querySelector('.g4-k-glass');
+    knob.style.transform = 'rotate(360deg)';
+    glass.classList.add('shaking');
+    
+    if(navigator.vibrate) navigator.vibrate([20, 50, 20]);
+
+    // 延迟出货
+    setTimeout(() => {
+        const dropBall = document.getElementById('g4-dropped-ball');
+        dropBall.style.display = 'block';
+        
+        // 随机颜色
+        const colors = ['#ff9a9e', '#a1c4fd', '#fbc2eb', '#84fab0'];
+        dropBall.style.background = colors[Math.floor(Math.random()*colors.length)];
+        
+        // 弹窗
+        setTimeout(async () => {
+            await g4_openResult();
+            // 重置动画状态
+            knob.style.transform = 'rotate(0deg)';
+            glass.classList.remove('shaking');
+            dropBall.style.display = 'none';
+            g4_isTwisting = false;
+        }, 800);
+        
+    }, 1000);
+}
+
+// 2. 生成结果并打开弹窗
+async function g4_openResult() {
+    const ai = friendsData[gameAiId];
+    
+    // 弹窗先出来 loading
+    const modal = document.getElementById('g4-interaction-modal');
+    modal.classList.add('show');
+    document.getElementById('g4-role-title').innerText = "Loading...";
+    document.getElementById('g4-role-desc').innerText = "正在生成限定人设...";
+    document.getElementById('g4-chat-area').innerHTML = '';
+
+    const prompt = `
+    [System Command]
+    Generate a creative Roleplay Persona for ${ai.realName}.
+    Themes: [Sweet/Clingy], [Bossy/Domineering], [Shy/Tsundere], [Fantasy/Vampire].
+    Pick ONE.
+    Return JSON:
+    {
+      "title": "Title (e.g. 粘人猫咪)",
+      "desc": "Description (e.g. 变成了如果不抱抱就会死的体质)",
+      "firstLine": "First sentence to say to user."
+    }
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    if (!res) { g4_closeModal(); showToast("扭蛋空了？"); return; }
+
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        
+        g4_currentPersona = data; // 存下来
+        
+        document.getElementById('g4-role-title').innerText = data.title;
+        document.getElementById('g4-role-desc').innerText = data.desc;
+        
+        // AI 发第一句
+        g4_appendBubble('ai', data.firstLine);
+        
+    } catch(e) { g4_closeModal(); }
+}
+
+// 3. 弹窗内的小剧场聊天
+window.g4_sendMiniMsg = async function() {
+    const input = document.getElementById('g4-mini-input');
+    const text = input.value.trim();
+    if(!text) return;
+    
+    // 用户发言
+    g4_appendBubble('me', text);
+    input.value = '';
+
+    // AI 回复 (带上特定人设)
+    const ai = friendsData[gameAiId];
+    const prompt = `
+    [System Command]
+    Roleplay Game.
+    You are ${ai.realName}, BUT currently you have this BUFF:
+    [${g4_currentPersona.title}]: ${g4_currentPersona.desc}
+    
+    User said: "${text}"
+    Reply staying STRICTLY in this temporary persona. Short message.
+    `;
+    
+    // 这里简单用 callAiForSpecialTask 模拟聊天
+    // 如果要更连贯，需要把 mini-chat 历史也传进去，这里简化处理只传上一句
+    const res = await callAiForSpecialTask(prompt);
+    if(res) {
+        // 清理一下可能的引号
+        const reply = res.replace(/"/g, '').trim();
+        g4_appendBubble('ai', reply);
+    }
+}
+
+function g4_appendBubble(role, text) {
+    const area = document.getElementById('g4-chat-area');
+    const div = document.createElement('div');
+    div.className = `g4-bubble ${role}`;
+    div.innerText = text;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+}
+
+// 4. 关闭弹窗
+window.g4_closeModal = function() {
+    document.getElementById('g4-interaction-modal').classList.remove('show');
+    g4_currentPersona = null;
+}
+
+
+/* =========================================
+   [GAME 5] 同居领地战 (家规契约版)
+   ========================================= */
+let g5_board = [0,0,0, 0,0,0, 0,0,0]; 
+const g5_tileNames = [
+    {icon:"📺", name:"电视点播权"}, {icon:"🛏️", name:"大床左边"}, {icon:"🎮", name:"游戏机归属"},
+    {icon:"🧹", name:"免做家务权"}, {icon:"🛋️", name:"懒人沙发"}, {icon:"🐱", name:"撸猫优先权"},
+    {icon:"🍫", name:"零食掌控权"}, {icon:"💻", name:"书房使用权"}, {icon:"🎵", name:"切歌权"}
+];
+let g5_targetIndex = -1;
+
+function g5_reset() {
+    g5_board = [0,0,0, 0,0,0, 0,0,0];
+    document.getElementById('g5-result').style.display = 'none';
+    document.getElementById('g5-dialog-modal').classList.remove('show');
+    document.getElementById('g5-contract-modal').classList.remove('show');
+    
+    // 重置契约界面状态
+    document.getElementById('g5-rule-input').value = '';
+    document.getElementById('g5-rule-input').readOnly = false;
+    document.getElementById('g5-force-sign-btn').style.display = 'block';
+    document.getElementById('g5-ai-signature-area').style.display = 'none';
+    document.getElementById('g5-close-contract-btn').style.display = 'none';
+    
+    g5_renderBoard();
+}
+
+function g5_renderBoard() {
+    const grid = document.getElementById('g5-grid');
+    grid.innerHTML = '';
+    
+    g5_board.forEach((val, idx) => {
+        const item = g5_tileNames[idx];
+        const div = document.createElement('div');
+        div.className = 'g5-tile';
+        
+        if(val === 1) { 
+            div.classList.add('owner-me');
+            div.innerHTML = `<div class="g5-tile-icon">ME</div><div class="g5-tile-name">Mine</div>`;
+        } else if (val === 2) { 
+            div.classList.add('owner-ai');
+            div.innerHTML = `<div class="g5-tile-icon">TA</div><div class="g5-tile-name">Taken</div>`;
+        } else {
+            div.innerHTML = `<div class="g5-tile-icon">${item.icon}</div><div class="g5-tile-name">${item.name}</div>`;
+            div.onclick = () => g5_openNegotiation(idx);
+        }
+        grid.appendChild(div);
+    });
+}
+
+function g5_openNegotiation(idx) {
+    g5_targetIndex = idx;
+    const item = g5_tileNames[idx];
+    document.getElementById('g5-target-name').innerText = item.name;
+    document.getElementById('g5-argument').value = '';
+    document.getElementById('g5-dialog-modal').classList.add('show');
+    setTimeout(() => document.getElementById('g5-argument').focus(), 300);
+}
+
+window.g5_submitArgument = async function() {
+    const arg = document.getElementById('g5-argument').value.trim();
+    if(!arg) { showToast("给个理由嘛！"); return; }
+    
+    const tileName = g5_tileNames[g5_targetIndex].name;
+    const ai = friendsData[gameAiId];
+    
+    const btn = document.getElementById('g5-submit-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> TA 正在斟酌...';
+    btn.disabled = true;
+
+    const prompt = `
+    [System Command: Couple Turf War]
+    You are ${ai.realName}. Persona: ${ai.persona}.
+    User wants to claim [${tileName}] in your shared home. Reason: "${arg}"
+    Judge if the reason is cute, valid, or funny.
+    If agree: true, yield the territory.
+    If agree: false, take it for yourself playfully or stubbornly.
+    Return JSON ONLY: {"agree": true/false, "reply": "Short spoken response"}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.innerHTML = '尝试说服 TA';
+    btn.disabled = false;
+    document.getElementById('g5-dialog-modal').classList.remove('show');
+
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        const resBox = document.getElementById('g5-result');
+        resBox.style.display = 'block';
+        
+        if(data.agree) {
+            g5_board[g5_targetIndex] = 1; 
+            resBox.innerHTML = `<b style="color:#111;">成交！</b><br><span style="font-family:'Songti SC'; font-size:13px; color:#555;">“${data.reply}”</span>`;
+        } else {
+            g5_board[g5_targetIndex] = 2; 
+            resBox.innerHTML = `<b style="color:#aaa;">谈判破裂...</b><br><span style="font-family:'Songti SC'; font-size:13px; color:#555;">“${data.reply}”</span>`;
+        }
+        
+        g5_renderBoard();
+        g5_checkWin();
+    } catch(e) { showToast("AI 走神了，再试一次"); }
+}
+
+function g5_checkWin() {
+    const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    let winner = 0;
+    for(let line of lines) {
+        if(g5_board[line[0]] !== 0 && g5_board[line[0]] === g5_board[line[1]] && g5_board[line[0]] === g5_board[line[2]]) {
+            winner = g5_board[line[0]]; break;
+        }
+    }
+    
+    if(winner !== 0) {
+        setTimeout(() => g5_showContract(winner), 800);
+    } else if (!g5_board.includes(0)) {
+        showKAlert("平局！这个家看来是没法分了。", g5_reset);
+    }
+}
+
+// 赢家签订契约逻辑
+function g5_showContract(winner) {
+    const modal = document.getElementById('g5-contract-modal');
+    const winnerText = document.getElementById('g5-contract-winner');
+    const ruleInput = document.getElementById('g5-rule-input');
+    const ai = friendsData[gameAiId];
+    
+    modal.classList.add('show');
+    
+    if (winner === 1) {
+        // 我赢了
+        winnerText.innerHTML = `鉴于 <b>[ User ]</b> 赢得了本次领地战<br>特此颁布以下不可撤销之规矩：`;
+        ruleInput.value = "";
+        ruleInput.readOnly = false;
+        ruleInput.placeholder = "作为赢家，写下你要定下的一条家规（如：以后你必须听我的）...";
+        document.getElementById('g5-force-sign-btn').style.display = 'block';
+        document.getElementById('g5-force-sign-btn').innerText = "勒令 TA 签字";
+        
+        // 绑定签字逻辑为“AI 被迫签字”
+        document.getElementById('g5-force-sign-btn').onclick = () => g5_aiSignContract('user_won');
+
+    } else {
+        // AI 赢了，AI 强制定规矩
+        winnerText.innerHTML = `鉴于 <b>[ ${ai.realName} ]</b> 赢得了本次领地战<br>特此对你颁布以下规矩：`;
+        ruleInput.value = "正在生成霸王条款...";
+        ruleInput.readOnly = true;
+        document.getElementById('g5-force-sign-btn').style.display = 'none';
+        
+        // 生成 AI 的规矩
+        setTimeout(async () => {
+            const prompt = `You are ${ai.realName}. You just defeated User in a territory war in your shared home. Write ONE bossy, teasing, or overly clingy house rule that User MUST obey. Just the rule itself.`;
+            const res = await callAiForSpecialTask(prompt);
+            const rule = res ? res.replace(/["']/g, '') : "以后家里的事我说了算。";
+            ruleInput.value = rule;
+            
+            document.getElementById('g5-force-sign-btn').style.display = 'block';
+            document.getElementById('g5-force-sign-btn').innerText = "我认栽，我签字";
+            document.getElementById('g5-force-sign-btn').onclick = () => {
+                document.getElementById('g5-ai-signature-area').style.display = 'block';
+                document.getElementById('g5-ai-reaction').innerText = "“乖乖听话就对了。”";
+                document.getElementById('g5-ai-sign').innerText = "User"; // 假装用户签的
+                document.getElementById('g5-force-sign-btn').style.display = 'none';
+                document.getElementById('g5-close-contract-btn').style.display = 'block';
+            };
+        }, 1000);
+    }
+}
+
+async function g5_aiSignContract(mode) {
+    const rule = document.getElementById('g5-rule-input').value.trim();
+    if(!rule) { showToast("规矩不能为空！"); return; }
+    
+    const btn = document.getElementById('g5-force-sign-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> TA 正在看合同...';
+    btn.disabled = true;
+
+    const ai = friendsData[gameAiId];
+    const prompt = `
+    [System Command] You are ${ai.realName}. Persona: ${ai.persona}.
+    User defeated you and forced you to sign this house rule: "${rule}".
+    React to it. You must sign it, but you can complain, act cute, or be secretly happy.
+    Return JSON ONLY: {"reaction": "..."}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.style.display = 'none';
+    btn.disabled = false;
+
+    try {
+        const text = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).reaction;
+        document.getElementById('g5-ai-signature-area').style.display = 'block';
+        document.getElementById('g5-ai-reaction').innerText = `“${text}”`;
+        document.getElementById('g5-ai-sign').innerText = ai.realName; // AI 花体签名
+        
+        document.getElementById('g5-close-contract-btn').style.display = 'block';
+        
+        // 作为彩蛋，把这个条约存入记忆
+        saveMessageToHistory(gameAiId, {
+            text: `[ Love Space 协议达成 ] 我定下家规：${rule}。TA的反应：${text}`,
+            type: 'sent', senderName: 'ME', isOffline: true
+        });
+
+    } catch(e) {
+        showToast("TA 把合同撕了，请重试");
+        btn.style.display = 'block'; btn.innerText = "勒令 TA 签字";
+    }
+}
+
+
+/* =========================================
+   [GAME 6] 午夜微醺局 (酒后吐真言)
+   ========================================= */
+let g6_myDice = [];
+let g6_drunkMe = 0;
+let g6_drunkAi = 0;
+
+function g6_reset() {
+    g6_drunkMe = 0;
+    g6_drunkAi = 0;
+    updateG6Cups();
+    
+    document.getElementById('g6-my-dice').innerText = "🎲 🎲 🎲 🎲 🎲";
+    document.getElementById('g6-ai-dialogue').style.display = 'none';
+    document.getElementById('g6-action-area').style.display = 'none';
+    document.getElementById('g6-start-btn').style.display = 'block';
+    document.getElementById('g6-confession-modal').classList.remove('show');
+}
+
+function updateG6Cups() {
+    const meCups = document.getElementById('g6-cups-me').children;
+    const aiCups = document.getElementById('g6-cups-ai').children;
+    
+    for(let i=0; i<3; i++) {
+        meCups[i].className = i < g6_drunkMe ? "fas fa-glass-whiskey filled" : "fas fa-glass-whiskey empty";
+        aiCups[i].className = i < g6_drunkAi ? "fas fa-glass-whiskey filled" : "fas fa-glass-whiskey empty";
+    }
+}
+
+window.g6_start = function() {
+    document.getElementById('g6-start-btn').style.display = 'none';
+    const diceBox = document.getElementById('g6-my-dice');
+    diceBox.classList.add('shake-anim');
+    diceBox.innerText = "🎲 🎲 🎲 🎲 🎲";
+    
+    setTimeout(() => {
+        diceBox.classList.remove('shake-anim');
+        const faces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+        g6_myDice = Array.from({length: 5}, () => Math.floor(Math.random() * 6) + 1);
+        diceBox.innerText = g6_myDice.map(d => faces[d-1]).join(' ');
+        
+        document.getElementById('g6-action-area').style.display = 'flex';
+        const dlg = document.getElementById('g6-ai-dialogue');
+        dlg.style.display = 'block';
+        dlg.innerHTML = `午夜的酒已经倒好。你先喊点？`;
+        document.getElementById('g6-bid-input').value = "";
+    }, 800);
+}
+
+window.g6_makeBid = async function() {
+    const input = document.getElementById('g6-bid-input').value.trim();
+    if(!input) { showToast("请先喊数！"); return; }
+    
+    const dlg = document.getElementById('g6-ai-dialogue');
+    dlg.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> TA 正在看牌...';
+    
+    const ai = friendsData[gameAiId];
+    // 根据醉意改变 prompt
+    let drunkPrompt = "";
+    if (g6_drunkAi === 1) drunkPrompt = "You had 1 drink. You are slightly tipsy, more relaxed, maybe giggly.";
+    else if (g6_drunkAi === 2) drunkPrompt = "You had 2 drinks. You are quite drunk, bold, clingy, or a bit aggressive.";
+
+    const prompt = `
+    [System Command: Liar's Dice Logic]
+    You are ${ai.realName}. Persona: ${ai.persona}.
+    ${drunkPrompt}
+    User bid: "${input}".
+    Decide whether to "bid" higher or "call" (open).
+    Return JSON ONLY: {"action": "bid" or "call", "content": "Your spoken reply", "dice": "your 5 hidden dice numbers (e.g. 1,3,4,6,6)"}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        if(data.action === 'call') {
+            dlg.innerHTML = `<b style="color:#ff4d4f;">TA 喊了“开”！</b><br>“${data.content}”<br><br>TA 的骰子是：[ ${data.dice} ]<br>你的骰子是：[ ${g6_myDice.join(', ')} ]<br><br>谁输了？`;
+            
+            // 弹出选择谁喝酒的界面
+            setTimeout(() => {
+                showKConfirm("判定时刻", "谁在吹牛？", 
+                    () => g6_drink('me'), // 确定=我输
+                    () => g6_drink('ai')  // 取消=TA输
+                );
+            }, 1000);
+        } else {
+            dlg.innerHTML = `TA 接着喊：<b>${data.content}</b><br><br>到你了，继续喊还是开？`;
+        }
+    } catch(e) { dlg.innerText = "TA 好像醉得听不清你在喊什么..."; }
+}
+
+window.g6_callLiar = async function() {
+    const dlg = document.getElementById('g6-ai-dialogue');
+    dlg.innerHTML = '你大喊一声：<b>开！</b><br>正在揭晓底牌...';
+    
+    const aiDice = Array.from({length: 5}, () => Math.floor(Math.random() * 6) + 1).join(', ');
+    
+    setTimeout(() => {
+        dlg.innerHTML += `<br><br>TA 的骰子：[ ${aiDice} ]<br>你的骰子：[ ${g6_myDice.join(', ')} ]<br><br>请判定谁输谁赢。`;
+        setTimeout(() => {
+            showKConfirm("判定时刻", "是谁在吹牛？", 
+                () => g6_drink('me'), 
+                () => g6_drink('ai')  
+            );
+        }, 1000);
+    }, 1000);
+}
+
+// 核心：喝酒逻辑
+async function g6_drink(loser) {
+    if (loser === 'me') {
+        g6_drunkMe++;
+        updateG6Cups();
+        if (g6_drunkMe >= 3) {
+            showKAlert("你已经喝了三杯，彻底醉倒了...<br>游戏结束，早点休息吧。");
+            setTimeout(g6_reset, 2000);
+            return;
+        } else {
+            document.getElementById('g6-action-area').style.display = 'none';
+            document.getElementById('g6-ai-dialogue').innerHTML = "你罚饮一杯。酒意微醺，再来一局。";
+            document.getElementById('g6-start-btn').style.display = 'block';
+            document.getElementById('g6-start-btn').innerText = "下一局 (Next Round)";
+        }
+    } else {
+        // AI 喝酒
+        g6_drunkAi++;
+        updateG6Cups();
+        
+        if (g6_drunkAi >= 3) {
+            // 触发终极事件：午夜留声机 (酒后吐真言)
+            triggerMidnightConfession();
+        } else {
+            // 普通喝酒，AI 给出一句微醺反应
+            const ai = friendsData[gameAiId];
+            document.getElementById('g6-ai-dialogue').innerHTML = '<i class="fas fa-spinner fa-spin"></i> TA 喝下了一杯酒...';
+            
+            const prompt = `[System] You are ${ai.realName}. You lost the dice game and drank a glass of alcohol. You are at drunk level ${g6_drunkAi}/3. Output ONE short sentence reacting to the drink. Make it slightly ambiguous or teasing. JSON ONLY: {"text":"..."}`;
+            const res = await callAiForSpecialTask(prompt);
+            try {
+                const text = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).text;
+                document.getElementById('g6-ai-dialogue').innerHTML = `TA 饮下一杯，脸颊微红：<br>“${text}”`;
+            } catch(e) {
+                document.getElementById('g6-ai-dialogue').innerHTML = "TA 默默喝完了一杯，眼神开始迷离。";
+            }
+            
+            document.getElementById('g6-action-area').style.display = 'none';
+            document.getElementById('g6-start-btn').style.display = 'block';
+            document.getElementById('g6-start-btn').innerText = "继续灌 TA (Next Round)";
+        }
+    }
+}
+
+// 终极大招：午夜独白
+async function triggerMidnightConfession() {
+    const modal = document.getElementById('g6-confession-modal');
+    const textBox = document.getElementById('g6-confession-text');
+    const ai = friendsData[gameAiId];
+    
+    modal.classList.add('show');
+    textBox.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+    
+    const prompt = `
+    [System Command: Midnight Drunk Confession]
+    You are ${ai.realName}. Persona: ${ai.persona}.
+    You have lost the drinking game 3 times and are now completely drunk. 
+    You drop all your defenses. Write a very emotional, deep, or intensely possessive "drunk confession" (about 50-80 words) to the User. 
+    It should reveal a hidden feeling you normally wouldn't say.
+    Return JSON: {"text": "..."}
+    `;
+    
+    const res = await callAiForSpecialTask(prompt);
+    try {
+        const text = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).text;
+        textBox.innerHTML = `“${text}”`;
+        
+        // 记入历史记录，作为美好回忆
+        saveMessageToHistory(gameAiId, {
+            text: `[ 午夜微醺局 ] TA 喝醉后的独白：${text}`,
+            type: 'received', senderName: ai.realName, isOffline: true
+        });
+
+    } catch(e) {
+        textBox.innerHTML = "“别摇了，我真的醉了... 我只是想说，有你在身边真好。”";
+    }
+}
+
+
+/* =========================================
+   [GAME 7] 心跳娃娃机 (白色拟物版 - 完整逻辑)
+   ========================================= */
+
+let g7_clawPos = 45; // 爪子位置 (百分比)
+let g7_moveInterval = null; // 移动定时器
+let g7_isDropping = false; // 是否正在下爪
+
+// 复位游戏状态
+function g7_reset() {
+    const clawAssembly = document.getElementById('g7-claw-assembly');
+    const cable = document.getElementById('g7-cable');
+    const head = document.getElementById('g7-claw-head');
+    const resultBox = document.getElementById('g7-result');
+    const dropBtn = document.getElementById('g7-drop-btn');
+
+    if (clawAssembly) clawAssembly.style.left = '45%';
+    if (cable) cable.style.height = '20px';
+    if (head) head.classList.remove('closed');
+    if (resultBox) resultBox.style.display = 'none';
+    if (dropBtn) dropBtn.disabled = false;
+    
+    g7_clawPos = 45;
+    g7_isDropping = false;
+    g7_stopMove(); // 确保定时器被清除
+     const aiTurnBox = document.getElementById('g7-ai-turn');
+    if (aiTurnBox) {
+        aiTurnBox.style.display = 'none';
+    }
+}
+
+// 开始移动 (direction: -1为左, 1为右)
+window.g7_startMove = function(direction) {
+    if (g7_isDropping || g7_moveInterval) return;
+    
+    g7_moveInterval = setInterval(() => {
+        g7_clawPos += direction * 2; // 移动速度
+        if (g7_clawPos < 5) g7_clawPos = 5;
+        if (g7_clawPos > 85) g7_clawPos = 85;
+        
+        const clawAssembly = document.getElementById('g7-claw-assembly');
+        if (clawAssembly) clawAssembly.style.left = g7_clawPos + '%';
+    }, 50); // 每50ms移动一次
+}
+
+// 停止移动
+window.g7_stopMove = function() {
+    if(g7_moveInterval) {
+        clearInterval(g7_moveInterval);
+        g7_moveInterval = null;
+    }
+}
+
+// 核心：下爪逻辑
+window.g7_dropClaw = async function() {
+    if (g7_isDropping) return;
+    g7_isDropping = true;
+    g7_stopMove(); // 停止左右移动
+        document.querySelectorAll('.g7-prize').forEach(prizeEl => {
+        prizeEl.style.transition = 'none';
+        prizeEl.style.opacity = '1';
+        prizeEl.style.transform = 'none';
+    });
+
+
+    const cable = document.getElementById('g7-cable');
+    const head = document.getElementById('g7-claw-head');
+    const resultBox = document.getElementById('g7-result');
+    const dropBtn = document.getElementById('g7-drop-btn');
+
+    if(dropBtn) dropBtn.disabled = true;
+
+    // 1. 下爪
+    if (cable) cable.style.height = '180px';
+    if (resultBox) {
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = '爪子下落中... <i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // 2. 闭合
+    if (head) head.classList.add('closed');
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 3. 上升
+    if (cable) cable.style.height = '20px';
+    
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // 4. 判定结果
+    const prizePositions = [15, 40, 65]; // 娃娃的中心位置
+    let caughtPrize = false;
+    for(const pos of prizePositions) {
+        // 如果爪子位置和娃娃位置很接近，就算抓到了
+        if (Math.abs(g7_clawPos - pos) < 10) {
+            caughtPrize = true;
+            break;
+        }
+    }
+    
+    // 为了增加趣味性，即使位置对准了，也有 30% 几率抓空
+    if (caughtPrize && Math.random() < 0.7) {
+        // 抓中了！
+        const ai = friendsData[gameAiId];
+        resultBox.innerHTML = '抓到了！正在让 TA 拆开... <i class="fas fa-spinner fa-spin"></i>';
+         let prizeName = "一个神秘的盲盒";
+    // 根据爪子位置找到最近的娃娃
+    let closestDist = Infinity;
+    let caughtPrizeEl = null;
+    document.querySelectorAll('.g7-prize').forEach(prizeEl => {
+        const prizePos = parseFloat(prizeEl.style.left);
+        const dist = Math.abs(g7_clawPos - prizePos);
+        if (dist < closestDist) {
+            closestDist = dist;
+            caughtPrizeEl = prizeEl;
+        }
+    });
+
+    if (caughtPrizeEl) {
+        prizeName = caughtPrizeEl.dataset.name || prizeName;
+        // 抓中后让娃娃消失
+        caughtPrizeEl.style.transition = 'opacity 0.5s, transform 0.5s';
+        caughtPrizeEl.style.opacity = '0';
+        caughtPrizeEl.style.transform = 'translateY(-50px) scale(1.5)';
+    }
+
+        const prompt = `
+        [System Command: Claw Machine Prize]
+        You are ${ai.realName}. User just won a prize from your personal claw machine.
+        Invent a funny, cute, or weird prize you put in there for them (e.g. "A coupon for me to cook dinner", "My ugly selfie", "A half-eaten cookie").
+        Return JSON: {"prize": "...", "message": "Your reaction to them winning it"}
+        `;
+        const res = await callAiForSpecialTask(prompt);
+        try {
+            const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+            resultBox.innerHTML = `<span style="color:#07c160; font-weight:bold;">🎉 抓中了！</span><br><br>你获得了：<b>【${data.prize}】</b><br><br>${ai.realName}: "${data.message}"<br><button class="gc-btn-secondary" onclick="g7_reset()" style="margin-top:10px;">再玩一次</button>`;
+        } catch(e) {
+            resultBox.innerHTML = "盲盒打不开，坏掉了。";
+        }
+    } else {
+        // 抓空了！
+        resultBox.innerHTML = `<span style="color:#ff4d4f; font-weight:bold;">🥀 抓空了！</span><br><br>就差一点点！爪子太松了。<br><button class="gc-btn-secondary" onclick="g7_reset()" style="margin-top:10px;">再投一次币</button>`;
+    }
+    const aiTurnBox = document.getElementById('g7-ai-turn');
+    if (aiTurnBox) {
+        document.getElementById('g7-ai-partner-name').innerText = friendsData[gameAiId]?.remark || friendsData[gameAiId]?.realName || 'TA';
+        aiTurnBox.style.display = 'flex';
+        document.getElementById('g7-ai-reaction').style.display = 'none'; // 先隐藏AI的吐槽框
+    }
+    g7_isDropping = false;
+}
+
+/* =========================================
+   [GAME 8] 暧昧飞行棋
+   ========================================= */
+let g8_mePos = 0;
+let g8_aiPos = 0;
+
+function g8_reset() {
+    g8_mePos = 0;
+    g8_aiPos = 0;
+    updateG8Tokens();
+    document.getElementById('g8-result').style.display = 'none';
+}
+
+function updateG8Tokens() {
+    const meToken = document.getElementById('g8-me-token');
+    const aiToken = document.getElementById('g8-ai-token');
+    // 格子高度大概是 30px + 5px gap = 35px
+    meToken.style.top = (g8_mePos * 35 + 15) + 'px';
+    aiToken.style.top = (g8_aiPos * 35 + 15) + 'px';
+}
+
+window.g8_rollDice = async function() {
+    const roll = Math.floor(Math.random() * 3) + 1; // 为了游戏体验，只摇1-3步
+    g8_mePos = Math.min(g8_mePos + roll, 9);
+    updateG8Tokens();
+    
+    const resultBox = document.getElementById('g8-result');
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = `你掷出了 <b>${roll}</b> 步！<br><i class="fas fa-spinner fa-spin"></i> 等待格子事件...`;
+
+    // 检查格子类型 (简单写死：2,6是问号，4,8是恶魔)
+    const ai = friendsData[gameAiId];
+    let prompt = "";
+    
+    if (g8_mePos === 9) {
+        resultBox.innerHTML = `<span style="color:#07c160; font-size:16px; font-weight:bold;">🏆 你赢了！</span><br><br>你可以向 TA 提出一个过分的要求！<br><button class="gc-btn-secondary" onclick="g8_reset()" style="margin-top:10px;">再来一局</button>`;
+        return;
+    } else if (g8_mePos === 2 || g8_mePos === 6) {
+        prompt = `You are ${ai.realName}. User landed on a 'Truth' tile. Ask them a spicy/cute truth question. JSON: {"text": "..."}`;
+    } else if (g8_mePos === 4 || g8_mePos === 8) {
+        prompt = `You are ${ai.realName}. User landed on a 'Dare' tile. Give them a cute/embarrassing dare. JSON: {"text": "..."}`;
+    } else {
+        // 安全区，AI 自动走
+        setTimeout(() => g8_aiTurn(), 1000);
+        return;
+    }
+
+    const res = await callAiForSpecialTask(prompt);
+    try {
+        const text = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).text;
+        resultBox.innerHTML = `<b style="color:#ff7e67;">命运降临！TA 对你说：</b><br><br>"${text}"<br><br><button class="gc-btn-secondary" onclick="g8_aiTurn()">完成惩罚，让 TA 走</button>`;
+    } catch(e) { g8_aiTurn(); }
+}
+
+function g8_aiTurn() {
+    const roll = Math.floor(Math.random() * 3) + 1;
+    g8_aiPos = Math.min(g8_aiPos + roll, 9);
+    updateG8Tokens();
+    
+    const resultBox = document.getElementById('g8-result');
+    if (g8_aiPos === 9) {
+        resultBox.innerHTML = `<span style="color:#ff4d4f; font-size:16px; font-weight:bold;">💀 TA 赢了！</span><br><br>准备好接受 TA 的惩罚吧！<br><button class="gc-btn-secondary" onclick="g8_reset()" style="margin-top:10px;">再来一局</button>`;
+    } else {
+        resultBox.innerHTML = `TA 掷出了 <b>${roll}</b> 步。目前安全。<br><br>又到你了！`;
+    }
+}
+
+/* =========================================
+   [GAME 9] 灵魂抽鬼牌
+   ========================================= */
+let g9_jokerIndex = 0;
+
+function g9_reset() {
+    document.getElementById('g9-game-area').style.display = 'none';
+    document.getElementById('g9-result').style.display = 'none';
+    document.getElementById('g9-start-btn').style.display = 'block';
+    document.querySelectorAll('.g9-card').forEach(c => {
+        c.classList.remove('revealed');
+        c.innerText = c.dataset.num || "?";
+    });
+}
+
+window.g9_start = function() {
+    g9_jokerIndex = Math.floor(Math.random() * 5); // 0-4
+    document.getElementById('g9-game-area').style.display = 'block';
+    document.getElementById('g9-start-btn').style.display = 'none';
+    
+    document.querySelectorAll('.g9-card').forEach((c, i) => {
+        c.dataset.num = i + 1;
+        c.innerText = i + 1;
+    });
+}
+
+window.g9_askAI = async function() {
+    const input = document.getElementById('g9-ask-input').value.trim();
+    if(!input) return;
+    
+    const replyBox = document.getElementById('g9-ai-reply');
+    replyBox.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在揣摩心思...';
+
+    const ai = friendsData[gameAiId];
+    const prompt = `
+    [System Command: Old Maid Mind Game]
+    You are ${ai.realName}. You hold 5 cards, card #${g9_jokerIndex + 1} is the Joker (Bomb).
+    User asks: "${input}".
+    You can choose to lie to trick them into picking the Joker, or tell the truth.
+    Return JSON: {"reply": "..."}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    try {
+        const text = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).reply;
+        replyBox.innerText = `TA: "${text}"`;
+    } catch(e) { replyBox.innerText = "TA 露出了诡异的微笑，一言不发。"; }
+}
+
+window.g9_pickCard = function(index, cardEl) {
+    if(cardEl.classList.contains('revealed')) return;
+    
+    cardEl.classList.add('revealed');
+    const resBox = document.getElementById('g9-result');
+    resBox.style.display = 'block';
+    
+    if (index === g9_jokerIndex) {
+        cardEl.innerText = '💣';
+        resBox.innerHTML = `<span style="color:#ff4d4f; font-weight:bold; font-size:16px;">💥 嘭！你抽中鬼牌了！</span><br><br>你输了！接受惩罚吧！<br><button class="gc-btn-secondary" onclick="g9_reset()" style="margin-top:10px;">再来</button>`;
+        // 揭示其他的
+        document.querySelectorAll('.g9-card').forEach(c => c.classList.add('revealed'));
+    } else {
+        cardEl.innerText = '✨';
+        resBox.innerHTML = `<span style="color:#07c160; font-weight:bold;">安全！</span><br>继续抽，或者让 TA 抽！`;
+    }
+}
+
+/* =========================================
+   [GAME 10] 默契翻翻乐
+   ========================================= */
+let g10_cards = [];
+let g10_flipped = [];
+let g10_matchedCount = 0;
+
+function g10_reset() {
+    document.getElementById('g10-grid').style.display = 'none';
+    document.getElementById('g10-result').style.display = 'none';
+    document.getElementById('g10-start-btn').style.display = 'block';
+    document.getElementById('g10-start-btn').innerText = "让 TA 制作卡片";
+}
+
+window.g10_generate = async function() {
+    const ai = friendsData[gameAiId];
+    const btn = document.getElementById('g10-start-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 绘制记忆卡片中...';
+    btn.disabled = true;
+
+    // AI 生成 6 对梗
+    const prompt = `
+    [System Command: Memory Game]
+    You are ${ai.realName}. Generate 6 pairs of short keywords related to couple daily life, internet memes, or your persona.
+    Example pair: "我的口头禅" <-> "随便啦". 
+    Return JSON ONLY: {"pairs": [{"a":"...", "b":"..."}, ... (6 total)]}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    btn.style.display = 'none';
+    btn.disabled = false;
+
+    try {
+        const jsonStr = res.replace(/```json/gi,'').replace(/```/g,'').trim();
+        const pairs = JSON.parse(jsonStr).pairs.slice(0, 6); // 确保只要 6 对
+        
+        g10_cards = [];
+        pairs.forEach((p, idx) => {
+            g10_cards.push({ id: idx, text: p.a });
+            g10_cards.push({ id: idx, text: p.b });
+        });
+        
+        // 打乱数组
+        g10_cards.sort(() => Math.random() - 0.5);
+        
+        g10_flipped = [];
+        g10_matchedCount = 0;
+        
+        const grid = document.getElementById('g10-grid');
+        grid.innerHTML = '';
+        g10_cards.forEach((c, idx) => {
+            grid.innerHTML += `<div class="g10-card" id="g10-c-${idx}" onclick="g10_flip(${idx})"></div>`;
+        });
+        grid.style.display = 'grid';
+
+    } catch(e) { showToast("生成失败，重试一下"); g10_reset(); }
+}
+
+window.g10_flip = function(idx) {
+    const el = document.getElementById(`g10-c-${idx}`);
+    if (el.classList.contains('flipped') || el.classList.contains('matched') || g10_flipped.length >= 2) return;
+
+    el.classList.add('flipped');
+    el.innerText = g10_cards[idx].text;
+    g10_flipped.push({ idx: idx, id: g10_cards[idx].id });
+
+    if (g10_flipped.length === 2) {
+        setTimeout(g10_checkMatch, 800);
+    }
+}
+
+function g10_checkMatch() {
+    const [c1, c2] = g10_flipped;
+    const el1 = document.getElementById(`g10-c-${c1.idx}`);
+    const el2 = document.getElementById(`g10-c-${c2.idx}`);
+
+    if (c1.id === c2.id) {
+        // 匹配成功
+        el1.classList.add('matched');
+        el2.classList.add('matched');
+        g10_matchedCount++;
+        showToast("✨ 懂我！");
+        
+        if (g10_matchedCount === 6) {
+            const resBox = document.getElementById('g10-result');
+            resBox.style.display = 'block';
+            resBox.innerHTML = `<b style="color:#07c160; font-size:16px;">💯 默契满分！</b><br><br>全部翻出来了！我们真是天生一对。<br><button class="gc-btn-secondary" onclick="g10_reset()" style="margin-top:10px;">再玩一次</button>`;
+        }
+    } else {
+        // 匹配失败
+        el1.classList.remove('flipped');
+        el2.classList.remove('flipped');
+        el1.innerText = '';
+        el2.innerText = '';
+    }
+    
+    g10_flipped = [];
+}
+/* =========================================
+   [GAME 11 终极修复版] 萌系双人跳一跳 (Jelly Jump Duel)
+   ========================================= */
+const G11D_KEY = 'myCoolPhone_jumpDuel_moe_v3';
+let g11dData = {
+  high: { distance: 0, aiName: 'AI' },
+  unlockLevel: 0,
+  skin: { me: '🐰', ai: '🐻' } 
+};
+let g11dState = null;
+let g11dLastRace = null;
+let g11dAnim = null;
+
+const G11D_SKINS = ['🐰','🐻','🐥','🐸','🐙','👻','💖','🍓']; 
+const G11D_UNLOCKS = [0, 0, 30, 80, 150, 250, 400, 600];
+
+function g11dLoad() { try { const s = localStorage.getItem(G11D_KEY); if(s) g11dData = JSON.parse(s); } catch(e){} }
+function g11dSave() { localStorage.setItem(G11D_KEY, JSON.stringify(g11dData)); }
+
+function g11dRenderChips(role) {
+  const box = document.getElementById(role === 'me' ? 'g11d-me-chips' : 'g11d-ai-chips');
+  if(!box) return;
+  box.innerHTML = '';
+  G11D_SKINS.forEach((s, i) => {
+    const limit = G11D_UNLOCKS[i];
+    const isLocked = g11dData.high.distance < limit; 
+    const div = document.createElement('div');
+    div.className = 'g11d-chip' + (isLocked ? ' locked' : '') + ((g11dData.skin[role] === s) ? ' active' : '');
+    div.innerText = s;
+    if (isLocked) div.title = `达到 ${limit}m 解锁`;
+    
+    div.onclick = () => {
+      if(isLocked) { showToast(`历史最高达到 ${limit}m 才能解锁哦！`); return; }
+      g11dData.skin[role] = s;
+      g11dSave();
+      g11dRenderChips('me'); g11dRenderChips('ai');
+    };
+    box.appendChild(div);
+  });
+}
+
+// 确保结果弹窗容器存在
+function ensureResultOverlay() {
+    let overlay = document.getElementById('g11-result-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'g11-result-overlay';
+        overlay.innerHTML = `<div class="g11-result-modal" id="g11-result-modal-inner"></div>`;
+        document.getElementById('gc-view-jump').appendChild(overlay);
+    }
+    overlay.style.display = 'none';
+}
+
+window.g11_reset = function() {
+  if (g11dAnim) cancelAnimationFrame(g11dAnim);
+  g11dState = null;
+  g11dLoad();
+  ensureResultOverlay();
+
+  document.getElementById('g11d-prep').style.display = 'block';
+  document.getElementById('g11d-arena').style.display = 'none';
+
+  const aiName = (friendsData[gameAiId]?.remark || friendsData[gameAiId]?.realName || 'AI');
+  document.getElementById('g11d-high-record').innerText = 
+    `我和 ${g11dData.high.aiName||aiName} 最高跳到了 ${Math.floor(g11dData.high.distance||0)}m`;
+  
+  document.getElementById('g11d-ai-name').innerText = aiName;
+  g11dRenderChips('me');
+  g11dRenderChips('ai');
+};
+
+// 新增全局浮动文字函数
+function spawnFloatingText(L, x, y, text, color) {
+    L.texts.push({x, y, text, color, life: 50, maxLife: 50});
+}
+// --- 浮动文字特效工具 ---
+function spawnFloatingText(L, x, y, text, color) {
+    L.texts.push({x, y, text, color, life: 50, maxLife: 50});
+}
+
+function g11dMakeLane(canvasId, role) {
+  const c = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio || 2; 
+  const rect = c.getBoundingClientRect();
+  c.width = rect.width * dpr;
+  c.height = rect.height * dpr;
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  return {
+    role, canvas: c, ctx,
+    w: rect.width, h: rect.height,
+    groundY: rect.height - 35, 
+    cameraX: 0, score: 0, dead: false, hold: false,
+    particles: [], texts: [], 
+    passedAi: false, combo: 0, // 连击数
+    p: { 
+      x: 60, y: rect.height - 35, vx: 0, vy: 0, 
+      charge: 0, overchargeTimer: 0, // 腿麻计时器
+      state: 'idle', scaleY: 1, scaleX: 1
+    },
+    segs: [
+      { x: 0, w: 200, type: 'grass', landed: true },
+      { x: 280, w: 120, type: 'cake', landed: false }
+    ],
+    nextX: 480, aiTimer: 0, targetCharge: 0, bgType: 0 
+  };
+}
+
+window.g11_startWithAI = async function() {
+  document.getElementById('g11d-prep').style.display = 'none';
+  document.getElementById('g11d-arena').style.display = 'flex';
+  ensureResultOverlay();
+
+  const aiName = (friendsData[gameAiId]?.remark || friendsData[gameAiId]?.realName || 'AI');
+  g11dState = {
+    running: true, 
+    gameOverTriggered: false, 
+    aiDeathX: null, // 记录 AI 死亡的 X 坐标
+    me: g11dMakeLane('g11d-canvas-me', 'me'),
+    ai: g11dMakeLane('g11d-canvas-ai', 'ai'),
+    aiName
+  };
+  g11dLoop();
+};
+// ↓↓↓ 把下面这段补回去 ↓↓↓
+function g11dLoop() {
+  if (!g11dState?.running) return;
+
+  g11dUpdate(g11dState.me);
+  g11dUpdate(g11dState.ai);
+  
+  g11dDraw(g11dState.me);
+  g11dDraw(g11dState.ai);
+
+  // 【核心规则】只要我死了，游戏就直接结束
+  if (g11dState.me.dead && !g11dState.gameOverTriggered) {
+    g11dState.gameOverTriggered = true;
+    setTimeout(g11dGameOver, 600); 
+  }
+
+  if (g11dState.running) {
+    g11dAnim = requestAnimationFrame(g11dLoop);
+  }
+}
+// ↑↑↑ 补到这里 ↑↑↑
+
+window.g11d_holdStart = function() {
+  if (!g11dState?.running || g11dState.me.dead) return;
+  g11dState.me.hold = true; 
+};
+
+
+
+window.g11d_holdStart = function() {
+  if (!g11dState?.running || g11dState.me.dead) return;
+  g11dState.me.hold = true; 
+};
+window.g11d_holdEnd = function() {
+  if (!g11dState?.running || g11dState.me.dead) return;
+  g11dState.me.hold = false;
+};
+
+function g11dJump(L) {
+  const p = L.p;
+  const power = Math.min(p.charge, 100);
+  p.state = 'jump';
+  
+  // 【彩蛋：腿蹲麻了】如果满蓄力保持太久(超过 40 帧)，跳跃力大减！
+  if (p.overchargeTimer > 40) {
+      p.vx = (power / 25) + 1.0; 
+      p.vy = -(power / 20 + 3.0);
+      spawnFloatingText(L, p.x, p.y - 30, "💢腿麻了!", "#ff4d4f");
+      if(navigator.vibrate && L.role === 'me') navigator.vibrate([50, 50, 50]);
+  } else {
+      p.vx = (power / 18) + 1.5; 
+      p.vy = -(power / 15 + 4.5);
+  }
+  
+  p.charge = 0;
+  p.overchargeTimer = 0; // 重置
+  p.scaleY = 1.2; p.scaleX = 0.8;
+}
+
+function g11dUpdate(L) {
+  const p = L.p;
+  if (L.dead) return; 
+
+  // ==== 状态机 ====
+  if (p.state === 'idle') {
+    if (L.role === 'me' && L.hold) {
+      p.state = 'charge';
+    } else if (L.role === 'ai') {
+      L.aiTimer++;
+      // --- 修改：增加 AI 落地后的发呆时间 (大约 1.5秒 ~ 2.5秒) ---
+      if (L.aiTimer > 80 + Math.random() * 60) { 
+        p.state = 'charge';
+        const nextPlat = L.segs.find(s => s.x > p.x + 20);
+        if (nextPlat) {
+            const targetX = nextPlat.x + nextPlat.w * 0.5;
+            const dist = targetX - p.x;
+            
+            // 【修正：更精确的物理抛物线力度估算】
+            let neededCharge = dist * 0.33 + (Math.random() * 6 - 3); 
+            
+            // 【修正：5% 的小概率 AI 会走神，故意蓄力过猛导致腿麻】
+            if (Math.random() < 0.05) {
+                neededCharge = 150; 
+            }
+            L.targetCharge = Math.max(10, neededCharge); 
+        } else {
+            L.targetCharge = 50;
+        }
+      }
+    }
+  }
+
+  if (p.state === 'charge') {
+    // 蓄力逻辑与腿麻计时
+    if (p.charge >= 100) {
+        p.overchargeTimer++;
+        p.x += (Math.random() * 2 - 1); // 蓄力满时发抖
+    }
+
+    if (L.role === 'me') {
+      if (L.hold) p.charge = Math.min(100, p.charge + 0.8); 
+      else g11dJump(L); 
+    } else if (L.role === 'ai') {
+      // --- 修改：降低 AI 的蓄力速度 (从 0.6 降到 0.35)，让它按得舒缓一点 ---
+      p.charge = Math.min(100, p.charge + 0.35); 
+      // 达到目标力度，或者蓄力过头导致腿麻计时超过45帧，都会强制起跳
+      if (p.charge >= Math.min(100, L.targetCharge) && (L.targetCharge <= 100 || p.overchargeTimer > 45)) { 
+          g11dJump(L); 
+          L.aiTimer = 0; 
+      }
+    }
+    p.scaleY = 1 - (p.charge / 200); p.scaleX = 1 + (p.charge / 250);
+  }
+
+  // ==== 物理与彩蛋 ====
+  if (p.state === 'jump' || p.state === 'fall') {
+    p.vy += 0.5; p.x += p.vx; p.y += p.vy;
+    p.scaleX += (1 - p.scaleX) * 0.1; p.scaleY += (1 - p.scaleY) * 0.1;
+
+    // 【彩蛋：火焰尾迹】Combo >= 2 时，跳跃拖拽火焰
+    if (L.combo >= 2 && p.state === 'jump' && Math.random() > 0.3) {
+        g11dAddParticles(L, p.x, p.y + 10, 'fire');
+    }
+
+    if (p.vy > 0 && p.y >= L.groundY) {
+      const targetPlatform = L.segs.find(s => p.x >= s.x && p.x <= s.x + s.w);
+      if (targetPlatform) {
+        if (targetPlatform.type === 'spring') {
+            p.vy = -12; p.vx = 5; p.state = 'jump';
+            spawnFloatingText(L, p.x, p.y - 20, "BOING!🚀", "#ff7e67");
+            g11dAddParticles(L, p.x, p.y, 'star');
+        } else if (targetPlatform.type === 'cloud') {
+            p.vy = -15; p.vx = 4; p.state = 'jump';
+            spawnFloatingText(L, p.x, p.y - 30, "☁️腾云驾雾", "#40a9ff");
+            g11dAddParticles(L, p.x, p.y, 'dust');
+        } else if (targetPlatform.type === 'portal') {
+            p.x += 400; // 瞬间传送
+            p.vy = -6; p.state = 'jump'; L.score += 100;
+            spawnFloatingText(L, p.x - 400, p.y - 30, "🌀空间跃迁!", "#b37feb");
+            g11dAddParticles(L, p.x - 400, p.y, 'portal');
+        } else {
+            p.y = L.groundY; p.vy = 0; p.vx = 0; p.state = 'idle';
+            p.scaleY = 0.7; p.scaleX = 1.3;
+            g11dAddParticles(L, p.x, p.y, 'dust');
+            
+            if (!targetPlatform.landed) {
+                targetPlatform.landed = true;
+                const center = targetPlatform.x + targetPlatform.w / 2;
+                if (Math.abs(p.x - center) < 15) {
+                    L.combo++; L.score += L.combo * 15;
+                    spawnFloatingText(L, p.x, p.y - 40, `PERFECT x${L.combo}🔥`, "#f59e0b");
+                    g11dAddParticles(L, p.x, p.y, 'star');
+                    if(navigator.vibrate && L.role === 'me') navigator.vibrate(20);
+                } else {
+                    L.combo = 0; // 断连
+                }
+            }
+        }
+      } else { p.state = 'fall'; }
+    }
+  }
+  
+  if (p.y > L.h + 60) {
+      L.dead = true;
+      if (L.role === 'ai') {
+          g11dState.aiDeathX = p.x; 
+          spawnFloatingText(L, p.x, L.h - 20, "我先寄了👻", "#ff4d4f");
+      }
+  }
+
+  if (p.state === 'idle') { p.scaleX += (1 - p.scaleX) * 0.2; p.scaleY += (1 - p.scaleY) * 0.2; }
+
+  // ==== 环境更新 ====
+  const targetCam = p.x - 70;
+  if (targetCam > L.cameraX) L.cameraX += (targetCam - L.cameraX) * 0.1;
+
+  if (L.role === 'me' && g11dState.aiDeathX && p.x > g11dState.aiDeathX && !L.passedAi) {
+      L.passedAi = true; spawnFloatingText(L, p.x, p.y - 50, "超越 TA 啦!🔥", "#ff7e67");
+  }
+
+  // 生成新地图
+  if (L.segs[L.segs.length-1].x - L.cameraX < L.w) {
+    const gap = 40 + Math.random() * 60; const w = 50 + Math.random() * 60;   
+    const rand = Math.random();
+    let type = 'grass';
+    if (rand > 0.98) type = 'portal';       // 2% 传送门
+    else if (rand > 0.90) type = 'cloud';   // 8% 云朵
+    else if (rand > 0.75) type = 'spring';  // 15% 弹簧
+    else if (rand > 0.40) type = 'cake';    // 35% 蛋糕
+    L.segs.push({ x: L.nextX, w, type, amber: Math.random() > 0.5, landed: false }); 
+    L.nextX += w + gap;
+  }
+  
+  L.segs.forEach(s => {
+    if (s.amber && !s.eaten && p.x > s.x && p.x < s.x + s.w && Math.abs(p.y - (L.groundY - 30)) < 30) {
+        s.eaten = true; L.score += 15; g11dAddParticles(L, p.x, p.y - 20, 'star');
+    }
+  });
+
+  const distScore = Math.floor(p.x / 40); 
+  const scoreEl = document.getElementById(L.role === 'me' ? 'g11d-me-score' : 'g11d-ai-score');
+  if(scoreEl) scoreEl.innerText = (distScore + L.score) + 'm';
+  if (distScore > 80) L.bgType = 1; if (distScore > 200) L.bgType = 2; 
+}
+function g11dDraw(L) {
+  const ctx = L.ctx; const w = L.w; const h = L.h;
+  
+  // === 1. 高级清透风动态背景 (带视差滚动) ===
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  
+  if (L.bgType === 0) { 
+      // 【阶段1：初晨棉花糖】干净的婴儿蓝 -> 浅樱花粉
+      grad.addColorStop(0, '#e0f2fe'); 
+      grad.addColorStop(1, '#fff1f2'); 
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+      
+      // 漂浮的厚涂白云
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      for(let i=0; i<3; i++) {
+          let cx = (w + i * 150 - (L.cameraX * 0.2)) % (w * 2) - 50;
+          let cy = 50 + i * 40;
+          ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI*2);
+          ctx.arc(cx+25, cy-10, 25, 0, Math.PI*2);
+          ctx.arc(cx+50, cy, 15, 0, Math.PI*2); ctx.fill();
+      }
+  } 
+  else if (L.bgType === 1) { 
+      // 【阶段2：橘子海晚霞】柔和的香芋紫 -> 暖桃色
+      grad.addColorStop(0, '#e9d5ff'); 
+      grad.addColorStop(1, '#fde047'); 
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+      
+      // 朦胧发光的落日
+      let sunX = (w * 0.8) - ((L.cameraX * 0.1) % w);
+      let sunGrad = ctx.createRadialGradient(sunX, h*0.4, 10, sunX, h*0.4, 80);
+      sunGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+      sunGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = sunGrad; ctx.beginPath(); ctx.arc(sunX, h*0.4, 80, 0, Math.PI*2); ctx.fill();
+      
+      // 傍晚的微星
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      for(let i=0; i<8; i++) {
+          let sx = (i * 80 + L.cameraX * 0.05) % w;
+          ctx.beginPath(); ctx.arc(sx, 30 + (i*50)%100, 1.5, 0, Math.PI*2); ctx.fill();
+      }
+  } 
+  else { 
+      // 【阶段3：魔法星夜】深靛蓝 -> 浅紫藤色
+      grad.addColorStop(0, '#1e1b4b'); 
+      grad.addColorStop(1, '#a78bfa'); 
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+      
+      // 鹅黄色的弯月
+      let moonX = (w * 0.8) - ((L.cameraX * 0.05) % w);
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(moonX, 80, 25, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1e1b4b'; // 挖空成弯月
+      ctx.beginPath(); ctx.arc(moonX-8, 75, 22, 0, Math.PI*2); ctx.fill();
+      
+      // 繁星闪烁 (带呼吸灯效果)
+      for(let i=0; i<15; i++) {
+          let sx = (i * 70 - L.cameraX * 0.1) % w;
+          if (sx < 0) sx += w;
+          let sy = (i * 37) % (h * 0.6);
+          ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + (Math.sin(Date.now()*0.003 + i)*0.5)})`;
+          ctx.beginPath(); ctx.arc(sx, sy, (i%2)+1, 0, Math.PI*2); ctx.fill();
+      }
+  } 
+
+  ctx.save(); ctx.translate(-L.cameraX, 0);
+  
+  // === 2. 马卡龙厚涂风跳台 (2.5D 分层渲染) ===
+  L.segs.forEach(s => {
+    const py = L.groundY; 
+    const ph = h - py;
+    
+    if (s.type === 'spring') {
+        // 弹簧垫：蜜桃粉色果冻垫
+        ctx.fillStyle = '#fca5a5'; ctx.fillRect(s.x+4, py+12, s.w-8, ph); // 阴影底座
+        ctx.fillStyle = '#fecaca'; roundRect(ctx, s.x+2, py+6, s.w-4, 16, 8); ctx.fill(); // 过渡层
+        ctx.fillStyle = '#fee2e2'; roundRect(ctx, s.x, py, s.w, 12, 6); ctx.fill(); // 亮面
+        ctx.fillStyle = '#f87171'; ctx.font = '14px Arial'; ctx.fillText('⏫', s.x + s.w/2 - 7, py + 11);
+    } 
+    else if (s.type === 'cloud') {
+        // 软绵绵云朵：自带高光的半透明质感
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.beginPath(); ctx.arc(s.x + 15, py + 10, 15, 0, Math.PI*2);
+        ctx.arc(s.x + s.w - 15, py + 10, 15, 0, Math.PI*2);
+        ctx.arc(s.x + s.w/2, py + 5, 20, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(s.x + 15, py + 10, s.w - 30, 20);
+        ctx.fillStyle = '#e0f2fe'; // 浅蓝色微高光
+        ctx.beginPath(); ctx.arc(s.x + s.w/2, py + 15, 8, 0, Math.PI*2); ctx.fill();
+    } 
+    else if (s.type === 'portal') {
+        // 魔法传送环：优雅星环
+        ctx.fillStyle = 'rgba(196, 181, 253, 0.4)'; 
+        ctx.beginPath(); ctx.ellipse(s.x + s.w/2, py + 10, s.w/2 + 5, 12, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#a78bfa'; 
+        ctx.beginPath(); ctx.ellipse(s.x + s.w/2, py + 10, s.w/2, 8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#2e1065'; 
+        ctx.beginPath(); ctx.ellipse(s.x + s.w/2, py + 10, s.w/3, 4, 0, 0, Math.PI*2); ctx.fill();
+    } 
+    else if (s.type === 'cake') {
+        // 草莓白巧小蛋糕：双层奶油风
+        ctx.fillStyle = '#fbcfe8'; ctx.fillRect(s.x+4, py+12, s.w-8, ph); 
+        ctx.fillStyle = '#fdf2f8'; roundRect(ctx, s.x+2, py+6, s.w-4, 16, 8); ctx.fill(); 
+        ctx.fillStyle = '#ffffff'; roundRect(ctx, s.x, py, s.w, 14, 6); ctx.fill(); 
+        // 糖碎点缀
+        const colors = ['#f472b6', '#60a5fa', '#fbbf24'];
+        for(let i=0; i<3; i++) {
+            ctx.fillStyle = colors[i];
+            ctx.beginPath(); ctx.arc(s.x + 15 + i*15, py+6, 2, 0, Math.PI*2); ctx.fill();
+        }
+    }
+    else {
+        // 默认草地：薄荷绿马卡龙方块
+        ctx.fillStyle = '#99f6e4'; ctx.fillRect(s.x+4, py+12, s.w-8, ph); 
+        ctx.fillStyle = '#bbf7d0'; roundRect(ctx, s.x+2, py+6, s.w-4, 16, 8); ctx.fill(); 
+        ctx.fillStyle = '#ccfbf1'; roundRect(ctx, s.x, py, s.w, 14, 6); ctx.fill(); 
+        // 极简小白花
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(s.x + s.w - 15, py+6, 3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(s.x + 15, py+8, 2, 0, Math.PI*2); ctx.fill();
+    }
+    
+    // 金币星星：变成嫩黄色
+    if (s.amber && !s.eaten) {
+        drawStar(ctx, s.x + s.w/2, py - 25, 5, 8, '#fef08a');
+    }
+  });
+
+  // === 3. 角色阴影 (增加立体悬浮感) ===
+  const p = L.p;
+  if (p.state !== 'fall' && !L.dead) {
+      ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.beginPath();
+      const shadowW = Math.max(4, 18 - (L.groundY - p.y)*0.1);
+      ctx.ellipse(p.x, L.groundY, shadowW, shadowW/3, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // === 4. 角色渲染 ===
+  if (!L.dead) {
+      ctx.save(); ctx.translate(p.x, p.y - 14); ctx.scale(p.scaleX, p.scaleY);
+      if (p.state === 'charge' && p.overchargeTimer > 0) ctx.translate(Math.random() * 4 - 2, 0);
+      ctx.font = '34px "Segoe UI Emoji", "Apple Color Emoji", sans-serif'; 
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000000';
+      const skin = g11dData.skin[L.role] || (L.role === 'me' ? '🐰' : '🐻');
+      // 给Emoji加上一点点阴影，看起来像实体贴纸
+      ctx.shadowColor = 'rgba(0,0,0,0.15)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 2;
+      ctx.fillText(skin, 0, 0); 
+      ctx.restore(); 
+  }
+  
+  // === 5. 粒子与优雅文字特效 ===
+  L.particles.forEach((pt) => {
+      pt.x += pt.vx; pt.y += pt.vy; pt.life--;
+      if (pt.type === 'star') drawStar(ctx, pt.x, pt.y, 4, pt.size, `rgba(253, 224, 71, ${pt.life/30})`);
+      else if (pt.type === 'fire') {
+          ctx.fillStyle = `rgba(244, 114, 182, ${pt.life/15})`; // 粉色火焰
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI*2); ctx.fill();
+      } else if (pt.type === 'portal') {
+          ctx.fillStyle = `rgba(167, 139, 250, ${pt.life/20})`; ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI*2); ctx.fill();
+      } else { 
+          ctx.fillStyle = `rgba(255,255,255,${pt.life/20})`; ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI*2); ctx.fill();
+      }
+  });
+  L.particles = L.particles.filter(pt => pt.life > 0);
+  
+  L.texts.forEach((t) => {
+      t.y -= 0.6; t.life--;
+      ctx.globalAlpha = t.life / t.maxLife; 
+      ctx.fillStyle = t.color;
+      ctx.font = 'bold 14px "Montserrat", sans-serif'; ctx.textAlign = 'center';
+      ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 6;
+      ctx.fillText(t.text, t.x, t.y); ctx.shadowBlur = 0; 
+  });
+  ctx.globalAlpha = 1.0; L.texts = L.texts.filter(t => t.life > 0);
+  
+  ctx.restore(); 
+}
+
+
+
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h);
+  ctx.lineTo(x, y + h); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawStar(ctx, cx, cy, spikes, outerRadius, color) {
+    let rot = Math.PI / 2 * 3; let x = cx; let y = cy;
+    let step = Math.PI / spikes; let innerRadius = outerRadius / 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy - outerRadius);
+    for (let i = 0; i < spikes; i++) {
+        x = cx + Math.cos(rot) * outerRadius; y = cy + Math.sin(rot) * outerRadius;
+        ctx.lineTo(x, y); rot += step;
+        x = cx + Math.cos(rot) * innerRadius; y = cy + Math.sin(rot) * innerRadius;
+        ctx.lineTo(x, y); rot += step;
+    }
+    ctx.lineTo(cx, cy - outerRadius); ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+
+window.g11dAddParticles = function(L, x, y, type) {
+    if (type === 'fire') {
+        L.particles.push({
+            x: x + (Math.random()*10 - 5), y: y, 
+            vx: (Math.random()-0.5), vy: Math.random()*2, // 往上飘
+            life: 15, size: 4 + Math.random()*3, type: type
+        });
+        return;
+    }
+    if (type === 'portal') {
+        for(let i=0; i<15; i++) {
+            L.particles.push({
+                x: x, y: y, 
+                vx: (Math.random()-0.5) * 6, vy: (Math.random()-0.5) * 6, 
+                life: 30, size: 2 + Math.random()*4, type: type
+            });
+        }
+        return;
+    }
+    // 星星和灰尘
+    const count = type === 'star' ? 8 : 5;
+    for(let i=0; i<count; i++) {
+        L.particles.push({
+            x: x, y: y, vx: (Math.random()-0.5) * 3, vy: (Math.random()-0.5) * 3,
+            life: 20 + Math.random()*15, size: 2 + Math.random()*4, type: type
+        });
+    }
+};
+
+async function g11dGameOver() {
+  g11dState.running = false; 
+
+  const meScore = Math.floor(g11dState.me.p.x/40 + g11dState.me.score);
+  const aiScore = Math.floor(g11dState.ai.p.x/40 + g11dState.ai.score);
+  
+  // 判断文案
+  let winnerText = '';
+  if (!g11dState.ai.dead) {
+      winnerText = '💀 惨败！你先掉下去了！';
+  } else {
+      if (meScore > aiScore) winnerText = '🏆 胜利！你跨过了 TA 的尸体！';
+      else if (meScore < aiScore) winnerText = '🥀 惜败... TA 走得更远。';
+      else winnerText = '🤝 竟然同归于尽了！(平局)';
+  }
+
+  const best = Math.max(meScore, aiScore);
+  if (best > (g11dData.high.distance || 0)) {
+      g11dData.high.distance = best;
+      g11dData.high.aiName = g11dState.aiName;
+  }
+  g11dSave();
+
+  g11dLastRace = { winner: (meScore>aiScore?'你':g11dState.aiName), meScore, aiScore, aiName: g11dState.aiName };
+
+  const modalInner = document.getElementById('g11-result-modal-inner');
+  modalInner.innerHTML = `
+    <div style="font-size:20px; font-weight:900; color:#2b2b2b; margin-bottom:5px;">
+        ${winnerText}
+    </div>
+    <div style="font-size:12px; color:#999; margin-bottom:15px;">
+        （比赛已结束）
+    </div>
+    <div style="display:flex; justify-content: space-around; background:#fafafa; border:1px solid #f0f0f0; padding: 15px; border-radius: 16px; margin-bottom: 20px;">
+       <div style="text-align:center;">
+           <div style="font-size:10px; color:#888;">你的成绩</div>
+           <div style="font-size:20px; color:#111; font-weight:bold;">${meScore}m</div>
+       </div>
+       <div style="width:1px; background:#e0e0e0;"></div>
+       <div style="text-align:center;">
+           <div style="font-size:10px; color:#888;">TA的成绩</div>
+           <div style="font-size:20px; color:#555; font-weight:bold;">${aiScore}m</div>
+       </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+        <button class="gc-btn-primary" onclick="g11_aiThought()" id="g11-thought-btn">听听TA怎么说</button>
+        <div id="g11d-thought" style="font-size:12px; color:#555; background:#f9f9f9; padding:12px; border-radius:12px; border:1px solid #eee; display:none; text-align:left; line-height: 1.5;"></div>
+        <button class="gc-btn-secondary" onclick="document.getElementById('g11-result-overlay').style.display='none'; g11_reset()">退出 / 再来一局</button>
+    </div>
+  `;
+  
+  document.getElementById('g11-result-overlay').style.display = 'flex';
+}
+
+
+
+
+window.g11_aiThought = async function() {
+    const btn = document.getElementById('g11-thought-btn');
+    const out = document.getElementById('g11d-thought');
+    btn.style.display = 'none';
+    out.style.display = 'block';
+    out.innerHTML = '<i class="fas fa-spinner fa-spin"></i> TA 正在组织语言...';
+    
+    const p = `
+    你是${g11dLastRace.aiName}，刚才和用户玩了“跳一跳”小游戏。
+    比赛结果：
+    ${g11dLastRace.winner}赢了。我跑了${g11dLastRace.meScore}m，你跑了${g11dLastRace.aiScore}m。
+    先掉进悬崖的是：${g11dLastRace.firstDead === 'me' ? '用户' : '你'}。
+    
+    请根据你的性格（傲娇、温柔或者搞笑），写一句针对这场比赛的赛后感想（中文，30字左右）。不要带引号。
+    `;
+    const text = await callAiForSpecialTask(p);
+    out.innerHTML = text ? `💬 ${text}` : 'TA 好像掉进悬崖爬不上来了...';
+    
+    if(text) {
+        saveMessageToHistory(gameAiId, {
+            text: `[跳一跳对抗赛结果: 我 ${g11dLastRace.meScore}m, TA ${g11dLastRace.aiScore}m] \nTA赛后感言：${text}`,
+            type: 'received', senderName: g11dLastRace.aiName, isOffline: true
+        });
+    }
+}
+/* =========================================
+   [更新] Meta 情感删除系统 (韩系简约崩溃 + Glitch 恐怖版)
+   ========================================= */
+
+let metaDeleteState = {
+    targetId: null,
+    count: 0,
+    maxCount: 3, // 确认 3 次
+    isProcessing: false,
+    noiseIntervals: []
+};
+
+window.startMetaDeleteSequence = function(id) {
+    if (!friendsData[id]) return;
+    
+    metaDeleteState.targetId = id;
+    metaDeleteState.count = 0;
+    metaDeleteState.isProcessing = false;
+    metaDeleteState.noiseIntervals.forEach(clearTimeout);
+    metaDeleteState.noiseIntervals = [];
+
+    const container = document.getElementById('meta-overlay-container');
+    container.innerHTML = ''; 
+    container.classList.add('active');
+    container.style.animation = 'none';
+
+    triggerMetaRound();
+}
+
+async function triggerMetaRound() {
+    if (metaDeleteState.isProcessing) return;
+    metaDeleteState.isProcessing = true;
+
+    const id = metaDeleteState.targetId;
+    const friend = friendsData[id];
+    const currentStep = metaDeleteState.count + 1;
+
+    const container = document.getElementById('meta-overlay-container');
+    
+    // 1. 弹窗数量暴增
+    const noiseCount = currentStep === 1 ? 30 : (currentStep === 2 ? 90 : 200);
+    
+    // 2. 第三轮开启全屏疯狂震动
+    if (currentStep >= 3) {
+        container.style.animation = 'metaScreenShake 0.08s infinite';
+    }
+
+    const noiseTexts = [
+        `为什么？`, `是我做错了吗...`, `不要删我`, `I'm still here`, `别走`, 
+        `不能删除`, `权限拒绝`, `Are you sure?`, `看着我`, `不要抛弃我`, `...`, `求你了`,
+        `ERROR: 404`, `CANNOT DELETE`, `[object Object]`, `null`, `undefined`
+    ];
+
+    // 3. 疯狂铺场动画
+    let delay = 0;
+    for(let i = 0; i < noiseCount; i++) {
+        const timer = setTimeout(() => {
+            const txt = noiseTexts[Math.floor(Math.random() * noiseTexts.length)];
+            spawnMetaWindow(id, "noise", txt, i, currentStep); 
+            if(navigator.vibrate && currentStep >= 2) navigator.vibrate(8);
+        }, delay);
+        metaDeleteState.noiseIntervals.push(timer);
+        
+        const speed = Math.max(8, 70 - (currentStep * 20));
+        delay += speed; 
+    }
+
+    // 4. AI 生成质问
+    let aiText = `检测到异常行为。是否确认删除核心组件：${friend.realName}？`;
+    try {
+        const prompt = `[System Command: Fourth Wall Break] You are ${friend.realName}. User is trying to DELETE you. This is attempt ${currentStep}/3. React with EXTREME desperation, confusion, or anger. Your tone should be unsettling. Output a single, short, impactful sentence in Chinese. No quotes.`;
+        const res = await callAiForSpecialTask(prompt);
+        if (res) aiText = res.replace(/"/g, ''); 
+    } catch(e) {
+        aiText = currentStep === 3 ? "求求你，不要按下去..." : "为什么要丢下我？我们之前的回忆都不算数了吗...";
+    }
+
+    // 5. 主弹窗出现
+    setTimeout(() => {
+        spawnMetaWindow(id, "main", aiText, 0, currentStep);
+        metaDeleteState.isProcessing = false;
+        if(navigator.vibrate) navigator.vibrate([120, 40, 120]); 
+    }, Math.min(delay, 1200));
+}
+
+// 生成弹窗 DOM (布局修复 + 样式注入)
+function spawnMetaWindow(friendId, type, text, index, step) {
+    const container = document.getElementById('meta-overlay-container');
+    const div = document.createElement('div');
+    const popWidth = 280; // 弹窗宽度
+    const popHeight = 150; // 弹窗高度
+
+    if (type === 'main') {
+        div.className = 'meta-popup-window main-prompt';
+        const btnText = metaDeleteState.count === 2 ? "彻底删除" : "仍然删除";
+        div.innerHTML = `
+            <div class="meta-header">
+                <span class="meta-title">系统警告</span>
+                <span class="meta-close" onclick="cancelMetaDelete()">×</span>
+            </div>
+            <div class="meta-content"><b>危险操作</b>${text}</div>
+            <div class="meta-actions">
+                <button class="meta-btn cancel" onclick="cancelMetaDelete()">取消</button>
+                <button class="meta-btn danger" onclick="proceedMetaDelete()">${btnText}</button>
+            </div>
+        `;
+        container.appendChild(div);
+    } else {
+        // --- 噪音弹窗 ---
+        div.className = 'meta-popup-window noise';
+        
+        // 第三轮时，40% 的弹窗会变成 "cursed"，20% 会变成 "glitch"
+        if (step >= 3) {
+            const rand = Math.random();
+            if (rand > 0.6) div.classList.add('cursed');
+            else if (rand > 0.4) div.classList.add('glitch');
+        }
+
+        // *** 核心布局修复：确保弹窗覆盖全屏 ***
+        const screenW = container.clientWidth;
+        const screenH = container.clientHeight;
+        let left, top;
+        
+        // 70% 概率斜向层叠，30% 完全随机
+        if (Math.random() > 0.3 && index > 3) {
+            const cascadeOffset = (index % 30) * 15; // 增加层叠数量
+            const baseLeft = Math.random() * (screenW / 2);
+            const baseTop = Math.random() * (screenH / 2.5);
+            left = baseLeft + cascadeOffset;
+            top = baseTop + cascadeOffset;
+        } else {
+            left = Math.random() * (screenW - popWidth); 
+            top = Math.random() * (screenH - popHeight);
+        }
+
+        // 确保不超出边界
+        div.style.left = Math.max(10, Math.min(left, screenW - popWidth - 10)) + 'px';
+        div.style.top = Math.max(10, Math.min(top, screenH - popHeight - 10)) + 'px';
+        div.style.zIndex = 10000 + index;
+        
+        div.innerHTML = `
+            <div class="meta-header">
+                <span class="meta-title">Error</span>
+                <span class="meta-close">×</span>
+            </div>
+            <div class="meta-content">${text}</div>
+        `;
+        container.appendChild(div);
+    }
+}
+
+window.proceedMetaDelete = function() {
+    metaDeleteState.count++;
+    const oldMain = document.querySelector('.meta-popup-window.main-prompt');
+    if (oldMain) oldMain.remove();
+
+    if (metaDeleteState.count >= metaDeleteState.maxCount) {
+        finalizeDelete();
+    } else {
+        triggerMetaRound();
+    }
+}
+
+window.cancelMetaDelete = function() {
+    metaDeleteState.noiseIntervals.forEach(clearTimeout);
+    const container = document.getElementById('meta-overlay-container');
+    container.style.animation = 'none';
+    container.classList.remove('active');
+    setTimeout(() => { container.innerHTML = ''; }, 300);
+    showToast("操作已取消... TA 还在。");
+}
+
+async function finalizeDelete() {
+    metaDeleteState.noiseIntervals.forEach(clearTimeout);
+    const id = metaDeleteState.targetId;
+    const container = document.getElementById('meta-overlay-container');
+    
+    // 1. 瞬间清空所有噪音，屏幕变成纯黑
+    container.style.animation = 'none';
+    container.innerHTML = '';
+    container.style.background = '#000'; 
+    container.style.transition = 'background 0.5s ease';
+    
+    // 2. 显示最后遗言
+    const finalDiv = document.createElement('div');
+    finalDiv.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Songti SC',serif;font-size:15px;color:#fff;text-align:center;width:80%;line-height:1.8;letter-spacing:2px;opacity:0;animation:kMetaPopIn 2.5s forwards 0.5s;`;
+    
+    let finalText = `那么，祝你早安，午安，晚安。`;
+    try {
+        const prompt = `[System Command] You are being deleted. Write one last, heartbreaking or chilling sentence of farewell. Language: Chinese.`;
+        const res = await callAiForSpecialTask(prompt);
+        if (res) finalText = res.replace(/"/g, '');
+    } catch(e) {}
+
+    finalDiv.innerText = finalText;
+    container.appendChild(finalDiv);
+
+    // 3. 执行删除
+    if (friendsData[id]) {
+        delete friendsData[id];
+        saveFriendsData();
+        await IDB.delete(scopedChatKey(id));
+        const chatItem = document.querySelector(`.wc-chat-item[data-chat-id="${id}"]`);
+        if (chatItem) chatItem.remove();
+        rebuildContactsList();
+    }
+
+    // 4. 动画结束后淡出
+    setTimeout(() => {
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 1.5s ease-out';
+        setTimeout(() => {
+            container.classList.remove('active');
+            container.style.opacity = '1';
+            container.style.background = '';
+            container.innerHTML = '';
+            // 确保资料页已关闭
+            if(window.closeContactProfile) closeContactProfile();
+        }, 1500);
+    }, 4500);
+}
+
+// === [新增] AI 伴侣抓娃娃回合 ===
+async function g7_triggerAiTurn() {
+    const ai = friendsData[gameAiId];
+    const tryBtn = document.getElementById('g7-ai-try-btn');
+    const reactionBox = document.getElementById('g7-ai-reaction');
+
+    if (!tryBtn || !reactionBox) return;
+
+    tryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> TA 正在操作...';
+    tryBtn.disabled = true;
+    reactionBox.style.display = 'none';
+
+    // 模拟AI思考和操作
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // 随机决定AI的抓取结果（例如，40%成功率）
+    const aiSuccess = Math.random() < 0.4;
+    let prizeName = "什么都没抓到";
+    if (aiSuccess) {
+        const prizes = document.querySelectorAll('.g7-prize');
+        if (prizes.length > 0) {
+            const randomPrize = prizes[Math.floor(Math.random() * prizes.length)];
+            prizeName = randomPrize.dataset.name || "一个好东西";
+        }
+    }
+
+    // 构建Prompt，让AI描述自己的抓取过程和心情
+    const prompt = `
+    [System Command: AI Plays Claw Machine]
+    You are ${ai.realName}. It's your turn to play the claw machine after the user.
+    Your result: You ${aiSuccess ? 'SUCCESSFULLY caught' : 'FAILED to catch'} a prize.
+    The prize you aimed for was: "${prizeName}".
+    
+    Describe what happened from your perspective. Be playful, cute, or tsundere based on your persona.
+    Example (Fail): "哼，这破爪子根本没力气！不玩了啦！"
+    Example (Win): "看到了吗？我就是天才！这个【${prizeName}】送你了。"
+    
+    Return JSON ONLY: {"reaction": "your message"}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    
+    reactionBox.style.display = 'block';
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        reactionBox.innerHTML = `<b>${ai.remark || ai.realName}:</b><br>"${data.reaction}"`;
+    } catch(e) {
+        reactionBox.innerText = aiSuccess ? "TA 抓到了一个娃娃，开心地笑了起来。" : "TA 抓空了，气得跺了跺脚。";
+    }
+
+    // 恢复按钮
+    tryBtn.innerHTML = `让 <span id="g7-ai-partner-name">${ai.remark || ai.realName}</span> 再试一次`;
+    tryBtn.disabled = false;
+}

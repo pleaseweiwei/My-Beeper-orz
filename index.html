@@ -2,9 +2,23 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 关键修改：加入 viewport-fit=cover -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
     <title>my Beeper</title>
-    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    
+    <!-- ... 原有的 CSS 引用 ... -->
+
+    <!-- PWA 图标及全屏支持 -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS 专属配置：允许全屏 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- iOS 状态栏样式：black-translucent 会让内容通顶，black 会黑条 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bono机">
+</head>
+
     <!-- 外部字体和图标 -->
     <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Montserrat:wght@200;300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,6 +29,14 @@
     
     <!-- [新增] 这里专门用来放你输入的自定义CSS -->
     <style id="dynamic-custom-css"></style>
+    
+    <!-- PWA 图标及苹果设备支持 -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bono小手机">
 </head>
 <body>
 
@@ -115,10 +137,11 @@
             <div class="app-cell" data-app-id="wechat" onclick="openWeChatApp()"><div class="icon-box"><i class="fab fa-weixin" style="color:#07c160;"></i></div><span class="app-label">WeChat</span></div>
             <div class="app-cell" data-app-id="api" onclick="toggleSettings()"><div class="icon-box"><i class="fas fa-link"></i></div><span class="app-label">API</span></div>
             <div class="app-cell" data-app-id="theme" onclick="toggleSettings('theme')"><div class="icon-box"><i class="fas fa-magic"></i></div><span class="app-label">Theme</span></div>
-            <div class="app-cell" data-app-id="lovespace"><div class="icon-box"><i class="fas fa-heart" style="color:#e91e63;"></i></div><span class="app-label">Love Space</span></div>
+           <div class="app-cell" data-app-id="lovespace" onclick="openLoveSpaceApp()"><div class="icon-box"><i class="fas fa-heart" style="color:#e91e63;"></i></div><span class="app-label">Love Space</span></div>
             <div class="app-cell" data-app-id="worldbook"><div class="icon-box"><i class="fas fa-globe-asia"></i></div><span class="app-label">WorldBook</span></div>
             <div class="app-cell" data-app-id="presets" onclick="openPresetsApp()"><div class="icon-box"><i class="fas fa-sliders-h"></i></div><span class="app-label">Presets</span></div>
-            <div class="app-cell" data-app-id="game"><div class="icon-box"><i class="fas fa-gamepad"></i></div><span class="app-label">Game</span></div>
+           <div class="app-cell" data-app-id="game" onclick="openGameApp()"><div class="icon-box" style="background:#111; color:#fff;"><i class="fas fa-gamepad"></i></div><span class="app-label">ARCADE</span></div>
+
             <div class="app-cell" data-app-id="novel"><div class="icon-box"><i class="fas fa-book-open"></i></div><span class="app-label">Novel</span></div>
         </div>
     </div>
@@ -706,34 +729,25 @@
 
                 <!-- Tab 2: 主题美化 -->
                 <div id="tab-content-theme" class="tab-content" style="display:none;">
-                    
-                    <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+
+                           <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
                         <label style="margin:0;">显示状态栏</label>
                         <label class="switch">
                             <input type="checkbox" id="show-statusbar-time-toggle" checked>
                             <span class="slider round"></span>
                         </label>
                     </div>
+
+                    <!-- 把下面这段全面屏开关加回来 -->
                     <div class="form-group" style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
-    <label style="margin:0;">全面屏模式 (Full Screen)</label>
-    <label class="switch">
-        <input type="checkbox" id="fullscreen-mode-toggle">
-        <span class="slider round"></span>
-    </label>
-</div>
+                        <label style="margin:0;">全面屏模式 (Full Screen)</label>
+                        <label class="switch">
+                            <input type="checkbox" id="fullscreen-mode-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
 
-<hr class="settings-divider">
 
-<!-- === [新增] 强制刷新按钮 (放在壁纸设置上面或最下面都可以) === -->
-<div class="form-group">
-    <button onclick="forceSystemRefresh()" style="width:100%; height:44px; background:#ff7e67; color:#fff; border:none; border-radius:12px; font-weight:700;">
-        <i class="fas fa-sync-alt"></i> 强制刷新系统 (清除缓存)
-    </button>
-    <div class="form-text" style="text-align:center;">如果更新后没变化，请点此按钮</div>
-</div>
-
-<hr class="settings-divider">
-                    
                     <hr class="settings-divider">
 
                     <div class="form-group">
@@ -1390,6 +1404,355 @@
     </div>
 
 </div>
+<!-- ============================================== -->
+<!-- [多开隔离 V5.0] 韩系高定艺术书风 情侣空间 APP -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="loveSpaceApp" style="background: #fdfdfd; font-family: 'Montserrat', 'PingFang SC', sans-serif;">
+    
+    <!-- 0. 大厅界面：温馨圆润排版 -->
+    <div id="ls2-lobby-view" class="ls2-view active" style="display:flex; flex-direction:column; height:100%; background:#fcfcfc;">
+        <div class="k-header" style="background:transparent; border-bottom:none; margin-top:20px; padding-bottom: 10px; padding-top:20px;">
+            <i class="fas fa-chevron-left" onclick="closeLoveSpaceApp()" style="cursor:pointer; font-size:20px; color:#333;"></i>
+            <span style="font-weight: 700; font-size: 16px; color:#333; letter-spacing: 1px;">双人宇宙</span>
+            <div style="width: 20px;"></div>
+        </div>
+        
+        <div style="padding: 20px 24px; display:flex; justify-content:space-between; align-items:center; background:#fff; margin: 0 20px 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);">
+            <div>
+                <div style="font-size: 10px; color: #999; letter-spacing: 1px; margin-bottom:5px;">CURRENT IDENTITY</div>
+                <div style="font-size: 18px; font-weight: 800; color: #333;" id="ls2-lobby-my-name">Me</div>
+            </div>
+            <!-- 修改后的圆润头像，不再像遗照 -->
+            <div style="width:56px; height:56px; border-radius: 50%; border: 3px solid #f9f9f9; box-shadow: 0 5px 15px rgba(0,0,0,0.08); overflow:hidden; flex-shrink:0;">
+                <img id="ls2-lobby-my-avatar" src="" style="width:100%; height:100%; object-fit:cover;">
+            </div>
+        </div>
+
+        <div style="padding: 10px 24px; font-family:'Montserrat'; font-size: 11px; font-weight:700; color: #333; letter-spacing: 1px;">CONNECTIONS</div>
+        <div id="ls2-lobby-list" style="flex:1; overflow-y:auto; padding: 10px 20px 30px;">
+            <!-- JS 动态填充列表 -->
+        </div>
+    </div>
+
+    <!-- 1. 申请界面：排版杂志风 (Editorial Layout) -->
+    <div id="ls2-setup-view" class="ls2-view" style="display:none; flex-direction:column; justify-content:center; align-items:center; padding: 40px; position:relative; background:#fdfdfd;">
+        <i class="fas fa-chevron-left" onclick="ls2BackToLobby()" style="position:absolute; top:60px; left:24px; font-size:20px; color:#111; cursor:pointer;"></i>
+        
+        <div style="font-family: 'Songti SC', serif; font-size: 28px; color: #111; margin-bottom: 10px;">灵魂连结</div>
+        <div style="font-size: 10px; color: #999; letter-spacing: 2px; font-family:'Montserrat'; margin-bottom: 50px;">SOUL CONNECTION</div>
+
+        <div style="display:flex; align-items:center; gap:20px; margin-bottom: 40px;">
+            <div style="width:70px; height:70px; border-radius:50%; border:3px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.1);"><img id="ls2-setup-me-img" src="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"></div>
+            <div style="font-size:20px; color:#ccc; font-weight:300;">+</div>
+            <div style="width:70px; height:70px; border-radius:50%; border:3px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.1);"><img id="ls2-setup-ai-img" src="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"></div>
+        </div>
+
+        <div style="font-size: 13px; color: #555; line-height: 1.8; text-align:center; margin-bottom: 40px; background:#fff; border-radius:16px; border:1px solid #eee; padding:25px; box-shadow:0 4px 15px rgba(0,0,0,0.03);">
+            将以 <b id="ls2-setup-me-name" style="color:#111;"></b> 的身份<br>向 <b id="ls2-setup-ai-name" style="color:#111;"></b> 发送缔结契约的邀请。
+        </div>
+
+        <button id="ls2-btn-invite" style="width: 100%; max-width: 240px; height: 48px; background: #111; color: #fff; border: none; font-size: 13px; font-weight:600; letter-spacing: 2px; border-radius:24px; cursor:pointer; transition:0.2s;" onclick="ls2SendInvitation()">发送邀请</button>
+    </div>
+
+    <!-- 2. 已开通：主界面 (增加双人头像与大背景) -->
+    <div id="ls2-main-view" class="ls2-view" style="display:none; flex-direction:column; height:100%; background: #fcfcfc; position:relative;">
+        
+        <!-- 顶部大图背景区 -->
+        <div id="ls2-space-bg" style="position:absolute; top:0; left:0; width:100%; height: 260px; background-image: url('https://images.unsplash.com/photo-1518134346374-184f9d21cea2?q=80&w=400&auto=format&fit=crop'); background-size:cover; background-position:center; z-index:0;">
+            <!-- 渐变遮罩，为了文字看清并且完美融入下方的白底 -->
+            <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(252,252,252,0.1) 0%, rgba(252,252,252,0.8) 60%, rgba(252,252,252,1) 100%);"></div>
+        </div>
+
+        <!-- 顶部控制栏 (悬浮在背景上) -->
+        <div class="zhm-top" style="position:relative; z-index:1; padding: 40px 24px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="width:36px; height:36px; background:rgba(255,255,255,0.85); backdrop-filter:blur(5px); border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.05);" onclick="ls2BackToLobby()">
+                <i class="fas fa-arrow-left" style="font-size:14px; color:#333;"></i>
+            </div>
+            <div style="width:36px; height:36px; background:rgba(255,255,255,0.85); backdrop-filter:blur(5px); border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.05);" onclick="ls2ToggleSettings()">
+                <i class="fas fa-sliders-h" style="font-size:14px; color:#333;"></i>
+            </div>
+        </div>
+
+        <!-- 双人头像与信息区 -->
+        <div class="ls2-couple-profile" style="position:relative; z-index:1; padding: 10px 24px 20px; display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="display:flex; flex-direction:column;">
+                <div class="zhm-subtitle" style="margin-bottom:8px; color:#666; letter-spacing: 2px;">OUR UNIVERSE.</div>
+                <div style="display:flex; align-items:center;">
+                    <!-- 头像重叠叠放 -->
+                    <div style="display:flex; position:relative; width: 75px; height: 48px;">
+                        <img id="ls2-avatar-me" src="" style="width:48px; height:48px; border-radius:50%; border:3px solid #fff; position:absolute; left:0; z-index:2; object-fit:cover; box-shadow:0 4px 10px rgba(0,0,0,0.08);">
+                        <img id="ls2-avatar-ai" src="" style="width:48px; height:48px; border-radius:50%; border:3px solid #fff; position:absolute; left:30px; z-index:1; object-fit:cover; box-shadow:0 4px 10px rgba(0,0,0,0.08);">
+                    </div>
+                    <div style="margin-left: 15px;">
+                        <div style="font-weight:800; font-size:18px; color:#222; line-height:1.2; display:flex; flex-direction:column;">
+                            <span id="ls2-name-me">Me</span> 
+                            <span id="ls2-name-ai" style="font-size:13px; color:#555; font-weight:600;">AI</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 天数圆形徽章 -->
+            <div class="zhm-badge" style="position:static; transform:rotate(-5deg); width:56px; height:56px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); background:#111; color:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; border-radius:50%; flex-shrink:0;">
+                <div class="zhm-days" id="ls2-days-count" style="font-size:18px; margin-top:4px;">01</div>
+                <div class="zhm-days-label" style="font-size:8px;">DAYS</div>
+            </div>
+        </div>
+        
+        <!-- 导航：悬浮圆形岛 -->
+        <div class="ls2-circle-nav-container" style="position:relative; z-index:2; background:transparent; padding: 10px 24px;">
+            <div class="ls2-nav-item active" onclick="ls2SwitchTab('status', this)">
+                <div class="ls2-nav-circle">RADAR</div>
+                <span class="ls2-nav-label">追踪</span>
+            </div>
+            <div class="ls2-nav-item" onclick="ls2SwitchTab('journal', this)">
+                <div class="ls2-nav-circle">DIARY</div>
+                <span class="ls2-nav-label">手账</span>
+            </div>
+            <div class="ls2-nav-item" onclick="ls2SwitchTab('fridge', this)">
+                <div class="ls2-nav-circle">FOOD</div>
+                <span class="ls2-nav-label">冰箱</span>
+            </div>
+            <div class="ls2-nav-item" onclick="ls2SwitchTab('qa', this)">
+                <div class="ls2-nav-circle">Q&A</div>
+                <span class="ls2-nav-label">问答</span>
+            </div>
+            <div class="ls2-nav-item" onclick="ls2SwitchTab('tasks', this)">
+                <div class="ls2-nav-circle">TODO</div>
+                <span class="ls2-nav-label">清单</span>
+            </div>
+        </div>
+
+        <!-- 内容滑动区 -->
+        <div class="ls2-content-wrap">
+            <!-- T1: RADAR -->
+            <div id="ls2-tab-status" class="ls2-tab-content active">
+                <div class="art-card">
+                    <div class="art-card-header">
+                        <span>STATUS LOG</span>
+                        <i class="fas fa-satellite-dish"></i>
+                    </div>
+                    <div class="art-card-body" style="padding:0;">
+                        <div style="padding: 20px; text-align:right;">
+                            <button class="black-pill-btn" onclick="ls2GenerateStatus()">扫描信号 SCAN</button>
+                        </div>
+                        <div id="ls2-radar-container" class="radar-clean-list">
+                            <!-- JS 填充 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+          <div id="ls2-tab-journal" class="ls2-tab-content">
+    <div class="journal-book-container">
+        
+        <!-- 手账封面 -->
+        <div class="journal-cover" id="journal-cover" onclick="openJournalBook()">
+            <div class="journal-cover-title">Our Diary</div>
+            <div class="journal-cover-hint">点击翻开手账本</div>
+        </div>
+        
+        <!-- 手账内页 -->
+        <div class="journal-inner" id="journal-inner">
+            
+            <div class="journal-tabs">
+                <div class="j-tab active" onclick="switchJournalTab('me')">ME</div>
+                <div class="j-tab" onclick="switchJournalTab('ai')">TA</div>
+                <div class="j-close-btn" onclick="closeJournalBook()" title="合上手账"><i class="fas fa-times"></i></div>
+            </div>
+            
+            <div class="art-card paper-texture" id="journal-paper">
+                
+                <!-- === 新增：日记翻页栏 === -->
+                <div class="journal-pagination">
+                    <div style="display:flex; gap:10px;">
+                        <i class="fas fa-chevron-left" onclick="journalPrevPage()" title="上一页"></i>
+                        <i class="fas fa-chevron-right" onclick="journalNextPage()" title="下一页"></i>
+                    </div>
+                    <span id="journal-date-display" style="font-weight:700; letter-spacing:1px;">2026/03/02</span>
+                    <i class="fas fa-plus" onclick="journalNewPage()" title="新建今日日记"></i>
+                </div>
+
+                <div class="art-card-body" style="position:relative; z-index:2; flex:1; display:flex; flex-direction:column; padding:15px; overflow:hidden;">
+                    
+                    <!-- 标签一：我写的手账 -->
+                    <div id="j-page-me" class="j-page-content active">
+                        <textarea id="ls2-journal-me" class="j-textarea" placeholder="记录此刻的心情..." onblur="ls2SaveJournalData()"></textarea>
+                    </div>
+                    
+                    <!-- 标签二：AI写的手账 (支持手动修改了！) -->
+                    <div id="j-page-ai" class="j-page-content" style="display:none;">
+                        <textarea id="ls2-journal-ai" class="j-textarea" placeholder="等待 TA 的日记生成..." onblur="ls2SaveJournalData()"></textarea>
+                        <div class="j-action" onclick="ls2GenerateJournal(false)" style="text-align:right;">
+                            <span>生成TA的日记</span> <i class="fas fa-magic"></i>
+                        </div>
+                    </div>
+
+                    <!-- 共用工具栏放在底部绝对定位，不占文本空间 -->
+                    <div class="j-tools" style="bottom: 10px; right: 15px;">
+                        <div class="round-tool-btn" onclick="openPaperModal()" title="更换纸张"><i class="fas fa-fill-drip"></i></div>
+                        <div class="round-tool-btn" onclick="ls2AddJournalSticker()" title="贴便利贴"><i class="fas fa-sticky-note"></i></div>
+                    </div>
+                </div>
+                <!-- 贴纸放置层 -->
+                <div id="ls2-journal-stickers" class="zine-stickers-layer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+            <!-- T3: FRIDGE -->
+            <div id="ls2-tab-fridge" class="ls2-tab-content">
+                <div class="fridge-art-container">
+                    <div class="fridge-door-art" id="ls2-fridge-door">
+                        <div class="fridge-handle-art" onclick="ls2ToggleFridgeDoor()">
+                            <div class="handle-text">OPEN</div>
+                        </div>
+                        <div id="ls2-fridge-surface" class="ff-surface"></div>
+                        
+                        <div class="fridge-actions-floating">
+                            <button onclick="ls2AddFridgeItem('note')">贴留言</button>
+                            <button onclick="ls2AddFridgeItem('magnet')">贴照片</button>
+                            <button class="dark" onclick="ls2AddFridgeItem('buy')">喊TA买菜</button>
+                        </div>
+                    </div>
+                    <div class="fridge-inner-art" id="ls2-fridge-inner" style="display:none;">
+                        <div class="inner-close-btn" onclick="ls2ToggleFridgeDoor()">CLOSE ×</div>
+                        <div class="inner-shelf" id="f-shelf-1"></div>
+                        <div class="inner-shelf" id="f-shelf-2"></div>
+                        <div class="inner-drawer" id="f-shelf-3"></div>
+                        
+                        <div class="diet-log-box">
+                            <div class="d-title">饮食监管 <span onclick="ls2CheckAiDiet()">查岗TA</span></div>
+                            <textarea id="my-diet-input" placeholder="输入饮食记录..."></textarea>
+                            <button onclick="ls2LogDiet()">计算热量</button>
+                            <div id="diet-ai-reaction" class="d-reaction" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- T4: Q&A -->
+            <div id="ls2-tab-qa" class="ls2-tab-content">
+                <div class="art-card">
+                    <div class="qa-hero-section">
+                        <div class="qa-big-icon">?</div>
+                        <button class="black-pill-btn wide" onclick="ls2GenerateQA()">抽取今日灵魂拷问</button>
+                    </div>
+                    <div id="ls2-qa-container" style="padding: 0 20px;"></div>
+                    <div class="qa-history-label">HISTORY ARCHIVE</div>
+                    <div id="ls2-qa-history" class="qa-history-list"></div>
+                </div>
+            </div>
+
+            <!-- T5: TASKS -->
+            <div id="ls2-tab-tasks" class="ls2-tab-content">
+                <div class="art-card">
+                    <div class="task-header-row">
+                        <span>GROWTH LIST</span>
+                        <span class="task-date">TODAY</span>
+                    </div>
+                    <div class="task-split-view">
+                        <div class="task-col left">
+                            <div class="t-head">ME <i class="fas fa-plus" onclick="ls2AddTask('me')"></i></div>
+                            <div id="ls2-tasks-me"></div>
+                        </div>
+                        <div class="task-col right">
+                            <div class="t-head">TA <i class="fas fa-magic" onclick="ls2GenerateAITask()"></i></div>
+                            <div id="ls2-tasks-ai"></div>
+                        </div>
+                    </div>
+                    <button class="task-eval-btn" onclick="ls2EvalTasks()">生成日结报告</button>
+                    <div class="task-eval-box" id="ls2-task-eval-box">
+                        <div id="ls2-task-eval-text">...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- === [新增] 情侣空间设置弹窗 (修正原本打不开的问题) === -->
+    <div id="ls2-settings-modal" class="modal-overlay" style="z-index:3000;">
+        <div class="modal-box" style="width: 320px; border-radius:24px;">
+            <div class="modal-header">
+                <span>空间设置</span>
+                <i class="fas fa-times" onclick="ls2ToggleSettings()"></i>
+            </div>
+            <div class="modal-body" style="padding: 15px; max-height: 400px; overflow-y: auto;">
+                
+                <div class="form-group">
+                    <label>空间背景图 (Background)</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="ls2-set-space-bg" placeholder="输入图片地址..." style="flex:1; border:1px solid #eee; border-radius:8px; padding:0 10px;">
+                        <button class="btn-secondary" onclick="document.getElementById('global-img-changer').click(); window.tempImgTarget='ls2_space_bg';" style="width:44px;"><i class="fas fa-upload"></i></button>
+                    </div>
+                </div>
+                                <div class="form-group">
+                    <label>手账本封面图 (Journal Cover)</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="ls2-set-journal-cover" placeholder="输入图片地址..." style="flex:1; border:1px solid #eee; border-radius:8px; padding:0 10px;">
+                        <button class="btn-secondary" onclick="document.getElementById('global-img-changer').click(); window.tempImgTarget='ls2_journal_cover';" style="width:44px;"><i class="fas fa-upload"></i></button>
+                    </div>
+                </div>
+                
+<div class="settings-section-title" style="margin-top:15px;">手账字体设置 (Fonts)</div>
+<div class="form-group">
+    <label>我的字体 (输入 TTF/WOFF2 链接)</label>
+    <input type="text" id="ls2-set-font-me" placeholder="留空则使用默认好看的手写体" style="width:100%; border:1px solid #eee; border-radius:8px; padding:10px;">
+</div>
+<div class="form-group">
+    <label>TA 的字体 (输入 TTF/WOFF2 链接)</label>
+    <input type="text" id="ls2-set-font-ai" placeholder="留空则使用默认好看的手写体" style="width:100%; border:1px solid #eee; border-radius:8px; padding:10px;">
+</div>
+<hr class="settings-divider">
+
+
+
+
+                <div class="form-group">
+                    <label>冰箱面板背景图</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="ls2-set-fridge-bg" placeholder="输入图片地址..." style="flex:1; border:1px solid #eee; border-radius:8px; padding:0 10px;">
+                        <button class="btn-secondary" onclick="document.getElementById('global-img-changer').click(); window.tempImgTarget='ls2_fridge_bg';" style="width:44px;"><i class="fas fa-upload"></i></button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display:flex; justify-content:space-between; align-items:center; margin:0;">
+                        <span>自动记录轨迹 (Radar)</span>
+                        <label class="switch" style="transform:scale(0.8);"><input type="checkbox" id="ls2-set-status"><span class="slider round"></span></label>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex; justify-content:space-between; align-items:center; margin:0;">
+                        <span>自动生成对方手账</span>
+                        <label class="switch" style="transform:scale(0.8);"><input type="checkbox" id="ls2-set-journal"><span class="slider round"></span></label>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex; justify-content:space-between; align-items:center; margin:0;">
+                        <span>自动生出贴纸/留言</span>
+                        <label class="switch" style="transform:scale(0.8);"><input type="checkbox" id="ls2-set-fridge"><span class="slider round"></span></label>
+                    </label>
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>自动事件时间间隔 (小时)</label>
+                    <input type="number" id="ls2-set-interval" min="1" max="24" placeholder="4" style="border:1px solid #eee; border-radius:8px; padding:10px; width:100%;">
+                </div>
+                
+                <hr class="settings-divider" style="margin:20px 0;">
+                <button class="btn-cancel" style="width:100%; color:#ff4d4f; border:1px solid #ff4d4f; background:#fff; height:40px; border-radius:12px;" onclick="ls2Disconnect()">解除灵魂绑定 (删除此空间)</button>
+            </div>
+            <div class="modal-footer" style="padding:15px; border-top:1px solid #f0f0f0;">
+                <button class="btn-confirm" onclick="ls2SaveSettingsBtn()" style="width:100%; background:#2b2b2b; color:#fff; height:44px; border-radius:12px;">保存设置</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
 <!-- ============================================== -->
 <!-- [新增] 世界书管理应用 (WorldBook App) -->
@@ -2410,6 +2773,718 @@
     </div>
 </div>
 <!-- ============================================== -->
+<!-- [NEW] ARCADE 双人游乐场 APP (韩系柔和轻杂志风) -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="gameApp" style="background: #fafafa; font-family: 'Montserrat', 'PingFang SC', sans-serif;">
+    
+    <!-- 顶部导航 -->
+    <div class="gc-header">
+        <i class="fas fa-chevron-left" onclick="closeGameApp()"></i>
+        <span>双人游乐场 <small style="font-size:9px; color:#aaa; font-weight:normal; letter-spacing:1px; margin-left:5px;">ARCADE</small></span>
+        <div style="width:20px;"></div>
+    </div>
+
+    <!-- 玩家选择区 -->
+    <div class="gc-player-select">
+        <div style="font-size: 11px; font-weight: 600; color: #888;">当前玩伴 (Player 2)</div>
+        <select id="gc-ai-selector" onchange="switchGamePartner()"></select>
+    </div>
+
+    <!-- 视图容器 -->
+    <div class="gc-view-container">
+        
+        <!-- ================= 大厅视图 ================= -->
+        <div id="gc-view-lobby" class="gc-view active">
+            <div class="gc-game-list">
+                
+                <!-- Game 1 -->
+                <div class="gc-game-card" onclick="openSubGame('truth')">
+                    <div class="gc-card-num">01</div>
+                    <div class="gc-card-info">
+                        <div class="title">午夜真心话</div>
+                        <div class="desc">Lie Detector · 揪出 TA 的小谎言</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-mask"></i></div>
+                </div>
+
+                <!-- Game 2 -->
+                <div class="gc-game-card" onclick="openSubGame('emoji')">
+                    <div class="gc-card-num">02</div>
+                    <div class="gc-card-info">
+                        <div class="title">脑电波同频</div>
+                        <div class="desc">Telepathy · Emoji 默契猜词</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-smile-wink"></i></div>
+                </div>
+                <!-- Game 3 -->
+                <div class="gc-game-card" onclick="openSubGame('suitcase')">
+                    <div class="gc-card-num">03</div>
+                    <div class="gc-card-info">
+                        <div class="title">平行宇宙逃亡</div>
+                        <div class="desc">The Escape · 逃亡路上的致命抉择</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-meteor"></i></div>
+                </div>
+
+                <!-- Game 4 -->
+                <div class="gc-game-card" onclick="openSubGame('roulette')">
+                    <div class="gc-card-num">04</div>
+                    <div class="gc-card-info">
+                        <div class="title">多巴胺扭蛋机</div>
+                        <div class="desc">Gacha · 抽取 TA 的专属奇遇 Buff</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-star"></i></div>
+                </div>
+
+                <!-- Game 5 -->
+                <div class="gc-game-card" onclick="openSubGame('turf')">
+                    <div class="gc-card-num">05</div>
+                    <div class="gc-card-info">
+                        <div class="title">同居领地战</div>
+                        <div class="desc">Turf War · 靠扯蛋抢占房间地盘</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-border-all"></i></div>
+                </div>
+                                <!-- Game 6: 微醺骰子 -->
+                <div class="gc-game-card" onclick="openSubGame('dice')">
+                    <div class="gc-card-num">06</div>
+                    <div class="gc-card-info">
+                        <div class="title">午夜微醺局</div>
+                        <div class="desc">Liar's Dice · 吹牛骰子，输了真心话</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-dice"></i></div>
+                </div>
+
+                <!-- Game 7: 娃娃机 -->
+                <div class="gc-game-card" onclick="openSubGame('claw')">
+                    <div class="gc-card-num">07</div>
+                    <div class="gc-card-info">
+                        <div class="title">心跳娃娃机</div>
+                        <div class="desc">Claw Machine · 抓取 TA 的专属盲盒</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-hand-rock"></i></div>
+                </div>
+
+                <!-- Game 8: 飞行棋 -->
+                <div class="gc-game-card" onclick="openSubGame('chess')">
+                    <div class="gc-card-num">08</div>
+                    <div class="gc-card-info">
+                        <div class="title">暧昧飞行棋</div>
+                        <div class="desc">Board Game · 命运格子与大冒险</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-chess-board"></i></div>
+                </div>
+
+                <!-- Game 9: 抽鬼牌 -->
+                <div class="gc-game-card" onclick="openSubGame('cards')">
+                    <div class="gc-card-num">09</div>
+                    <div class="gc-card-info">
+                        <div class="title">灵魂抽鬼牌</div>
+                        <div class="desc">Old Maid · 心理博弈，抽中就爆炸</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-clone"></i></div>
+                </div>
+
+                <!-- Game 10: 连连看 -->
+                <div class="gc-game-card" onclick="openSubGame('memory')">
+                    <div class="gc-card-num">10</div>
+                    <div class="gc-card-info">
+                        <div class="title">默契翻翻乐</div>
+                        <div class="desc">Memory · 翻出只有我们懂的梗</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-th-large"></i></div>
+                </div>
+                <!-- Game 11: 双人连线跳跳 -->
+<div class="gc-game-card" onclick="openSubGame('jump')">
+    <div class="gc-card-num">11</div>
+    <div class="gc-card-info">
+        <div class="title">羁绊跳跳</div>
+        <div class="desc">Tethered Jump · 绳子绑在一起的默契考验</div>
+    </div>
+    <div class="gc-card-icon"><i class="fas fa-link"></i></div>
+</div>
+
+
+
+            </div>
+        </div>
+
+                <!-- ================= Game 1: 真心话 ================= -->
+        <div id="gc-view-truth" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>午夜真心话</span>
+            </div>
+            <div class="gc-sub-content">
+                <!-- 头部：双方对峙 UI -->
+                <div class="gc-duel-header">
+                    <div>
+                        <img id="g1-me-avatar" class="gc-duel-avatar me" src="">
+                        <div class="gc-duel-name">Me</div>
+                    </div>
+                    <div class="gc-duel-vs">VS</div>
+                    <div>
+                        <img id="g1-ai-avatar" class="gc-duel-avatar ai" src="">
+                        <div id="g1-ai-name" class="gc-duel-name">AI</div>
+                    </div>
+                </div>
+                
+                <div style="text-align:center;"><div class="gc-round-tag" id="g1-round-tag">Round 1: TA 的秘密</div></div>
+                
+                <!-- Round 1: AI 出题我来猜 -->
+                <div id="g1-r1-area">
+                    <div class="gc-prompt-box">让 TA 生成 3 句话，找出那句谎言！</div>
+                    <button class="gc-btn-primary" id="g1-start-btn" onclick="g1_generate()">让 TA 出题</button>
+                    
+                    <div id="g1-cards-area" style="display:none; margin-top: 10px; display:flex; flex-direction:column; gap:12px;">
+                        <!-- 动态生成卡片 -->
+                    </div>
+                    <div id="g1-r1-result" class="gc-result-box"></div>
+                </div>
+
+                <!-- Round 2: 我出题 TA 来猜 -->
+                <div id="g1-r2-area" style="display:none;">
+                    <div class="gc-prompt-box">现在轮到你了！写下 3 句话，并勾选出<b style="color:#ff4d4f;">哪句是谎言</b>，看看 TA 能不能识破？</div>
+                    <div class="g1-my-form">
+                        <div class="g1-my-row">
+                            <input type="radio" name="g1_my_lie" value="0" checked>
+                            <input type="text" id="g1-my-q0" placeholder="第一句 (例如: 我怕黑)">
+                        </div>
+                        <div class="g1-my-row">
+                            <input type="radio" name="g1_my_lie" value="1">
+                            <input type="text" id="g1-my-q1" placeholder="第二句 (例如: 我讨厌吃香菜)">
+                        </div>
+                        <div class="g1-my-row">
+                            <input type="radio" name="g1_my_lie" value="2">
+                            <input type="text" id="g1-my-q2" placeholder="第三句 (例如: 我谈过3次恋爱)">
+                        </div>
+                        <button class="gc-btn-primary" id="g1-submit-btn" onclick="g1_submitMyTurn()">发送给 TA 验证</button>
+                    </div>
+                    <div id="g1-r2-result" class="gc-result-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Game 2: Emoji ================= -->
+        <div id="gc-view-emoji" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>脑电波同频</span>
+            </div>
+            <div class="gc-sub-content">
+                <!-- 头部：双方对峙 UI -->
+                <div class="gc-duel-header">
+                    <div>
+                        <img id="g2-me-avatar" class="gc-duel-avatar me" src="">
+                        <div class="gc-duel-name">Me</div>
+                    </div>
+                    <div class="gc-duel-vs"><i class="fas fa-wifi" style="color:#07c160; font-size:18px;"></i></div>
+                    <div>
+                        <img id="g2-ai-avatar" class="gc-duel-avatar ai" src="">
+                        <div id="g2-ai-name" class="gc-duel-name">AI</div>
+                    </div>
+                </div>
+
+                <div style="text-align:center;"><div class="gc-round-tag" id="g2-round-tag">Round 1: 接收 TA 的电波</div></div>
+                
+                <!-- Round 1: AI 发 Emoji 我来猜 -->
+                <div id="g2-r1-area">
+                    <button class="gc-btn-primary" id="g2-start-btn" onclick="g2_generate()">连接 TA 的脑电波</button>
+                    
+                    <div id="g2-emoji-display" class="gc-huge-emoji">❓❓❓</div>
+                    <div id="g2-taunt" style="font-size:12px; color:#888; text-align:center; margin-bottom:20px;"></div>
+                    
+                    <div id="g2-guess-area" style="display:none; gap:10px;">
+                        <input type="text" id="g2-guess-input" class="gc-input" placeholder="输入你的猜测...">
+                        <button class="gc-btn-primary" style="width:80px;" onclick="g2_guess()">我猜！</button>
+                    </div>
+                    <div id="g2-r1-result" class="gc-result-box"></div>
+                </div>
+
+                <!-- Round 2: 我发 Emoji TA来猜 -->
+                <div id="g2-r2-area" style="display:none;">
+                    <div class="gc-prompt-box">换你发信号了！只用 <b>纯 Emoji</b> 描述一件事或一个词，看看 TA 的脑洞大不大！</div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="g2-my-emoji-input" class="gc-input" placeholder="例: 🎬🍿🥤 (看电影)" style="font-size: 20px; letter-spacing: 2px;">
+                        <button class="gc-btn-primary" style="width:80px;" id="g2-send-btn" onclick="g2_submitMyTurn()">发射</button>
+                    </div>
+                    <div id="g2-r2-result" class="gc-result-box"></div>
+                </div>
+            </div>
+        </div>
+
+
+                  <!-- ================= Game 3: 平行宇宙逃亡 (黑白灰高定版) ================= -->
+        <div id="gc-view-suitcase" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>PARALLEL UNIVERSE.</span>
+            </div>
+            <div class="gc-sub-content">
+                
+                <!-- 1. 顶部：危机卡片 -->
+                <div id="g3-setup-area" class="g3-k-setup">
+                    <div class="g3-k-icon"><i class="fas fa-meteor"></i></div>
+                    <div class="g3-k-title">SURVIVAL MODE</div>
+                    <div class="g3-k-desc">
+                        系统将模拟一场绝境危机。<br>
+                        你和 TA 需要从 6 件随机散落的物资中，<br>
+                        轮流挑选 4 件带入避难所。
+                    </div>
+                    <button class="g3-k-btn" id="g3-start-btn" onclick="g3_generateScenario()">INITIALIZE</button>
+                </div>
+
+                <div id="g3-game-area" style="display:none; flex-direction:column; width:100%;">
+                    <!-- 剧本展示 -->
+                    <div class="g3-k-scenario-box">
+                        <div class="g3-k-label">CURRENT CRISIS</div>
+                        <div id="g3-scenario" class="g3-k-text">...</div>
+                    </div>
+
+                    <!-- 共享背包 (进度条样式) -->
+                    <div class="g3-k-inventory-bar">
+                        <div class="g3-k-inv-header">
+                            <span>BACKPACK STORAGE</span>
+                            <span id="g3-bp-count">0 / 4</span>
+                        </div>
+                        <div class="g3-k-slots">
+                            <div class="g3-k-slot" id="g3-slot-0"></div>
+                            <div class="g3-k-slot" id="g3-slot-1"></div>
+                            <div class="g3-k-slot" id="g3-slot-2"></div>
+                            <div class="g3-k-slot" id="g3-slot-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- AI 对话区 (极简风) -->
+                    <div id="g3-ai-dialogue" class="g3-k-dialogue" style="display:none;">
+                        <div class="g3-k-avatar"><img src=""></div>
+                        <div class="g3-k-bubble">...</div>
+                    </div>
+
+                    <!-- 物资选择网格 -->
+                    <div class="g3-k-grid" id="g3-items-grid"></div>
+                    
+                    <!-- 结局区域 -->
+                    <div id="g3-ending-box" class="g3-k-ending" style="display:none;"></div>
+                    <button class="g3-k-btn black" id="g3-ending-btn" style="display:none; margin-top:20px;" onclick="g3_generateEnding()">GENERATE ENDING</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Game 4: 脸红心跳扭蛋机 (真实物理+弹窗聊天) ================= -->
+        <div id="gc-view-roulette" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>LUCKY GACHA.</span>
+            </div>
+            <div class="gc-sub-content" style="align-items:center; justify-content:center;">
+                
+                            <!-- 纯CSS超真实拟物扭蛋机 (复古圆球款) -->
+                <div class="g4-retro-machine">
+                    
+                    <!-- 顶部完美的圆形玻璃罩 -->
+                    <div class="g4-retro-globe" id="g4-globe">
+                        <!-- 强烈的玻璃弧形反光 -->
+                        <div class="g4-glass-glare"></div>
+                        <!-- 塑料扭蛋胶囊 -->
+                        <div class="g4-capsule c1"></div>
+                        <div class="g4-capsule c2"></div>
+                        <div class="g4-capsule c3"></div>
+                        <div class="g4-capsule c4"></div>
+                        <div class="g4-capsule c5"></div>
+                        <div class="g4-capsule c6"></div>
+                    </div>
+
+                    <!-- 玻璃球与底座之间的金属连接环 -->
+                    <div class="g4-metal-collar"></div>
+
+                    <!-- 机器厚重烤漆底座 -->
+                    <div class="g4-retro-base">
+                        <!-- 投币口 -->
+                        <div class="g4-coin-slot"><div class="slot-hole"></div></div>
+                        
+                        <!-- 3D金属质感旋钮 -->
+                        <div class="g4-turn-knob" id="g4-knob" onclick="g4_twist()">
+                            <div class="g4-knob-grip"></div>
+                        </div>
+                        
+                        <!-- 扭蛋掉落出口 -->
+                        <div class="g4-dispenser-hole">
+                            <div class="g4-flap"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 掉落出来的球 (默认隐藏) -->
+                    <div id="g4-dropped-ball" class="g4-capsule dropped" style="display:none;"></div>
+                </div>
+
+                <div class="g4-k-instruction">
+                    TAP THE KNOB TO PLAY<br>
+                    <span style="font-size:10px; color:#999; font-weight:400;">抽取 TA 的限定隐藏人设</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- === [新增] Game 4 扭蛋结果互动弹窗 (独立小剧场) === -->
+        <div id="g4-interaction-modal" class="k-full-modal" style="z-index: 5000; background: rgba(255,255,255,0.98);">
+            <div class="k-modal-header" style="border-bottom:none; padding-top:30px;">
+                <i class="fas fa-chevron-down" onclick="g4_closeModal()"></i>
+                <span>SECRET ENCOUNTER</span>
+                <div style="width:20px;"></div>
+            </div>
+            
+            <div class="g4-modal-body">
+                <!-- 卡片展示 -->
+                <div class="g4-card-display">
+                    <div class="g4-tag">SSR</div>
+                    <div class="g4-role-title" id="g4-role-title">...</div>
+                    <div class="g4-role-desc" id="g4-role-desc">...</div>
+                </div>
+
+                <!-- 迷你聊天区 -->
+                <div class="g4-chat-area" id="g4-chat-area">
+                    <!-- 聊天记录 -->
+                </div>
+            </div>
+
+            <!-- 底部输入框 -->
+            <div class="g4-input-bar">
+                <input type="text" id="g4-mini-input" placeholder="回应 TA..." onkeydown="if(event.key==='Enter') g4_sendMiniMsg()">
+                <button onclick="g4_sendMiniMsg()"><i class="fas fa-arrow-up"></i></button>
+            </div>
+        </div>
+
+
+                <!-- ================= Game 5: 同居领地战 (谈判与契约版) ================= -->
+        <div id="gc-view-turf" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>同居领地战 <small style="font-size:9px; font-weight:400; color:#999; letter-spacing:1px; margin-left:5px;">TURF WAR</small></span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box" style="text-align:center; background:#fff; border:1px solid #f0f0f0;">
+                    <div style="font-weight:700; font-size:14px; margin-bottom:5px; color:#333;">这间屋子，听谁的？</div>
+                    <div style="color:#999; font-size:10px;">说服 TA 让出地盘。连成三线者，可制定一条绝对的【同居规矩】。</div>
+                </div>
+                
+                <div class="g5-grid" id="g5-grid"></div>
+                
+                <div id="g5-result" class="gc-result-box" style="margin-top:15px; text-align:center; border:1px solid #111;"></div>
+
+                <div id="g5-dialog-modal" class="k-full-modal" style="background:rgba(255,255,255,0.98); z-index:200;">
+                    <div class="k-modal-header" style="border:none; padding-top:40px;">
+                        <i class="fas fa-times" onclick="document.getElementById('g5-dialog-modal').classList.remove('show')"></i>
+                        <span>NEGOTIATION</span>
+                        <div style="width:20px;"></div>
+                    </div>
+                    <div style="padding:30px; display:flex; flex-direction:column; justify-content:center; flex:1;">
+                        <div style="font-size:20px; font-weight:800; margin-bottom:10px; text-align:center; color:#111;">
+                            我想占领 <span id="g5-target-name" style="border-bottom:2px solid #111; padding-bottom:2px;">沙发</span>
+                        </div>
+                        <div style="font-size:12px; color:#999; text-align:center; margin-bottom:40px;">给出一个让 TA 无法拒绝的理由</div>
+                        <textarea id="g5-argument" class="k-input-textarea" rows="4" placeholder="例如：因为我今天洗碗了，所以遥控器归我..." style="background:#f5f5f5; border:none;"></textarea>
+                        <button class="gc-btn-primary" id="g5-submit-btn" onclick="g5_submitArgument()" style="margin-top:30px; background:#111;">尝试说服 TA</button>
+                    </div>
+                </div>
+
+                <div id="g5-contract-modal" class="k-full-modal" style="background:#f5f5f5; z-index:250; align-items:center; padding:40px 20px;">
+                    <div class="g5-contract-card">
+                        <div class="g5-contract-title">COHABITATION<br>AGREEMENT</div>
+                        <div class="g5-contract-subtitle">同居特别条约</div>
+                        
+                        <div id="g5-contract-winner" style="font-size:12px; margin-bottom:20px; color:#666; line-height:1.5;">
+                            鉴于 <b>[ User ]</b> 赢得了本次领地战<br>特此颁布以下不可撤销之规矩：
+                        </div>
+                        
+                        <textarea id="g5-rule-input" class="g5-contract-textarea" placeholder="在此写下你要定下的规矩 (例如：以后每天下班必须给我带杯奶茶)"></textarea>
+                        
+                        <div id="g5-ai-signature-area" style="display:none; margin-top:30px; border-top:1px dashed #ccc; padding-top:20px;">
+                            <div style="font-size:10px; color:#aaa; margin-bottom:10px;">签署方反应：</div>
+                            <div id="g5-ai-reaction" style="font-size:13px; font-weight:600; color:#333; margin-bottom:20px; line-height:1.5;"></div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                                <span style="font-size:10px; color:#999;">Sign:</span>
+                                <span id="g5-ai-sign" style="font-family:'Alex Brush', cursive; font-size:32px; color:#111;"></span>
+                            </div>
+                        </div>
+
+                        <button id="g5-force-sign-btn" class="gc-btn-primary" onclick="g5_forceAiSign()" style="margin-top:30px; background:#111;">勒令 TA 签字</button>
+                        <button id="g5-close-contract-btn" class="gc-btn-secondary" onclick="g5_reset()" style="display:none; margin-top:15px; border:none; background:transparent;">收起契约</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Game 6: 午夜微醺局 ================= -->
+        <div id="gc-view-dice" class="gc-view" style="background:#111; color:#fff;">
+            <div class="gc-sub-header" style="color:#fff;">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()" style="color:#fff;"></i>
+                <span>午夜微醺局 <small style="font-size:9px; font-weight:400; color:#888; letter-spacing:1px; margin-left:5px;">LIAR'S DICE</small></span>
+            </div>
+            <div class="gc-sub-content">
+                <div style="text-align:center; margin-bottom:30px;">
+                    <div style="font-family:'Montserrat', sans-serif; font-weight:800; font-size:28px; color:#fff; letter-spacing:1px;">Midnight Drink</div>
+                    <div style="font-size:10px; color:#888; letter-spacing:2px; margin-top:5px;">输一次，喝一杯。直至意乱情迷。</div>
+                </div>
+
+                <div class="g6-drunk-status">
+                    <div class="g6-glass-wrap">
+                        <span style="font-size:10px; color:#aaa; margin-bottom:5px; font-weight:700;">Me</span>
+                        <div class="g6-cups" id="g6-cups-me">
+                            <i class="fas fa-glass-whiskey empty"></i>
+                            <i class="fas fa-glass-whiskey empty"></i>
+                            <i class="fas fa-glass-whiskey empty"></i>
+                        </div>
+                    </div>
+                    <div style="width:1px; background:rgba(255,255,255,0.2);"></div>
+                    <div class="g6-glass-wrap">
+                        <span style="font-size:10px; color:#aaa; margin-bottom:5px; font-weight:700;">TA</span>
+                        <div class="g6-cups" id="g6-cups-ai">
+                            <i class="fas fa-glass-whiskey empty"></i>
+                            <i class="fas fa-glass-whiskey empty"></i>
+                            <i class="fas fa-glass-whiskey empty"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="g6-table-area" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:30px; text-align:center; margin-bottom:20px; min-height:120px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                    <div style="font-size:11px; color:#aaa; margin-bottom:15px; font-weight:700; letter-spacing:1px;">MY DICE</div>
+                    <div id="g6-my-dice" style="font-size:32px; letter-spacing:10px; color:#fff;">?????</div>
+                </div>
+
+                <div id="g6-ai-dialogue" class="g6-dialogue-box" style="display:none;"></div>
+                
+                <div id="g6-action-area" style="display:none; flex-direction:column; gap:15px; margin-top:20px;">
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="g6-bid-input" class="gc-input" placeholder="喊点 (如: 3个6)" style="text-align:center; font-weight:bold; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2);">
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="gc-btn-secondary" onclick="g6_makeBid()" style="flex:2; border-color:rgba(255,255,255,0.3); background:transparent; color:#fff;">继续喊</button>
+                        <button class="gc-btn-primary" id="g6-call-btn" onclick="g6_callLiar()" style="flex:1; background:#fff; color:#111;">开TA！</button>
+                    </div>
+                </div>
+
+                <button class="gc-btn-primary" id="g6-start-btn" onclick="g6_start()" style="margin-top:20px; background:#fff; color:#111;">摇骰子</button>
+
+                <div id="g6-confession-modal" class="k-full-modal" style="background:#000; z-index:200; align-items:center; justify-content:center; padding:30px;">
+                    <div style="width:100%; border:1px solid rgba(255,255,255,0.2); padding:40px 30px; border-radius:20px; text-align:center; position:relative; overflow:hidden;">
+                        <div style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:radial-gradient(circle, rgba(255,126,103,0.1) 0%, transparent 60%); z-index:0; pointer-events:none;"></div>
+                        <i class="fas fa-wine-glass-alt" style="font-size:30px; color:#ff7e67; margin-bottom:20px; position:relative; z-index:1;"></i>
+                        <div style="font-family:'Montserrat', sans-serif; font-size:20px; font-weight:800; color:#fff; margin-bottom:30px; position:relative; z-index:1; letter-spacing:1px;">Drunk Confession</div>
+                        <div id="g6-confession-text" style="font-size:14px; font-weight:500; line-height:1.8; color:#ddd; position:relative; z-index:1;"></div>
+                        <button class="gc-btn-secondary" onclick="g6_reset()" style="margin-top:40px; background:rgba(255,255,255,0.1); border:none; color:#aaa; width:100%; position:relative; z-index:1;">明天醒来就当没发生过</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       <!-- ================= Game 7: 心跳娃娃机 (白色拟物版) ================= -->
+<div id="gc-view-claw" class="gc-view">
+    <div class="gc-sub-header">
+        <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+        <span>心动娃娃机 <small style="font-size:9px; font-weight:400; color:#999; letter-spacing:1px; margin-left:5px;">CLAW MACHINE</small></span>
+    </div>
+    <div class="gc-sub-content" style="align-items:center;">
+        
+        <div class="gc-prompt-box" style="width:100%; text-align:center; margin-bottom:10px;">
+            <div style="font-weight:700; color:#333; margin-bottom:4px;">看准时机，果断下爪！</div>
+            <div style="font-size:10px; color:#888;">盲盒里装着 TA 准备的 礼物 / 恶搞 / 惩罚</div>
+        </div>
+
+        <!-- 白色拟物化机身 -->
+        <div class="g7-machine-body">
+            <!-- 顶部装饰条 -->
+            <div class="g7-machine-header">
+                <div class="g7-logo-text">CLAW CRANE</div>
+            </div>
+            
+            <!-- 玻璃视窗 -->
+            <div class="g7-glass-window">
+                <!-- 内部轨道 -->
+                <div class="g7-rail-track"></div>
+                
+                <!-- 移动的机械爪组件 -->
+                <div class="g7-claw-assembly" id="g7-claw-assembly">
+                    <div class="g7-claw-cable" id="g7-cable"></div>
+                    <div class="g7-claw-head" id="g7-claw-head">
+                        <div class="g7-prong left"></div>
+                        <div class="g7-prong right"></div>
+                    </div>
+                </div>
+
+                <!-- 娃娃池 -->
+                <div class="g7-prize-pool" id="g7-prizes-container">
+                    <div class="g7-prize" data-id="1" data-name="一只呆萌的泰迪熊" style="left:15%;">🧸</div>
+                    <div class="g7-prize" data-id="2" data-name="一只害羞的小兔子" style="left:40%;">🐰</div>
+                    <div class="g7-prize" data-id="3" data-name="一个奇怪的青蛙头套" style="left:65%;">🐸</div>
+                </div>
+            </div>
+
+            <!-- 下方控制面板 -->
+            <div class="g7-control-panel">
+                <div class="g7-joystick-base">
+                    <!-- 左右移动按钮 -->
+                    <div class="g7-joystick-stick" onpointerdown="g7_startMove(-1)" onpointerup="g7_stopMove()" onpointerleave="g7_stopMove()"><i class="fas fa-chevron-left"></i></div>
+                    <div class="g7-joystick-stick" onpointerdown="g7_startMove(1)" onpointerup="g7_stopMove()" onpointerleave="g7_stopMove()"><i class="fas fa-chevron-right"></i></div>
+                </div>
+                <div class="g7-button-base">
+                    <!-- 抓取按钮 -->
+                    <button class="g7-action-button" id="g7-drop-btn" onpointerdown="g7_dropClaw()">
+                        抓
+                    </button>
+                </div>
+            </div>
+            <!-- 出口 -->
+            <div class="g7-dispenser-slot"></div>
+        </div>
+
+        <!-- 结果显示区 -->
+        <div id="g7-result" class="gc-result-box" style="width:100%; margin-top:20px; text-align:center;"></div>
+        
+        <!-- AI 伴侣互动区域 -->
+        <div id="g7-ai-turn" style="width:100%; margin-top:20px; display:none; flex-direction:column; align-items:center; gap:10px;">
+            <button class="gc-btn-secondary" id="g7-ai-try-btn" onclick="g7_triggerAiTurn()">
+                让 <span id="g7-ai-partner-name">TA</span> 也试试
+            </button>
+            <div id="g7-ai-reaction" class="gc-result-box" style="width:100%; display:none; background:#fff8e1; border-color:#ffe58f;">
+                <!-- AI的抓取结果和吐槽会显示在这里 -->
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+        <!-- ================= Game 8: 飞行棋 ================= -->
+        <div id="gc-view-chess" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>暧昧飞行棋</span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box">共 10 步，谁先到终点谁赢。路上会踩到大冒险，全由 AI 现编！</div>
+                
+                <div class="g8-track-container">
+                    <div id="g8-me-token" class="g8-token g8-me">Me</div>
+                    <div id="g8-ai-token" class="g8-token g8-ai">TA</div>
+                    <!-- 10个格子 -->
+                    <div class="g8-cell">START</div><div class="g8-cell"></div><div class="g8-cell">❓</div>
+                    <div class="g8-cell"></div><div class="g8-cell">😈</div><div class="g8-cell"></div>
+                    <div class="g8-cell">❓</div><div class="g8-cell"></div><div class="g8-cell">😈</div><div class="g8-cell">WIN</div>
+                </div>
+
+                <button class="gc-btn-primary" id="g8-roll-btn" onclick="g8_rollDice()" style="margin-top:30px;">掷骰子 🎲</button>
+                <div id="g8-result" class="gc-result-box" style="margin-top:20px;"></div>
+            </div>
+        </div>
+
+        <!-- ================= Game 9: 抽鬼牌 ================= -->
+        <div id="gc-view-cards" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>灵魂抽鬼牌</span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box">5 张牌中有一张是“鬼牌(Joker)”。抽前你可以问 TA 一句话试探，看 TA 会不会撒谎。</div>
+                <button class="gc-btn-primary" id="g9-start-btn" onclick="g9_start()">发牌</button>
+                
+                <div id="g9-game-area" style="display:none; margin-top:20px;">
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <input type="text" id="g9-ask-input" class="gc-input" placeholder="试探TA (如: 中间那张是鬼牌吗?)">
+                        <button class="gc-btn-secondary" style="width:80px;" onclick="g9_askAI()">质问</button>
+                    </div>
+                    <div id="g9-ai-reply" style="font-size:13px; color:#ff7e67; font-weight:bold; margin-bottom:20px; min-height:20px;"></div>
+                    
+                    <div class="g9-cards-row">
+                        <div class="g9-card" onclick="g9_pickCard(0, this)">1</div>
+                        <div class="g9-card" onclick="g9_pickCard(1, this)">2</div>
+                        <div class="g9-card" onclick="g9_pickCard(2, this)">3</div>
+                        <div class="g9-card" onclick="g9_pickCard(3, this)">4</div>
+                        <div class="g9-card" onclick="g9_pickCard(4, this)">5</div>
+                    </div>
+                </div>
+                <div id="g9-result" class="gc-result-box" style="margin-top:20px;"></div>
+            </div>
+        </div>
+
+        <!-- ================= Game 10: 翻翻乐 ================= -->
+        <div id="gc-view-memory" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>默契翻翻乐</span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box">AI 将根据你们的聊天记录/人设，生成 6 对专属关键词。翻开它们进行配对！</div>
+                <button class="gc-btn-primary" id="g10-start-btn" onclick="g10_generate()">让 TA 制作卡片</button>
+                
+                <div id="g10-grid" class="g10-grid" style="display:none; margin-top:20px;"></div>
+                <div id="g10-result" class="gc-result-box" style="margin-top:20px;"></div>
+            </div>
+        </div>
+<div id="gc-view-jump" class="gc-view">
+  <div class="gc-sub-header">
+    <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+    <span>双人跳一跳对抗</span>
+  </div>
+
+  <div class="gc-sub-content" style="display:flex;flex-direction:column;height:100%;">
+    <div id="g11d-prep">
+      <div class="gc-prompt-box">
+        上半屏你跳，下半屏 TA 跳。长按蓄力，松手起跳。<br>
+        跳过悬崖，吃琥珀，谁先掉下去谁输。
+      </div>
+
+      <div class="g11d-record">最高记录：<span id="g11d-high-record">我和TA 0m</span></div>
+
+      <div class="g11d-wardrobe">
+        <div class="g11d-title">我の装扮</div>
+        <div class="g11d-chip-row" id="g11d-me-chips"></div>
+      </div>
+
+      <div class="g11d-wardrobe">
+        <div class="g11d-title">TAの装扮</div>
+        <div class="g11d-chip-row" id="g11d-ai-chips"></div>
+      </div>
+
+      <button class="gc-btn-primary" id="g11d-start-btn" onclick="g11_startWithAI()">开始对抗</button>
+    </div>
+
+    <div id="g11d-arena" style="display:none;">
+      <div class="g11d-lane-card">
+        <div class="g11d-lane-head">
+          <span>ME</span><span id="g11d-me-score">0m</span>
+        </div>
+        <div class="g11d-canvas-wrap">
+          <canvas id="g11d-canvas-me"></canvas>
+          <div id="g11d-touch-me" class="g11d-touch"
+               onpointerdown="g11d_holdStart()"
+               onpointerup="g11d_holdEnd()"
+               onpointerleave="g11d_holdEnd()"></div>
+        </div>
+      </div>
+
+      <div class="g11d-lane-card">
+        <div class="g11d-lane-head">
+          <span id="g11d-ai-name">AI</span><span id="g11d-ai-score">0m</span>
+        </div>
+        <div class="g11d-canvas-wrap">
+          <canvas id="g11d-canvas-ai"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div id="g11-result-box" class="gc-result-box" style="display:none;"></div>
+  </div>
+</div>
+
+
+
+
+    </div>
+</div>
+
+<!-- ============================================== -->
 <!-- [韩系简约版] 钱包 APP (全中文) -->
 <!-- ============================================== -->
 <div class="app-fullscreen-view" id="payApp" style="background: #fafafa;">
@@ -3010,8 +4085,123 @@
         </div>
     </div>
 </div>
+    <!-- === ↓↓↓ 新增这段脚本，用于激活保存桌面的功能 ↓↓↓ === -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(() => console.log('PWA Service Worker 注册成功'))
+                    .catch(err => console.log('PWA 注册失败', err));
+            });
+        }
+    </script>
+    <!-- === [新增] 更换纸张弹窗 === -->
+<div id="ls2-paper-modal" class="modal-overlay" style="z-index: 3100;">
+    <div class="modal-box" style="width: 320px;">
+        <div class="modal-header">
+            <span>更换手账纸张</span>
+            <i class="fas fa-times" onclick="document.getElementById('ls2-paper-modal').classList.remove('active')"></i>
+        </div>
+        <div class="modal-body" style="padding: 10px;">
+            <div id="paper-preview-list" class="paper-preview-grid">
+                <!-- JS 动态填充预设 -->
+            </div>
+            <div class="form-group" style="margin-top:15px;">
+                <label>自定义上传 (PNG/JPG)</label>
+                <button class="btn-secondary" style="width:100%;" onclick="document.getElementById('global-img-changer').click(); window.tempImgTarget='ls2_journal_paper_custom';">
+                    <i class="fas fa-upload"></i> 上传图片
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- === [新增] 添加/编辑便利贴弹窗 === -->
+<div id="ls2-sticker-modal" class="modal-overlay" style="z-index: 3100;">
+    <div class="modal-box" style="width: 320px;">
+        <div class="modal-header">
+            <span>添加便利贴 / 图片</span>
+            <i class="fas fa-times" onclick="document.getElementById('ls2-sticker-modal').classList.remove('active')"></i>
+        </div>
+        <div class="modal-body" style="padding: 15px;">
+            <!-- 选项卡 -->
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <button class="tab-btn active" onclick="ls2SwitchStickerTab('text')" id="tab-sticker-text">文字</button>
+                <button class="tab-btn" onclick="ls2SwitchStickerTab('img')" id="tab-sticker-img">图片</button>
+            </div>
 
+            <!-- 文字模式 -->
+            <div id="sticker-panel-text">
+                <textarea id="ls2-sticker-text" rows="3" placeholder="写点什么..." style="width:100%; border:1px solid #eee; padding:10px; border-radius:8px;"></textarea>
+                <div class="form-group" style="margin-top:10px;">
+                    <label>背景颜色 (点击彩虹圈可自定义)</label>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <div class="color-circle-picker" style="background:#fff4e6;" onclick="ls2SetStickerColor('#fff4e6')"></div>
+                        <div class="color-circle-picker" style="background:#e6f7ff;" onclick="ls2SetStickerColor('#e6f7ff')"></div>
+                        <div class="color-circle-picker" style="background:#fff0f6;" onclick="ls2SetStickerColor('#fff0f6')"></div>
+                        <div class="color-circle-picker" style="background:#ffffff; border:1px solid #eee;" onclick="ls2SetStickerColor('#ffffff')"></div>
+                        <!-- 万能调色板 -->
+                        <div class="color-circle-picker" style="background:conic-gradient(red, yellow, lime, aqua, blue, magenta, red); position:relative; overflow:hidden;">
+                            <input type="color" onchange="ls2SetStickerColor(this.value)" style="position:absolute; top:-10px; left:-10px; width:40px; height:40px; opacity:0; cursor:pointer;">
+                        </div>
+                    </div>
+                    <input type="hidden" id="ls2-sticker-color" value="#fff4e6">
+                </div>
+
+                <div class="form-group" style="margin-top:10px;">
+                    <label>自定义底图 (撑满形状)</label>
+                    <button class="btn-secondary" style="width:100%;" onclick="document.getElementById('ls2-sticker-bg-file').click()">选择底图</button>
+                    <input type="file" id="ls2-sticker-bg-file" accept="image/*" style="display:none;" onchange="ls2HandleStickerBgFile(this)">
+                    <div id="ls2-sticker-bg-preview" style="height:40px; margin-top:5px; background-size:cover; background-position:center; border-radius:4px; display:none; position:relative;">
+                        <i class="fas fa-times" onclick="ls2ClearStickerBg()" style="position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.5); color:#fff; border-radius:50%; padding:2px 4px; font-size:10px; cursor:pointer;"></i>
+                    </div>
+                    <input type="hidden" id="ls2-sticker-bg-val" value="">
+                </div>
+            </div>
+
+            <!-- 图片模式 -->
+            <div id="sticker-panel-img" style="display:none;">
+                <div class="form-group">
+                    <label>上传图片 (支持透明PNG)</label>
+                    <div style="display:flex; gap:10px;">
+                        <div id="ls2-sticker-preview" style="width:60px; height:60px; background:#eee; border-radius:8px; background-size:cover;"></div>
+                        <button class="btn-secondary" onclick="document.getElementById('ls2-sticker-file').click()" style="flex:1;">选择图片</button>
+                        <input type="file" id="ls2-sticker-file" accept="image/*" style="display:none;" onchange="ls2HandleStickerFile(this)">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label>照片内容描述 (给AI看)</label>
+                    <input type="text" id="ls2-sticker-img-desc" placeholder="例如：我们在海边的合照..." style="width:100%; border:1px solid #eee; padding:8px; border-radius:8px;">
+                </div>
+                <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin:0;">显示边框/白底</label>
+                    <label class="switch" style="transform:scale(0.8);">
+                        <input type="checkbox" id="ls2-sticker-border">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="form-text">关闭开关即可制作异形无边框贴纸</div>
+            </div>
+
+            <!-- 通用：形状选择 -->
+            <div class="form-group" style="margin-top:15px;">
+                <label>形状</label>
+                <select id="ls2-sticker-shape" style="width:100%; padding:5px;">
+                    <option value="shape-rect">长方形 (Rectangle)</option>
+                    <option value="shape-square">方形 (Square)</option>
+                    <option value="shape-rounded">圆角矩形 (Rounded)</option>
+                    <option value="shape-circle">圆形 (Circle)</option>
+                    <option value="shape-heart">爱心 (Heart)</option>
+                    <option value="shape-star">五角星 (Star)</option>
+                </select>
+            </div>
+
+            <button class="btn-confirm" style="width:100%; margin-top:10px;" onclick="ls2ConfirmAddSticker()">添加</button>
+        </div>
+    </div>
+</div>
+<!-- Meta 故障删除特效容器 -->
+<div id="meta-overlay-container"></div>
 
 </body>
 </html>

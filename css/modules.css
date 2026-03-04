@@ -4,58 +4,6 @@
    ========================================= */
 
 
-
-
-
-/* AI 的小说正文样式 */
-.offline-entry.ai .oe-text {
-    font-family: 'Noto Serif SC', 'Songti SC', 'Playfair Display', serif !important;
-    font-size: 16.5px !important;
-    line-height: 2 !important;
-    color: #2c2c2c !important;
-    text-align: justify;
-    letter-spacing: 0.8px;
-    border-left: 3px solid #e0e0e0;
-    padding-left: 18px;
-}
-
-/* AI 的动作描写 (斜体) */
-.offline-entry.ai .oe-text i, 
-.offline-entry.ai .oe-text em {
-    color: #777 !important;
-    font-family: 'Montserrat', 'PingFang SC', sans-serif !important;
-    font-size: 14.5px !important;
-    font-style: normal !important;
-    background: transparent !important;
-    opacity: 0.85;
-}
-
-/* AI 的说话内容 (粗体/引号内) */
-.offline-entry.ai .oe-text b, 
-.offline-entry.ai .oe-text strong {
-    color: #111 !important;
-    font-weight: 900 !important;
-    font-family: 'Noto Serif SC', 'Songti SC', serif !important;
-}
-
-/* 用户的行动记录样式 */
-.offline-entry.user .oe-text {
-    text-align: right;
-    font-family: 'Montserrat', 'PingFang SC', sans-serif !important;
-    font-size: 15px !important;
-    color: #555 !important;
-    border-right: 3px solid #111;
-    padding-right: 18px;
-    border-left: none;
-    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.02));
-    padding-top: 10px;
-    padding-bottom: 10px;
-    border-radius: 8px 0 0 8px;
-}
-
-
-
-
 .vn-option-btn:hover {
     background: #000;
     transform: translateY(-2px);
@@ -114,46 +62,6 @@ textarea#custom-css-input:focus {
 /* 修正 label 作为按钮时的默认边距 */
 .file-btn {
     margin: 0; 
-}
-/* =========================================
-   全局变量修正 (韩系高定配色系统)
-   请确保这段代码在 :root 之后或覆盖原有变量
-   ========================================= */
-
-/* =========================================
-   1. 聊天窗口与设置窗口 (美化修复版)
-   ========================================= */
-
-.chat-header i, .settings-header i { font-size: 18px; color: #444; cursor: pointer; padding: 5px; }
-
-
-
-.message-bubble.sent { 
-    background: #333; color: #fff; 
-    border-bottom-right-radius: 4px; /* 俏皮尾巴 */
-    align-self: flex-end; 
-}
-.message-bubble.received { 
-    background: #fff; color: #333; 
-    border: var(--k-border);
-    border-bottom-left-radius: 4px; /* 俏皮尾巴 */
-    align-self: flex-start; 
-}
-
-/* 输入框区域 */
-.chat-input-area { 
-    padding: 15px 20px 35px; /* 底部留宽一点 */
-    background: #fff;
-    border-top: var(--k-border);
-}
-
-.chat-input-form:focus-within { background: #fff; border-color: #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-.chat-input-form input { font-size: 14px; color: #333; }
-.chat-input-form button {
-    width: 38px; height: 38px;
-    background: #222; border-radius: 50%;
-    color: #fff; display: flex; justify-content: center; align-items: center;
-    font-size: 13px;
 }
 
 /* =========================================
@@ -373,7 +281,6 @@ textarea#custom-css-input:focus {
 .moment-content { flex: 1; }
 .moment-name { font-weight: 700; color: #333; margin-bottom: 8px; font-size: 14px; }
 .moment-text { font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 10px; }
-.moment-images img { width: 100%; border-radius: 16px; object-fit: cover; }
 .moment-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
 .moment-meta span { font-size: 11px; color: #ccc; }
 /* === 动态朋友圈扩展 === */
@@ -558,94 +465,7 @@ textarea#custom-css-input:focus {
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 .wc-tab-item.active i { font-size: 18px; }
-/* =========================================
-   韩系高定聊天界面 - 复制到 style.css 最底部
-   ========================================= */
 
-/* 1. 聊天大背景：应用极淡波点纹理，去掉廉价纯白 */
-.chat-view {
-    /* 极浅的暖灰白底色 */
-    background-color: #f9f9f9 !important;
-    /* 核心：波点纹理 (颜色很浅，为了不眼花) */
-    background-image: radial-gradient(#e0e0e0 1.5px, transparent 1.5px) !important;
-    background-size: 24px 24px !important; 
-    box-shadow: -10px 0 40px rgba(0,0,0,0.05);
-}
-
-/* 2. 顶部导航栏：磨砂玻璃效果 + 稍微加高 */
-.chat-header {
-    background: rgba(249, 249, 249, 0.85) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    border-bottom: 1px solid rgba(0,0,0,0.03) !important;
-    height: 90px; /* 加高显得大气 */
-    padding-top: 50px !important;
-    padding-bottom: 10px !important;
-    z-index: 10;
-}
-/* 名字下的在线状态 */
-.chat-header small {
-    display: block;
-    margin-top: 2px;
-}
-
-/* 3. 聊天记录区域：增加呼吸感 */
-.chat-messages {
-    background: transparent !important; /* 透明，为了透出背景的波点 */
-    padding: 20px 18px !important;
-    gap: 24px !important; /* 气泡隔得远一点，像杂志排版 */
-}
-
-
-
-/* -> 接收方 (白色气泡，左上角是尖的) */
-.message-bubble.received {
-    background: #ffffff !important;
-    color: #444 !important;
-    border-radius: 4px 22px 22px 22px !important; 
-}
-/* 给白色气泡加个可爱的小装饰点 */
-.message-bubble.received::before {
-    content: '';
-    position: absolute;
-    top: 16px; left: -6px;
-    width: 6px; height: 6px;
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: -2px 2px 5px rgba(0,0,0,0.05);
-}
-
-/* -> 发送方 (深灰气泡，右下角是尖的) */
-.message-bubble.sent {
-    background: #2b2b2b !important; /* 深炭灰，比纯黑更有质感 */
-    color: #fefefe !important;
-    border-radius: 22px 22px 4px 22px !important; 
-    box-shadow: 0 5px 20px rgba(43, 43, 43, 0.2) !important;
-}
-
-/* 5. 底部输入框：悬浮胶囊设计 */
-.chat-input-area {
-    background: transparent !important; /* 底部背景透明 */
-    border-top: none !important;
-    padding: 0 20px 35px 20px !important; /* 距离底部远一点 */
-}
-
-
-
-.chat-input-form input {
-    font-size: 14px;
-    color: #444;
-}
-
-/* 发送按钮：黑色圆形 */
-.chat-input-form button {
-    width: 42px !important;
-    height: 42px !important;
-    background: #2b2b2b !important;
-    border-radius: 50%;
-    transition: all 0.3s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-.chat-input-form button:hover { transform: scale(1.1) rotate(-10deg); }
 /* =========================================
    新增：聊天头像布局 (追加到 style.css 最底部)
    ========================================= */
@@ -1184,13 +1004,7 @@ textarea#custom-css-input:focus {
     background-color: var(--k-bg); 
 }
 
-/* 复用一下现有的表单样式，让 textarea 更好看一点 */
-.chat-settings-page-content textarea {
-    resize: vertical;
-    min-height: 80px;
-    line-height: 1.5;
-    padding: 12px 15px;
-}
+
 /* =========================================
    [新增] 聊天设置页面新样式 (V2 重构补丁)
    ========================================= */
@@ -1247,35 +1061,6 @@ textarea#custom-css-input:focus {
     flex: 1; /* 关键：让它能占满剩余空间 */
     min-width: 0; /* 关键：允许弹性收缩 */
     max-width: calc(100% - 60px); /* 减去头像和间距的宽度 */
-}
-
-/* === [替换] 气泡翻译模式样式 === */
-.bubble-content-main {
-    position: relative;
-    z-index: 2;
-}
-
-.bubble-translation {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed rgba(0,0,0,0.2); /* 加深颜色，确保看得见 */
-    font-size: 12px !important;
-    line-height: 1.4;
-    color: #666; /* 翻译文字颜色 */
-    display: block; /* 确保换行 */
-    width: 100%;
-}
-
-/* 接收方(白气泡)的翻译样式 */
-.message-bubble.received .bubble-translation {
-    border-top-color: #e0e0e0;
-    color: #888;
-}
-
-/* 发送方(黑气泡)的翻译样式 */
-.message-bubble.sent .bubble-translation {
-    border-top-color: rgba(255,255,255,0.3);
-    color: #ccc;
 }
 
 
@@ -1476,19 +1261,6 @@ textarea#custom-css-input:focus {
 .msg-image-content img { width: 100%; display: block; }
 
 /* 2. 语音条 */
-/* 语音气泡里的转文字 */
-.msg-voice-transcript {
-  display: none;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(0,0,0,.15);
-  font-size: 12px;
-  color: #666;
-  line-height: 1.4;
-}
-.msg-voice-transcript.show {
-  display: block;
-}
 
 /* 长按录音中 */
 #holdToTalkBtn.recording {
@@ -1935,12 +1707,14 @@ textarea#custom-css-input:focus {
 /* 装饰性图片，黑白滤镜 */
 .k-hero-banner::before {
     content: ''; position: absolute; top:0; right:0; width: 60%; height: 100%;
-    background: url('https://images.unsplash.com/photo-1485230946387-dd33314715fa?q=80&w=400&auto=format&fit=crop') center/cover;
+    /* 替换了失效的 404 图片 */
+    background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop') center/cover;
     filter: grayscale(100%) contrast(1.2);
     opacity: 0.5;
     mask-image: linear-gradient(to right, transparent, black);
     -webkit-mask-image: linear-gradient(to right, transparent, black);
 }
+
 .k-hero-tag { font-size: 10px; letter-spacing: 2px; border: 1px solid #fff; display: inline-block; padding: 4px 8px; width: fit-content; margin-bottom: 10px; }
 .k-hero-title { font-family: 'Playfair Display', serif; font-size: 36px; line-height: 1; z-index: 2; }
 .k-hero-subtitle { font-size: 10px; color: #999; margin-top: 10px; letter-spacing: 1px; z-index: 2; }
@@ -2420,114 +2194,7 @@ textarea#custom-css-input:focus {
     outline: none;
     line-height: 1;
 }
-/* =========================================
-   Page 4: 优化版样式 (短发票 + 图片滚动条)
-   ========================================= */
 
-/* 1. 滚动组件优化 */
-.collection-ticker-widget {
-    background: #fff;
-    border-radius: 40px;
-    height: 56px; /*稍微加高一点以容纳图片*/
-    display: flex;
-    align-items: center;
-    padding: 0 6px 0 20px; /* 右侧padding减小，让图片靠边 */
-    box-shadow: var(--k-shadow);
-    border: var(--k-border);
-    overflow: hidden;
-    position: relative;
-    margin-bottom: 5px; /* 减少到底下发票的距离 */
-}
-
-/* 新增：圆形图片容器 */
-.ticker-img-circle {
-    width: 44px; height: 44px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-    margin-left: 10px;
-    border: 2px solid #f5f5f5;
-    cursor: pointer;
-    z-index: 5;
-    background: #eee;
-}
-.ticker-img-circle img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-/* 2. 发票组件 (变短版) */
-.receipt-widget.short-version {
-    background: #fdfdfd;
-    width: 100%;
-    border-radius: 12px 12px 0 0;
-    padding: 20px 20px 30px 20px; /* 底部padding减少 */
-    position: relative;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-    font-family: 'Courier New', Courier, monospace;
-    display: flex;
-    flex-direction: column;
-    gap: 8px; /* 间距由 15 改为 8，变紧凑 */
-    
-    /* 核心：锯齿边缘 */
-    mask-image: radial-gradient(circle at bottom, transparent 6px, black 6.5px);
-    mask-size: 20px 100%;
-    mask-position: bottom;
-    mask-repeat: repeat-x;
-    -webkit-mask-image: radial-gradient(circle at bottom, transparent 6px, black 6.5px);
-    -webkit-mask-size: 20px 100%;
-    -webkit-mask-position: bottom;
-    -webkit-mask-repeat: repeat-x;
-    
-    padding-bottom: 25px; /* 给锯齿留的刚好距离 */
-    z-index: 2; /* 确保发票在APP上方图层 */
-}
-
-/* 隐藏部分元素以缩短高度 */
-.receipt-widget.short-version .receipt-thanks {
-    display: none;
-}
-.receipt-widget.short-version .receipt-barcode {
-    margin: 0;
-    transform: scaleY(0.6); /* 压扁一点条形码 */
-    opacity: 0.5;
-}
-
-/* 3. APP 网格向上移动 */
-.grid-apps.moved-up {
-    margin-top: -15px; /* 负边距，让它钻到锯齿下面一点 */
-    padding-top: 0;
-    position: relative;
-    z-index: 1; /* 在发票下面 */
-}
-
-/* 这里的样式复用之前的，确保没漏 */
-.receipt-hole {
-    position: absolute;
-    top: 12px; left: 50%; transform: translateX(-50%);
-    width: 10px; height: 10px;
-    background: #e0e0e0; border-radius: 50%;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
-}
-.receipt-header { text-align: center; margin-top: 5px; }
-.receipt-title { font-size: 16px; font-weight: 900; letter-spacing: 2px; color: #222; }
-.receipt-date { font-size: 9px; color: #999; margin-top: 2px; }
-.receipt-divider-dashed { border-top: 1px dashed #ccc; width: 100%; height: 1px; }
-.receipt-divider-line { border-top: 2px solid #222; width: 100%; height: 2px; }
-
-.receipt-item {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 11px; color: #444; cursor: pointer; padding: 6px 0;
-    transition: background 0.2s;
-}
-.receipt-item:hover { background: rgba(0,0,0,0.02); }
-.r-item-name { display: flex; gap: 8px; }
-.r-qty { color: #aaa; }
-.r-item-price { font-weight: 700; display: flex; align-items: center; gap: 4px; }
-.receipt-footer { text-align: center; display: flex; flex-direction: column; gap: 5px; }
-.receipt-total { display: flex; justify-content: space-between; font-size: 13px; color: #222; margin-bottom: 2px; }
-.receipt-barcode { font-size: 20px; letter-spacing: -2px; user-select: none; }
 /* =========================================
    Page 4: 修复版样式 (滚动修复 + App样式统一)
    ========================================= */
@@ -2545,6 +2212,7 @@ textarea#custom-css-input:focus {
     overflow: hidden;
     position: relative;
     margin-bottom: 20px; /* 增加与下方发票的距离 */
+    flex-shrink: 0;
 }
 
 /* 核心修复：滚动容器设置 */
@@ -2686,14 +2354,14 @@ textarea#custom-css-input:focus {
     transform: scaleY(0.6); opacity: 0.5; margin: 0;
 }
 /* =========================================
-   [重制版] Bono机 开机动画 (韩系抽象菠萝)
+   [韩系气泡弹出版 - 灰粉克制配色] 
    ========================================= */
 
 #boot-screen {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background-color: #fafafa; /* 极浅的米白/灰白 */
+    background-color: #fcfcfc; 
     z-index: 9999;
     display: flex;
     justify-content: center;
@@ -2702,10 +2370,9 @@ textarea#custom-css-input:focus {
     transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
 }
 
-/* 消失时的动画：稍微放大并淡出 */
 #boot-screen.fade-out {
     opacity: 0;
-    transform: scale(1.1);
+    transform: scale(1.05);
     pointer-events: none;
 }
 
@@ -2713,169 +2380,176 @@ textarea#custom-css-input:focus {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 30px;
+    gap: 38px;
+    margin-top: 20px;
 }
 
-/* --- 菠萝图标设计 --- */
-.pineapple-icon {
+/* --- 白色传呼机主体 --- */
+.white-pager {
+    width: 120px;
+    height: 75px;
+    background: #ffffff;
+    border-radius: 18px; 
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid rgba(0,0,0,0.02);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.04), inset 0 -3px 8px rgba(0,0,0,0.01);
+    
+    opacity: 0;
+    animation: 
+        soft-float-in 1s cubic-bezier(0.25, 1, 0.5, 1) forwards,
+        hover-bob 4s ease-in-out 1s infinite;
 }
 
-/* 1. 叶冠 (Crown) - 三根线条 */
-.p-crown {
+/* 🌟 优化：极简高级灰的气泡 */
+.pager-bubble {
+    position: absolute;
+    top: -55px;
+    left: 40px; 
+    background: #ffffff;
+    padding: 10px 16px;
+    border-radius: 20px 20px 20px 0; 
+    
+    /* 去掉粉色光晕，换成极干净的浅灰阴影和细边框 */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); 
+    border: 1px solid #f2f2f2; 
+    
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: #777777; /* 温柔的高级灰文字 */
     display: flex;
+    align-items: center;
     gap: 6px;
-    margin-bottom: -5px; /* 下沉一点，连接果实 */
-    z-index: 2;
-}
-.p-crown span {
-    width: 4px;
-    height: 25px;
-    background: #222;
-    border-radius: 4px;
-    transform-origin: bottom center;
+    z-index: 10;
+    
+    transform-origin: bottom left; 
     opacity: 0;
+    transform: scale(0);
+    animation: 
+        bubble-spring-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 1.2s,
+        bubble-float 3s ease-in-out infinite 1.8s;
 }
-/* --- 叶子动画精修版 --- */
-.p-crown span:nth-child(1) {
-    height: 18px;
-    transform-origin: bottom right; /* 左叶子以右下角为轴 */
-    animation: leaf-left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    animation-delay: 0.2s;
-}
-.p-crown span:nth-child(2) {
-    height: 28px;
-    transform-origin: bottom center;
-    animation: leaf-center 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    animation-delay: 0.3s;
-}
-.p-crown span:nth-child(3) {
-    height: 18px;
-    transform-origin: bottom left; /* 右叶子以左下角为轴 */
-    animation: leaf-right 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    animation-delay: 0.4s;
+.pager-bubble i { font-size: 12px; color: #a5a5a5; }
+
+.wp-antenna {
+    position: absolute;
+    top: -5px;
+    right: 22px;
+    width: 14px;
+    height: 6px;
+    background: #f0f0f0;
+    border-radius: 4px 4px 0 0;
+    z-index: -1;
 }
 
-@keyframes leaf-left {
-    from { transform: rotate(0deg) scale(0); opacity: 0; }
-    to { transform: rotate(-30deg) scale(1); opacity: 1; }
-}
-@keyframes leaf-center {
-    from { transform: scale(0); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-@keyframes leaf-right {
-    from { transform: rotate(0deg) scale(0); opacity: 0; }
-    to { transform: rotate(30deg) scale(1); opacity: 1; }
-}
-
-
-/* 2. 果实主体 (Body) */
-.p-body {
-    width: 70px;
-    height: 85px;
-    border: 3px solid #222; /* 粗黑线条 */
-    border-radius: 35px 35px 30px 30px; /* 类似菠萝的椭圆 */
-    position: relative;
-    overflow: hidden; /* 裁剪内部波点 */
-    background: #fff;
-    opacity: 0;
-    transform: scale(0.8);
-    animation: body-pop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-/* 3. 内部波点纹理 (Pattern) */
-.p-pattern {
+/* 屏幕区域 */
+.wp-screen {
     width: 100%;
-    height: 100%;
-    /* 纯 CSS 画波点：黑色圆点背景图 */
-    background-image: radial-gradient(#222 2px, transparent 2px);
-    background-size: 14px 14px; /* 波点间距 */
-    background-position: 0 0;
-    opacity: 0.15; /* 淡淡的，显高级 */
-    animation: pattern-move 10s linear infinite; /* 纹理缓慢移动 */
+    height: 28px;
+    background: #f0f2f4;
+    border-radius: 8px;
+    box-shadow: inset 1px 2px 4px rgba(0,0,0,0.03);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
 }
 
-/* --- 文字排版 --- */
-.boot-text-group {
-    text-align: center;
+/* 屏幕里的字：等待和开心 */
+.wp-text-wait, .wp-text-smile {
+    position: absolute;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
 }
+.wp-text-wait {
+    font-size: 14px;
+    color: #b0b0b0;
+    letter-spacing: 2px;
+    animation: text-hide 0.1s forwards 1.2s;
+}
+/* 🌟 亮点：保留颜文字为粉色 (傲娇脸红感) */
+.wp-text-smile {
+    font-size: 13px;
+    color: #ff8fab; /* 柔和的樱花粉 */
+    opacity: 0;
+    transform: scale(0.5);
+    animation: smile-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 1.2s;
+}
+
+/* 底部区域 */
+.wp-bottom { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; }
+.wp-speaker { display: flex; gap: 4px; }
+.wp-speaker span { display: block; width: 3px; height: 10px; background: #eaeaea; border-radius: 2px; }
+.wp-buttons { display: flex; gap: 6px; }
+.wp-btn { width: 14px; height: 6px; background: #f0f0f0; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+.wp-btn-pink { background: #ffcce0; }
+
+/* --- 名字排版 --- */
+.boot-text-group { text-align: center; }
 
 .b-main-title {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 900; /* 特粗 */
-    font-size: 42px;
-    color: #222;
-    letter-spacing: -2px; /* 紧凑设计感 */
+    font-family: 'Quicksand', sans-serif; 
+    font-weight: 700;
+    font-size: 32px;
+    color: #4a4a4a;
+    letter-spacing: -0.5px;
     line-height: 1;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     
-    /* 遮罩动画：字从下往上切出来 */
-    clip-path: inset(0 0 100% 0);
-    animation: text-reveal 1s cubic-bezier(0.77, 0, 0.175, 1) forwards;
-    animation-delay: 0.6s;
+    opacity: 0;
+    transform: translateY(15px);
+    animation: text-gentle-fade 1s cubic-bezier(0.25, 1, 0.5, 1) forwards 1.5s;
 }
 
 .b-sub-title {
-    font-size: 10px;
-    color: #888;
-    letter-spacing: 4px; /* 极宽间距，韩系特征 */
-    text-transform: uppercase;
+    font-family: 'Quicksand', sans-serif;
     font-weight: 500;
+    font-size: 10px;
+    color: #c0c0c0;
+    letter-spacing: 2px; 
+    
     opacity: 0;
-    animation: fade-up 0.8s ease forwards;
-    animation-delay: 1.0s;
+    transform: translateY(10px);
+    animation: text-gentle-fade 1s cubic-bezier(0.25, 1, 0.5, 1) forwards 1.7s;
 }
 
 /* === 关键帧动画 === */
 
-/* 叶子生长 */
-@keyframes leaf-grow {
-    to { opacity: 1; transform: rotate(var(--r, 0deg)) translateY(0); }
-}
-/* 这里为了方便上面的 nth-child 写法，实际上在上面重写了 transform，
-   为了保持简单，我们直接在上面写最终状态，或者这里分开写。
-   修正一下：上面的 animation 会把 transform 覆盖，所以这里简单处理透明度。
-   更稳妥的写法是保持上面的 transform 不变，只变 scaleY 或 translateY。
-   👇 下面是修正后的叶子动画逻辑，配合上面的 cubic-bezier
-*/
-@keyframes leaf-grow {
-    from { transform: translateY(15px) scaleY(0); opacity: 0; }
-    to { transform: translateY(0) scaleY(1); opacity: 1; } /* 保持原有的 rotate */
-}
-/* 注意：上面的 CSS nth-child 里已经定义了 rotate，
-   为了不冲突，最简单的办法是只动 scale 和 opacity，
-   或者把 rotate 包在父容器里。
-   但为了代码简洁，我稍微调整一下上面的 nth-child 里的 transform 写法：
-   见下文调整说明。
-*/
-
-/* 果实弹出 */
-@keyframes body-pop {
-    0% { transform: scale(0.5); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-/* 纹理微动 (呼吸感) */
-@keyframes pattern-move {
-    0% { background-position: 0 0; }
-    100% { background-position: 14px 14px; }
-}
-
-/* 文字揭示 */
-@keyframes text-reveal {
-    0% { clip-path: inset(100% 0 0 0); transform: translateY(10px); }
-    100% { clip-path: inset(0 0 0 0); transform: translateY(0); }
-}
-
-/* 副标题淡入 */
-@keyframes fade-up {
-    0% { opacity: 0; transform: translateY(5px); }
+@keyframes soft-float-in {
+    0% { opacity: 0; transform: translateY(30px); }
     100% { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes bubble-spring-pop {
+    0% { opacity: 0; transform: scale(0) rotate(-15deg); }
+    60% { opacity: 1; transform: scale(1.15) rotate(5deg); } 
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes text-hide {
+    to { opacity: 0; visibility: hidden; }
+}
+@keyframes smile-pop {
+    0% { opacity: 0; transform: scale(0.5); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes hover-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+@keyframes bubble-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes text-gentle-fade {
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* =========================================
    [NEW] Bubble App Styles (韩系黑白风)
    ========================================= */
@@ -3995,50 +3669,6 @@ textarea#custom-css-input:focus {
    ========================================= */
 
 
-
-
-
-/* 3. 核心字体美化 */
-.oe-text {
-    font-family: 'Bookerly', 'Georgia', 'Songti SC', serif; /* 使用衬线体，更有小说感 */
-    font-size: 16px !important; /* 字号加大 */
-    line-height: 1.9 !important; /* 行高加大，呼吸感 */
-    color: #2c2c2c !important; /* 深灰色，比纯黑柔和 */
-    text-align: justify; /* 两端对齐 */
-    letter-spacing: 0.5px;
-}
-
-/* 4. 区分“动作描写” (Markdown的 *斜体*) */
-.oe-text i, .oe-text em {
-    color: #888 !important;      /* 灰色 */
-    font-style: normal !important; /* 取消斜体，改用颜色区分，或者保留斜体看你喜好 */
-    font-family: 'Montserrat', sans-serif !important; /* 动作改回无衬线体，形成对比 */
-    font-size: 14px !important;
-    background: #f7f7f7;         /* 极淡的灰色背景块 */
-    padding: 0 4px;
-    border-radius: 4px;
-}
-
-/* 5. 区分“说话内容” (Markdown的 「」 或 "") */
-.oe-text b, .oe-text strong {
-    color: #000 !important;      /* 纯黑 */
-    font-weight: 700 !important;
-    background: transparent !important;
-}
-
-/* 6. 用户发的消息：靠右，样式区分 */
-.offline-entry.user .oe-text {
-    text-align: right;
-    font-family: 'Montserrat', sans-serif !important; /* 用户说话保持现代感 */
-    color: #555 !important;
-    border-right: 3px solid #2b2b2b; /* 右侧加粗线 */
-    padding-right: 15px;
-    border-left: none; /* 去掉原本可能有的左线 */
-    background: #fafafa;
-    padding: 10px;
-    border-radius: 8px;
-}
-
 /* 7. 操作栏美化 */
 .oe-actions {
     margin-top: 10px;
@@ -4076,76 +3706,6 @@ textarea#custom-css-input:focus {
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-}
-
-/* =========================================
-   [终极美化] 线下模式排版与玻璃拟态选项
-   ========================================= */
-
-/* 3. 中间内容区：自动撑满剩余空间 */
-.offline-content {
-    /* === 核心修复 === */
-    flex: 1;                 /* 关键：占据所有剩余垂直空间 */
-    overflow-y: auto;        /* 关键：内容多时出现滚动条 */
-    min-height: 0;           /* 关键：防止Flex子元素溢出bug */
-    height: auto;            /* 重置高度，由 flex 控制 */
-    
-    padding: 20px 24px;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch; /* 移动端顺滑滚动 */
-    position: relative;
-    z-index: 1;
-}
-/* 隐藏滚动条样式 */
-.offline-content::-webkit-scrollbar { display: none; }
-
-.offline-entry {
-    margin-bottom: 40px !important;
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(0,0,0,0.02);
-    position: relative;
-}
-
-.offline-entry.ai .oe-text {
-    font-family: 'Noto Serif SC', 'Songti SC', 'Playfair Display', serif !important;
-    font-size: 16.5px !important;
-    line-height: 2 !important;
-    color: #2c2c2c !important;
-    text-align: justify;
-    letter-spacing: 0.8px;
-    border-left: 3px solid #e0e0e0;
-    padding-left: 18px;
-}
-
-.offline-entry.ai .oe-text i, 
-.offline-entry.ai .oe-text em {
-    color: #777 !important;
-    font-family: 'Montserrat', 'PingFang SC', sans-serif !important;
-    font-size: 14.5px !important;
-    font-style: normal !important;
-    background: transparent !important;
-    opacity: 0.85;
-}
-
-.offline-entry.ai .oe-text b, 
-.offline-entry.ai .oe-text strong {
-    color: #111 !important;
-    font-weight: 900 !important;
-    font-family: 'Noto Serif SC', 'Songti SC', serif !important;
-}
-
-.offline-entry.user .oe-text {
-    text-align: right;
-    font-family: 'Montserrat', 'PingFang SC', sans-serif !important;
-    font-size: 15px !important;
-    color: #555 !important;
-    border-right: 3px solid #111;
-    padding-right: 18px;
-    border-left: none;
-    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.02));
-    padding-top: 10px;
-    padding-bottom: 10px;
-    border-radius: 8px 0 0 8px;
 }
 
 /* 2. [重制版] 玻璃拟态剧情选项 UI */
@@ -4504,15 +4064,6 @@ textarea#custom-css-input:focus {
 .pay-item-title { font-size: 14px; color: #333; font-weight: 600; }
 .pay-item-desc { font-size: 10px; color: #aaa; margin-top: 3px; }
 
-/* 6. 账单明细卡 */
-.bill-card-minimal {
-    background: #fff; padding: 15px; border-radius: 16px;
-    margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.01);
-}
-.income-text { color: #d4a373; font-weight: 600; } /* 暖棕色代表收入 */
-.expense-text { color: #333; font-weight: 600; }
-
 /* =========================================
    [极致美化] 抢金币小游戏 & 韩系弹窗
    ========================================= */
@@ -4582,6 +4133,9 @@ textarea#custom-css-input:focus {
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;
     flex-direction: column;
+-webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
 }
 
 .pay-sub-page.show {
@@ -5041,3 +4595,2662 @@ textarea#custom-css-input:focus {
 
 .stock-color-up { color: #111 !important; }
 .stock-color-down { color: #888 !important; }
+/* =========================================
+   [韩系极简] 电子宠物 (Pet App) - Black & White
+   ========================================= */
+
+:root {
+    /* 韩系黑白灰配色 */
+    --pet-bg: #ffffff;
+    --pet-line: #333333;
+    --pet-gray: #f2f2f2;
+    --pet-shadow: rgba(0,0,0,0.05);
+    --pet-accent: #000000;
+}
+
+/* 1. 房间容器 (清新简约风) */
+.pet-room-stage {
+    position: relative;
+    width: 100%;
+    height: 60%;
+    background-color: #f0f0f0; 
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    transition: filter 1s ease, background 0.3s;
+}
+
+/* 地板 (清新浅色) */
+.pet-floor {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 35%;
+    /* 默认柔和的浅木色/米色 */
+    background-color: #fdfbf7; 
+    background-size: cover;
+    background-position: center top;
+    /* 去掉原本刺眼的黑线，改为淡淡的阴影分割 */
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+    transition: background 0.3s;
+}
+
+/* 窗户 (支持自定义图) */
+.pet-window {
+    position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 140px; 
+    background-color: #fff;
+    background-size: cover;
+    background-position: center;
+    border: 4px solid #fff; 
+    border-radius: 60px 60px 0 0; /* 拱形窗 */
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+/* 如果没传图片，显示默认的线条效果 */
+.pet-window::after {
+    content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; height:100%;
+    background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 12px);
+    pointer-events: none;
+}
+
+
+/* 夜晚模式 */
+.pet-room-stage.night-mode { filter: invert(0.9) hue-rotate(180deg); } 
+
+/* 2. 宠物 & 家具 */
+.pet-entity {
+    position: absolute; width: 80px; height: 80px;
+    left: 50%; top: 70%; transform: translate(-50%, -50%);
+    z-index: 10; cursor: grab;
+    transition: top 3s linear, left 3s linear;
+    display: flex; justify-content: center; align-items: flex-end;
+}
+/* 宠物被提起来时的样式和动画 */
+.pet-entity.dragging { 
+    cursor: grabbing !important; 
+    transition: none !important; 
+    transform: translate(-50%, -50%) scale(1.1) !important; 
+    z-index: 8000 !important; 
+}
+.pet-entity.dragging .pet-img-wrapper {
+    animation: struggle 0.5s infinite;
+}
+@keyframes struggle {
+    0% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+    100% { transform: rotate(-5deg); }
+}
+
+/* 强制提高弹窗的层级，确保在宠物之上 */
+.modal-overlay,
+.pet-dialog-overlay,
+.k-full-modal {
+    z-index: 10000 !important;
+}
+
+.pet-img-wrapper img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%); } /* 强制黑白 */
+
+/* 家具 (可移动) */
+.pet-furniture {
+    position: absolute;
+    font-size: 40px;
+    z-index: 5;
+    cursor: grab;
+    filter: grayscale(100%); /* 家具也黑白 */
+    transition: transform 0.2s;
+}
+.pet-furniture.dragging {
+    cursor: grabbing;
+    transform: scale(1.2);
+    z-index: 100; /* 拖动时置顶 */
+    opacity: 0.8;
+}
+.pet-item { position: absolute; font-size: 24px; z-index: 8; animation: popIn 0.3s; }
+
+/* 3. 底部 UI (黑白灰) */
+.pet-ui-container {
+    flex: 1; background: #fff; 
+    padding: 20px; display: flex; flex-direction: column; gap: 15px;
+    position: relative; z-index: 20;
+}
+
+/* 状态条 */
+.pet-stats-bar {
+    display: flex; justify-content: space-around; align-items: center;
+    border: 2px solid var(--pet-line);
+    border-radius: 12px; padding: 10px;
+    background: #fff;
+    box-shadow: 4px 4px 0 var(--pet-line);
+}
+.pet-stat { font-size: 12px; font-weight: 700; color: var(--pet-line); font-family: 'Montserrat'; }
+
+/* 操作按钮 */
+.pet-actions-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+.pet-action-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
+}
+.pet-btn-icon {
+    width: 50px; height: 50px; 
+    background: #fff; 
+    border: 2px solid var(--pet-line); 
+    border-radius: 50%; /* 圆形图标 */
+    display: flex; justify-content: center; align-items: center;
+    font-size: 20px; color: var(--pet-line);
+    transition: 0.2s;
+}
+.pet-action-btn:active .pet-btn-icon { background: var(--pet-line); color: #fff; transform: scale(0.95); }
+.pet-btn-label { font-size: 10px; font-weight: 600; color: #666; letter-spacing: 1px; }
+
+/* 4. 自定义可爱对话框 (Custom Dialog) */
+.pet-dialog-overlay {
+    position: absolute; inset: 0; background: rgba(255,255,255,0.6); backdrop-filter: blur(2px);
+    z-index: 200; display: none; align-items: center; justify-content: center;
+}
+.pet-dialog-overlay.active { display: flex; animation: fadeIn 0.3s; }
+
+.pet-dialog-box {
+    background: #fff;
+    border: 3px solid var(--pet-line);
+    border-radius: 20px;
+    padding: 25px;
+    width: 80%;
+    max-width: 300px;
+    text-align: center;
+    box-shadow: 8px 8px 0 rgba(0,0,0,0.1);
+    position: relative;
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.pet-dialog-content { font-size: 14px; color: #333; line-height: 1.6; margin-bottom: 20px; font-weight: 500; }
+.pet-dialog-btn {
+    background: var(--pet-line); color: #fff; border: none;
+    padding: 8px 25px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 700;
+}
+
+/* 5. 商店 Tabs */
+.shop-tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+.shop-tab { font-size: 12px; font-weight: 700; color: #999; cursor: pointer; padding: 5px 10px; }
+.shop-tab.active { color: #333; background: #eee; border-radius: 8px; }
+
+/* 6. 相册与拍立得 (Polaroid) */
+.album-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+    max-height: 400px; overflow-y: auto; padding: 5px;
+}
+
+/* 翻转卡片容器 */
+.polaroid-card {
+    background: transparent;
+    width: 100%; aspect-ratio: 3/4;
+    perspective: 1000px;
+    cursor: pointer;
+}
+.polaroid-inner {
+    position: relative; width: 100%; height: 100%;
+    text-align: center; transition: transform 0.8s;
+    transform-style: preserve-3d;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.polaroid-card.flipped .polaroid-inner { transform: rotateY(180deg); }
+
+/* 正面与背面 */
+.polaroid-front, .polaroid-back {
+    position: absolute; width: 100%; height: 100%;
+    -webkit-backface-visibility: hidden; backface-visibility: hidden;
+    background: #fff; border: 1px solid #eee; padding: 10px 10px 30px 10px;
+    display: flex; flex-direction: column;
+}
+/* 正面：图片 */
+.p-photo { flex: 1; background: #333; overflow: hidden; }
+.p-photo img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%) contrast(1.2); }
+/* 背面：文字 (旋转180度) */
+.polaroid-back { transform: rotateY(180deg); justify-content: center; align-items: center; padding: 20px; }
+.p-text { 
+    font-family: 'Alex Brush', cursive; font-size: 16px; color: #555; 
+    line-height: 1.5; text-align: center; 
+}
+.p-date { position: absolute; bottom: 10px; right: 10px; font-size: 9px; color: #ccc; font-family: monospace; }
+
+/* 气泡美化 */
+.pet-bubble-pretty {
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    background: #fff; border: 2px solid #333; color: #333;
+    padding: 8px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+    white-space: nowrap; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+    opacity: 0; transition: 0.3s; pointer-events: none;
+}
+.pet-bubble-pretty.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+.pet-bubble-pretty::after {
+    content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px;
+    border-width: 6px; border-style: solid; border-color: #333 transparent transparent transparent;
+}
+/* =========================================
+   1. 线下模式：字体缩小与精致化排版
+   ========================================= */
+.offline-entry.ai .oe-text, 
+.offline-entry.user .oe-text,
+.oe-text {
+    font-size: 13.5px !important;  /* 原本是16.5px，现在调小显得精致 */
+    line-height: 1.8 !important; 
+}
+.offline-entry.ai .oe-text i, 
+.offline-entry.ai .oe-text em,
+.oe-text i, .oe-text em {
+    font-size: 12px !important;    /* 动作描述字号再稍微小一点 */
+}
+
+
+/* =========================================
+   2. 电子宠物：韩系黑白灰高定美化补丁
+   ========================================= */
+
+/* 房间背景：奶白与浅灰，去掉刺眼线条 */
+.pet-room-stage { background-color: #fafafa !important; }
+.pet-floor {
+    background-color: #f5f5f5 !important;
+    box-shadow: none !important;
+    border-top: 1px solid rgba(0,0,0,0.03) !important;
+}
+.pet-window {
+    border: 1px solid #f0f0f0 !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.03) !important;
+    border-radius: 80px 80px 0 0 !important;
+}
+
+/* 顶部状态条：悬浮胶囊，去除彩色，统一黑白灰 */
+.pet-stats-bar {
+    border: 1px solid rgba(0,0,0,0.04) !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03) !important;
+    border-radius: 24px !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    padding: 16px 20px !important;
+    backdrop-filter: blur(10px);
+}
+.pet-stat {
+    color: #999 !important;
+    font-size: 10px !important;
+    letter-spacing: 0.5px !important;
+}
+/* 强行覆盖HTML中写死的绿/橙/黄色，改为深灰系 */
+#pet-stat-hunger, #pet-stat-mood, #pet-stat-money {
+    color: #2b2b2b !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    margin-left: 4px;
+}
+/* 签到按钮变成高级质感 */
+#pet-daily-btn {
+    background: #f5f5f5 !important;
+    color: #555 !important;
+    border-radius: 20px !important;
+    padding: 6px 14px !important;
+    font-weight: 600 !important;
+    transition: 0.3s;
+}
+#pet-daily-btn:hover { background: #e0e0e0 !important; color: #2b2b2b !important; }
+
+/* 底部操作网格：去除黑粗框，变成奶油块 */
+.pet-btn-icon {
+    border: 1px solid rgba(0,0,0,0.03) !important;
+    background: #fcfcfc !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.04) !important;
+    color: #666 !important;
+    border-radius: 18px !important; /* 微微圆角矩形更好看 */
+}
+.pet-action-btn:active .pet-btn-icon {
+    background: #2b2b2b !important;
+    color: #fff !important;
+    transform: scale(0.92);
+}
+.pet-btn-label { color: #aaa !important; font-size: 9px !important; }
+
+/* 对话气泡与弹窗：柔和阴影，去边框 */
+.pet-bubble-pretty {
+    border: none !important;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.06) !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    padding: 10px 16px !important;
+    color: #444 !important;
+    letter-spacing: 0.5px;
+}
+.pet-bubble-pretty::after {
+    border-top-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* 核心弹窗变高级 */
+.pet-dialog-box {
+    border: 1px solid rgba(255,255,255,0.8) !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.1) !important;
+    border-radius: 24px !important;
+    padding: 30px !important;
+}
+.pet-dialog-btn {
+    background: #2b2b2b !important;
+    color: #fff !important;
+    border-radius: 20px !important;
+    height: 44px !important;
+    font-size: 13px !important;
+}
+
+/* 相册卡片去硬边框 */
+.polaroid-front, .polaroid-back {
+    border: 1px solid #f9f9f9 !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.04) !important;
+    border-radius: 8px !important;
+}
+/* =========================================
+   [新增] 宠物APP 2.0 升级样式
+   ========================================= */
+
+/* 1. 窗户升级：带框框和背景色 */
+.pet-window {
+    border: 6px solid var(--pet-window-frame, #333) !important; /* 窗框颜色变量 */
+    background-color: var(--pet-window-bg, #87ceeb) !important; /* 窗户玻璃颜色 */
+    border-radius: 60px 60px 0 0 !important; /* 拱形 */
+    box-shadow: 
+        0 0 0 4px #fff, /* 外层白边 */
+        inset 0 0 20px rgba(0,0,0,0.1) !important; /* 内阴影 */
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* 2. 宠物翻转与动画 */
+.pet-entity {
+    transition: top 3s linear, left 3s linear, transform 0.3s ease !important; /* 增加 transform 过渡 */
+}
+.pet-entity.flipped .pet-img-wrapper img {
+    transform: scaleX(-1); /* 左右镜像翻转 */
+}
+.pet-entity:active {
+    transform: scale(0.95) !important; /* 点击时的按压感 */
+}
+
+/* 3. 点击时的可爱浮动表情 */
+.pet-reaction-float {
+    position: absolute;
+    font-size: 24px;
+    font-weight: bold;
+    pointer-events: none;
+    animation: floatUpFade 1s ease-out forwards;
+    z-index: 100;
+    text-shadow: 0 2px 5px rgba(255,255,255,0.8);
+}
+
+/* 4. 领养/初始化弹窗 */
+.pet-setup-step {
+    display: none;
+    animation: fadeIn 0.3s;
+}
+.pet-setup-step.active {
+    display: block;
+}
+
+/* 5. 宠物朋友圈 (Moments) */
+.pet-moments-view {
+    position: absolute;
+    inset: 0;
+    background: #f7f7f7;
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+    animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pet-moments-view.show {
+    display: flex;
+}
+
+.pet-moment-card {
+    background: #fff;
+    margin: 15px;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.02);
+}
+.pet-moment-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.pet-moment-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.pet-moment-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pet-moment-info { flex: 1; }
+.pet-moment-name { font-weight: 700; font-size: 14px; color: #333; }
+.pet-moment-time { font-size: 10px; color: #999; }
+.pet-moment-text {
+    font-size: 13px;
+    color: #444;
+    line-height: 1.6;
+    background: #fcfcfc;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px dashed #eee;
+}
+.pet-moment-action {
+    margin-top: 10px;
+    text-align: right;
+    font-size: 11px;
+    color: #aaa;
+}
+
+/* 6. 设置面板的分页样式 */
+.pet-settings-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+.pet-setting-tab {
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #999;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+.pet-setting-tab.active {
+    background: #333;
+    color: #fff;
+    font-weight: 700;
+}
+.pet-stage-box {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex; 
+    align-items: center;
+    gap: 15px;
+}
+.pet-stage-img {
+    width: 50px; height: 50px; 
+    background: #fff; border-radius: 8px; 
+    object-fit: contain;
+    border: 1px solid #ddd;
+}
+.pet-stage-info { flex: 1; }
+.pet-stage-title { font-size: 12px; font-weight: 700; color: #333; }
+.pet-stage-desc { font-size: 10px; color: #999; margin-top: 2px; }
+
+/* 窗框颜色选择器美化 */
+.color-circle-picker {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+    display: inline-block;
+    margin-right: 5px;
+}
+.color-circle-picker.active {
+    transform: scale(1.2);
+    border-color: #333;
+}
+/* =========================================
+   [O U R S .] 高定韩系黑白灰 - 杂志艺术书风 V4.0
+   ========================================= */
+
+/* 1. 基础布局与动画 */
+.ls2-view { width: 100%; height: 100%; overflow: hidden; background: #fdfdfd; }
+.ls2-view.active { display: flex; animation: fadeIn 0.4s ease; }
+
+/* 炫酷的 Tab 内容切换动画：几何遮罩展开 */
+.ls2-tab-content { display: none; height: 100%; flex-direction: column; }
+.ls2-tab-content.active { 
+    display: flex; 
+    animation: sweepIn 0.5s cubic-bezier(0.77, 0, 0.175, 1) forwards;
+}
+@keyframes sweepIn {
+    0% { clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%); transform: translateY(15px); }
+    100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translateY(0); }
+}
+
+/* 2. 头部杂志名与画像 (Cubism Vibe) */
+.zine-header-top {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 50px 24px 15px; background: #fff;
+    border-bottom: 1px solid #111;
+}
+.zine-header-top i { font-size: 18px; color: #111; cursor: pointer; }
+.zine-top-title { font-family: 'Playfair Display', 'Songti SC', serif; font-size: 18px; font-weight: bold; letter-spacing: 4px; }
+
+.zine-profiles-graphic {
+    display: flex; justify-content: space-between; align-items: stretch;
+    padding: 20px; background: #fafafa; border-bottom: 1px solid #111; flex-shrink: 0;
+}
+.zp-avatar-box {
+    width: 65px; height: 85px; border: 1px solid #111; padding: 3px; background: #fff;
+    box-shadow: -4px 4px 0 #e5e5e5; transition: 0.3s;
+}
+.zp-avatar-box.right-box { box-shadow: 4px 4px 0 #e5e5e5; }
+.zp-avatar-box img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(80%); transition: 0.4s; }
+.zp-avatar-box:hover img { filter: grayscale(0%); }
+
+.zp-days-block {
+    flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    border-top: 1px solid #111; border-bottom: 1px solid #111; margin: 10px 15px;
+    background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 2px, #fff 2px, #fff 4px);
+}
+.zp-d-num {
+    font-family: 'Playfair Display', serif; font-size: 34px; color: #111;
+    background: #fff; padding: 0 15px; margin: -6px 0; border: 1px solid #111;
+}
+.zp-d-title, .zp-d-sub { font-family: 'Montserrat'; font-size: 8px; color: #666; letter-spacing: 2px; background: #fff; padding: 2px 5px; }
+
+/* 3. 不对称几何导航条 */
+.ls2-grid-nav {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: #e0e0e0; border-bottom: 1px solid #e0e0e0; flex-shrink: 0;
+}
+.gn-item {
+    background: #fff; padding: 12px 10px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: flex-start;
+    position: relative; overflow: hidden;
+}
+.gn-item:nth-child(1), .gn-item:nth-child(4) { grid-column: span 2; }
+.gn-item::before {
+    content: ''; position: absolute; inset: 0; background: #111;
+    transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 0;
+}
+.gn-item.active::before { transform: translateY(0); }
+.gn-item span { position: relative; z-index: 1; transition: color 0.4s ease; }
+.gn-item.active span { color: #fff; }
+.gn-en { font-family: 'Montserrat'; font-size: 9px; letter-spacing: 1px; color: #999; margin-bottom: 2px; }
+.gn-cn { font-family: 'Songti SC', serif; font-size: 13px; font-weight: bold; color: #111; }
+
+.ls2-content-wrap { flex: 1; overflow-y: auto; padding: 20px; }
+
+/* 4. 杂志画册通用组件 (Zine Spread) */
+.zine-spread {
+    background: #fff; border: 1px solid #111; box-shadow: 6px 6px 0 #f0f0f0;
+    position: relative; margin-bottom: 20px;
+}
+.zine-page-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 12px 20px; border-bottom: 1px solid #111; background: #111; color: #fff;
+}
+.zph-cn { font-family: 'Songti SC', serif; font-size: 15px; }
+.zph-en { font-family: 'Montserrat'; font-size: 9px; letter-spacing: 2px; color: #aaa; }
+.zine-page { padding: 20px; position: relative; }
+.zp-label { font-size: 10px; color: #999; letter-spacing: 1px; margin-bottom: 15px; font-family: 'Montserrat'; }
+.zp-content, .zp-textarea {
+    font-family: 'Songti SC', serif; font-size: 14px; line-height: 1.8; color: #333;
+    width: 100%; border: none; background: transparent; outline: none; resize: none; min-height: 120px; text-align: justify;
+}
+.ai-page { border-bottom: 1px dashed #ccc; background: #fafafa; }
+.zp-action {
+    display: inline-block; margin-top: 15px; padding: 8px 14px;
+    border: 1px solid #111; font-size: 11px; cursor: pointer; transition: 0.3s; background: #fff; color: #111;
+}
+.zp-action:hover { background: #111; color: #fff; }
+.zp-tools { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+.zp-tools button { background: #fff; border: 1px solid #e0e0e0; padding: 6px 14px; font-size: 10px; color: #555; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+.zp-tools button:hover { border-color: #111; color: #111; }
+
+.zine-stickers-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+/* 5. 状态雷达 (瑞士风网格) */
+.radar-grid-container { display: flex; flex-direction: column; gap: 1px; background: #333; border: 1px solid #333; }
+.radar-card-flat { background: #111; padding: 15px; display: grid; grid-template-columns: 50px 1fr; gap: 15px; align-items: center; transition: 0.2s; }
+.radar-card-flat:hover { background: #1a1a1a; }
+.radar-time-block { font-family: 'Montserrat'; font-size: 14px; font-weight: 300; color: #fff; text-align: right; }
+.radar-info-block { display: flex; flex-direction: column; gap: 4px; border-left: 1px solid #333; padding-left: 15px; }
+.r-row { display: flex; gap: 8px; font-size: 11px; align-items: baseline; }
+.r-label { color: #888; font-size: 9px; width: 30px; text-transform: uppercase; font-family: 'Montserrat'; }
+.r-val { color: #ddd; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-val.highlight { color: #fff; font-weight: bold; }
+
+/* 6. 扁平几何冰箱 (Flat Fridge) */
+.flat-fridge-container { position: relative; background: #fff; min-height: 480px; overflow: hidden; }
+.ff-door {
+    position: absolute; inset: 0; background: #eef0f2; z-index: 10;
+    transition: transform 0.6s cubic-bezier(0.85, 0, 0.15, 1); transform-origin: left center;
+    border-right: 15px solid #e0e2e5; box-shadow: 5px 0 15px rgba(0,0,0,0.05);
+}
+.ff-door.open { transform: translateX(-100%); }
+.ff-door-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,0.05); }
+.ff-handle { position: absolute; right: 25px; top: 50%; transform: translateY(-50%); width: 8px; height: 100px; background: #d0d2d5; cursor: pointer; box-shadow: 2px 2px 0 rgba(0,0,0,0.05); transition: 0.2s; }
+.ff-handle:hover { background: #111; }
+.ff-surface { position: absolute; inset: 0; pointer-events: none; }
+.ff-actions { position: absolute; bottom: 20px; right: 20px; left: 20px; display: flex; gap: 10px; justify-content: flex-end; pointer-events: none; }
+.ff-actions button { pointer-events: auto; background: #fff; border: 1px solid #111; padding: 8px 14px; font-size: 10px; color: #111; cursor: pointer; box-shadow: 2px 2px 0 #111; transition: 0.2s; font-family: 'Songti SC', serif; font-weight: bold; }
+.ff-actions button:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #111; }
+.ff-actions button.black { background: #111; color: #fff; }
+
+.ff-inside {
+    position: absolute; inset: 0; background: #fdfdfd; z-index: 5;
+    display: flex; flex-direction: column; padding: 20px 15px; border-left: 10px solid #e0e2e5;
+}
+.ff-close-btn { position: absolute; top: 15px; right: 15px; font-size: 16px; color: #111; cursor: pointer; z-index: 20; }
+.ff-shelf { flex: 1; border-bottom: 2px solid #eef0f2; display: flex; align-items: flex-end; gap: 15px; padding-bottom: 10px; }
+.ff-drawer { flex: 1.2; border: 2px solid #eef0f2; border-radius: 8px; margin-top: 15px; background: #f9fbfd; display: flex; align-items: flex-end; padding: 10px; gap: 15px; }
+.ff-diet-log { margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px; }
+.ff-diet-title { font-size: 12px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; }
+.ff-diet-title span { font-weight: normal; font-size: 10px; color: #888; cursor: pointer; border: 1px solid #eee; padding: 2px 6px; border-radius: 4px; }
+.ff-diet-log textarea { width: 100%; height: 50px; background: #f5f5f5; border: none; padding: 10px; font-size: 12px; margin-bottom: 8px; outline: none; border-radius: 4px; }
+.ff-diet-log button { width: 100%; background: #111; color: #fff; border: none; padding: 10px; font-size: 11px; cursor: pointer; }
+.ff-diet-reaction { margin-top: 10px; font-size: 11px; color: #555; background: #f9f9f9; padding: 10px; border-left: 3px solid #111; line-height: 1.5; }
+
+/* 贴纸 (Risograph 风) */
+.ls2-note {
+    position: absolute; width: 110px; min-height: 110px;
+    padding: 15px; font-family: 'Songti SC', serif; font-size: 13px; color: #111;
+    cursor: grab; user-select: none; box-shadow: 4px 4px 0 rgba(0,0,0,0.05); border: 1px solid #111;
+}
+.ls2-note.pink { background: #fce4ec; } 
+.ls2-note.blue { background: #e3f2fd; } 
+.ls2-note.white { background: #fff; }
+.note-del { position: absolute; bottom: 5px; right: 5px; font-size: 10px; color: #111; cursor: pointer; opacity: 0.2; }
+.ls2-note:hover .note-del { opacity: 1; }
+
+/* 7. Q&A 和 Tasks */
+.qa-card-flat { border: 1px solid #111; padding: 20px; background: #fff; box-shadow: 4px 4px 0 #f0f0f0; margin-bottom: 15px; }
+.qa-q-text { font-family: 'Songti SC', serif; font-size: 16px; font-weight: bold; margin-bottom: 20px; line-height: 1.4; color: #111; text-align: center; }
+.qa-answer-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.qa-a-label { width: 30px; font-size: 10px; font-weight: bold; color: #111; border-right: 1px solid #111; padding-right: 10px; text-align: right; }
+.qa-a-text { flex: 1; font-size: 12px; color: #555; }
+.qa-reaction { font-family: 'Songti SC', serif; font-size: 11px; color: #888; font-style: italic; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #eee; text-align: center;}
+
+.tasks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.task-col { border: 1px solid #eee; padding: 15px; background: #fafafa; }
+.tc-title { font-size: 12px; font-weight: bold; border-bottom: 1px solid #111; padding-bottom: 5px; margin-bottom: 15px; display: flex; justify-content: space-between; color: #111; }
+.flat-task-item { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px dashed #ddd; padding-bottom: 8px; }
+.fti-desc { font-size: 11px; color: #333; line-height: 1.4; flex: 1; padding-right: 5px; }
+.fti-prog { font-size: 9px; color: #999; margin-top: 4px; font-family: 'Montserrat'; }
+.fti-actions { display: flex; gap: 5px; align-items: center; }
+.fti-btn { width: 18px; height: 18px; border: 1px solid #111; background: #fff; display: flex; justify-content: center; align-items: center; font-size: 8px; cursor: pointer; }
+.fti-btn.done { background: #111; color: #fff; }
+.fti-del { color: #ccc; cursor: pointer; font-size: 10px; margin-left: 2px;}
+.fti-del:hover { color: #ff4d4f; }
+
+.task-eval-box { background: #fdfdfd; border: 1px solid #111; padding: 15px; position: relative; margin-top: 10px; }
+.te-title { position: absolute; top: -8px; left: 15px; background: #fdfdfd; padding: 0 5px; font-size: 10px; font-weight: bold; color: #111; }
+
+/* 8. 大厅连线卡片 (Lobby) */
+.ls2-lobby-item-flat {
+    border: 1px solid #111; padding: 15px; background: #fff;
+    display: flex; align-items: center; gap: 15px;
+    margin-bottom: 15px; box-shadow: 4px 4px 0 #f0f0f0;
+}
+.li-avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 1px solid #eee; }
+.li-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.li-info { flex: 1; }
+.li-name { font-size: 14px; font-weight: bold; color: #111; margin-bottom: 4px; }
+.li-status { font-family: 'Montserrat'; font-size: 9px; letter-spacing: 1px; color: #aaa; }
+.li-status.bound { color: #111; font-weight: bold; }
+.li-btn {
+    border: 1px solid #111; background: #fff; color: #111; padding: 8px 15px;
+    font-size: 11px; cursor: pointer; font-family: 'Songti SC', serif; transition: 0.2s;
+}
+.li-btn.black { background: #111; color: #fff; }
+.li-btn:active { transform: scale(0.95); }
+
+/* 海王雷达闪烁动画 */
+.playboy-siren {
+    font-size: 40px; color: #ff4d4f; margin-bottom: 15px;
+    animation: sirenFlash 0.5s infinite alternate;
+}
+@keyframes sirenFlash {
+    from { transform: scale(1); filter: drop-shadow(0 0 5px rgba(255,77,79,0.2)); }
+    to { transform: scale(1.2); filter: drop-shadow(0 0 20px rgba(255,77,79,0.8)); }
+}
+/* =========================================================
+   [O U R S .] 5.0 高定韩系黑白灰 - 艺术书重构版
+   ========================================================= */
+
+/* 1. 全局背景：带噪点的纸张质感 */
+#ls2-main-view {
+    background-color: #fcfcfc;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+/* 2. 头部设计：现代杂志排版 */
+.zine-header-modern {
+    padding: 50px 24px 10px;
+    background: #fff;
+    position: relative;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    flex-shrink: 0;
+}
+
+.zhm-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 15px;
+    font-size: 18px; color: #111;
+}
+.zhm-date {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px; letter-spacing: 2px; font-weight: 600;
+    border: 1px solid #111; padding: 2px 6px; border-radius: 4px;
+}
+
+.zhm-main-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px; line-height: 1; color: #111;
+    margin-bottom: 5px;
+}
+
+.zhm-subtitle {
+    font-size: 10px; color: #999; letter-spacing: 3px;
+    margin-bottom: 10px; font-weight: 500;
+}
+
+/* 关系徽章：圆形设计 */
+.zhm-badge {
+    position: absolute;
+    right: 24px; bottom: 15px;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: #111; color: #fff;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    transform: rotate(-10deg);
+}
+.zhm-days { font-family: 'Montserrat'; font-size: 20px; font-weight: 700; line-height: 1; }
+.zhm-days-label { font-size: 7px; letter-spacing: 1px; margin-top: 2px; }
+
+/* 3. 导航：悬浮圆岛 (Floating Circle Nav) */
+.ls2-circle-nav-container {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 24px;
+    background: #fcfcfc;
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+.ls2-circle-nav-container::-webkit-scrollbar { display: none; }
+
+.ls2-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    cursor: pointer; opacity: 0.5; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.ls2-nav-item.active { opacity: 1; transform: translateY(-2px); }
+
+.ls2-nav-circle {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    display: flex; justify-content: center; align-items: center;
+    background: #fff;
+    font-size: 9px; font-weight: 700; color: #333;
+    font-family: 'Montserrat';
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    transition: all 0.3s;
+}
+.ls2-nav-item.active .ls2-nav-circle {
+    background: #111; color: #fff; border-color: #111;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+.ls2-nav-label { font-size: 10px; font-weight: 600; color: #333; font-family: 'Songti SC', serif; }
+/* =========================================
+   [修复与美化] Love Space 滑动与显示效果补丁
+   ========================================= */
+
+.ls2-content-wrap {
+    flex: 1;
+    padding: 10px 24px 30px;
+    /* 核心修复：强制允许 Y 轴滚动，并修复 iOS 滚动阻尼 */
+    overflow-y: auto !important; 
+    overflow-x: hidden;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ls2-tab-content {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    /* 核心修复：解除高度死锁，让长内容自然撑开容器 */
+    height: auto !important; 
+    min-height: 100%;
+    animation: card-slide-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* 优化大厅伙伴卡片，去掉以前僵硬的黑白滤镜，视觉更清爽 */
+.partner-card {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    aspect-ratio: 3/4;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.04);
+    background: #fff;
+    cursor: pointer;
+    transition: transform 0.3s;
+    border: 1px solid rgba(0,0,0,0.03);
+}
+.pc-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s;
+}
+.partner-card:hover .pc-bg {
+    transform: scale(1.05);
+}
+.pc-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 15px;
+}
+
+/* 5. 通用艺术卡片 (Art Card) */
+.art-card {
+    background: #fff;
+    border-radius: 20px; /* 大圆角 */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.03);
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+/* --- Radar 样式 --- */
+.art-card-header {
+    padding: 20px; border-bottom: 1px solid #f5f5f5;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Montserrat'; font-weight: 700; font-size: 12px; letter-spacing: 1px;
+}
+.radar-clean-list {
+    display: flex; flex-direction: column;
+}
+/* 雷达条目：极简线条 */
+.radar-card-flat {
+    padding: 18px 20px;
+    border-bottom: 1px solid #f9f9f9;
+    display: grid; grid-template-columns: 50px 1fr; gap: 15px;
+    background: #fff; transition: 0.2s;
+}
+.radar-card-flat:hover { background: #fafafa; }
+.radar-time-block { 
+    font-family: 'Montserrat'; font-weight: 600; font-size: 13px; color: #111; 
+    text-align: right; border-right: 2px solid #eee; padding-right: 15px;
+}
+.radar-info-block { display: flex; flex-direction: column; gap: 4px; }
+.r-row { display: flex; gap: 8px; font-size: 12px; color: #555; }
+.r-label { font-weight: 700; font-size: 10px; color: #ccc; width: 30px; }
+.r-val.highlight { background: #111; color: #fff; padding: 0 6px; border-radius: 4px; font-size: 11px; }
+
+/* 黑色药丸按钮 */
+.black-pill-btn {
+    background: #111; color: #fff; border: none;
+    padding: 8px 20px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: 0.2s;
+}
+.black-pill-btn:active { transform: scale(0.95); }
+.black-pill-btn.wide { width: 100%; height: 44px; font-size: 13px; }
+
+/* --- Journal 样式 (拟物纸张) --- */
+.art-card.paper-texture {
+    background-color: #fff;
+    background-image: 
+        linear-gradient(#f5f5f5 1px, transparent 1px),
+        linear-gradient(90deg, #f5f5f5 1px, transparent 1px);
+    background-size: 20px 20px;
+    padding: 20px;
+}
+/* 胶带装饰 */
+.tape-deco {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%) rotate(-2deg);
+    width: 80px; height: 25px;
+    background: rgba(200, 200, 200, 0.3);
+    backdrop-filter: blur(2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.journal-section { margin-bottom: 25px; position: relative; }
+.j-label {
+    font-family: 'Songti SC', serif; font-weight: bold; font-size: 14px;
+    color: #111; border-left: 3px solid #111; padding-left: 10px; margin-bottom: 10px;
+}
+.j-content { font-size: 13px; color: #444; line-height: 1.8; min-height: 60px; }
+.j-action { font-size: 10px; color: #999; margin-top: 8px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.j-action:hover { color: #111; }
+
+.dashed-divider { height: 1px; width: 100%; border-top: 1px dashed #ccc; margin: 20px 0; }
+
+.j-textarea {
+    width: 100%; border: none; background: rgba(255,255,255,0.8);
+    padding: 10px; font-family: 'Songti SC', serif; font-size: 13px; line-height: 1.6;
+    min-height: 100px; resize: none; outline: none;
+}
+.j-tools { position: absolute; right: 0; bottom: -30px; display: flex; gap: 10px; }
+.round-tool-btn {
+    width: 36px; height: 36px; border-radius: 50%; background: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08); display: flex; justify-content: center; align-items: center;
+    cursor: pointer; font-size: 14px; transition: 0.2s;
+}
+.round-tool-btn:active { transform: scale(0.9); }
+
+/* --- Fridge 样式 (插画风) --- */
+.fridge-art-container {
+    height: 460px; position: relative;
+    border-radius: 24px; overflow: hidden;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.06);
+    background: #fff;
+}
+.fridge-door-art {
+    position: absolute; inset: 0; background: #fdfdfd; z-index: 10;
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border-right: 15px solid #f2f2f2; /* 门厚度 */
+}
+.fridge-door-art.open { transform: translateX(-90%); }
+
+.fridge-handle-art {
+    position: absolute; right: 25px; top: 50%; transform: translateY(-50%);
+    width: 12px; height: 120px; background: #eee; border-radius: 6px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.handle-text { writing-mode: vertical-rl; font-size: 8px; letter-spacing: 2px; color: #aaa; }
+
+.fridge-actions-floating {
+    position: absolute; bottom: 20px; left: 20px; display: flex; gap: 8px;
+}
+.fridge-actions-floating button {
+    background: #fff; border: 1px solid #eee; padding: 6px 12px; border-radius: 15px;
+    font-size: 10px; color: #555; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+}
+.fridge-actions-floating button.dark { background: #333; color: #fff; border-color: #333; }
+
+.fridge-inner-art {
+    position: absolute; inset: 0; background: #f0f4f8; z-index: 5;
+    padding: 40px 15px 15px 15px; display: flex; flex-direction: column; gap: 10px;
+    border-left: 10px solid #e0e0e0; /* 内壁厚度 */
+}
+.inner-close-btn { position: absolute; top: 15px; right: 15px; font-size: 10px; color: #999; cursor: pointer; }
+.inner-shelf { flex: 1; background: rgba(255,255,255,0.5); border-bottom: 4px solid #dce3e8; border-radius: 4px; display: flex; align-items: flex-end; padding: 5px; }
+.inner-drawer { flex: 1.5; background: #fff; border-radius: 12px; border: 2px solid #dce3e8; margin-top: 5px; display: flex; align-items: flex-end; padding: 10px; }
+
+.diet-log-box {
+    background: #fff; padding: 12px; border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+.d-title { font-size: 11px; font-weight: 700; display: flex; justify-content: space-between; margin-bottom: 5px;}
+.d-title span { color: #aaa; font-weight: 400; cursor: pointer; }
+.diet-log-box textarea { width: 100%; border: 1px solid #eee; height: 40px; font-size: 11px; padding: 5px; margin-bottom: 5px; border-radius: 6px; }
+.diet-log-box button { width: 100%; background: #333; color: #fff; border: none; font-size: 10px; padding: 5px; border-radius: 6px; }
+.d-reaction { font-size: 10px; color: #666; margin-top: 5px; background: #f9f9f9; padding: 5px; border-left: 2px solid #333; }
+
+/* --- Q&A 样式 --- */
+.qa-hero-section {
+    background: #111; color: #fff; padding: 30px 20px;
+    border-radius: 20px 20px 0 0;
+    text-align: center; position: relative; overflow: hidden;
+}
+.qa-big-icon {
+    font-size: 80px; font-family: 'Playfair Display'; color: rgba(255,255,255,0.1);
+    position: absolute; top: -20px; left: 20px;
+}
+.qa-history-label {
+    font-size: 10px; text-align: center; color: #ccc; letter-spacing: 2px; margin: 20px 0 10px;
+}
+.qa-history-item {
+    background: #f9f9f9; padding: 15px; border-radius: 12px; margin-bottom: 10px;
+    border: 1px solid #f0f0f0;
+}
+
+/* --- Task 清单样式 --- */
+.task-header-row {
+    display: flex; justify-content: space-between; padding: 20px; border-bottom: 1px solid #eee;
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+}
+.task-date { color: #aaa; font-weight: 400; }
+.task-split-view { display: flex; min-height: 200px; }
+.task-col { flex: 1; padding: 15px; }
+.task-col.left { border-right: 1px dashed #eee; }
+.t-head { font-size: 14px; font-family: 'Playfair Display'; font-weight: 700; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+.t-head i { font-size: 10px; background: #f0f0f0; width: 20px; height: 20px; display: flex; justify-content: center; align-items: center; border-radius: 50%; cursor: pointer; color: #555; }
+
+.task-eval-btn {
+    width: calc(100% - 40px); margin: 0 20px 20px;
+    background: #fff; border: 1px solid #111; color: #111;
+    height: 40px; font-weight: 700; cursor: pointer; font-size: 11px;
+}
+.task-eval-box {
+    background: #111; color: #fff; padding: 20px; margin: 0 20px 20px;
+    font-family: 'Songti SC', serif; font-size: 12px; line-height: 1.6;
+    border-radius: 4px;
+}
+
+/* 覆盖旧样式补丁 */
+.ls2-note.crooked { border-radius: 0; transform: rotate(var(--rot)); border: none; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+.ls2-note.pink { background: #ffebeb; }
+.ls2-note.blue { background: #eaf4fc; }
+/* =========================================
+   [全新] Love Space 状态追踪：时间轴样式
+   ========================================= */
+.ls2-timeline-container {
+    padding: 0 20px 20px 0;
+    position: relative;
+}
+.ls2-timeline-container::before {
+    content: '';
+    position: absolute;
+    left: 62px;
+    top: 15px;
+    bottom: 20px;
+    width: 2px;
+    background: #f0f0f0;
+}
+.ls2-tl-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    position: relative;
+    animation: fadeUp 0.4s ease forwards;
+    opacity: 0;
+}
+.ls2-tl-item:nth-child(1) { animation-delay: 0.1s; }
+.ls2-tl-item:nth-child(2) { animation-delay: 0.2s; }
+.ls2-tl-item:nth-child(3) { animation-delay: 0.3s; }
+.ls2-tl-item:nth-child(4) { animation-delay: 0.4s; }
+.ls2-tl-item:nth-child(5) { animation-delay: 0.5s; }
+
+.ls2-tl-time {
+    width: 45px;
+    font-size: 11px;
+    color: #999;
+    font-family: 'Montserrat', sans-serif;
+    text-align: right;
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+.ls2-tl-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #ccc;
+    margin: 6px 15px 0 15px;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.8);
+    flex-shrink: 0;
+    transition: 0.3s;
+}
+/* 敏感操作高亮 */
+.ls2-tl-item.highlight .ls2-tl-dot {
+    border-color: #ff4d4f;
+    background: #ffecec;
+}
+.ls2-tl-content {
+    flex: 1;
+    font-size: 13px;
+    color: #444;
+    line-height: 1.6;
+    background: #fff;
+    padding: 12px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+.ls2-tl-content b {
+    color: #111;
+    font-weight: 700;
+}
+
+/* =========================================
+   [全新] Love Space 大厅选择：画廊网格卡片
+   ========================================= */
+.ls2-partner-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding-bottom: 30px;
+}
+.partner-card {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    aspect-ratio: 3/4;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+    background: #eee;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+.partner-card:active {
+    transform: scale(0.95);
+}
+.pc-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(20%);
+    transition: filter 0.4s;
+}
+.partner-card:hover .pc-bg {
+    filter: grayscale(0%);
+}
+.pc-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 15px;
+}
+.pc-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 2px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.pc-status {
+    font-size: 9px;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+.pc-status.bound {
+    color: #ff7e67;
+    font-weight: bold;
+}
+.pc-btn {
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(5px);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 8px 0;
+    border-radius: 12px;
+    font-size: 11px;
+    text-align: center;
+    font-weight: 600;
+    transition: 0.3s;
+}
+.pc-btn.active {
+    background: #fff;
+    color: #111;
+    border: none;
+}
+/* =========================================
+   隐藏 Love Space 的所有滚动条 (但保留滑动)
+   ========================================= */
+
+/* 隐藏主内容区的滚动条 */
+.ls2-content-wrap::-webkit-scrollbar,
+#ls2-lobby-list::-webkit-scrollbar,
+.ls2-circle-nav-container::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.ls2-content-wrap,
+#ls2-lobby-list,
+.ls2-circle-nav-container,
+.modal-body {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+/* =========================================
+   [新增] 3D 翻页手账本系统样式
+   ========================================= */
+
+.journal-book-container {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    perspective: 1500px; /* 3D 透视感 */
+    margin-bottom: 20px;
+}
+
+/* 封面设计 */
+.journal-cover {
+    position: absolute;
+    inset: 0;
+    background-color: #2b2b2b;
+    border-radius: 12px 24px 24px 12px;
+    box-shadow: 10px 10px 30px rgba(0,0,0,0.15), inset -5px 0 15px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    /* 核心动画：围绕左侧翻开 */
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s;
+    transform-origin: left center;
+    z-index: 10;
+}
+.journal-cover::before {
+    content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 2px;
+    background: rgba(255,255,255,0.2); /* 模拟书脊压痕 */
+}
+
+/* 翻开状态 */
+.journal-cover.opened {
+    transform: rotateY(-110deg);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.journal-cover-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    color: #fff;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.3);
+    padding: 10px 20px;
+    border: 1px solid rgba(255,255,255,0.5);
+    backdrop-filter: blur(5px);
+}
+
+.journal-cover-hint {
+    color: rgba(255,255,255,0.8);
+    font-size: 10px;
+    margin-top: 20px;
+    letter-spacing: 3px;
+    background: rgba(0,0,0,0.4);
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+/* 内页区域 */
+.journal-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s 0.3s; /* 等封面翻开一半后再显示内容 */
+}
+/* 封面翻开后激活内页 */
+.journal-cover.opened + .journal-inner {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 顶部小标签 */
+.journal-tabs {
+    display: flex;
+    z-index: 2;
+    padding-left: 15px;
+    gap: 5px;
+    margin-bottom: -1px;
+}
+.j-tab {
+    padding: 10px 18px;
+    background: #e0e0e0;
+    border-radius: 12px 12px 0 0;
+    font-size: 12px;
+    font-weight: bold;
+    color: #666;
+    cursor: pointer;
+    box-shadow: inset 0 -2px 5px rgba(0,0,0,0.05);
+    transition: 0.2s;
+}
+.j-tab.active {
+    background: #fff;
+    color: #111;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+}
+.j-close-btn {
+    margin-left: auto;
+    padding: 10px 15px;
+    color: #999;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s;
+}
+.j-close-btn:hover { color: #ff4d4f; }
+
+/* 页面内容区 */
+.j-page-content {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    padding: 15px;
+}
+.j-page-content.active {
+    display: flex;
+}
+#journal-paper {
+    background-color: #fff;
+    border-radius: 0 16px 16px 16px;
+    margin-bottom: 0;
+}
+/* =========================================
+   [更新] 情侣空间手账本与便利贴增强样式 (多页/去黑框/防遮挡版)
+   ========================================= */
+
+/* 强制隐藏不活动的 Tab，修复手账 3D 透视引起的遮挡 Bug */
+.ls2-tab-content:not(.active) { display: none !important; }
+
+#ls2-tab-journal.active {
+    height: 100% !important; 
+    display: flex !important;
+    flex-direction: column;
+}
+
+.journal-book-container {
+    flex: 1; position: relative; width: 100%; min-height: 480px;
+    display: block !important; perspective: 1500px; z-index: 10;
+}
+
+.journal-cover, .journal-inner {
+    position: absolute; inset: 0; 
+    border-radius: 4px 16px 16px 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.1);
+}
+
+.journal-inner { display: flex; flex-direction: column; }
+
+#journal-paper {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    border-radius: 0 16px 16px 4px; margin-bottom: 0; padding: 0 !important;
+}
+
+/* 日记翻页栏 */
+.journal-pagination {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 20px; background: rgba(255,255,255,0.85); backdrop-filter: blur(5px);
+    border-bottom: 1px dashed rgba(0,0,0,0.1); font-size: 13px; color: #333; z-index: 10;
+}
+.journal-pagination i {
+    cursor: pointer; padding: 6px 12px; background: #f0f0f0;
+    border-radius: 8px; transition: 0.2s; color: #555;
+}
+.journal-pagination i:hover { background: #111; color: #fff; }
+
+.j-page-content { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.j-textarea {
+    flex: 1; width: 100%; overflow-y: auto; background: transparent; border: none; outline: none; resize: none;
+    padding: 20px;
+}
+
+/* === [升级] 增强版贴纸系统 (支持形状、去黑框、缩放) === */
+.ls2-note {
+    position: absolute; z-index: 50; overflow: visible !important;
+    display: flex; justify-content: center; align-items: center;
+    border: none !important; box-shadow: none !important; background: transparent !important;
+    padding: 0 !important; cursor: grab; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.15));
+    pointer-events: auto !important; /* 【核心修复】强制恢复点击与拖拽拦截 */
+}
+.ls2-note:hover { z-index: 100 !important; }
+
+/* 内容容器 */
+.sticker-inner {
+    width: 100%; height: 100%; min-width: 80px; min-height: 80px;
+    box-sizing: border-box; display: flex; justify-content: center; align-items: center;
+    text-align: center; word-break: break-word; overflow: hidden;
+}
+
+/* 胶带装饰 */
+.tape-deco-small {
+    position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 30px; height: 12px; background: rgba(255,255,255,0.6); 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 2px; z-index: 10;
+}
+
+/* 控制按钮 */
+.note-control-btn {
+    position: absolute; width: 24px; height: 24px; border-radius: 50%;
+    display: none; justify-content: center; align-items: center;
+    font-size: 11px; cursor: pointer; z-index: 101; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.ls2-note:hover .note-control-btn { display: flex; }
+
+.note-del-btn { top: -10px; right: -10px; background: #ff4d4f; color: #fff; }
+.scale-up-btn { top: -10px; left: -10px; background: #fff; color: #333; }
+.scale-down-btn { top: -10px; left: 18px; background: #fff; color: #333; }
+
+/* 形状矩阵 */
+.shape-rect { border-radius: 0; }
+.shape-square { border-radius: 0; aspect-ratio: 1; }
+.shape-rounded { border-radius: 12px; }
+.shape-circle { border-radius: 50%; aspect-ratio: 1; }
+
+/* 完美圆润爱心 (SVG Mask 平滑遮罩) */
+.shape-heart {
+    aspect-ratio: 1;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+    -webkit-mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    background-color: inherit;
+}
+
+/* 完美圆润五角星 (SVG Mask 平滑遮罩) */
+.shape-star {
+    aspect-ratio: 1;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath stroke-linejoin='round' d='M12 17.27l-5.18 3.12c-.75.45-1.67-.23-1.47-1.09l1.37-5.91-4.61-4.04c-.67-.58-.32-1.68.56-1.76l6.05-.51 2.37-5.63c.35-.82 1.55-.82 1.9 0l2.37 5.63 6.05.51c.88.08 1.23 1.18.56 1.76l-4.61 4.04 1.37 5.91c.2.86-.72 1.54-1.47 1.09L12 17.27z'/%3E%3C/svg%3E");
+    -webkit-mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath stroke-linejoin='round' d='M12 17.27l-5.18 3.12c-.75.45-1.67-.23-1.47-1.09l1.37-5.91-4.61-4.04c-.67-.58-.32-1.68.56-1.76l6.05-.51 2.37-5.63c.35-.82 1.55-.82 1.9 0l2.37 5.63 6.05.51c.88.08 1.23 1.18.56 1.76l-4.61 4.04 1.37 5.91c.2.86-.72 1.54-1.47 1.09L12 17.27z'/%3E%3C/svg%3E");
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    background-color: inherit;
+}
+/* === LoveSpace: Paper modal beautify === */
+.paper-preview-grid{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:12px;
+  padding: 6px;
+}
+
+.paper-preview-item{
+  height: 90px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+  background: #fff;
+  position: relative;
+  overflow:hidden;
+  cursor:pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.paper-preview-item:active{
+  transform: scale(0.98);
+}
+
+.paper-preview-name{
+  position:absolute;
+  left:10px;
+  bottom:10px;
+  font-size:11px;
+  font-weight:700;
+  color:#111;
+  background: rgba(255,255,255,0.9);
+  padding:4px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* =========================================
+   [ARCADE] 韩系柔和轻杂志风 (Soft Minimalist) - 全局框架
+   ========================================= */
+/* 大厅头部与选人 */
+.gc-header {
+    height: 90px; padding: 50px 24px 15px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-size: 18px; font-weight: 800; color: #2b2b2b;
+}
+.gc-header i { cursor: pointer; font-size: 18px; color: #555; }
+
+.gc-player-select {
+    padding: 15px 24px; background: #fafafa; border-bottom: 1px solid rgba(0,0,0,0.03);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.gc-player-select select {
+    background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 4px 8px;
+    font-family: 'Montserrat', 'PingFang SC', sans-serif;
+    font-size: 13px; font-weight: 600; color: #333; outline: none;
+}
+
+.gc-view-container {
+    flex: 1; position: relative; overflow: hidden; background: #fdfdfd;
+}
+.gc-view {
+    position: absolute; inset: 0; padding: 24px; overflow-y: auto;
+    display: none; flex-direction: column;
+    animation: fadeIn 0.3s ease;
+}
+.gc-view.active { display: flex; }
+.gc-view::-webkit-scrollbar { display: none; }
+
+/* 游戏列表卡片 */
+.gc-game-list { display: flex; flex-direction: column; gap: 16px; padding-bottom: 50px;}
+.gc-game-card {
+    background: #ffffff; 
+    padding: 24px;
+    position: relative; overflow: hidden;
+    cursor: pointer; transition: transform 0.3s, box-shadow 0.3s;
+    border-radius: 20px; 
+    border: 1px solid rgba(0,0,0,0.03);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.03);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.gc-game-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.06); }
+
+.gc-card-num {
+    font-family: 'Playfair Display', serif; font-size: 50px; font-weight: 900;
+    position: absolute; right: 10px; bottom: -10px; color: rgba(0,0,0,0.03); line-height: 1;
+}
+.gc-card-info { position: relative; z-index: 2; flex: 1; }
+.gc-card-info .title { font-size: 16px; font-weight: 800; color: #333; margin-bottom: 6px; }
+.gc-card-info .desc { font-size: 11px; color: #999; }
+.gc-card-icon { 
+    width: 44px; height: 44px; border-radius: 14px; background: #f5f5f5; 
+    display: flex; justify-content: center; align-items: center; 
+    font-size: 18px; color: #555; z-index: 2;
+}
+
+/* 子游戏通用 UI */
+.gc-sub-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 25px;
+    font-size: 16px; font-weight: 800; color: #2b2b2b;
+    padding-top: 50px; flex-shrink: 0;
+}
+.gc-sub-content {
+    flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 40px;
+}
+.gc-prompt-box {
+    background: #f9f9f9; border-radius: 14px; padding: 16px;
+    font-size: 12px; color: #666; line-height: 1.6; margin-bottom: 20px;
+    border: 1px solid rgba(0,0,0,0.02);
+}
+.gc-input {
+    width: 100%; border: 1px solid #e5e5e5; background: #fff; padding: 14px 16px;
+    font-size: 13px; font-family: inherit; border-radius: 12px; outline: none; transition: 0.2s;
+}
+.gc-input:focus { border-color: #2b2b2b; box-shadow: 0 4px 15px rgba(0,0,0,0.04); }
+
+.gc-btn-primary {
+    background: #2b2b2b; color: #fff; border: none; padding: 14px;
+    font-size: 13px; font-weight: 700; border-radius: 12px; cursor: pointer;
+    transition: 0.2s; box-shadow: 0 6px 20px rgba(43,43,43,0.15); display: block; width: 100%;
+}
+.gc-btn-primary:active { transform: scale(0.97); }
+.gc-btn-primary:disabled { background: #ccc; box-shadow: none; pointer-events: none; }
+
+.gc-btn-secondary {
+    background: #fff; color: #555; border: 1px solid #ddd; padding: 14px;
+    font-size: 13px; font-weight: 700; border-radius: 12px; cursor: pointer;
+    transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.02); display: block; width: 100%;
+}
+.gc-btn-secondary:active { background: #f0f0f0; transform: scale(0.97); }
+.gc-btn-secondary:disabled { color: #ccc; border-color: #eee; pointer-events: none; }
+
+.gc-result-box {
+    margin-top: 20px; padding: 20px; background: #fff; color: #444; border-radius: 16px;
+    font-size: 13px; line-height: 1.6; display: none; border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+}
+
+/* 双方对峙头像 UI (G1, G2 共用) */
+.gc-duel-header {
+    display: flex; justify-content: center; align-items: center; gap: 25px;
+    margin-bottom: 20px; padding: 20px; background: #fff;
+    border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);
+}
+.gc-duel-avatar {
+    width: 60px; height: 60px; border-radius: 50%; border: 3px solid #f9f9f9;
+    object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+}
+.gc-duel-avatar.me { border-color: #333; }
+.gc-duel-avatar.ai { border-color: #ff7e67; }
+.gc-duel-vs { font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 900; color: #ccc; font-style: italic; }
+.gc-duel-name { font-size: 11px; font-weight: 700; color: #666; text-align: center; margin-top: 8px; }
+.gc-round-tag {
+    text-align: center; font-size: 11px; font-weight: 700; color: #fff; background: #111; 
+    padding: 4px 14px; border-radius: 12px; display: inline-block; margin-bottom: 20px;
+}
+
+/* ================= G1: 真心话 ================= */
+.g1-card {
+    border: 1px solid #eee; padding: 18px; text-align: center; cursor: pointer;
+    background: #fff; transition: 0.3s; border-radius: 16px; color: #555;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.02); font-size: 13px; line-height: 1.5;
+}
+.g1-card:hover { border-color: #ccc; transform: translateY(-2px); }
+.g1-card.selected { background: #2b2b2b; color: #fff; border-color: #2b2b2b; }
+.g1-my-form { display: flex; flex-direction: column; gap: 12px; }
+.g1-my-row {
+    display: flex; align-items: center; gap: 12px; background: #fafafa; 
+    padding: 12px 15px; border-radius: 14px; border: 1px solid #eee;
+}
+.g1-my-row input[type="radio"] { accent-color: #ff4d4f; transform: scale(1.2); cursor: pointer; }
+.g1-my-row input[type="text"] { flex: 1; border: none; background: transparent; font-size: 13px; outline: none; color: #333; }
+
+/* ================= G2: Emoji ================= */
+.gc-huge-emoji { font-size: 44px; text-align: center; margin: 20px 0; letter-spacing: 8px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.1)); }
+
+/* ================= G3: 平行宇宙 (韩系黑白灰卡片风) ================= */
+.g3-k-setup {
+    text-align: center; padding: 40px 20px; background: #fff; border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.03);
+}
+.g3-k-icon { font-size: 40px; color: #111; margin-bottom: 20px; }
+.g3-k-title { font-family: 'Montserrat'; font-weight: 800; font-size: 18px; letter-spacing: 2px; margin-bottom: 10px; }
+.g3-k-desc { font-size: 12px; color: #888; line-height: 1.8; margin-bottom: 30px; }
+.g3-k-btn {
+    background: #111; color: #fff; border: none; padding: 14px 30px;
+    border-radius: 30px; font-size: 12px; font-weight: 600; letter-spacing: 1px;
+    cursor: pointer; transition: 0.3s; width: 100%;
+}
+.g3-k-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+.g3-k-btn.black { background: #000; }
+.g3-k-scenario-box {
+    background: #f9f9f9; padding: 20px; border-radius: 16px; margin-bottom: 20px; border-left: 3px solid #111;
+}
+.g3-k-label { font-size: 10px; font-weight: 700; color: #ccc; letter-spacing: 1px; margin-bottom: 8px; }
+.g3-k-text { font-size: 13px; color: #333; line-height: 1.6; font-family: 'Songti SC', serif; font-weight: bold;}
+.g3-k-inventory-bar { margin-bottom: 20px; }
+.g3-k-inv-header { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #999; margin-bottom: 8px; letter-spacing: 1px;}
+.g3-k-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.g3-k-slot {
+    aspect-ratio: 1; background: #fff; border: 1px dashed #ddd; border-radius: 12px;
+    display: flex; justify-content: center; align-items: center; font-size: 24px; position: relative; transition: 0.3s;
+}
+.g3-k-slot.filled { border-style: solid; border-color: #111; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+.g3-k-slot::after { content: attr(data-owner); position: absolute; bottom: -15px; font-size: 9px; color: #aaa; font-weight: 600; }
+.g3-k-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.g3-k-card {
+    background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s;
+    display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.g3-k-card:hover { transform: translateY(-2px); border-color: #111; }
+.g3-k-card.picked { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
+.g3-emoji { font-size: 24px; }
+.g3-name { font-size: 12px; font-weight: 600; color: #333; }
+.g3-k-dialogue { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; animation: fadeUp 0.3s ease; }
+.g3-k-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: #eee; flex-shrink: 0; }
+.g3-k-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.g3-k-bubble {
+    background: #111; color: #fff; padding: 12px 16px; border-radius: 4px 16px 16px 16px;
+    font-size: 12px; line-height: 1.5; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.g3-k-ending {
+    background: #fff; padding: 25px; border-radius: 20px; border: 1px solid #eee;
+    font-size: 13px; line-height: 1.8; color: #444; font-family: 'Songti SC', serif; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+/* ================= G4: 经典复古圆球扭蛋机 (Skeuomorphic Retro Gacha) ================= */
+.g4-retro-machine {
+    position: relative; width: 220px; height: 360px; margin: 20px auto 0;
+    filter: drop-shadow(0 30px 25px rgba(0,0,0,0.15));
+}
+.g4-retro-globe {
+    position: relative; width: 220px; height: 220px; border-radius: 50%; margin: 0 auto;
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.05) 60%, rgba(0,0,0,0.05) 100%);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); border: 2px solid rgba(255,255,255,0.6);
+    box-shadow: inset -15px -15px 35px rgba(0,0,0,0.1), inset 15px 15px 30px rgba(255,255,255,0.9), 0 10px 20px rgba(0,0,0,0.05);
+    z-index: 3; overflow: hidden;
+}
+.g4-glass-glare {
+    position: absolute; top: 5%; left: 5%; width: 80%; height: 80%; border-radius: 50%;
+    box-shadow: inset 15px 25px 20px rgba(255,255,255,0.7); transform: rotate(-30deg); pointer-events: none; z-index: 10;
+}
+.g4-capsule {
+    position: absolute; width: 50px; height: 50px; border-radius: 50%;
+    background: linear-gradient(180deg, var(--cap-color) 50%, #fdfdfd 50%);
+    box-shadow: inset -5px -5px 10px rgba(0,0,0,0.15), inset 5px 5px 10px rgba(255,255,255,0.8), 0 6px 10px rgba(0,0,0,0.15);
+    border: 1px solid rgba(255,255,255,0.5); transition: transform 0.2s;
+}
+.g4-capsule::after {
+    content: ''; position: absolute; top: 50%; left: -3px; right: -3px; height: 3px;
+    background: rgba(255,255,255,0.7); border-radius: 2px; transform: translateY(-50%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.9); z-index: 5;
+}
+.c1 { --cap-color: rgba(255, 154, 158, 0.8); top: 160px; left: 40px; transform: rotate(20deg); }
+.c2 { --cap-color: rgba(161, 196, 253, 0.8); top: 140px; left: 90px; transform: rotate(-15deg); }
+.c3 { --cap-color: rgba(251, 194, 235, 0.8); top: 110px; left: 50px; transform: rotate(60deg); }
+.c4 { --cap-color: rgba(132, 250, 176, 0.8); top: 155px; left: 135px; transform: rotate(-40deg); }
+.c5 { --cap-color: rgba(253, 203, 113, 0.8); top: 125px; left: 120px; transform: rotate(10deg); }
+.c6 { --cap-color: rgba(207, 217, 223, 0.8); top: 90px; left: 90px; transform: rotate(35deg); }
+.g4-metal-collar {
+    width: 120px; height: 18px; margin: -10px auto 0;
+    background: linear-gradient(90deg, #b0b0b0 0%, #ffffff 30%, #dcdcdc 50%, #fdfdfd 70%, #999999 100%);
+    border-radius: 10px; position: relative; z-index: 4;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.2), inset 0 2px 2px rgba(255,255,255,0.8); border: 1px solid #a0a0a0;
+}
+.g4-retro-base {
+    width: 150px; height: 140px; margin: -5px auto 0;
+    background: linear-gradient(135deg, #fdfdfd 0%, #e6e6e6 100%); border-radius: 10px 10px 30px 30px;
+    position: relative; z-index: 2; border: 1px solid #ccc;
+    box-shadow: inset -5px -5px 15px rgba(0,0,0,0.08), inset 5px 5px 15px rgba(255,255,255,1);
+    display: flex; flex-direction: column; align-items: center;
+}
+.g4-coin-slot {
+    position: absolute; top: 15px; right: 25px; width: 16px; height: 28px;
+    background: linear-gradient(180deg, #d0d0d0, #eee); border-radius: 4px;
+    box-shadow: 1px 1px 3px rgba(255,255,255,0.8), inset 1px 1px 3px rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center;
+}
+.g4-coin-slot .slot-hole { width: 3px; height: 18px; background: #222; border-radius: 2px; box-shadow: inset 1px 1px 2px rgba(0,0,0,0.8); }
+.g4-turn-knob {
+    position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 60px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #ddd, #fff, #aaa, #fff, #ddd);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.9);
+    cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+.g4-turn-knob::before { content: ''; position: absolute; inset: 12px; background: #f0f0f0; border-radius: 50%; box-shadow: inset 0 3px 6px rgba(0,0,0,0.2); }
+.g4-knob-grip {
+    position: absolute; top: 50%; left: -5px; right: -5px; height: 14px;
+    background: linear-gradient(180deg, #ff6b6b, #d32f2f); border-radius: 7px; transform: translateY(-50%);
+    box-shadow: 0 3px 5px rgba(0,0,0,0.3), inset 0 3px 3px rgba(255,255,255,0.4); z-index: 10;
+}
+.g4-dispenser-hole {
+    position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); width: 65px; height: 50px; background: #1a1a1a;
+    border-radius: 30px 30px 10px 10px; box-shadow: inset 0 10px 20px rgba(0,0,0,0.8), 0 2px 2px rgba(255,255,255,1); border-top: 2px solid #666; overflow: hidden;
+}
+.g4-flap { position: absolute; top: 0; left: 0; right: 0; height: 80%; background: rgba(255,255,255,0.2); backdrop-filter: blur(2px); border-bottom: 2px solid rgba(255,255,255,0.4); transform-origin: top; }
+@keyframes shakeGlobe {
+    0% { transform: translate(0,0) rotate(0deg); } 25% { transform: translate(8px, -15px) rotate(20deg); }
+    50% { transform: translate(-8px, 10px) rotate(-15deg); } 75% { transform: translate(5px, -8px) rotate(25deg); } 100% { transform: translate(0,0) rotate(0deg); }
+}
+.g4-retro-globe.shaking .g4-capsule { animation: shakeGlobe 0.4s infinite alternate ease-in-out; }
+.g4-capsule.dropped { position: absolute; z-index: 20; animation: retroDrop 1.2s cubic-bezier(0.28, 0.84, 0.42, 1) forwards; }
+@keyframes retroDrop {
+    0% { top: 230px; left: 85px; transform: scale(0.3); opacity: 0; }
+    20% { top: 320px; left: 85px; transform: scale(1.1); opacity: 1; }
+    45% { top: 270px; left: 105px; transform: scale(0.95); opacity: 1; }
+    75% { top: 325px; left: 125px; transform: scale(1.02); opacity: 1; }
+    100% { top: 320px; left: 135px; transform: scale(1) rotate(60deg); opacity: 1; }
+}
+.g4-k-instruction { font-family: 'Montserrat'; font-weight: 700; font-size: 12px; color: #333; margin-top: 30px; letter-spacing: 2px; text-align: center; }
+
+/* 扭蛋结果弹窗 (小剧场) */
+.g4-modal-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+.g4-card-display { background: #fff; border: 1px solid #111; border-radius: 20px; padding: 25px; text-align: center; box-shadow: 8px 8px 0 rgba(0,0,0,0.05); }
+.g4-tag { display: inline-block; background: #111; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-bottom: 10px; }
+.g4-role-title { font-size: 20px; font-weight: 800; margin-bottom: 5px; color: #111; }
+.g4-role-desc { font-size: 12px; color: #666; }
+.g4-chat-area { flex: 1; background: #f9f9f9; border-radius: 16px; padding: 15px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 300px; }
+.g4-bubble { padding: 8px 12px; border-radius: 12px; font-size: 12px; max-width: 80%; }
+.g4-bubble.ai { background: #fff; align-self: flex-start; border: 1px solid #eee; color: #333; }
+.g4-bubble.me { background: #111; align-self: flex-end; color: #fff; }
+.g4-input-bar { display: flex; gap: 10px; padding: 15px 20px; background: #fff; border-top: 1px solid #f5f5f5; }
+.g4-input-bar input { flex: 1; background: #f5f5f5; border: none; padding: 10px 15px; border-radius: 20px; font-size: 12px; outline: none; }
+.g4-input-bar button { width: 36px; height: 36px; background: #111; color: #fff; border-radius: 50%; border: none; cursor: pointer; }
+
+/* ================= G5: 同居领地战 (韩系高级谈判版) ================= */
+.g5-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 20px 0;
+}
+
+.g5-tile {
+    aspect-ratio: 1;
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+}
+.g5-tile:active { transform: scale(0.95); }
+
+.g5-tile-icon { font-size: 24px; margin-bottom: 8px; color: #333; }
+.g5-tile-name { font-size: 10px; color: #999; font-weight: 500; letter-spacing: 1px; }
+
+/* 占领状态：我 (深黑块) */
+.g5-tile.owner-me { background: #111; border-color: #111; }
+.g5-tile.owner-me .g5-tile-icon, .g5-tile.owner-me .g5-tile-name { color: #fff; }
+
+/* 占领状态：AI (高级浅灰斜纹) */
+.g5-tile.owner-ai {
+    background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #fafafa 10px, #fafafa 20px);
+    border-color: #eee;
+}
+.g5-tile.owner-ai .g5-tile-icon { opacity: 0.3; }
+
+/* 契约书卡片 (拟物纸张) */
+.g5-contract-card {
+    background: #fff;
+    width: 100%;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+    border: 1px solid #eee;
+    position: relative;
+}
+.g5-contract-card::before {
+    content: ''; position: absolute; left: 20px; top: 0; bottom: 0; width: 2px;
+    border-left: 2px dashed #ff4d4f; opacity: 0.3; /* 模拟法律文件的红线 */
+}
+.g5-contract-title {
+    font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; line-height: 1; color: #111; margin-bottom: 5px;
+}
+.g5-contract-subtitle {
+    font-size: 10px; letter-spacing: 4px; color: #999; margin-bottom: 30px; border-bottom: 1px solid #111; padding-bottom: 10px;
+}
+.g5-contract-textarea {
+    width: 100%; height: 80px; border: none; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 8px; font-family: 'Songti SC', serif; font-size: 14px; outline: none; resize: none; color: #111;
+}
+
+/* ================= G6: 午夜微醺局 (深色酒吧风) ================= */
+.g6-dialogue-box {
+    background: rgba(255,255,255,0.05);
+    border-left: 2px solid #fff;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #ddd;
+    line-height: 1.6;
+    font-family: 'Songti SC', serif;
+}
+
+/* 醉意进度杯 */
+.g6-drunk-status {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+.g6-glass-wrap { display: flex; flex-direction: column; align-items: center; }
+.g6-cups { display: flex; gap: 8px; }
+.g6-cups i { font-size: 18px; transition: 0.5s; }
+.g6-cups i.empty { color: rgba(255,255,255,0.1); }
+.g6-cups i.filled { color: #ff7e67; text-shadow: 0 0 10px rgba(255,126,103,0.5); }
+
+/* 摇骰子动画 */
+@keyframes shakeDice {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    25% { transform: translate(5px, 5px) rotate(5deg); }
+    50% { transform: translate(0, -5px) rotate(-5deg); }
+    75% { transform: translate(-5px, 5px) rotate(5deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+.shake-anim { animation: shakeDice 0.4s ease-in-out infinite; }
+
+/* ================= G7: 心跳娃娃机 (Skeuomorphic 3D拟物风) ================= */
+
+.g7-skeuo-machine {
+    width: 260px;
+    background: linear-gradient(180deg, #ffc5d9 0%, #ff9a9e 100%);
+    border-radius: 20px 20px 10px 10px;
+    border: 3px solid #ff7e93;
+    box-shadow: 
+        inset -5px -5px 15px rgba(0,0,0,0.1), 
+        inset 5px 5px 15px rgba(255,255,255,0.6),
+        0 15px 35px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+    margin-top: 10px;
+}
+
+/* 跑马灯 */
+.g7-marquee-top {
+    width: 100%; height: 24px; background: #222;
+    display: flex; justify-content: center; align-items: center;
+    color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 2px;
+    box-shadow: inset 0 -3px 5px rgba(0,0,0,0.5);
+    border-bottom: 2px solid #555;
+    overflow: hidden;
+}
+.g7-marquee-top span { animation: marquee-scroll 5s linear infinite; white-space: nowrap; }
+
+/* 玻璃视窗 */
+.g7-glass-cabinet {
+    width: 230px; height: 220px;
+    background: radial-gradient(circle at bottom, #fdfbfb 0%, #ebedee 100%);
+    border: 6px solid #fff;
+    border-radius: 12px;
+    margin: 15px 0;
+    position: relative;
+    box-shadow: inset 0 10px 20px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+/* 玻璃高光反光 */
+.g7-glass-glare {
+    position: absolute; top: -50px; left: -50px; width: 150px; height: 300px;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.8) 45%, rgba(255,255,255,0.8) 55%, transparent 60%);
+    pointer-events: none; z-index: 10;
+}
+
+/* 顶部导轨 */
+.g7-rail {
+    position: absolute; top: 10px; left: 10px; right: 10px; height: 8px;
+    background: linear-gradient(180deg, #ccc, #888, #ccc);
+    border-radius: 4px; box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+}
+
+/* 整个爪子组件 */
+.g7-claw-assembly {
+    position: absolute; top: 18px; left: 10px; /* left 是动态变的 */
+    display: flex; flex-direction: column; align-items: center;
+    z-index: 5;
+    /* 取消动画过渡，方便JS精确控制X坐标 */
+}
+
+/* 悬挂的线 */
+.g7-claw-cable {
+    width: 2px; height: 20px; /* height 会被 JS 动态拉长 */
+    background: #555;
+    transition: height 0.05s linear; /* 仅让线长有微弱过渡 */
+}
+
+/* 爪子头部 */
+.g7-claw-head {
+    width: 24px; height: 16px; background: linear-gradient(180deg, #eee, #aaa);
+    border-radius: 4px 4px 10px 10px; position: relative;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+}
+
+/* 左右抓手 */
+.g7-prong {
+    position: absolute; top: 10px; width: 4px; height: 25px;
+    background: linear-gradient(180deg, #aaa, #777); border-radius: 2px;
+    transition: transform 0.3s; transform-origin: top center;
+}
+.g7-prong.left { left: 2px; transform: rotate(20deg); }
+.g7-prong.right { right: 2px; transform: rotate(-20deg); }
+
+/* 爪子闭合状态 */
+.g7-claw-head.closed .left { transform: rotate(0deg); }
+.g7-claw-head.closed .right { transform: rotate(0deg); }
+
+/* 底部盲盒区域 */
+.g7-prizes-floor {
+    position: absolute; bottom: 0; width: 100%; height: 40px;
+    background: #e0e0e0; border-top: 1px solid #ccc;
+}
+.g7-box {
+    position: absolute; bottom: 5px; font-size: 28px;
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
+    transition: bottom 0.5s ease-in; /* 被抓起时的动画 */
+}
+
+/* --- 下半部分控制台 --- */
+.g7-control-panel {
+    width: 100%; height: 90px;
+    background: linear-gradient(180deg, #fce4ec, #ffcce0);
+    border-top: 2px solid #ff7e93;
+    display: flex; justify-content: space-around; align-items: center;
+    position: relative;
+}
+
+/* 投币口 */
+.g7-coin-slot {
+    width: 20px; height: 35px; background: linear-gradient(180deg, #ccc, #fff);
+    border-radius: 4px; border: 1px solid #999;
+    box-shadow: inset 1px 1px 3px rgba(255,255,255,0.8), 2px 2px 5px rgba(0,0,0,0.1);
+    display: flex; justify-content: center; align-items: center;
+}
+.g7-coin-slot .slot-hole { width: 4px; height: 20px; background: #222; border-radius: 2px; box-shadow: inset 1px 1px 2px #000; }
+
+/* 拟物大按钮基座 */
+.g7-btn-base {
+    width: 60px; height: 60px;
+    background: linear-gradient(180deg, #ccc, #888);
+    border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+}
+/* 物理感红色按钮 */
+.g7-arcade-btn {
+    width: 48px; height: 48px;
+    background: radial-gradient(circle at 30% 30%, #ff4d4f, #cc0000);
+    border-radius: 50%;
+    border: none; color: #fff; font-weight: 900; font-size: 11px;
+    box-shadow: 
+        inset 2px 2px 5px rgba(255,255,255,0.5),
+        inset -2px -2px 5px rgba(0,0,0,0.3),
+        0 6px 0 #990000,
+        0 8px 10px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: all 0.1s;
+    outline: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+/* 按下去的真实反馈 */
+.g7-arcade-btn:active {
+    transform: translateY(6px);
+    box-shadow: 
+        inset 2px 2px 5px rgba(255,255,255,0.5),
+        inset -2px -2px 5px rgba(0,0,0,0.3),
+        0 0 0 #990000,
+        0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* 掉落口 */
+.g7-dispenser {
+    position: absolute; bottom: 15px; left: 20px; width: 60px; height: 50px;
+    background: #111; border-radius: 8px; border: 2px solid #555;
+    box-shadow: inset 0 10px 20px #000; overflow: hidden;
+}
+.g7-dispenser .flap {
+    width: 100%; height: 80%; background: rgba(255,255,255,0.2); backdrop-filter: blur(2px);
+    border-bottom: 2px solid rgba(255,255,255,0.4);
+}
+
+/* ================= G8: 飞行棋 ================= */
+.g8-track-container { display: flex; flex-direction: column; gap: 5px; position: relative; background: #f9f9f9; padding: 10px; border-radius: 16px; margin-top: 15px; }
+.g8-cell { background: #fff; border: 1px solid #eee; height: 30px; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 12px; color: #ccc; }
+.g8-token {
+    position: absolute; width: 24px; height: 24px; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; font-size: 9px; font-weight: bold; color: #fff; transition: top 0.5s ease; z-index: 10; left: 20px;
+}
+.g8-me { background: #111; left: 15px; }
+.g8-ai { background: #ff7e67; left: 45px; }
+
+/* ================= G9: 抽鬼牌 ================= */
+.g9-cards-row { display: flex; justify-content: space-between; gap: 8px; }
+.g9-card {
+    flex: 1; aspect-ratio: 2/3; background: #111; color: #fff; border-radius: 8px; display: flex; justify-content: center; align-items: center;
+    font-weight: 800; cursor: pointer; transition: 0.3s;
+    background-image: repeating-linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333), repeating-linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333);
+    background-size: 10px 10px; background-position: 0 0, 5px 5px;
+}
+.g9-card:hover { transform: translateY(-10px); }
+.g9-card.revealed { background: #fff; color: #111; border: 1px solid #ccc; font-size: 24px; pointer-events: none; }
+
+/* ================= G10: 翻翻乐 ================= */
+.g10-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.g10-card {
+    aspect-ratio: 4/3; background: #2b2b2b; border-radius: 12px; cursor: pointer;
+    display: flex; justify-content: center; align-items: center; text-align: center;
+    font-size: 11px; font-weight: bold; color: transparent; transition: 0.3s; padding: 5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.g10-card.flipped { background: #fff; color: #333; border: 1px solid #111; box-shadow: none; transform: rotateY(180deg); }
+.g10-card.matched { background: #f0f0f0; color: #aaa; border: 1px dashed #ccc; pointer-events: none; }
+
+/* ================= G11: 跳跳对抗 ================= */
+#g11d-prep { background: #fff; border-radius: 20px; padding: 20px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04); text-align: center; }
+.g11d-record { font-size: 13px; color: #333; font-weight: 700; background: #fafafa; display: inline-block; padding: 8px 18px; border-radius: 20px; margin-bottom: 20px; border: 1px solid #eee; }
+.g11d-wardrobe { margin: 15px 0; text-align: left; }
+.g11d-title { font-size: 12px; font-weight: 800; color: #888; margin-bottom: 8px; padding-left: 5px; border-left: 4px solid #ccc; }
+.g11d-chip-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.g11d-chip {
+    width: 44px; height: 44px; border-radius: 14px; background: #fff; border: 2px solid #eee;
+    font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; position: relative;
+}
+.g11d-chip.active { border-color: #333; background: #fdfdfd; transform: scale(1.1) translateY(-2px); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.06); }
+.g11d-chip.locked { opacity: 0.5; filter: grayscale(100%); background: #f9f9f9; }
+.g11d-chip.locked::after { content: '🔒'; position: absolute; font-size: 10px; bottom: 2px; right: 2px; }
+#g11d-arena { display: flex; flex-direction: column; gap: 15px; height: 100%; }
+.g11d-lane-card {
+    flex: 1; background: #fff; border-radius: 24px; padding: 10px; box-shadow: 0 8px 25px rgba(0,0,0,0.04); border: 2px solid #f0f0f0; position: relative; overflow: hidden; display: flex; flex-direction: column;
+}
+.g11d-lane-head { display: flex; justify-content: space-between; align-items: center; padding: 0 10px 8px; z-index: 2; }
+.g11d-lane-head span:first-child { font-weight: 900; font-size: 14px; color: #555; background: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 12px; }
+.g11d-lane-head span:last-child { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px; color: #111; text-shadow: 2px 2px 0 #fff; }
+.g11d-canvas-wrap { flex: 1; border-radius: 18px; overflow: hidden; position: relative; background: #fdfdfd; box-shadow: inset 0 0 20px rgba(0,0,0,0.02); }
+.g11d-canvas-wrap canvas { width: 100%; height: 100%; display: block; }
+.g11d-touch { position: absolute; inset: 0; z-index: 10; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#g11-result-box { text-align: center; border: 1px solid #eee; background: rgba(255, 255, 255, 0.95); border-radius: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
+#g11-result-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(15px); z-index: 1000; display: none; justify-content: center; align-items: center; animation: fadeIn 0.3s ease; }
+.g11-result-modal { background: #fff; width: 280px; border-radius: 24px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); border: 1px solid #f0f0f0; text-align: center; transform: scale(0.9); animation: popIn 0.4s forwards; }
+
+/* =========================================
+   [终极版] 韩系简约崩溃风 + Glitch 特效 (Meta Delete)
+   ========================================= */
+
+#meta-overlay-container {
+    position: fixed; inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    display: none;
+    overflow: hidden;
+}
+#meta-overlay-container.active {
+    display: block;
+    pointer-events: auto;
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px) grayscale(60%); /* 调高模糊和灰度，更有失焦感 */
+    -webkit-backdrop-filter: blur(10px) grayscale(60%);
+}
+
+/* 屏幕剧烈震动动画 */
+@keyframes metaScreenShake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(3px, -4px) rotate(0.8deg); }
+    20% { transform: translate(-4px, 3px) rotate(-0.8deg); }
+    30% { transform: translate(4px, 4px) rotate(0.8deg); }
+    40% { transform: translate(-3px, -4px) rotate(-0.8deg); filter: hue-rotate(120deg); }
+    50% { transform: translate(4px, -3px) rotate(0.8deg); }
+}
+
+/* 弹窗基础样式：韩系简约 */
+.meta-popup-window {
+    position: absolute;
+    background: #ffffff;
+    border: 1px solid #f0f0f0; /* 极细边框 */
+    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+    min-width: 260px; /* 弹窗稍微变大一点 */
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Montserrat', 'PingFang SC', sans-serif;
+    border-radius: 16px; /* 韩系圆角 */
+    animation: metaPopIn 0.15s ease-out forwards;
+    opacity: 0;
+}
+@keyframes metaPopIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* 标题栏：简约风格 + 关闭按钮 */
+.meta-header {
+    height: 34px; padding: 0 15px; display: flex;
+    justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #f5f5f5;
+    background: #fafafa;
+}
+.meta-title { font-size: 11px; font-weight: 700; color: #555; }
+.meta-close { font-size: 14px; color: #aaa; cursor: pointer; }
+
+.meta-content {
+    padding: 25px; font-size: 13px; color: #444;
+    line-height: 1.6; text-align: center;
+}
+
+/* 按钮区域 */
+.meta-actions {
+    padding: 15px 20px; display: flex;
+    justify-content: flex-end; gap: 10px;
+    background: #f7f7f7; border-top: 1px solid #f0f0f0;
+}
+.meta-btn {
+    padding: 8px 20px; border-radius: 8px; border: 1px solid #ddd;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.meta-btn.cancel { background: #fff; color: #555; }
+.meta-btn.danger { background: #ff4d4f; color: #fff; border-color: #ff4d4f; }
+
+/* === 弹窗异变形态 === */
+
+/* 1. 恐怖红黑反转 */
+.meta-popup-window.cursed {
+    background: #000 !important;
+    border-color: #ff3b30 !important;
+    color: #ff3b30 !important;
+    box-shadow: 0 0 20px rgba(255, 59, 48, 0.5), inset 0 0 10px rgba(255, 59, 48, 0.3) !important;
+}
+.cursed .meta-header { background: #333 !important; border-color: #555 !important; }
+.cursed .meta-title, .cursed .meta-content, .cursed .meta-close { color: #ff3b30 !important; }
+
+/* 2. Glitch 故障文字动画 */
+.meta-popup-window.glitch .meta-content {
+    animation: glitchText 0.3s infinite;
+}
+@keyframes glitchText {
+    0% { transform: translate(0); text-shadow: 2px 2px 0 #ff00ff, -2px -2px 0 #00ffff; }
+    25% { transform: translate(2px, -2px); }
+    50% { transform: translate(-2px, 2px); text-shadow: -2px 2px 0 #ff00ff, 2px -2px 0 #00ffff; }
+    75% { transform: translate(2px, 2px); }
+    100% { transform: translate(-2px, -2px); }
+}
+
+/* 主警告弹窗：强制居中 + 独特样式 */
+.meta-popup-window.main-prompt {
+    top: 50% !important; left: 50% !important;
+    transform: translate(-50%, -50%);
+    z-index: 999999 !important;
+    border-width: 2px;
+    border-color: #ff4d4f;
+    box-shadow: 0 25px 60px rgba(255, 77, 79, 0.25);
+}
+.main-prompt .meta-content b {
+    display: block; font-size: 18px; font-weight: 900; color: #111; margin-bottom: 10px;
+}
+/* =========================================
+   [补全包] 丢失的 G11、钱包与宠物样式
+   ========================================= */
+
+/* ================= G11: 羁绊跳跳 (Jump Duel) ================= */
+#g11d-prep {
+    background: #fff; border-radius: 20px; padding: 20px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04); text-align: center;
+}
+.g11d-record {
+    font-size: 13px; color: #333; font-weight: 700;
+    background: #fafafa; display: inline-block; padding: 8px 18px;
+    border-radius: 20px; margin-bottom: 20px; border: 1px solid #eee;
+}
+.g11d-wardrobe { margin: 15px 0; text-align: left; }
+.g11d-title {
+    font-size: 12px; font-weight: 800; color: #888;
+    margin-bottom: 8px; padding-left: 5px; border-left: 4px solid #ccc;
+}
+.g11d-chip-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.g11d-chip {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: #fff; border: 2px solid #eee;
+    font-size: 20px; display: flex; justify-content: center; align-items: center;
+    cursor: pointer; transition: all 0.2s; position: relative;
+}
+.g11d-chip.active {
+    border-color: #333; background: #fdfdfd;
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.06);
+}
+.g11d-chip.locked { opacity: 0.5; filter: grayscale(100%); background: #f9f9f9; }
+.g11d-chip.locked::after { content: '🔒'; position: absolute; font-size: 10px; bottom: 2px; right: 2px; }
+
+#g11d-arena { display: flex; flex-direction: column; gap: 15px; height: 100%; }
+.g11d-lane-card {
+    flex: 1; background: #fff; border-radius: 24px; padding: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.04); border: 2px solid #f0f0f0;
+    position: relative; overflow: hidden; display: flex; flex-direction: column;
+}
+.g11d-lane-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 10px 8px; z-index: 2;
+}
+.g11d-lane-head span:first-child {
+    font-weight: 900; font-size: 14px; color: #555;
+    background: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 12px;
+}
+.g11d-lane-head span:last-child {
+    font-family: 'Montserrat', sans-serif; font-weight: 700;
+    font-size: 18px; color: #111; text-shadow: 2px 2px 0 #fff;
+}
+.g11d-canvas-wrap {
+    flex: 1; border-radius: 18px; overflow: hidden; position: relative;
+    background: #fdfdfd; box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
+}
+.g11d-canvas-wrap canvas { width: 100%; height: 100%; display: block; }
+.g11d-touch { position: absolute; inset: 0; z-index: 10; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+#g11-result-box {
+    text-align: center; border: 1px solid #eee;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+}
+#g11-result-overlay {
+    position: absolute; inset: 0; background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+    z-index: 1000; display: none; justify-content: center; align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+.g11-result-modal {
+    background: #fff; width: 280px;
+    border-radius: 24px; padding: 25px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+    border: 1px solid #f0f0f0; text-align: center;
+    transform: scale(0.9); animation: popIn 0.4s forwards;
+}
+
+/* ================= Pay App: 钱包与股票 ================= */
+/* 核心卡片：极简奶白 */
+.pay-korean-card {
+    background: #ffffff; border-radius: 28px; padding: 25px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.03); position: relative;
+    overflow: hidden; border: 1px solid rgba(0,0,0,0.02);
+}
+/* 银灰卡片 (银行卡) */
+.pay-silver-card {
+    background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ea 100%);
+    border-radius: 28px; padding: 25px; position: relative;
+    overflow: hidden; color: #555; box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.pay-silver-card::after {
+    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: linear-gradient(to bottom right, rgba(255,255,255,0.8) 0%, transparent 60%);
+    opacity: 0.5; pointer-events: none;
+}
+.pay-num-lg {
+    font-family: 'Montserrat', sans-serif; font-size: 36px;
+    font-weight: 300; color: #2b2b2b; letter-spacing: -1px; margin: 8px 0;
+}
+.pay-label-sm { font-size: 11px; color: #999; letter-spacing: 1px; font-weight: 500; }
+
+.pay-pill-btn {
+    background: #2b2b2b; color: #fff; border: none; padding: 8px 20px;
+    border-radius: 20px; font-size: 12px; cursor: pointer; transition: 0.2s;
+    box-shadow: 0 4px 12px rgba(43,43,43,0.15);
+}
+.pay-pill-btn.outline { background: transparent; border: 1px solid #ccc; color: #666; box-shadow: none; }
+
+/* 列表样式 */
+.pay-simple-list {
+    background: #fff; border-radius: 24px; padding: 5px 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.02);
+}
+.pay-simple-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 0; border-bottom: 1px solid #f9f9f9; cursor: pointer;
+}
+.pay-item-left { display: flex; align-items: center; gap: 15px; }
+.pay-icon-box {
+    width: 36px; height: 36px; border-radius: 12px;
+    display: flex; justify-content: center; align-items: center; font-size: 15px;
+    background: #f7f7f7; color: #555;
+}
+.pay-item-title { font-size: 14px; color: #333; font-weight: 600; }
+.pay-item-desc { font-size: 10px; color: #aaa; margin-top: 3px; }
+
+/* 账单卡片 */
+.bill-card-modern {
+    background: #ffffff; padding: 16px 20px; border-radius: 20px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.03);
+    transition: transform 0.2s ease;
+}
+.bill-icon-wrap {
+    width: 42px; height: 42px; border-radius: 50%; display: flex;
+    justify-content: center; align-items: center; flex-shrink: 0; font-size: 14px;
+}
+.bill-icon-in { background: rgba(7, 193, 96, 0.1); color: #07c160; }
+.bill-icon-out { background: #f5f5f5; color: #333; }
+.bill-info-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+.bill-title { font-size: 14px; font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.bill-time { font-size: 11px; color: #aaa; font-family: 'Montserrat', sans-serif; }
+.bill-amount-wrap { font-size: 16px; font-weight: 700; font-family: 'Montserrat', sans-serif; }
+.bill-income-text { color: #07c160; }
+.bill-expense-text { color: #2b2b2b; }
+
+/* 股市卡片 */
+.stock-card {
+    background: #ffffff; border: 1px solid rgba(0,0,0,0.04); border-radius: 16px;
+    padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02); cursor: pointer; transition: transform 0.2s;
+}
+.stock-info-left { display: flex; flex-direction: column; gap: 4px; }
+.stock-name { font-size: 14px; font-weight: 700; color: #111; }
+.stock-code { font-size: 10px; color: #999; font-family: 'Montserrat'; letter-spacing: 1px; }
+.stock-info-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.stock-price { font-size: 16px; font-weight: 600; font-family: 'Montserrat'; color: #111; }
+.stock-tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-family: 'Montserrat'; }
+.stock-up { background: #111; color: #fff; }
+.stock-down { background: #f0f0f0; color: #555; }
+.stock-flat { background: #fafafa; color: #888; border: 1px solid #eee; }
+.stock-color-up { color: #111 !important; }
+.stock-color-down { color: #888 !important; }
+
+/* 造星计划档案袋 */
+.idol-file {
+    flex: 1; background: #f9f9f9; border: 1px solid #ddd;
+    border-radius: 12px; padding: 25px 0; text-align: center;
+    cursor: pointer; transition: 0.2s;
+}
+
+/* 亲密付卡片 */
+.intimate-card {
+    background:#fff; border-radius:16px; padding:15px; 
+    box-shadow:0 4px 15px rgba(0,0,0,0.02); border:1px solid #f0f0f0; margin-bottom:10px;
+}
+
+/* ================= Pet App: 电子宠物 2.0 ================= */
+.pet-room-stage {
+    position: relative; width: 100%; height: 60%;
+    background-color: #fafafa; background-size: cover; background-position: center;
+    overflow: hidden; transition: filter 1s ease, background 0.3s;
+}
+.pet-floor {
+    position: absolute; bottom: 0; width: 100%; height: 35%;
+    background-color: #f5f5f5; background-size: cover; background-position: center top;
+    border-top: 1px solid rgba(0,0,0,0.03); transition: background 0.3s;
+}
+.pet-window {
+    position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 140px; background-color: #fff;
+    background-size: cover; background-position: center;
+    border: 4px solid #fff; border-radius: 60px 60px 0 0; overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+.pet-entity {
+    position: absolute; width: 80px; height: 80px;
+    left: 50%; top: 70%; transform: translate(-50%, -50%);
+    z-index: 10; cursor: grab; transition: top 3s linear, left 3s linear, transform 0.3s ease;
+    display: flex; justify-content: center; align-items: flex-end;
+}
+.pet-entity.flipped .pet-img-wrapper img { transform: scaleX(-1); }
+.pet-img-wrapper img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%); }
+
+.pet-ui-container {
+    flex: 1; background: #fff; padding: 20px; display: flex; flex-direction: column; gap: 15px;
+    position: relative; z-index: 20;
+}
+.pet-stats-bar {
+    display: flex; justify-content: space-around; align-items: center;
+    border: 1px solid rgba(0,0,0,0.04); border-radius: 24px; padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+}
+.pet-stat { font-size: 10px; font-weight: 700; color: #999; font-family: 'Montserrat'; letter-spacing:0.5px; }
+
+.pet-actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.pet-action-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+.pet-btn-icon {
+    width: 50px; height: 50px; background: #fcfcfc;
+    border: 1px solid rgba(0,0,0,0.03); border-radius: 18px;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 20px; color: #666; box-shadow: 0 6px 16px rgba(0,0,0,0.04);
+}
+.pet-btn-label { font-size: 9px; font-weight: 600; color: #aaa; letter-spacing: 1px; }
+
+.pet-bubble-pretty {
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.95); border: none; color: #444;
+    padding: 10px 16px; border-radius: 16px; font-size: 12px; font-weight: 600;
+    white-space: nowrap; box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+    opacity: 0; transition: 0.3s; pointer-events: none; letter-spacing: 0.5px;
+}
+.pet-bubble-pretty.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+.pet-bubble-pretty::after {
+    content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px;
+    border-width: 6px; border-style: solid; border-color: rgba(255, 255, 255, 0.95) transparent transparent transparent;
+}
+
+/* 相册卡片 */
+.album-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+    max-height: 400px; overflow-y: auto; padding: 5px;
+}
+.polaroid-card {
+    background: transparent; width: 100%; aspect-ratio: 3/4; perspective: 1000px; cursor: pointer;
+}
+.polaroid-inner {
+    position: relative; width: 100%; height: 100%; text-align: center;
+    transition: transform 0.8s; transform-style: preserve-3d;
+}
+.polaroid-card.flipped .polaroid-inner { transform: rotateY(180deg); }
+.polaroid-front, .polaroid-back {
+    position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden;
+    background: #fff; padding: 10px 10px 30px 10px; display: flex; flex-direction: column;
+    border: 1px solid #f9f9f9; box-shadow: 0 10px 25px rgba(0,0,0,0.04); border-radius: 8px;
+}
+.p-photo { flex: 1; background: #333; overflow: hidden; }
+.p-photo img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%) contrast(1.2); }
+.polaroid-back { transform: rotateY(180deg); justify-content: center; align-items: center; padding: 20px; }
+/* =========================================
+   [全新] G7: 白色拟物风心动娃娃机 (White Skeuomorphic)
+   ========================================= */
+
+/* 1. 娃娃机主体 */
+.g7-machine-body {
+    width: 280px;
+    background: linear-gradient(145deg, #fdfdfd, #f0f0f0);
+    border-radius: 20px;
+    border: 1px solid #fff;
+    box-shadow: 
+        0 25px 50px -12px rgba(0,0,0,0.15),
+        inset 0 2px 4px rgba(255,255,255,1),
+        inset 0 -4px 8px rgba(0,0,0,0.04);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 2. 顶部装饰条 */
+.g7-machine-header {
+    background: #e5e7eb;
+    border-radius: 12px;
+    padding: 8px;
+    text-align: center;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+.g7-logo-text {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 10px;
+    color: #9ca3af;
+    letter-spacing: 4px;
+    text-shadow: 0 1px 1px #fff;
+}
+
+/* 3. 玻璃视窗 */
+.g7-glass-window {
+    height: 240px;
+    background: #f9fafb;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.03);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+}
+
+/* 内部轨道 */
+.g7-rail-track {
+    position: absolute;
+    top: 12px; left: 10px; right: 10px;
+    height: 6px;
+    background: linear-gradient(#d1d5db, #9ca3af);
+    border-radius: 3px;
+    box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+}
+
+/* 娃娃池 */
+.g7-prize-pool {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 30px;
+    background: #e5e7eb;
+    border-top: 1px solid #d1d5db;
+}
+.g7-prize {
+    position: absolute;
+    font-size: 32px;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.1));
+    user-select: none;
+}
+
+/* 机械爪组件 (保持之前的逻辑，样式微调) */
+.g7-claw-assembly {
+    position: absolute;
+    top: 18px;
+    left: 45%; /* 初始位置 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+    transition: left 0.3s ease; /* 左右移动动画 */
+}
+.g7-claw-cable {
+    width: 2px;
+    height: 20px;
+    background: #6b7280;
+    transition: height 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* 下落动画 */
+}
+.g7-claw-head {
+    width: 20px;
+    height: 12px;
+    background: linear-gradient(#f3f4f6, #9ca3af);
+    border-radius: 2px 2px 8px 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    position: relative;
+}
+.g7-prong {
+    position: absolute;
+    top: 8px;
+    width: 3px;
+    height: 20px;
+    background: #9ca3af;
+    border-radius: 2px;
+    transform-origin: top center;
+    transition: transform 0.3s ease-in-out;
+}
+.g7-prong.left { left: 2px; transform: rotate(25deg); }
+.g7-prong.right { right: 2px; transform: rotate(-25deg); }
+.g7-claw-head.closed .left { transform: rotate(5deg); }
+.g7-claw-head.closed .right { transform: rotate(-5deg); }
+
+
+/* 4. 控制面板 */
+.g7-control-panel {
+    background: #e5e7eb;
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+}
+.g7-joystick-base {
+    display: flex;
+    gap: 10px;
+}
+.g7-joystick-stick {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #f9fafb, #d1d5db);
+    border: 1px solid #f9fafb;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1), inset 0 -2px 3px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #4b5563;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+.g7-joystick-stick:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 -1px 2px rgba(0,0,0,0.1);
+}
+
+.g7-button-base {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: #d1d5db;
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.15);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.g7-action-button {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(145deg, #f87171, #ef4444);
+    color: #fff;
+    font-weight: 800;
+    font-size: 16px;
+    font-family: inherit;
+    text-shadow: 0 -1px 1px rgba(0,0,0,0.2);
+    box-shadow: 0 5px 0 #b91c1c, 0 8px 15px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.1s;
+    outline: none;
+}
+.g7-action-button:active {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #b91c1c, 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* 5. 出口 */
+.g7-dispenser-slot {
+    height: 20px;
+    width: 80px;
+    margin: 0 auto;
+    background: #4b5563;
+    border-radius: 4px;
+    box-shadow: inset 0 5px 8px rgba(0,0,0,0.4);
+}
