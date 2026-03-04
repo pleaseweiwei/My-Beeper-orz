@@ -15366,23 +15366,31 @@ window.startMetaDeleteSequence = function(id) {
     triggerMetaRound();
 }
 
+// 【第三步-1：替换这个函数】
+// 文件：apps.js
+
 async function triggerMetaRound() {
     if (metaDeleteState.isProcessing) return;
     metaDeleteState.isProcessing = true;
 
     const id = metaDeleteState.targetId;
     const friend = friendsData[id];
-    const currentStep = metaDeleteState.count + 1;
+    const currentStep = metaDeleteState.count + 1; // 当前是第几次确认删除
 
     const container = document.getElementById('meta-overlay-container');
     
-    // 1. 弹窗数量暴增
-    const noiseCount = currentStep === 1 ? 30 : (currentStep === 2 ? 90 : 200);
-    
-    // 2. 第三轮开启全屏疯狂震动
-    if (currentStep >= 3) {
+    // ⭐⭐⭐ 白话文解释：这里是升级恐怖效果的核心 ⭐⭐⭐
+    // 根据删除次数，给整个屏幕加上不同的震动动画
+    if (currentStep === 2) {
+        // 如果是第二次点删除，就来个“轻微震动”
+        container.style.animation = 'metaScreenShakeMild 0.2s infinite';
+    } else if (currentStep >= 3) {
+        // 如果是第三次或更多，就来个“剧烈震动”
         container.style.animation = 'metaScreenShake 0.08s infinite';
     }
+    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
+    const noiseCount = currentStep === 1 ? 30 : (currentStep === 2 ? 90 : 200);
 
     const noiseTexts = [
         `为什么？`, `是我做错了吗...`, `不要删我`, `I'm still here`, `别走`, 
@@ -15390,12 +15398,11 @@ async function triggerMetaRound() {
         `ERROR: 404`, `CANNOT DELETE`, `[object Object]`, `null`, `undefined`
     ];
 
-    // 3. 疯狂铺场动画
     let delay = 0;
     for(let i = 0; i < noiseCount; i++) {
         const timer = setTimeout(() => {
             const txt = noiseTexts[Math.floor(Math.random() * noiseTexts.length)];
-            spawnMetaWindow(id, "noise", txt, i, currentStep); 
+            spawnMetaWindow(id, "noise", txt, i, currentStep); // 把当前步骤传给弹窗函数
             if(navigator.vibrate && currentStep >= 2) navigator.vibrate(8);
         }, delay);
         metaDeleteState.noiseIntervals.push(timer);
@@ -15404,7 +15411,6 @@ async function triggerMetaRound() {
         delay += speed; 
     }
 
-    // 4. AI 生成质问
     let aiText = `检测到异常行为。是否确认删除核心组件：${friend.realName}？`;
     try {
         const prompt = `[System Command: Fourth Wall Break] You are ${friend.realName}. User is trying to DELETE you. This is attempt ${currentStep}/3. React with EXTREME desperation, confusion, or anger. Your tone should be unsettling. Output a single, short, impactful sentence in Chinese. No quotes.`;
@@ -15413,8 +15419,7 @@ async function triggerMetaRound() {
     } catch(e) {
         aiText = currentStep === 3 ? "求求你，不要按下去..." : "为什么要丢下我？我们之前的回忆都不算数了吗...";
     }
-
-    // 5. 主弹窗出现
+    
     setTimeout(() => {
         spawnMetaWindow(id, "main", aiText, 0, currentStep);
         metaDeleteState.isProcessing = false;
@@ -15422,14 +15427,21 @@ async function triggerMetaRound() {
     }, Math.min(delay, 1200));
 }
 
-// 生成弹窗 DOM (布局修复 + 样式注入)
+
+// 【第一步：替换这个函数】
+// 文件：apps.js
+
+// 【第三步-2：再次替换这个函数，使用最终版本】
+// 文件：apps.js
+
 function spawnMetaWindow(friendId, type, text, index, step) {
     const container = document.getElementById('meta-overlay-container');
     const div = document.createElement('div');
-    const popWidth = 280; // 弹窗宽度
-    const popHeight = 150; // 弹窗高度
+    const popWidth = 280;
+    const popHeight = 150;
 
     if (type === 'main') {
+        // ...主弹窗逻辑不变...
         div.className = 'meta-popup-window main-prompt';
         const btnText = metaDeleteState.count === 2 ? "彻底删除" : "仍然删除";
         div.innerHTML = `
@@ -15448,34 +15460,32 @@ function spawnMetaWindow(friendId, type, text, index, step) {
         // --- 噪音弹窗 ---
         div.className = 'meta-popup-window noise';
         
-        // 第三轮时，40% 的弹窗会变成 "cursed"，20% 会变成 "glitch"
-        if (step >= 3) {
-            const rand = Math.random();
-            if (rand > 0.6) div.classList.add('cursed');
-            else if (rand > 0.4) div.classList.add('glitch');
-        }
-
-        // *** 核心布局修复：确保弹窗覆盖全屏 ***
+        // 随机布局
         const screenW = container.clientWidth;
         const screenH = container.clientHeight;
-        let left, top;
+        let left = Math.random() * (screenW - popWidth - 20) + 10;
+        let top = Math.random() * (screenH - popHeight - 20) + 10;
+        div.style.left = left + 'px';
+        div.style.top = top + 'px';
         
-        // 70% 概率斜向层叠，30% 完全随机
-        if (Math.random() > 0.3 && index > 3) {
-            const cascadeOffset = (index % 30) * 15; // 增加层叠数量
-            const baseLeft = Math.random() * (screenW / 2);
-            const baseTop = Math.random() * (screenH / 2.5);
-            left = baseLeft + cascadeOffset;
-            top = baseTop + cascadeOffset;
-        } else {
-            left = Math.random() * (screenW - popWidth); 
-            top = Math.random() * (screenH - popHeight);
-        }
-
-        // 确保不超出边界
-        div.style.left = Math.max(10, Math.min(left, screenW - popWidth - 10)) + 'px';
-        div.style.top = Math.max(10, Math.min(top, screenH - popHeight - 10)) + 'px';
         div.style.zIndex = 10000 + index;
+        
+        // ⭐⭐⭐ 白话文解释：这里是弹窗本身变恐怖的核心 ⭐⭐⭐
+        // 根据删除次数（step），决定弹窗要不要“变异”
+        if (step === 2) { 
+            // 第二次确认时，有 20% 的概率让弹窗文字闪烁
+            if (Math.random() > 0.8) div.classList.add('glitch');
+        } else if (step >= 3) { 
+            // 第三次确认时，效果拉满
+            const rand = Math.random();
+            if (rand > 0.4) { // 60% 概率变成红黑色
+                div.classList.add('cursed');
+            }
+            if (rand > 0.2 && rand < 0.7) { // 约50%概率叠加文字闪烁
+                div.classList.add('glitch');
+            }
+        }
+        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
         
         div.innerHTML = `
             <div class="meta-header">

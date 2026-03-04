@@ -7254,3 +7254,12 @@ textarea#custom-css-input:focus {
     border-radius: 4px;
     box-shadow: inset 0 5px 8px rgba(0,0,0,0.4);
 }
+/* 【第二步：把这段代码粘贴到 modules.css 文件末尾】 */
+
+/* 新增一个轻微震动的动画，给第二次删除用 */
+@keyframes metaScreenShakeMild {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(1px, -1px) rotate(0.2deg); }
+    50% { transform: translate(-1px, 1px) rotate(-0.2deg); }
+    75% { transform: translate(1px, 1px) rotate(0.2deg); }
+}
