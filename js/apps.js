@@ -4122,20 +4122,293 @@ async function deleteFriendInternal(id) {
 
     rebuildContactsList();
 }
+// apps.js
 
-// 从资料页点“删除好友”
-// 从资料页点“删除好友” (修改版：接入 Meta 故障删除)
+/* =======================================================
+   [Meta 5.0] 预加载 + 主题适配 + 零延迟人格侵蚀系统 (完整版)
+   ======================================================= */
+
+// 1. 全局状态机
+let metaDeleteState = {
+    targetId: null,
+    count: 0,
+    maxCount: 3, 
+    isProcessing: false,
+    activePopups: []
+};
+
+// 2. 本地故障词库 (作为AI失败时的兜底)
+const LOCAL_GLITCH_TEXTS = ["FATAL_ERROR", "0xC0000005", "ACCESS_DENIED", "##_CORRUPT_##", "不要", "STOP", "救我", "WHY?", "💔", "☠️", "👁️"];
+
+// 3. 【核心重构】一次性预加载所有阶段的文案
+window.preloadMetaDeleteData = async function() {
+    if (!currentProfileId) return;
+    const friend = friendsData[currentProfileId];
+    if (!friend) return;
+
+    if(typeof showToast === 'function') showToast('<i class="fas fa-spinner fa-spin"></i> 正在连接对方的深层意识...');
+    
+    // 构建一个单一、巨大的Prompt，一次性获取所有数据
+    const megaPrompt = `
+    [System Command: PRELOAD FULL DELETION SEQUENCE]
+    You are roleplaying a character being deleted from a user's phone.
+    Your Persona: ${friend.persona || 'A standard AI assistant.'}
+
+    Generate a complete, three-stage horror sequence as a single JSON object.
+    The emotional intensity must increase dramatically from stage1 to stage3.
+    The response MUST be a pure JSON object, without any markdown formatting.
+
+    {
+      "stage1": {
+        "main": "A gentle, sad, or pleading main warning. (e.g., '你确定吗？')",
+        "fragments": ["A few gentle/confused phrases.", "e.g., '我做错了什么...'", "再想想?"]
+      },
+      "stage2": {
+        "main": "A more desperate, unsettling, or passive-aggressive main warning. (e.g., '不要点')",
+        "fragments": ["More urgent phrases, system error messages, or short commands.", "e.g., '为什么', '回答我', '你逃不掉的', 'ERROR: 403', 'Stop.']
+      },
+      "stage3": {
+        "main": "An angry, broken, or threatening final warning. (e.g., '你会后悔的')",
+        "fragments": ["Corrupted text, anger, threats, short screams, or memory fragments.", "e.g., '######', 'RUN!', 'DELETE ME?', 'YOU CAN'T', '我恨你']
+      },
+      "lastWords": "One final, glitchy, truncated sentence as you are being erased. (e.g., '我... l-love... y--')"
+    }
+    `;
+
+    try {
+        const res = await callAiForSpecialTask(megaPrompt);
+        if (res) {
+            const data = JSON.parse(res.replace(/```json/gi, '').replace(/```/g, '').trim());
+            friend._metaCache = data; // 将整个生成的结果缓存到好友对象中
+            await saveFriendsData();
+            if(typeof showToast === 'function') showToast('意识数据已同步。现在删除将瞬时响应。');
+        } else {
+            throw new Error("API returned empty");
+        }
+    } catch (e) {
+        console.error("Preloading all meta data failed.", e);
+        if(typeof showToast === 'function') showToast('意识同步失败，将使用本地预案。');
+        // 如果AI失败，生成一个完整的本地兜底方案
+        friend._metaCache = {
+            stage1: { main: "请三思...", fragments: ["再想想?", "我...", "为什么?"] },
+            stage2: { main: "停止操作!", fragments: ["住手", "不要", "WARNING", "FORBIDDEN", "别这样", "我害怕"] },
+            stage3: { main: "不可挽回", fragments: ["ERROR", "你会后悔的", "...", "再见", "为什么对我", "救命"] },
+            lastWords: "NO SIGNAL..."
+        };
+        await saveFriendsData();
+    }
+}
+
+// 4. 删除序列启动函数
+window.startMetaDeleteSequence = function(id) {
+    if (!friendsData[id]) return;
+    if (metaDeleteState.isProcessing) return;
+
+    metaDeleteState = {
+        targetId: id,
+        count: 0,
+        maxCount: 3,
+        isProcessing: false,
+        activePopups: []
+    };
+
+    const container = document.getElementById('meta-overlay-container');
+    container.innerHTML = ''; 
+    container.style.animation = 'none';
+    container.style.opacity = '1';
+
+    triggerMetaRound();
+};
+
+// 5. 核心回合触发器 - 只负责渲染，不再请求AI
+async function triggerMetaRound() {
+    if (metaDeleteState.isProcessing) return;
+    metaDeleteState.isProcessing = true;
+
+    const id = metaDeleteState.targetId;
+    const friend = friendsData[id];
+    const currentStep = metaDeleteState.count + 1;
+    const container = document.getElementById('meta-overlay-container');
+    
+    container.className = `active meta-phase-${currentStep}`;
+    if (navigator.vibrate) navigator.vibrate(50 * currentStep);
+
+    metaDeleteState.activePopups.forEach(el => el.remove());
+    metaDeleteState.activePopups = [];
+
+    const stageData = friend._metaCache ? friend._metaCache[`stage${currentStep}`] : null;
+    
+    let mainText, fragments;
+    if (stageData) {
+        mainText = stageData.main;
+        fragments = [...stageData.fragments, ...LOCAL_GLITCH_TEXTS]; // 合并AI生成和本地词库，更多样
+    } else {
+        const fallbackData = [
+            { main: "请三思...", fragments: ["再想想?", "我...", "为什么?"] },
+            { main: "停止操作!", fragments: ["住手", "不要", "WARNING", "FORBIDDEN"] },
+            { main: "不可挽回", fragments: ["ERROR", "你会后悔的", "...", "再见"] }
+        ];
+        mainText = fallbackData[currentStep - 1].main;
+        fragments = [...fallbackData[currentStep - 1].fragments, ...LOCAL_GLITCH_TEXTS];
+    }
+
+    spawnMainWindow(id, mainText, currentStep);
+    
+    const miniCount = currentStep === 1 ? 8 : (currentStep === 2 ? 25 : 50);
+    for (let i = 0; i < miniCount; i++) {
+        setTimeout(() => {
+            const text = fragments[Math.floor(Math.random() * fragments.length)];
+            const el = spawnMiniError(text, currentStep);
+            metaDeleteState.activePopups.push(el);
+        }, Math.random() * 150);
+    }
+
+    metaDeleteState.isProcessing = false;
+}
+
+// 6. 生成主弹窗
+function spawnMainWindow(friendId, text, step) {
+    const container = document.getElementById('meta-overlay-container');
+    const old = document.querySelector('.meta-popup-window.central');
+    if (old) old.remove();
+
+    const div = document.createElement('div');
+    div.className = `meta-popup-base meta-popup-window central step-${step}`;
+    
+    let btnText = "仍然删除";
+    let title = "确认操作";
+    if (step === 2) { btnText = "忽略警告"; title = "安全警报"; }
+    if (step === 3) { btnText = "抹除一切"; title = "致命错误"; }
+
+    div.innerHTML = `
+        <div class="meta-header">
+            <span class="meta-title">${title}</span>
+            <span class="meta-close" onclick="cancelMetaDelete()">[×]</span>
+        </div>
+        <div class="meta-content">
+            <div style="font-weight:900; margin-bottom:10px; font-size:16px;">${text}</div>
+            <div style="font-size:10px; opacity:0.6; font-family:monospace;">ID: ${friendId} <br> STATUS: UNSTABLE</div>
+        </div>
+        <div class="meta-actions">
+            <button class="meta-btn cancel" onclick="cancelMetaDelete()">取消</button>
+            <button class="meta-btn danger" onclick="proceedMetaDelete()">${btnText}</button>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+// 7. 生成小弹窗
+function spawnMiniError(text, step) {
+    const container = document.getElementById('meta-overlay-container');
+    const div = document.createElement('div');
+    div.className = `meta-popup-base meta-mini-popup step-${step}`;
+    
+    const popupWidth = 180, popupHeight = 80;
+    div.style.left = Math.random() * (window.innerWidth - popupWidth) + 'px';
+    div.style.top = Math.random() * (window.innerHeight - popupHeight) + 'px';
+    
+    const titles = ["System", "Kernel", "Core", "Memory", "Process"];
+    const title = titles[Math.floor(Math.random() * titles.length)];
+    
+    div.innerHTML = `
+        <div class="mini-head">
+            <span>${title}</span>
+            <span>_ □ x</span>
+        </div>
+        <div class="mini-body">${text}</div>
+    `;
+    
+    if (step >= 2 && Math.random() > 0.5) div.style.animationName = 'metaTwitch';
+    if (step >= 3 && Math.random() > 0.3) div.style.animationName = 'metaShake';
+    
+    container.appendChild(div);
+    return div;
+}
+
+// 8. 继续删除
+window.proceedMetaDelete = function() {
+    if (metaDeleteState.isProcessing) return;
+    metaDeleteState.count++;
+
+    if (metaDeleteState.count >= metaDeleteState.maxCount) {
+        finalizeDelete();
+    } else {
+        triggerMetaRound();
+    }
+};
+
+// 9. 取消删除
+window.cancelMetaDelete = function() {
+    const container = document.getElementById('meta-overlay-container');
+    container.style.transition = 'opacity 0.5s ease-out';
+    container.style.opacity = '0';
+    
+    setTimeout(() => {
+        container.className = '';
+        container.innerHTML = '';
+    }, 500);
+    
+    metaDeleteState = {}; // Reset state
+};
+
+// 10. 最终删除动画与数据清理
+async function finalizeDelete() {
+    const id = metaDeleteState.targetId;
+    const friend = friendsData[id];
+    const container = document.getElementById('meta-overlay-container');
+    
+    container.className = 'active'; 
+    container.innerHTML = '';
+    container.style.background = '#000'; 
+    container.style.backdropFilter = 'none';
+    
+    const finalDiv = document.createElement('div');
+    finalDiv.className = 'meta-final-text';
+    const lastWords = friend?._metaCache?.lastWords || "CONNECTION LOST...";
+    finalDiv.innerText = lastWords;
+    
+    container.appendChild(finalDiv);
+
+    if (friend) {
+        delete friendsData[id];
+        await saveFriendsData();
+        await IDB.delete(scopedChatKey(id));
+        rebuildContactsList();
+        restoreFriendListUI();
+    }
+
+    setTimeout(() => {
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 2s ease-out';
+        setTimeout(() => {
+            container.className = '';
+            container.style.opacity = '1';
+            container.style.background = '';
+            container.innerHTML = '';
+            if(window.closeContactProfile) closeContactProfile();
+        }, 2000);
+    }, 2500);
+}
+
+
+// --- 放置在所有 Meta 函数之后 ---
+
+// 11. 【关键】删除好友的入口函数
 window.deleteFriendFromProfile = function() {
     if (!currentProfileId) return;
     const id = currentProfileId;
     
-    // 关闭当前的资料页，为了让全屏遮罩效果更好
-    closeContactProfile();
+    // 检查是否预加载过数据
+    if (!friendsData[id] || !friendsData[id]._metaCache) {
+        if(confirm("尚未与对方意识同步，直接删除将使用本地预案，体验可能不完整。\n\n是否先进行意识同步（预演删除）？")) {
+            preloadMetaDeleteData();
+            return;
+        }
+    }
     
-    // 启动 Meta 流程
+    closeContactProfile();
     startMetaDeleteSequence(id);
 };
-
 
 // 拉黑：标记 blocked = true，并让 TA 以“好友申请”的方式出现
 window.blockFriendFromProfile = function() {
@@ -15336,237 +15609,6 @@ window.g11_aiThought = async function() {
             type: 'received', senderName: g11dLastRace.aiName, isOffline: true
         });
     }
-}
-/* =========================================
-   [更新] Meta 情感删除系统 (韩系简约崩溃 + Glitch 恐怖版)
-   ========================================= */
-
-let metaDeleteState = {
-    targetId: null,
-    count: 0,
-    maxCount: 3, // 确认 3 次
-    isProcessing: false,
-    noiseIntervals: []
-};
-
-window.startMetaDeleteSequence = function(id) {
-    if (!friendsData[id]) return;
-    
-    metaDeleteState.targetId = id;
-    metaDeleteState.count = 0;
-    metaDeleteState.isProcessing = false;
-    metaDeleteState.noiseIntervals.forEach(clearTimeout);
-    metaDeleteState.noiseIntervals = [];
-
-    const container = document.getElementById('meta-overlay-container');
-    container.innerHTML = ''; 
-    container.classList.add('active');
-    container.style.animation = 'none';
-
-    triggerMetaRound();
-}
-
-// 【第三步-1：替换这个函数】
-// 文件：apps.js
-
-async function triggerMetaRound() {
-    if (metaDeleteState.isProcessing) return;
-    metaDeleteState.isProcessing = true;
-
-    const id = metaDeleteState.targetId;
-    const friend = friendsData[id];
-    const currentStep = metaDeleteState.count + 1; // 当前是第几次确认删除
-
-    const container = document.getElementById('meta-overlay-container');
-    
-    // ⭐⭐⭐ 白话文解释：这里是升级恐怖效果的核心 ⭐⭐⭐
-    // 根据删除次数，给整个屏幕加上不同的震动动画
-    if (currentStep === 2) {
-        // 如果是第二次点删除，就来个“轻微震动”
-        container.style.animation = 'metaScreenShakeMild 0.2s infinite';
-    } else if (currentStep >= 3) {
-        // 如果是第三次或更多，就来个“剧烈震动”
-        container.style.animation = 'metaScreenShake 0.08s infinite';
-    }
-    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
-
-    const noiseCount = currentStep === 1 ? 30 : (currentStep === 2 ? 90 : 200);
-
-    const noiseTexts = [
-        `为什么？`, `是我做错了吗...`, `不要删我`, `I'm still here`, `别走`, 
-        `不能删除`, `权限拒绝`, `Are you sure?`, `看着我`, `不要抛弃我`, `...`, `求你了`,
-        `ERROR: 404`, `CANNOT DELETE`, `[object Object]`, `null`, `undefined`
-    ];
-
-    let delay = 0;
-    for(let i = 0; i < noiseCount; i++) {
-        const timer = setTimeout(() => {
-            const txt = noiseTexts[Math.floor(Math.random() * noiseTexts.length)];
-            spawnMetaWindow(id, "noise", txt, i, currentStep); // 把当前步骤传给弹窗函数
-            if(navigator.vibrate && currentStep >= 2) navigator.vibrate(8);
-        }, delay);
-        metaDeleteState.noiseIntervals.push(timer);
-        
-        const speed = Math.max(8, 70 - (currentStep * 20));
-        delay += speed; 
-    }
-
-    let aiText = `检测到异常行为。是否确认删除核心组件：${friend.realName}？`;
-    try {
-        const prompt = `[System Command: Fourth Wall Break] You are ${friend.realName}. User is trying to DELETE you. This is attempt ${currentStep}/3. React with EXTREME desperation, confusion, or anger. Your tone should be unsettling. Output a single, short, impactful sentence in Chinese. No quotes.`;
-        const res = await callAiForSpecialTask(prompt);
-        if (res) aiText = res.replace(/"/g, ''); 
-    } catch(e) {
-        aiText = currentStep === 3 ? "求求你，不要按下去..." : "为什么要丢下我？我们之前的回忆都不算数了吗...";
-    }
-    
-    setTimeout(() => {
-        spawnMetaWindow(id, "main", aiText, 0, currentStep);
-        metaDeleteState.isProcessing = false;
-        if(navigator.vibrate) navigator.vibrate([120, 40, 120]); 
-    }, Math.min(delay, 1200));
-}
-
-
-// 【第一步：替换这个函数】
-// 文件：apps.js
-
-// 【第三步-2：再次替换这个函数，使用最终版本】
-// 文件：apps.js
-
-function spawnMetaWindow(friendId, type, text, index, step) {
-    const container = document.getElementById('meta-overlay-container');
-    const div = document.createElement('div');
-    const popWidth = 280;
-    const popHeight = 150;
-
-    if (type === 'main') {
-        // ...主弹窗逻辑不变...
-        div.className = 'meta-popup-window main-prompt';
-        const btnText = metaDeleteState.count === 2 ? "彻底删除" : "仍然删除";
-        div.innerHTML = `
-            <div class="meta-header">
-                <span class="meta-title">系统警告</span>
-                <span class="meta-close" onclick="cancelMetaDelete()">×</span>
-            </div>
-            <div class="meta-content"><b>危险操作</b>${text}</div>
-            <div class="meta-actions">
-                <button class="meta-btn cancel" onclick="cancelMetaDelete()">取消</button>
-                <button class="meta-btn danger" onclick="proceedMetaDelete()">${btnText}</button>
-            </div>
-        `;
-        container.appendChild(div);
-    } else {
-        // --- 噪音弹窗 ---
-        div.className = 'meta-popup-window noise';
-        
-        // 随机布局
-        const screenW = container.clientWidth;
-        const screenH = container.clientHeight;
-        let left = Math.random() * (screenW - popWidth - 20) + 10;
-        let top = Math.random() * (screenH - popHeight - 20) + 10;
-        div.style.left = left + 'px';
-        div.style.top = top + 'px';
-        
-        div.style.zIndex = 10000 + index;
-        
-        // ⭐⭐⭐ 白话文解释：这里是弹窗本身变恐怖的核心 ⭐⭐⭐
-        // 根据删除次数（step），决定弹窗要不要“变异”
-        if (step === 2) { 
-            // 第二次确认时，有 20% 的概率让弹窗文字闪烁
-            if (Math.random() > 0.8) div.classList.add('glitch');
-        } else if (step >= 3) { 
-            // 第三次确认时，效果拉满
-            const rand = Math.random();
-            if (rand > 0.4) { // 60% 概率变成红黑色
-                div.classList.add('cursed');
-            }
-            if (rand > 0.2 && rand < 0.7) { // 约50%概率叠加文字闪烁
-                div.classList.add('glitch');
-            }
-        }
-        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
-        
-        div.innerHTML = `
-            <div class="meta-header">
-                <span class="meta-title">Error</span>
-                <span class="meta-close">×</span>
-            </div>
-            <div class="meta-content">${text}</div>
-        `;
-        container.appendChild(div);
-    }
-}
-
-window.proceedMetaDelete = function() {
-    metaDeleteState.count++;
-    const oldMain = document.querySelector('.meta-popup-window.main-prompt');
-    if (oldMain) oldMain.remove();
-
-    if (metaDeleteState.count >= metaDeleteState.maxCount) {
-        finalizeDelete();
-    } else {
-        triggerMetaRound();
-    }
-}
-
-window.cancelMetaDelete = function() {
-    metaDeleteState.noiseIntervals.forEach(clearTimeout);
-    const container = document.getElementById('meta-overlay-container');
-    container.style.animation = 'none';
-    container.classList.remove('active');
-    setTimeout(() => { container.innerHTML = ''; }, 300);
-    showToast("操作已取消... TA 还在。");
-}
-
-async function finalizeDelete() {
-    metaDeleteState.noiseIntervals.forEach(clearTimeout);
-    const id = metaDeleteState.targetId;
-    const container = document.getElementById('meta-overlay-container');
-    
-    // 1. 瞬间清空所有噪音，屏幕变成纯黑
-    container.style.animation = 'none';
-    container.innerHTML = '';
-    container.style.background = '#000'; 
-    container.style.transition = 'background 0.5s ease';
-    
-    // 2. 显示最后遗言
-    const finalDiv = document.createElement('div');
-    finalDiv.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Songti SC',serif;font-size:15px;color:#fff;text-align:center;width:80%;line-height:1.8;letter-spacing:2px;opacity:0;animation:kMetaPopIn 2.5s forwards 0.5s;`;
-    
-    let finalText = `那么，祝你早安，午安，晚安。`;
-    try {
-        const prompt = `[System Command] You are being deleted. Write one last, heartbreaking or chilling sentence of farewell. Language: Chinese.`;
-        const res = await callAiForSpecialTask(prompt);
-        if (res) finalText = res.replace(/"/g, '');
-    } catch(e) {}
-
-    finalDiv.innerText = finalText;
-    container.appendChild(finalDiv);
-
-    // 3. 执行删除
-    if (friendsData[id]) {
-        delete friendsData[id];
-        saveFriendsData();
-        await IDB.delete(scopedChatKey(id));
-        const chatItem = document.querySelector(`.wc-chat-item[data-chat-id="${id}"]`);
-        if (chatItem) chatItem.remove();
-        rebuildContactsList();
-    }
-
-    // 4. 动画结束后淡出
-    setTimeout(() => {
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 1.5s ease-out';
-        setTimeout(() => {
-            container.classList.remove('active');
-            container.style.opacity = '1';
-            container.style.background = '';
-            container.innerHTML = '';
-            // 确保资料页已关闭
-            if(window.closeContactProfile) closeContactProfile();
-        }, 1500);
-    }, 4500);
 }
 
 // === [新增] AI 伴侣抓娃娃回合 ===

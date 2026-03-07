@@ -6696,119 +6696,7 @@ textarea#custom-css-input:focus {
 #g11-result-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(15px); z-index: 1000; display: none; justify-content: center; align-items: center; animation: fadeIn 0.3s ease; }
 .g11-result-modal { background: #fff; width: 280px; border-radius: 24px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); border: 1px solid #f0f0f0; text-align: center; transform: scale(0.9); animation: popIn 0.4s forwards; }
 
-/* =========================================
-   [终极版] 韩系简约崩溃风 + Glitch 特效 (Meta Delete)
-   ========================================= */
 
-#meta-overlay-container {
-    position: fixed; inset: 0;
-    z-index: 99999;
-    pointer-events: none;
-    display: none;
-    overflow: hidden;
-}
-#meta-overlay-container.active {
-    display: block;
-    pointer-events: auto;
-    background: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px) grayscale(60%); /* 调高模糊和灰度，更有失焦感 */
-    -webkit-backdrop-filter: blur(10px) grayscale(60%);
-}
-
-/* 屏幕剧烈震动动画 */
-@keyframes metaScreenShake {
-    0%, 100% { transform: translate(0, 0); }
-    10% { transform: translate(3px, -4px) rotate(0.8deg); }
-    20% { transform: translate(-4px, 3px) rotate(-0.8deg); }
-    30% { transform: translate(4px, 4px) rotate(0.8deg); }
-    40% { transform: translate(-3px, -4px) rotate(-0.8deg); filter: hue-rotate(120deg); }
-    50% { transform: translate(4px, -3px) rotate(0.8deg); }
-}
-
-/* 弹窗基础样式：韩系简约 */
-.meta-popup-window {
-    position: absolute;
-    background: #ffffff;
-    border: 1px solid #f0f0f0; /* 极细边框 */
-    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
-    min-width: 260px; /* 弹窗稍微变大一点 */
-    max-width: 300px;
-    display: flex;
-    flex-direction: column;
-    font-family: 'Montserrat', 'PingFang SC', sans-serif;
-    border-radius: 16px; /* 韩系圆角 */
-    animation: metaPopIn 0.15s ease-out forwards;
-    opacity: 0;
-}
-@keyframes metaPopIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-/* 标题栏：简约风格 + 关闭按钮 */
-.meta-header {
-    height: 34px; padding: 0 15px; display: flex;
-    justify-content: space-between; align-items: center;
-    border-bottom: 1px solid #f5f5f5;
-    background: #fafafa;
-}
-.meta-title { font-size: 11px; font-weight: 700; color: #555; }
-.meta-close { font-size: 14px; color: #aaa; cursor: pointer; }
-
-.meta-content {
-    padding: 25px; font-size: 13px; color: #444;
-    line-height: 1.6; text-align: center;
-}
-
-/* 按钮区域 */
-.meta-actions {
-    padding: 15px 20px; display: flex;
-    justify-content: flex-end; gap: 10px;
-    background: #f7f7f7; border-top: 1px solid #f0f0f0;
-}
-.meta-btn {
-    padding: 8px 20px; border-radius: 8px; border: 1px solid #ddd;
-    font-size: 12px; font-weight: 600; cursor: pointer;
-}
-.meta-btn.cancel { background: #fff; color: #555; }
-.meta-btn.danger { background: #ff4d4f; color: #fff; border-color: #ff4d4f; }
-
-/* === 弹窗异变形态 === */
-
-/* 1. 恐怖红黑反转 */
-.meta-popup-window.cursed {
-    background: #000 !important;
-    border-color: #ff3b30 !important;
-    color: #ff3b30 !important;
-    box-shadow: 0 0 20px rgba(255, 59, 48, 0.5), inset 0 0 10px rgba(255, 59, 48, 0.3) !important;
-}
-.cursed .meta-header { background: #333 !important; border-color: #555 !important; }
-.cursed .meta-title, .cursed .meta-content, .cursed .meta-close { color: #ff3b30 !important; }
-
-/* 2. Glitch 故障文字动画 */
-.meta-popup-window.glitch .meta-content {
-    animation: glitchText 0.3s infinite;
-}
-@keyframes glitchText {
-    0% { transform: translate(0); text-shadow: 2px 2px 0 #ff00ff, -2px -2px 0 #00ffff; }
-    25% { transform: translate(2px, -2px); }
-    50% { transform: translate(-2px, 2px); text-shadow: -2px 2px 0 #ff00ff, 2px -2px 0 #00ffff; }
-    75% { transform: translate(2px, 2px); }
-    100% { transform: translate(-2px, -2px); }
-}
-
-/* 主警告弹窗：强制居中 + 独特样式 */
-.meta-popup-window.main-prompt {
-    top: 50% !important; left: 50% !important;
-    transform: translate(-50%, -50%);
-    z-index: 999999 !important;
-    border-width: 2px;
-    border-color: #ff4d4f;
-    box-shadow: 0 25px 60px rgba(255, 77, 79, 0.25);
-}
-.main-prompt .meta-content b {
-    display: block; font-size: 18px; font-weight: 900; color: #111; margin-bottom: 10px;
-}
 /* =========================================
    [补全包] 丢失的 G11、钱包与宠物样式
    ========================================= */
@@ -7263,3 +7151,203 @@ textarea#custom-css-input:focus {
     50% { transform: translate(-1px, 1px) rotate(-0.2deg); }
     75% { transform: translate(1px, 1px) rotate(0.2deg); }
 }
+/* modules.css */
+
+/* =========================================
+   [Meta 4.0] 主题适配 + 三段式人格侵蚀系统
+   ========================================= */
+
+/* --- 1. 主容器与阶段性背景特效 --- */
+#meta-overlay-container {
+    position: fixed; inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    display: none;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0);
+    transition: all 0.5s ease-out; /* 背景切换时有缓动 */
+}
+
+#meta-overlay-container.active {
+    display: block;
+    pointer-events: auto;
+}
+
+/* 阶段 1：温和的灰色调，像系统弹窗 */
+#meta-overlay-container.meta-phase-1 {
+    background: rgba(43, 43, 43, 0.3);
+    backdrop-filter: blur(8px);
+}
+
+/* 阶段 2：不安的暗红色调 + 轻微抖动 */
+#meta-overlay-container.meta-phase-2 {
+    background: rgba(50, 10, 10, 0.5);
+    backdrop-filter: blur(12px) saturate(1.5);
+    animation: metaShake 0.1s infinite;
+}
+
+/* 阶段 3：完全崩坏的红黑高对比度 */
+#meta-overlay-container.meta-phase-3 {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: contrast(200%) brightness(1.2);
+    animation: metaGlitchScreen 0.08s infinite;
+}
+
+/* --- 2. [主题适配] 弹窗基础样式 --- */
+.meta-popup-base {
+    position: absolute;
+    font-family: var(--global-font); /* 核心：使用主题字体 */
+    animation: metaSlamIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 主警告弹窗 */
+.meta-popup-window.central {
+    /* 核心：样式继承自主题卡片 */
+    background: var(--k-card, #fff);
+    border-radius: var(--k-radius-lg, 24px);
+    box-shadow: var(--k-shadow, 0 10px 30px rgba(0,0,0,0.1));
+    border: var(--k-border, 1px solid rgba(0,0,0,0.03));
+    
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.meta-header {
+    padding: 10px 15px; display: flex;
+    justify-content: space-between; align-items: center;
+    font-weight: bold; font-size: 11px;
+    color: var(--k-text-sub, #999);
+    border-bottom: var(--k-border, 1px solid #f0f0f0);
+}
+.meta-content {
+    padding: 25px 20px;
+    color: var(--k-text-dark, #333);
+    text-align: center; line-height: 1.6;
+}
+.meta-actions {
+    padding: 15px; display: flex; gap: 10px;
+    background: rgba(0,0,0,0.02);
+}
+.meta-btn {
+    flex: 1; height: 40px; border-radius: 12px;
+    font-weight: 700; cursor: pointer; text-transform: uppercase;
+    font-size: 13px;
+}
+.meta-btn.cancel { background: #eee; color: #555; border: none; }
+.meta-btn.danger { background: #d9534f; color: #fff; border: none; }
+
+/* 微型弹窗 */
+.meta-mini-popup {
+    background: var(--k-card, #fff);
+    border: var(--k-border, 1px solid #f0f0f0);
+    box-shadow: var(--k-shadow, 0 5px 15px rgba(0,0,0,0.05));
+    min-width: 150px; max-width: 220px;
+    z-index: 99990;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.meta-mini-popup .mini-head {
+    background: #f5f5f5; color: #aaa;
+    padding: 4px 8px; font-size: 10px;
+    display: flex; justify-content: space-between;
+}
+.meta-mini-popup .mini-body {
+    padding: 10px; color: var(--k-text-dark, #333);
+    font-weight: 500; font-size: 12px;
+    line-height: 1.4; word-break: break-all;
+}
+
+/* --- 3. 阶段性样式覆盖 --- */
+
+/* 阶段 2: 开始故障 */
+#meta-overlay-container.meta-phase-2 .meta-mini-popup,
+#meta-overlay-container.meta-phase-2 .meta-popup-window {
+    animation-duration: 0.2s;
+    animation-name: metaScreenShakeMild;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+#meta-overlay-container.meta-phase-2 .meta-popup-window .meta-header {
+    background: #fff0f0; color: #d9534f;
+}
+#meta-overlay-container.meta-phase-2 .meta-mini-popup .mini-head {
+    background: #d9534f; color: #fff;
+}
+#meta-overlay-container.meta-phase-2 .meta-mini-popup .mini-body {
+    text-shadow: 0 0 3px rgba(255, 77, 79, 0.5); /* 文字开始发红光 */
+}
+
+/* 阶段 3: 人格侵蚀 */
+#meta-overlay-container.meta-phase-3 .meta-popup-base {
+    background: #000 !important;
+    border: 1px solid #ff0000 !important;
+    color: #ff0000 !important;
+    box-shadow: 0 0 15px rgba(255,0,0,0.5) !important;
+    animation-name: metaGlitchBox;
+    animation-duration: 0.1s;
+    animation-iteration-count: infinite;
+}
+#meta-overlay-container.meta-phase-3 .meta-header,
+#meta-overlay-container.meta-phase-3 .mini-head {
+    background: #ff0000 !important;
+    color: #000 !important;
+    border-bottom-color: #ff0000 !important;
+}
+#meta-overlay-container.meta-phase-3 .meta-content,
+#meta-overlay-container.meta-phase-3 .mini-body {
+    color: #ff0000 !important;
+    font-family: 'Courier New', monospace;
+}
+#meta-overlay-container.meta-phase-3 .meta-btn.cancel { display: none; }
+#meta-overlay-container.meta-phase-3 .meta-btn.danger { background: #ff0000; color: #000; }
+
+/* 最终遗言 */
+.meta-final-text {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-family: 'Songti SC', serif; font-size: 20px; color: #fff;
+    width: 100%; text-align: center;
+    text-shadow: 0 0 10px #fff;
+    animation: metaFlash 3s forwards;
+}
+
+/* --- 4. 动画库 (更新与新增) --- */
+@keyframes metaSlamIn { from { transform: translate(-50%, -50%) scale(1.2); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+@keyframes metaShake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
+@keyframes metaScreenShakeMild { 0% { transform: translate(0, 0); } 25% { transform: translate(1px, -1px) rotate(0.1deg); } 50% { transform: translate(-1px, 1px) rotate(-0.1deg); } 75% { transform: translate(1px, 1px) rotate(0.1deg); } 100% { transform: translate(0,0); } }
+@keyframes metaTwitch { 0% { margin-left: 0; } 10% { margin-left: 5px; } 20% { margin-left: -5px; } 100% { margin-left: 0; } }
+@keyframes metaFlash { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.2; } }
+@keyframes metaGlitchScreen { 0% { filter: hue-rotate(0deg); transform: translate(0,0); } 20% { filter: hue-rotate(90deg) invert(1); transform: translate(-2px, 2px); } 40% { filter: hue-rotate(0deg); transform: translate(2px, -2px); } 60% { filter: hue-rotate(180deg); transform: translate(-2px, -2px); } 80% { filter: invert(0); transform: translate(2px, 2px); } }
+@keyframes metaGlitchBox { 0% { transform: translate(-50%, -50%) skew(0deg); } 20% { transform: translate(-51%, -49%) skew(2deg); } 40% { transform: translate(-49%, -51%) skew(-2deg); } 100% { transform: translate(-50%, -50%) skew(0deg); } }
+/* modules.css - 找到并替换这两个动画 */
+
+/* --- 4. 动画库 (更新与新增) --- */
+@keyframes metaSlamIn { from { transform: translate(-50%, -50%) scale(1.2); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+/* 【已修复】这个动画现在包含了居中，所以主弹窗不会跑偏 */
+@keyframes metaShake {
+    0% { transform: translate(calc(-50% + 1px), calc(-50% + 1px)); }
+    50% { transform: translate(calc(-50% - 1px), calc(-50% - 1px)); }
+    100% { transform: translate(calc(-50% + 1px), calc(-50% - 1px)); }
+}
+
+/* 【已修复】这个动画也包含了居中，解决了第二阶段弹窗偏离的问题 */
+@keyframes metaScreenShakeMild {
+    0% { transform: translate(-50%, -50%); }
+    25% { transform: translate(calc(-50% + 1px), calc(-50% - 1px)) rotate(0.1deg); }
+    50% { transform: translate(calc(-50% - 1px), calc(-50% + 1px)) rotate(-0.1deg); }
+    75% { transform: translate(calc(-50% + 1px), calc(-50% + 1px)) rotate(0.1deg); }
+    100% { transform: translate(-50%, -50%); }
+}
+
+@keyframes metaTwitch { 0% { margin-left: 0; } 10% { margin-left: 5px; } 20% { margin-left: -5px; } 100% { margin-left: 0; } }
+@keyframes metaFlash { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.2; } }
+@keyframes metaGlitchScreen { 0% { filter: hue-rotate(0deg); transform: translate(0,0); } 20% { filter: hue-rotate(90deg) invert(1); transform: translate(-2px, 2px); } 40% { filter: hue-rotate(0deg); transform: translate(2px, -2px); } 60% { filter: hue-rotate(180deg); transform: translate(-2px, -2px); } 80% { filter: invert(0); transform: translate(2px, 2px); } }
+
+/* 【无需修改】这个动画本来就是对的，因为它包含了-50% */
+@keyframes metaGlitchBox { 0% { transform: translate(-50%, -50%) skew(0deg); } 20% { transform: translate(-51%, -49%) skew(2deg); } 40% { transform: translate(-49%, -51%) skew(-2deg); } 100% { transform: translate(-50%, -50%) skew(0deg); } }
+

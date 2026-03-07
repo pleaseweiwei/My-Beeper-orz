@@ -49,3 +49,89 @@ html, body {
     -webkit-mask-image: none !important;
   }
 }
+/* =========================================
+   [最终修复] PWA 沉浸式全屏适配补丁
+   ========================================= */
+
+/* 仅在通过设置开启“全面屏模式”时生效 */
+body.fullscreen-mode {
+    /* 将 body 背景设为黑色，防止在不同视图切换时出现白色闪屏 */
+    background-color: #000;
+}
+
+/* 步骤 1:
+   让 .phone 容器强制占满整个物理屏幕，并且去除它自身的所有内边距。
+   这是关键一步，让它成为真正的“画布”。
+*/
+body.fullscreen-mode .phone {
+    border-radius: 0 !important;
+    padding: 0 !important;
+    height: 100vh; /* 使用 vh 确保在浏览器中也有效 */
+    height: 100dvh; /* 优先使用 dvh，动态适应移动端浏览器 UI 显隐 */
+}
+
+/* 步骤 2:
+   调整 .phone 内部的各个组件，让它们“躲开”不安全区域。
+*/
+
+/* 调整你的自定义状态栏，给它加上顶部的内边距，把时间和信号图标“推”下来 */
+body.fullscreen-mode .status-bar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(40px + env(safe-area-inset-top)); /* 高度也要相应增加 */
+}
+
+/* 调整主屏幕的页面，增加顶部和底部的内边距 */
+body.fullscreen-mode .page {
+    padding-top: calc(115px + env(safe-area-inset-top));
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+
+/* 调整底部 Dock 栏，把它从屏幕绝对底部往上推一个安全区的距离 */
+body.fullscreen-mode .dock-bar {
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(75px + env(safe-area-inset-bottom));
+    /* 为了美观，让它在有底部横条时，胶囊本身也稍微上移一点 */
+    bottom: 20px;
+}
+
+/* 步骤 3:
+   适配其他全屏的应用视图，如微信、聊天页、设置页等。
+   这些页面是独立的，需要单独处理。
+*/
+
+/* 为所有全屏视图添加上下安全区内边距 */
+body.fullscreen-mode .app-fullscreen-view,
+body.fullscreen-mode .chat-view,
+body.fullscreen-mode .settings-view,
+body.fullscreen-mode .chat-settings-page-view,
+body.fullscreen-mode #presetsApp,
+body.fullscreen-mode #worldBookApp,
+body.fullscreen-mode #liveApp,
+body.fullscreen-mode #payApp,
+body.fullscreen-mode #gameApp,
+body.fullscreen-mode #petApp,
+body.fullscreen-mode #loveSpaceApp,
+body.fullscreen-mode .offline-mode-view {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    box-sizing: border-box;
+    border-radius: 0;
+}
+
+/* 修正这些视图内部的底部输入框或导航栏，防止被遮挡 */
+body.fullscreen-mode .chat-input-area,
+body.fullscreen-mode .offline-input-area,
+body.fullscreen-mode .g4-input-bar {
+    /* 直接增加 padding-bottom */
+    padding-bottom: calc(15px + env(safe-area-inset-bottom));
+}
+
+body.fullscreen-mode .wc-tab-bar {
+    /* 用 calc 确保它在安全区之上，并保持原有间距 */
+    bottom: calc(30px + env(safe-area-inset-bottom));
+}
+
+body.fullscreen-mode .k-dock-wrapper {
+    bottom: calc(30px + env(safe-area-inset-bottom));
+}
+
