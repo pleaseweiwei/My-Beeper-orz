@@ -6559,3 +6559,19 @@ textarea#custom-css-input:focus {
 #live-tiktok-modal video {
     background-color: #000;
 }
+/* 聊天内的居中灰色系统提示条 (用于开场白等) */
+.chat-row.system {
+    justify-content: center;
+    margin: 15px 0;
+}
+.msg-system-greeting {
+    background: rgba(0,0,0,0.05);
+    color: #888;
+    font-size: 11px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    max-width: 85%;
+    text-align: center;
+    line-height: 1.6;
+    word-break: break-word;
+}

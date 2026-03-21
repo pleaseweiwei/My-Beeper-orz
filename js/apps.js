@@ -1300,11 +1300,11 @@ window.openChatDetail = async function(name) {
        const greetingText = getEffectiveGreeting(friend);
 if (friend && greetingText) {
     const avatar = friend.avatar || null;
-    appendMessage(greetingText, 'received', avatar, name);
+    appendMessage(greetingText, 'system', avatar, name);
 
     saveMessageToHistory(name, {
         text: greetingText,
-        type: 'received',
+        type: 'system',
         senderName: name,
         customAvatar: avatar
     });
@@ -2740,11 +2740,11 @@ window.saveChatSettings = async function() {
         
         // c. 显示新的开场白 (如果新开场白不是空的)
         if (newGreeting) {
-            const avatar = friend.avatar || null;
-            const name = friend.remark || friend.realName;
-            appendMessage(newGreeting, 'received', avatar, name);
-            await saveMessageToHistory(currentChatId, { text: newGreeting, type: 'received', senderName: name, customAvatar: avatar });
-        }
+    const avatar = friend.avatar || null;
+    const name = friend.remark || friend.realName;
+    appendMessage(newGreeting, 'system', avatar, name);
+    await saveMessageToHistory(currentChatId, { text: newGreeting, type: 'system', senderName: name, customAvatar: avatar });
+}
         
         closeChatSettingsPage();
         alert('开场白已更新，聊天记录已自动清空！');
@@ -3355,7 +3355,15 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
     row.setAttribute('data-msg-id', uniqueId); 
     row.setAttribute('data-msg-text', text);   
     row.setAttribute('data-msg-sender', senderName || (type==='sent'?'ME':'AI')); 
-
+ if (type === 'system') {
+        const sysBubble = document.createElement('div');
+        sysBubble.className = 'msg-system-greeting';
+        sysBubble.innerHTML = text.replace(/\n/g, '<br>');
+        row.appendChild(sysBubble);
+        chatMessages.appendChild(row);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return; // 直接退出，不再渲染后面的头像和多选框
+    }
     // === [新增] 多选框容器 (默认隐藏，CSS控制) ===
     const checkboxWrap = document.createElement('div');
     checkboxWrap.className = 'chat-row-checkbox';
@@ -7285,13 +7293,11 @@ window.clearCurrentChatHistory = async function() {
             // 4. 关闭设置页面，留在聊天窗口，让用户看到清空后的效果
             closeChatSettingsPage();
             
-            // 5. 自动显示新的开场白
             const greeting = getEffectiveGreeting(friend);
-            if(greeting){
-                 appendMessage(greeting, 'received', friend.avatar, friend.remark || friend.realName);
-                 await saveMessageToHistory(currentChatId, { text: greeting, type: 'received', senderName: (friend.remark || friend.realName), customAvatar: friend.avatar });
-            }
-
+if(greeting){
+     appendMessage(greeting, 'system', friend.avatar, friend.remark || friend.realName);
+     await saveMessageToHistory(currentChatId, { text: greeting, type: 'system', senderName: (friend.remark || friend.realName), customAvatar: friend.avatar });
+}
 
         } catch (e) {
             console.error("清空聊天记录失败:", e);

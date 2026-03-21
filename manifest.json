@@ -1,6 +1,6 @@
 {
-  "name": "My Beeper"
-  "short_name": "Beeper"
+  "name": "My Beeper",
+  "short_name": "Beeper",
   "start_url": "./index.html",
   "display": "standalone", 
   "background_color": "#000000",

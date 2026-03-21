@@ -179,13 +179,14 @@ body {
 
 
 .editable-name {
-    font-size: calc(11px * var(--font-scale));
-    font-weight: 600;
-    color: var(--theme-text-color); /* 应用变量 */
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    font-size: calc(9px * var(--font-scale)); /* 【修改】11px 改成 9px，缩小字号 */
+    font-weight: 500;                         /* 【修改】600 改成 500，让字体变细一点 */
+    color: var(--theme-text-color); 
+    letter-spacing: 0px;                      /* 【修改】去掉字间距，让排版更紧凑 */
+    /* text-transform: uppercase; */          /* 【修改】注释掉这行，不强制全大写，显示原来的 Hannah */
     border-bottom: 1px dashed transparent;
 }
+
 .editable-name:focus { outline: none; border-bottom-color: #333; }
 
 .date-pill {
