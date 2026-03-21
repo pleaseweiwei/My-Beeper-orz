@@ -25,7 +25,9 @@
     <!-- 本地样式表 -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/animations.css">
-    
+        <!-- 新增：读取 DOCX 需要的库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+
     <!-- [新增] 这里专门用来放你输入的自定义CSS -->
     <style id="dynamic-custom-css"></style>
 
@@ -514,6 +516,10 @@
 <!-- === 修改后的聊天底部输入区 (index.html) === -->
 <div class="chat-input-area">
     <form id="chatForm" class="chat-input-form" style="position:relative; z-index:10;">
+         <!-- === 新增：联想表情包容器 === -->
+    <div id="chat-sticker-suggest" class="sticker-suggest-container" style="display:none;"></div>
+
+    <form id="chatForm" class="chat-input-form" style="position:relative; z-index:10;">
         
         <!-- === 左侧区域：加号 & 表情 === -->
         <div style="display:flex; align-items:center; gap: 12px; margin-right: 10px;">
@@ -536,23 +542,17 @@
     <div id="chat-extra-panels" class="chat-panels-container">
         <!-- 1. 表情面板 -->
         <div id="panel-emoji" class="chat-panel" style="display:none;">
-            <div class="emoji-tabs">
-                <span class="active">Emoji</span>
-                <span>Stickers</span>
+                       <div class="emoji-tabs" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f0f0f0; padding-bottom:8px;">
+                <div style="display:flex; gap:15px;">
+                    <span class="active">Emoji</span>
+                    <span>Stickers</span>
+                </div>
+                <!-- [新增] 导入表情包入口 -->
+                <div onclick="openStickerManager()" style="font-size:11px; color:#111; background:#f5f5f5; padding:4px 10px; border-radius:12px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:4px; transition:0.2s;">
+                    <i class="fas fa-folder-plus"></i> 导入表情包
+                </div>
             </div>
-            <div class="emoji-grid">
-                <span onclick="insertEmoji('😂')">😂</span><span onclick="insertEmoji('❤️')">❤️</span>
-                <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('😭')">😭</span>
-                <span onclick="insertEmoji('👍')">👍</span><span onclick="insertEmoji('🤝')">🤝</span>
-                <span onclick="insertEmoji('🙏')">🙏</span><span onclick="insertEmoji('🎉')">🎉</span>
-                <span onclick="insertEmoji('🤔')">🤔</span><span onclick="insertEmoji('😡')">😡</span>
-            </div>
-            <div class="sticker-grid">
-                <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDdtY2Z4b3E4eHRqbnZ6Z3I5eXF6eXF6eXF6eXF6eXF6eXF6eSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/MDJ9IbxxvDUQM/giphy.gif" onclick="sendSticker(this.src)">
-                <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmZ6eXF6eXF6eXF6eXF6eXF6eXF6eXF6eXF6eXF6eSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/13CoXDiaCcCzd2/giphy.gif" onclick="sendSticker(this.src)">
-                <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYnZ6eXF6eXF6eXF6eXF6eXF6eXF6eSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/l0HlCqV35hdEg/giphy.gif" onclick="sendSticker(this.src)">
-                <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3Z6eXF6eXF6eXF6eXF6eXF6eXF6eSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/3o7TKs6AWsp1M6Jqne/giphy.gif" onclick="sendSticker(this.src)">
-            </div>
+
         </div>
 
         <!-- 2. 加号功能面板 -->
@@ -944,6 +944,28 @@
                 <div style="color:#999; font-size:12px; padding:10px;">正在加载世界书列表...</div>
             </div>
         </div>
+                        <!-- === [修改] 纯净的表情包授权入口 === -->
+        <div class="form-group" style="margin-top: 15px;">
+            <label>允许 TA 使用的表情包 (Stickers)</label>
+            <div style="font-size:11px; color:#999; margin-bottom:8px;">勾选后TA才可使用。如果要添加新表情，请在聊天界面的 😀笑脸 菜单中导入。</div>
+            <div id="cs-sticker-categories" class="worldbook-checklist-container" style="max-height: 160px; background:#fafafa; border-color:#eee;">
+                <!-- JS 动态填充可用的分类复选框 -->
+            </div>
+        </div>
+
+        <!-- === [新增] 视觉解析开关 === -->
+        <div class="form-group" style="margin-top: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <label style="margin:0; font-weight:500;">开启表情包视觉解析 (Vision)</label>
+                <label class="switch">
+                    <input type="checkbox" id="cs-vision-sticker-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <span class="form-text" style="display:block;">开启后，TA会直接“看”这个表情包图片；关闭则只发送表情包的名字。需配合 gpt-4o, gemini-1.5-pro 等视觉模型使用。</span>
+        </div>
+
+
 
         <hr class="settings-divider">
 
@@ -4393,6 +4415,106 @@
 </div>
 <!-- Meta 故障删除特效容器 -->
 <div id="meta-overlay-container"></div>
+<!-- === [极致重构版] 全屏表情包管理中枢 === -->
+<div class="chat-settings-page-view" id="stickerManagerPage" style="z-index: 3500; background: #fafafa;">
+    <div class="chat-settings-page-header" style="background: #fff; border-bottom: 1px solid #eee;">
+        <i class="fas fa-chevron-down" onclick="closeStickerManager()" style="cursor:pointer;"></i>
+        <span style="font-weight:800; color:#111;">表情包中枢</span>
+        <div style="width:24px;"></div>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div style="display:flex; background:#fff; padding: 0 20px; border-bottom:1px solid #f0f0f0; flex-shrink: 0;">
+        <div class="sm-tab-btn active" id="tab-btn-sm-import" onclick="switchStickerTab('import')" style="flex:1; text-align:center; padding: 15px 0;">导入新表情</div>
+        <div class="sm-tab-btn" id="tab-btn-sm-category" onclick="switchStickerTab('category')" style="flex:1; text-align:center; padding: 15px 0;">图库与分类</div>
+    </div>
+
+    <!-- 内容区：单页滚动，告别双重滚动条 -->
+    <div class="chat-settings-page-content" style="padding: 0; display: flex; flex-direction: column; flex: 1;">
+        
+        <!-- Tab 1: 导入 -->
+        <div id="sm-tab-import" style="padding:24px; display:flex; flex-direction:column; gap:20px;">
+            <!-- 上传卡片 -->
+            <div class="sm-upload-card" onclick="document.getElementById('sm-local-upload').click()" style="background:#fff; border: 2px dashed #ccc; border-radius: 20px; padding: 40px 20px; text-align:center; cursor:pointer;">
+                <i class="fas fa-cloud-upload-alt" style="font-size:40px; color:#111; margin-bottom:15px;"></i>
+                <div style="font-size:16px; font-weight:800; color:#333;">导入本地图片</div>
+                <div style="font-size:12px; color:#999; margin-top:8px;">支持多图连选，自动使用文件名，一键成组</div>
+            </div>
+            <input type="file" id="sm-local-upload" multiple accept="image/*" style="display:none;" onchange="handleStickerLocalUpload(this)">
+           <!-- 文本/链接提取 -->
+<div style="background:#fff; border-radius:20px; border:1px solid #eee; padding:20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+    <div style="font-size:14px; font-weight:800; color:#333; margin-bottom:6px;">智能文档提取</div>
+    <div style="font-size:11px; color:#888; margin-bottom:12px; line-height: 1.5;">支持 .txt / .json / .docx<br>文本格式：名字 + 空格/冒号 + 图片链接</div>
+    
+    <!-- 分类命名 -->
+    <input type="text" id="sm-batch-group-name" placeholder="为这组表情命名分类 (必填)" style="width:100%; border:1px solid #eee; background:#f9f9f9; border-radius:12px; padding:12px 15px; font-size:13px; margin-bottom:10px; outline:none; color:#333; transition:0.2s;" onfocus="this.style.borderColor='#111'; this.style.background='#fff';">
+    
+    <!-- 【修复：新增】使用权限选择 -->
+    <select id="sm-batch-scope" style="width:100%; border:1px solid #eee; background:#f9f9f9; border-radius:12px; padding:12px 15px; font-size:13px; font-weight:600; color:#333; margin-bottom:10px; outline:none;">
+        <option value="global">🌍 公共图库 (所有人可用)</option>
+        <option value="exclusive">🔒 当前角色专属</option>
+    </select>
+    
+    <textarea id="sm-batch-text" rows="4" placeholder="例如：&#10;摸鱼 https://img.com/a.jpg&#10;叹气: https://img.com/b.png" style="width:100%; border:none; background:#f9f9f9; border-radius:12px; padding:15px; font-size:13px; resize:vertical; outline:none; color:#333; margin-bottom:15px;"></textarea>
+    
+    <div style="display:flex; gap:10px;">
+        <button class="btn-secondary" onclick="document.getElementById('sm-file-upload').click()" style="flex:1; border-radius:12px; height:44px;"><i class="fas fa-file-alt"></i> 选择文档</button>
+        <input type="file" id="sm-file-upload" accept=".txt,.json,.docx" style="display:none;" onchange="handleStickerBatchFile(this)">
+        <button class="btn-confirm" onclick="processBatchStickers()" style="flex:1; background:#111; border-radius:12px; height:44px;">解析并导入</button>
+    </div>
+</div>
+
+
+        </div>
+
+       <!-- Tab 2: 图库管理 -->
+<div id="sm-tab-category" style="display:none; padding: 20px;">
+    <!-- 【修复：美化版】操作栏 (滑动时自动吸顶) -->
+    <div class="sm-actions-bar">
+        <button class="sm-btn-move" onclick="batchMoveStickers()"><i class="fas fa-folder-open"></i> 移动到分类</button>
+        <button class="sm-btn-del" onclick="batchDeleteStickers()"><i class="fas fa-trash"></i> 删除</button>
+    </div>
+    
+    <!-- 网格 -->
+    <div id="sm-stickers-grid" class="sm-stickers-grid">
+        <!-- JS 渲染 -->
+    </div>
+</div>
+
+    </div>
+</div>
+
+<!-- 批量命名确认弹窗 -->
+<div id="sticker-local-preview-modal" class="modal-overlay" style="z-index: 3600;">
+   <div class="modal-box" style="width:320px; border-radius:24px; background:#fff; overflow:hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+       <div style="background:#fcfcfc; padding:30px 20px 20px; text-align:center; border-bottom:1px solid #f0f0f0;">
+           <div style="width:64px; height:64px; background:#111; color:#fff; border-radius:18px; display:flex; justify-content:center; align-items:center; font-size:28px; margin: 0 auto 15px;">
+               <i class="fas fa-images"></i>
+           </div>
+           <div style="font-size:16px; font-weight:800; color:#333;">已选择 <span id="slp-count" style="color:#ff7e67;">0</span> 张图片</div>
+           <div style="font-size:11px; color:#888; margin-top:8px;">原文件名将自动作为表情词</div>
+       </div>
+       <div class="modal-body" style="padding:20px;">
+           <div class="input-group">
+               <label style="font-size:12px; font-weight:700; color:#555;">为这组表情命名分类 (选填)</label>
+               <input type="text" id="slp-group-name" placeholder="例如：日常、星穹铁道..." style="width:100%; border:1px solid #eee; background:#fafafa; border-radius:12px; padding:14px 15px; font-size:14px; color:#333; outline:none; transition:0.2s;" onfocus="this.style.borderColor='#111'; this.style.background='#fff';">
+           </div>
+           <div class="input-group" style="margin-top:20px;">
+               <label style="font-size:12px; font-weight:700; color:#555;">使用权限</label>
+               <select id="slp-scope" style="width:100%; border:1px solid #eee; background:#fafafa; border-radius:12px; padding:14px 10px; font-size:13px; font-weight:600; color:#333; outline:none;">
+                   <option value="global">🌍 公共图库 (所有人可用)</option>
+                   <option value="exclusive">🔒 当前角色专属</option>
+               </select>
+           </div>
+       </div>
+       <div style="display:flex; gap:12px; padding: 0 20px 20px;">
+           <button class="btn-cancel" onclick="slpCancelBatch()" style="flex:1; border-radius:14px; height:44px;">取消</button>
+           <button class="btn-confirm" onclick="slpConfirmBatch()" style="flex:2; border-radius:14px; background:#111; height:44px;">确定导入</button>
+       </div>
+   </div>
+</div>
+
+
 
 </body>
 </html>

@@ -792,10 +792,10 @@ textarea#custom-css-input:focus {
 
 /* 2. 卡片主体：变宽了！ */
 .mind-card-box {
-    width: 360px; /* <--- 修改：宽度增加到 360px */
+    width: 320px; 
     background: rgba(255, 255, 255, 0.96);
-    border-radius: 24px;
-    padding: 24px; /* 内边距也稍微大一点 */
+    border-radius: 20px; 
+    padding: 20px; 
     
     box-shadow: 
         0 20px 50px rgba(0,0,0,0.2),
@@ -806,8 +806,9 @@ textarea#custom-css-input:focus {
     
     display: flex;
     flex-direction: column;
-    gap: 18px; 
+    gap: 14px; 
 }
+
 .mind-overlay.active .mind-card-box {
     transform: translateY(0) scale(1);
 }
@@ -5890,6 +5891,12 @@ textarea#custom-css-input:focus {
     -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
 }
 
+/* ★ 新增这一段：如果没有触发 scrolling 滚动状态，就让文字水平居中 ★ */
+.mind-inline-marquee:not(.scrolling),
+.marquee-container:not(.scrolling) {
+    text-align: center;
+}
+
 .mind-inline-marquee b,
 .marquee-container b {
     display: inline-block;
@@ -6574,4 +6581,279 @@ textarea#custom-css-input:focus {
     text-align: center;
     line-height: 1.6;
     word-break: break-word;
+}
+/* =========================================
+   [高定美化] 表情包管理系统 UI 样式
+   ========================================= */
+
+/* Tab 切换按钮 */
+.sm-tab-btn {
+    padding: 8px 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #999;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.sm-tab-btn.active {
+    color: #111;
+    border-bottom: 2px solid #111;
+}
+
+/* 本地上传虚线大卡片 */
+.sm-upload-card {
+    background: #fff;
+    border: 2px dashed #e0e0e0;
+    border-radius: 16px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.sm-upload-card:hover {
+    background: #fafafa;
+    border-color: #111;
+    transform: translateY(-2px);
+}
+
+/* 图库网格 */
+.sm-stickers-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    align-content: start;
+}
+
+/* 分类标题条 */
+.sm-category-title {
+    grid-column: 1 / -1;
+    font-family: 'Montserrat', 'PingFang SC', sans-serif;
+    font-weight: 800;
+    font-size: 12px;
+    color: #333;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sm-category-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #f0f0f0;
+}
+
+/* 单个表情项目 */
+.sm-sticker-item {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.sm-sticker-item:hover { 
+    border-color: #333; 
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    transform: translateY(-2px);
+}
+
+/* 表情图片限制 */
+.sm-sticker-item img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    margin-bottom: 8px;
+}
+
+/* 名字省略 */
+.sm-sticker-name {
+    font-size: 9px;
+    color: #888;
+    font-weight: 600;
+    text-align: center;
+    width: 90%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 精致复选框 */
+.sm-sticker-checkbox {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 16px;
+    height: 16px;
+    accent-color: #111;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: 0.2s;
+}
+.sm-sticker-item:hover .sm-sticker-checkbox,
+.sm-sticker-checkbox:checked {
+    opacity: 1;
+}
+
+/* 聊天里实际发出来的表情图片样式 */
+img.msg-sticker-img {
+    max-width: 120px;
+    max-height: 120px;
+    object-fit: contain;
+    vertical-align: bottom; 
+    display: inline-block;
+    margin: 4px;
+    border-radius: 8px;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.05)); /* 给透明底表情加上微光 */
+}
+/* 隐藏表情包面板顶部的横向滚动条 */
+.emoji-tabs::-webkit-scrollbar { display: none; }
+.emoji-tabs { -ms-overflow-style: none; scrollbar-width: none; }
+/* =========================================
+   【修复1】表情包管理中枢优化补丁
+   ========================================= */
+#sm-tab-category {
+    overflow: visible !important; 
+}
+#sm-stickers-grid {
+    overflow: visible !important; 
+}
+
+/* 隐藏所有多余的滚动条，只保留功能，视觉上绝对干净 */
+.chat-settings-page-content::-webkit-scrollbar,
+.emoji-tabs::-webkit-scrollbar {
+    display: none;
+}
+.emoji-tabs, .chat-settings-page-content {
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+/* =========================================
+   【究极修复】彻底消灭双重滑动条 & 按钮高级美化
+   ========================================= */
+
+/* 1. 强制干掉内层滚动，把滚动权交还给外层父容器 */
+#sm-tab-category, 
+#sm-stickers-grid {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+}
+
+/* 2. 隐藏所有丑陋的原生滚动条，但保留顺滑滚动能力 */
+.chat-settings-page-content::-webkit-scrollbar,
+#panel-emoji::-webkit-scrollbar,
+.emoji-tabs::-webkit-scrollbar {
+    display: none;
+}
+.chat-settings-page-content,
+#panel-emoji,
+.emoji-tabs {
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+
+/* 3. 极致美化：图库与分类的悬浮操作按钮 */
+.sm-actions-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    /* 磨砂玻璃吸顶 */
+    background: rgba(250,250,250,0.85);
+    backdrop-filter: blur(12px);
+    padding: 10px 0;
+}
+
+.sm-btn-move, .sm-btn-del {
+    flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px;
+    height: 48px; border-radius: 16px; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    border: none;
+}
+
+.sm-btn-move {
+    background: #2b2b2b; color: #fff;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15); /* 质感深色投影 */
+}
+.sm-btn-move:active { transform: scale(0.95); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+
+.sm-btn-del {
+    background: #fff; color: #ff4d4f;
+    border: 1px solid #ffecec;
+    box-shadow: 0 6px 15px rgba(255,77,79,0.08); /* 柔和红色光晕 */
+}
+.sm-btn-del:active { transform: scale(0.95); background: #fff5f5; border-color: #ffcccc; }
+/* =========================================
+   [新增] 聊天框联想表情包提示 (韩系高级毛玻璃)
+   ========================================= */
+.sticker-suggest-container {
+    position: absolute;
+    bottom: 100%;
+    left: 12px;
+    max-width: calc(100% - 24px);
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    border-radius: 16px;
+    box-shadow: 0 -5px 25px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.04);
+    z-index: 50;
+    margin-bottom: 8px; /* 悬浮在输入框正上方 */
+    
+    /* 隐藏丑陋的滚动条 */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.sticker-suggest-container::-webkit-scrollbar {
+    display: none;
+}
+
+.suggest-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.2s, background 0.2s;
+    background: #fcfcfc;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.02);
+}
+.suggest-item:hover {
+    background: #f5f5f5;
+}
+.suggest-item:active {
+    transform: scale(0.95);
+}
+
+.suggest-item img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.06)); /* 微微立体感 */
+}
+
+.suggest-name {
+    font-size: 10px;
+    color: #666;
+    font-weight: 600;
+    max-width: 50px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
 }

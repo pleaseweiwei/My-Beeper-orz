@@ -87,7 +87,6 @@ body {
     /* === 修改部分开始 === */
     scroll-snap-type: x mandatory;
     scroll-snap-stop: always;     /* 【核心修改】强制每次滑动必须停在下一页，不能跳页 */
-    scroll-behavior: smooth;
     overscroll-behavior-x: none;  /* 禁止左右边缘的橡皮筋回弹效果，手感更“硬” */
     /* === 修改部分结束 === */
 }
@@ -97,7 +96,7 @@ body {
 .page {
     min-width: 100%;
     height: 100%;
-    padding: 30px 24px 80px 24px;
+    padding: 60px 24px 80px 24px;
     scroll-snap-align: start;
     overflow-y: auto;
     display: flex;
@@ -124,6 +123,7 @@ body {
     min-height: 30px;
     text-shadow: 0 1px 2px rgba(255,255,255,0.8); 
     opacity: 0.9;
+    margin-bottom: -27px;
 }
 
 .clock-profile-combo {
@@ -468,8 +468,6 @@ input:checked + .slider:before { transform: translateX(18px); }
     transition: all 0.3s;
 }
 
-
-/* 2. 移动端浏览器自适应 (屏幕宽度小于 500px 时自动铺满) */
 @media (max-width: 600px) {
     body {
         align-items: flex-start; /* 顶端对齐 */
@@ -483,15 +481,14 @@ input:checked + .slider:before { transform: translateX(18px); }
         box-shadow: none;
     }
     
-    
     .page {
-        padding-top: 30px; 
+        /* 将原本的 30px 修改为 50px 或 60px */
+        padding-top: 50px; 
         padding-bottom: 80px; 
     }
     .dock-bar {
         bottom: 20px; /* Dock 稍微抬高一点 */
     }
 }
-
 
 
