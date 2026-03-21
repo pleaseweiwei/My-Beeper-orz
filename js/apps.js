@@ -11,6 +11,7 @@ const FRIENDS_DATA_KEY = 'myCoolPhone_friendsData';
 const HOME_CUSTOM_KEY = 'myCoolPhone_homeCustom';
 const MOMENTS_FEED_KEY = 'myCoolPhone_momentsFeed';
 
+
 // === 【新增】存放当前角色的心声状态 ===
 let currentMindState = {
     action: "正在发呆",
@@ -19,6 +20,223 @@ let currentMindState = {
     murmur: "...",
     hiddenThought: "..."
 };
+function getAffectionStage(score) {
+    score = Number(score) || 0;
+    if (score < 20) return "疏离";
+    if (score < 40) return "熟悉";
+    if (score < 60) return "亲近";
+    if (score < 80) return "偏爱";
+    return "上头";
+}
+
+function ensureFriendMindFields(friend, friendId = 'AI') {
+    if (!friend) return;
+
+    if (typeof friend.affection !== 'number') friend.affection = 0;
+
+    if (!friend.mindState) friend.mindState = {};
+
+    friend.mindState = {
+        action: friend.mindState.action || "正在发呆",
+        location: friend.mindState.location || "未知地点",
+        weather: friend.mindState.weather || "晴",
+        murmur: friend.mindState.murmur || "我还没想好要说什么。不过我在看着你。也在等你继续靠近一点。",
+        hiddenThought: friend.mindState.hiddenThought || "现在先不告诉你。再多聊几句，也许我会慢慢松口。",
+        kaomoji: friend.mindState.kaomoji || "( ˙W˙ )",
+        bgm: friend.mindState.bgm || "No BGM"
+    };
+}
+function ensureFriendSummaryFields(friend) {
+    if (!friend) return;
+
+    if (!friend.summaryConfig) friend.summaryConfig = {};
+
+    if (
+        friend.summaryConfig.turnCount === undefined ||
+        friend.summaryConfig.turnCount === null ||
+        friend.summaryConfig.turnCount === ''
+    ) {
+        friend.summaryConfig.turnCount = 20;
+    }
+
+    if (
+        friend.summaryConfig.wordCount === undefined ||
+        friend.summaryConfig.wordCount === null ||
+        friend.summaryConfig.wordCount === ''
+    ) {
+        friend.summaryConfig.wordCount = 200;
+    }
+
+    if (typeof friend.summaryConfig.prompt !== 'string') {
+        friend.summaryConfig.prompt = '';
+    }
+
+    if (!Array.isArray(friend.summaries)) friend.summaries = [];
+    if (!Array.isArray(friend.relationshipLog)) friend.relationshipLog = [];
+}
+
+function normalizeAllFriendsSummaryFields() {
+    Object.keys(friendsData || {}).forEach(id => {
+        ensureFriendSummaryFields(friendsData[id]);
+    });
+}
+
+function normalizeAllFriendsMindFields() {
+    Object.keys(friendsData || {}).forEach(id => {
+        ensureFriendMindFields(friendsData[id], id);
+    });
+}
+
+function applyMindMarqueeIfOverflow() {
+    const ids = ['mind-location-val', 'mind-action-val', 'now-playing-bgm'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || !el.parentElement) return;
+        const wrap = el.parentElement;
+        wrap.classList.remove('scrolling');
+
+        requestAnimationFrame(() => {
+            if (el.scrollWidth > wrap.clientWidth) {
+                wrap.classList.add('scrolling');
+            }
+        });
+    });
+}
+
+function updateAffectionUI(score) {
+    const s = Math.max(0, Math.min(100, Number(score) || 0));
+    const fill = document.getElementById('affection-fill');
+    const text = document.getElementById('affection-percent-text');
+    if (fill) fill.style.width = `${s}%`;
+    if (text) text.innerText = `${s}%`;
+}
+
+function syncMindBgmToPlayer(bgmText) {
+    if (!bgmText) return;
+
+    const bgmEl = document.getElementById('now-playing-bgm');
+    if (bgmEl) bgmEl.innerText = bgmText;
+
+    let title = bgmText;
+    let artist = 'AI Mood';
+
+    const match = bgmText.match(/^(.*?)\s*-\s*(.*)$/);
+    if (match) {
+        title = match[1].trim();
+        artist = match[2].trim();
+    }
+
+    const homeTitle = document.getElementById('home-music-title');
+    const homeArtist = document.getElementById('home-music-artist');
+
+    if (homeTitle) homeTitle.innerText = title;
+    if (homeArtist) homeArtist.innerText = artist;
+
+    if (typeof saveHomeMusicText === 'function') {
+        saveHomeMusicText();
+    }
+
+    // 如果歌单里正好有同名歌，就自动播放
+    if (typeof musicPlaylist !== 'undefined' && Array.isArray(musicPlaylist) && typeof playMusic === 'function') {
+        const idx = musicPlaylist.findIndex(song => {
+            const a = (song.name || '').toLowerCase();
+            const b = `${song.name || ''} - ${song.artist || ''}`.toLowerCase();
+            return a === title.toLowerCase() || b === bgmText.toLowerCase();
+        });
+        if (idx !== -1) {
+            playMusic(idx);
+        }
+    }
+
+    applyMindMarqueeIfOverflow();
+}
+
+function refreshMindCardUI(friendId, useTyping = false) {
+    const friend = friendsData[friendId];
+    if (!friend) return;
+
+    ensureFriendMindFields(friend, friendId);
+    const state = friend.mindState;
+    const affection = Math.max(0, Math.min(100, Number(friend.affection) || 0));
+
+    const avatarEl = document.querySelector('.mind-big-avatar');
+    const nameEl = document.querySelector('.mind-name');
+
+    if (avatarEl) {
+        avatarEl.src = friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(friend.realName || friendId)}`;
+    }
+    if (nameEl) {
+        nameEl.innerText = friend.remark || friend.realName || friendId;
+    }
+
+    updateAffectionUI(affection);
+
+    const locEl = document.getElementById('mind-location-val');
+    const actEl = document.getElementById('mind-action-val');
+    const weaEl = document.getElementById('mind-weather-val');
+    const bgmEl = document.getElementById('now-playing-bgm');
+    const kaoEl = document.getElementById('mind-kaomoji-display');
+    const murEl = document.getElementById('mind-murmur-text');
+    const secEl = document.getElementById('mind-hidden-text');
+
+    if (locEl) locEl.innerText = state.location || "未知地点";
+    if (actEl) actEl.innerText = state.action || "正在发呆";
+    if (weaEl) weaEl.innerText = state.weather || "晴";
+    if (bgmEl) bgmEl.innerText = state.bgm || "No BGM";
+    if (kaoEl) kaoEl.innerText = state.kaomoji || "( ˙W˙ )";
+
+    if (useTyping && typeof typeWriterEffect === 'function') {
+        typeWriterEffect(state.murmur || "...", 'mind-murmur-text', 18);
+        setTimeout(() => {
+            typeWriterEffect(state.hiddenThought || "...", 'mind-hidden-text', 18);
+        }, 150);
+    } else {
+        if (murEl) murEl.innerText = state.murmur || "...";
+        if (secEl) secEl.innerText = state.hiddenThought || "...";
+    }
+
+    applyMindMarqueeIfOverflow();
+}
+
+function parseAndApplyMindStateBlock(friendId, statusBlock) {
+    const friend = friendsData[friendId];
+    if (!friend || !statusBlock) return;
+
+    ensureFriendMindFields(friend, friendId);
+
+    const getVal = (key) => {
+        const reg = new RegExp(`${key}[:：]\\s*(.*)`, 'i');
+        const m = statusBlock.match(reg);
+        return m ? m[1].trim() : '';
+    };
+
+    // 一次对话最多 ±2，前端强制钳制
+    const deltaRaw = parseInt(
+        getVal('AffectionDelta') ||
+        getVal('FavorDelta') ||
+        getVal('Affection') ||
+        '0',
+        10
+    );
+    const delta = Math.max(-2, Math.min(2, isNaN(deltaRaw) ? 0 : deltaRaw));
+
+    friend.affection = Math.max(0, Math.min(100, (Number(friend.affection) || 0) + delta));
+
+    friend.mindState.action = getVal('Action') || friend.mindState.action;
+    friend.mindState.location = getVal('Location') || friend.mindState.location;
+    friend.mindState.weather = getVal('Weather') || friend.mindState.weather;
+    friend.mindState.bgm = getVal('BGM') || friend.mindState.bgm;
+    friend.mindState.murmur = getVal('Murmur') || friend.mindState.murmur;
+    friend.mindState.hiddenThought = getVal('Secret') || friend.mindState.hiddenThought;
+    friend.mindState.kaomoji = getVal('Kaomoji') || friend.mindState.kaomoji;
+
+    saveFriendsData();
+
+    const isOpen = document.getElementById('mind-card-overlay')?.classList.contains('active');
+    refreshMindCardUI(friendId, !!isOpen);
+    syncMindBgmToPlayer(friend.mindState.bgm);
+}
+
 // === [插入] 线下模式与预设的全局变量 ===
 const PRESETS_DATA_KEY = 'myCoolPhone_tavernPresets';
 const OFFLINE_CONFIG_KEY = 'myCoolPhone_offlineConfig';
@@ -235,8 +453,9 @@ applyPersonaToUI();
                         break; // 停止收集
                     }
                     if (history[i].type === 'sent') {
-                        contextMessages.unshift(history[i].text); // 加到数组最前面
-                    }
+    contextMessages.unshift(formatSpecialMessageForAI(history[i].text));
+}
+
                 }
 
                 // 3. 检查输入框里是否还有没发出去的字，如果有，也算进去
@@ -618,7 +837,9 @@ function saveThemeConfig() {
 
     localStorage.setItem(THEME_KEY, JSON.stringify(theme));
     initThemeSettings();
-    alert('主题配置已保存！');
+if (typeof toggleSettings === 'function') {
+        toggleSettings();
+    }
 }
 
 // === 新增：预设/导入/导出功能实现 ===
@@ -817,7 +1038,9 @@ function saveAllSettings() {
         temperature: document.getElementById('temperature-slider').value
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    alert('AI设置已保存');
+    if (typeof toggleSettings === 'function') {
+        toggleSettings();
+    }
 }
 
 function saveNewPreset() {
@@ -1300,17 +1523,36 @@ window.confirmAddFriend = function() {
 
     // 决定显示的ID（有备注用备注，没备注用真名）
     const chatId = remark || realName;
-
-    // 保存数据到全局变量 (【修改】增加了 avatar 和 chatSettings 字段)
     friendsData[chatId] = {
-        realName: realName,
-        remark: remark,
-        persona: persona || "你是一个普通的微信好友。", 
-        worldbook: worldbook,
-        greeting: greeting,
-        avatar: '', // 新好友默认无自定义头像
-        chatSettings: {} // 初始化空设置
-    };
+    realName: realName,
+    remark: remark,
+    persona: persona || "你是一个普通的微信好友。",
+    worldbook: worldbook,
+    greeting: greeting,
+    avatar: '',
+    affection: 0,
+    mindState: {
+        action: "正在观察你",
+        location: "聊天界面",
+        weather: "晴",
+        murmur: "我刚出现。先看看你会怎么和我说第一句话。也许接下来会变得有意思。",
+        hiddenThought: "先保留一点距离。别急，让我再确认一下，你是不是值得我靠近。",
+        kaomoji: "( ˙W˙ )",
+        bgm: "No BGM"
+    },
+    chatSettings: {},
+    summaryConfig: {
+        turnCount: 20,
+        wordCount: 200,
+        prompt: ''
+    },
+    summaries: [],
+    relationshipLog: []
+};
+
+
+
+
 
     // 【新增】立即持久化保存到 LocalStorage
     saveFriendsData();
@@ -1367,6 +1609,33 @@ function addFriendToChatList(name, lastMsg) {
 
 
 // --- 4. 修改后的 AI 发送函数 (注入人设) ---
+function formatSpecialMessageForAI(text) {
+    if (!text || typeof text !== 'string') return '';
+
+    // 描述图片 -> 发给 AI 时伪装成“用户发了一张照片”
+    if (text.startsWith('[IMG_DESC]')) {
+        const desc = text.replace('[IMG_DESC]', '').trim();
+        return `[System: User sent a photo. You should treat it as a real image. The photo shows: ${desc}]`;
+    }
+
+    return text;
+}
+
+function formatChatPreviewText(text, isOffline = false) {
+    if (!text) return '点击开始聊天';
+    if (isOffline) return '[故事进展]';
+
+    if (text.startsWith('[INTIMATE_')) return '[亲密付消息]';
+
+    if (text.startsWith('[IMG_DESC]')) {
+        const desc = text.replace('[IMG_DESC]', '').trim();
+        return `[图片] ${desc.length > 12 ? desc.slice(0, 12) + '...' : desc}`;
+    }
+
+    if (text.startsWith('[VOICE]')) return '[语音]';
+
+    return text.length > 25 ? text.slice(0, 25) + '...' : text;
+}
 
 // === 升级版 AI 发送逻辑 (兼容群聊 + 支持翻译模式) ===
 async function sendMessageToAI(userMessage) {
@@ -1453,7 +1722,10 @@ async function sendMessageToAI(userMessage) {
         
     } else {
         // ------ 单聊逻辑 (Single Chat Logic) ------
-        
+       const currentAffection = Number(f.affection || 0);
+const affectionStage = getAffectionStage(currentAffection);
+
+
         // ★★★ 修改开始：注入话题延展与留白原则 ★★★
         systemPrompt = `
         System Prompt: Dynamic Human Simulator (Final Integrated Version)
@@ -1466,6 +1738,19 @@ async function sendMessageToAI(userMessage) {
         [Target Persona]
         Name: ${f.realName || 'Assistant'}
         Persona Description: ${f.persona || 'Helpful Assistant'}
+        
+[RELATIONSHIP STATE]
+Current affection toward the user: ${currentAffection}/100
+Current relationship stage: ${affectionStage}
+
+Behavior rules:
+- Your tone, initiative, softness, distance, jealousy, protectiveness, and willingness to reveal inner thoughts MUST reflect this affection level.
+- Low affection means more guarded, restrained, polite, and less主动.
+- Medium affection means more familiar, willing to continue the conversation, and more naturally expressive.
+- High affection means more偏心, more在意用户反应, more likely to主动, tease, get jealous, protect, or show attachment.
+- You are NOT allowed to suddenly jump personality without matching the affection level.
+- For this turn, the affection change MUST be an integer from -2 to 2 only.
+
         ${f.worldbook ? `World Setting: ${f.worldbook}` : ''}
 
         1. Core Logic (CRITICAL)
@@ -1500,6 +1785,7 @@ async function sendMessageToAI(userMessage) {
             - First express Empathy, Mockery, Shock, or Envy.
             - User: "I worked late." -> Bad AI: "Why?" -> Good AI: "Ouch. Pat pat. I would've faked sick."
         `;
+       
         // --- [新增点] 强制语言设置 (如果有) ---
         if (chatSettings.targetOutputLang) {
             systemPrompt += `\nIMPORTANT: You MUST speak in ${chatSettings.targetOutputLang} only, unless asked otherwise.`;
@@ -1540,13 +1826,34 @@ async function sendMessageToAI(userMessage) {
         - IMPORTANT: Use Simplified Chinese (简体中文) for Action, Location, and Weather.
         - Format:
         [STATUS_START]
-        Action: (Short action, e.g. 正在喝咖啡, 害羞地低下头)
-        Location: (Where are you now?)
-        Weather: (Current weather)
-        Murmur: (A short surface thought, e.g. 他怎么还不回我...)
-        Secret: (Your deep hidden thought/feeling, e.g. 其实我有点心动了)
-        Kaomoji: (A text emoticon matching the mood/persona, e.g. (｡•-•｡), (TT), (╯°Ã°）╯
-        [STATUS_END]
+AffectionDelta: (integer only, from -2 to 2)
+Action: (current action, short)
+Location: (current location)
+Weather: (current weather)
+BGM: (one fitting bgm title, format: Title - Artist/Style)
+Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
+Secret: (3 to 4 longer sentences, first-person self-talk, hidden deeper thoughts, in character voice)
+Kaomoji: (one matching kaomoji)
+[STATUS_END]
+Rules:
+- AffectionDelta must be one of: -2, -1, 0, 1, 2
+- Do not explain the status block
+- Murmur and Secret must be character self-talk, not narration
+- Murmur and Secret must each contain 3 to 4 sentences
+- BGM must match the current mood, setting, or conversation scene
+
+[Example Status Block]
+[STATUS_START]
+AffectionDelta: 1
+Action: 正在靠着窗边发消息
+Location: 卧室
+Weather: 小雨
+BGM: cardigan - Taylor Swift
+Murmur: 他今天倒是来得比我想象中早一点。我本来还想装作无所谓，结果还是第一时间去看消息了。真烦，明明不该这么在意的。可我就是忍不住。
+Secret: 其实我有一点高兴。不是一点，是比我愿意承认的还要更多。要是他再多说几句好听的，我可能真的会心软得很快。现在先藏着吧，至少我还不想让他看得太明白。
+Kaomoji: ( ｡•̀ᴗ-)✧
+[STATUS_END]
+
         `;
         // === 新增：朋友圈发帖协议 ===
         systemPrompt += `
@@ -1639,18 +1946,17 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
                 // 截取最近的 N 条
                 const recentHistory = history.slice(-memoryLimit);
                 
-                // ★ 修改：将其转换为 API 格式时，桥接记忆
                 contextMessages = recentHistory.map(msg => {
-                    let finalContent = msg.text;
-                    // 如果这是线下模式产生的历史，告诉 AI 这是一个回忆/发生过的事件，而不是线上发的消息
-                    if (msg.isOffline) {
-                        finalContent = `(Offline Event Memory: ${msg.text})`;
-                    }
-                    return {
-                        role: msg.type === 'sent' ? 'user' : 'assistant',
-                        content: finalContent
-                    };
-                });
+    let finalContent = formatSpecialMessageForAI(msg.text);
+    if (msg.isOffline) {
+        finalContent = `(Offline Event Memory: ${finalContent})`;
+    }
+    return {
+        role: msg.type === 'sent' ? 'user' : 'assistant',
+        content: finalContent
+    };
+});
+
             } catch (e) {
                 console.error("加载历史记录失败:", e);
             }
@@ -1771,39 +2077,78 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
                 });
             }
 
-            // 1. 提取心声状态 [STATUS_START]...[STATUS_END]，并从 rawReply 中移除
-            const statusRegex = /\[STATUS_START\]([\s\S]*?)\[STATUS_END\]/i;
-            const statusMatch = rawReply.match(statusRegex);
-            if (statusMatch) {
-                const statusBlock = statusMatch[1];
-                const getVal = (key) => {
-                    const reg = new RegExp(key + "[:：]\\s*(.*)", "i");
-                    const m = statusBlock.match(reg);
-                    return m ? m[1].trim() : null;
-                };
-                if (friendsData[currentChatId]) {
-                    const oldState = friendsData[currentChatId].mindState || {};
-                    friendsData[currentChatId].mindState = {
-                        action: getVal("Action") || oldState.action || "发呆",
-                        location: getVal("Location") || oldState.location || "未知",
-                        weather: getVal("Weather") || oldState.weather || "晴",
-                        murmur: getVal("Murmur") || "...",
-                        hiddenThought: getVal("Secret") || "...",
-                        kaomoji: getVal("Kaomoji") || "( ˙W˙ )"
-                    };
-                    saveFriendsData();
-                }
-                const currentMindState = friendsData[currentChatId].mindState;
-                const actionEl = document.getElementById('mind-action-val');
-                const locEl = document.getElementById('mind-location-val');
-                const weaEl = document.getElementById('mind-weather-val');
-                const kaoEl = document.getElementById('mind-kaomoji-display');
-                if (actionEl) actionEl.innerText = currentMindState.action;
-                if (locEl)    locEl.innerText    = currentMindState.location;
-                if (weaEl)    weaEl.innerText    = currentMindState.weather;
-                if (kaoEl)    kaoEl.innerText    = currentMindState.kaomoji;
-                rawReply = rawReply.replace(statusRegex, '').trim();
-            }
+const statusRegex = /\[STATUS_START\]([\s\S]*?)\[STATUS_END\]/i;
+const statusMatch = rawReply.match(statusRegex);
+if (statusMatch) {
+    const statusBlock = statusMatch[1];
+
+    const readStatusValue = (key) => {
+        const reg = new RegExp(`${key}[:：]\\s*(.*)`, 'i');
+        const m = statusBlock.match(reg);
+        return m ? m[1].trim() : '';
+    };
+
+    if (!friendsData[currentChatId].mindState) friendsData[currentChatId].mindState = {};
+    if (typeof friendsData[currentChatId].affection !== 'number') friendsData[currentChatId].affection = 0;
+
+    const deltaRaw = parseInt(readStatusValue('AffectionDelta') || '0', 10);
+    const delta = Math.max(-2, Math.min(2, isNaN(deltaRaw) ? 0 : deltaRaw));
+
+    friendsData[currentChatId].affection = Math.max(
+        0,
+        Math.min(100, friendsData[currentChatId].affection + delta)
+    );
+
+    friendsData[currentChatId].mindState.action = readStatusValue('Action') || friendsData[currentChatId].mindState.action || '正在发呆';
+    friendsData[currentChatId].mindState.location = readStatusValue('Location') || friendsData[currentChatId].mindState.location || '未知地点';
+    friendsData[currentChatId].mindState.weather = readStatusValue('Weather') || friendsData[currentChatId].mindState.weather || '晴';
+    friendsData[currentChatId].mindState.bgm = readStatusValue('BGM') || friendsData[currentChatId].mindState.bgm || 'No BGM';
+    friendsData[currentChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[currentChatId].mindState.murmur || '...';
+    friendsData[currentChatId].mindState.hiddenThought = readStatusValue('Secret') || friendsData[currentChatId].mindState.hiddenThought || '...';
+    friendsData[currentChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[currentChatId].mindState.kaomoji || '( ˙W˙ )';
+
+    saveFriendsData();
+
+    const actionEl = document.getElementById('mind-action-val');
+    const locEl = document.getElementById('mind-location-val');
+    const weaEl = document.getElementById('mind-weather-val');
+    const kaoEl = document.getElementById('mind-kaomoji-display');
+    const murEl = document.getElementById('mind-murmur-text');
+    const secEl = document.getElementById('mind-hidden-text');
+    const bgmEl = document.getElementById('now-playing-bgm');
+    const affTextEl = document.getElementById('affection-percent-text');
+    const affFillEl = document.getElementById('affection-fill');
+
+    if (actionEl) actionEl.innerText = friendsData[currentChatId].mindState.action;
+    if (locEl) locEl.innerText = friendsData[currentChatId].mindState.location;
+    if (weaEl) weaEl.innerText = friendsData[currentChatId].mindState.weather;
+    if (kaoEl) kaoEl.innerText = friendsData[currentChatId].mindState.kaomoji;
+    if (murEl) murEl.innerText = friendsData[currentChatId].mindState.murmur;
+    if (secEl) secEl.innerText = friendsData[currentChatId].mindState.hiddenThought;
+    if (bgmEl) bgmEl.innerText = friendsData[currentChatId].mindState.bgm;
+    if (affTextEl) affTextEl.innerText = `${friendsData[currentChatId].affection}%`;
+    if (affFillEl) affFillEl.style.width = `${friendsData[currentChatId].affection}%`;
+
+    const homeTitle = document.getElementById('home-music-title');
+    const homeArtist = document.getElementById('home-music-artist');
+    const bgmText = friendsData[currentChatId].mindState.bgm || 'No BGM';
+
+    if (bgmText.includes(' - ')) {
+        const parts = bgmText.split(' - ');
+        if (homeTitle) homeTitle.innerText = parts[0].trim();
+        if (homeArtist) homeArtist.innerText = parts.slice(1).join(' - ').trim();
+    } else {
+        if (homeTitle) homeTitle.innerText = bgmText;
+        if (homeArtist) homeArtist.innerText = 'AI Mood';
+    }
+
+    if (typeof saveHomeMusicText === 'function') saveHomeMusicText();
+
+    rawReply = rawReply.replace(statusRegex, '').trim();
+}
+
+
+
 
             // 2. 提取弹幕 [DANMAKU_START]...[DANMAKU_END]，并从 rawReply 中移除
             const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[DANMAKU_END\]/i;
@@ -2125,65 +2470,28 @@ window.openGroupChat = function(groupId) {
     sysMsg.innerHTML = `<span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:4px; font-size:11px; color:#999;">你邀请了 ${group.members.join(', ')} 加入群聊</span>`;
     chatMessages.appendChild(sysMsg);
 }
-// === [修改版] 角色心声卡片逻辑 V6 (修复版：读取实时AI状态) ===
-window.toggleMindCard = function(event) { 
+window.toggleMindCard = function(event) {
     if (!event) return;
 
-    // 如果没有当前聊天对象，就不打开
-    if (!currentChatId || !friendsData[currentChatId]) return;
-
     const card = document.getElementById('mind-card-overlay');
-    const isActive = card.classList.contains('active');
-    
+    if (!card) return;
+
     if (event.target.id === 'mind-card-overlay') {
-        if(isActive) card.classList.remove('active');
+        card.classList.remove('active');
         return;
     }
 
-    if (isActive) {
+    if (card.classList.contains('active')) {
         card.classList.remove('active');
-    } else {
-        // === [关键修改]：读取当前角色的存储状态，如果没有则使用默认值 ===
-        const friend = friendsData[currentChatId];
-        // 如果该角色还没有状态数据，给一个默认的
-        const state = friend.mindState || {
-            action: "正在看着你",
-            location: "聊天界面",
-            weather: "晴",
-            murmur: "想说点什么...",
-            hiddenThought: "...",
-            kaomoji: "( ˙W˙ )"
-        };
-        
-        // --- 刷新 UI ---
-        // 1. 头像和名字
-        const avatarEl = document.querySelector('.mind-big-avatar');
-        const nameEl = document.querySelector('.mind-name');
-        if(avatarEl) avatarEl.src = friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.realName}`;
-        if(nameEl) nameEl.innerText = friend.remark || friend.realName;
-
-        // 2. 状态填入
-        const actionEl = document.getElementById('mind-action-val');
-        if(actionEl) actionEl.innerText = state.action;
-        
-        document.getElementById('mind-location-val').innerText = state.location;
-        document.getElementById('mind-weather-val').innerText = state.weather;
-
-        // 3. 碎碎念 (打字机)
-        typeWriterEffect(state.murmur, 'mind-murmur-text'); 
-
-        // 4. 小心思 (打字机)
-        setTimeout(() => {
-            typeWriterEffect(state.hiddenThought, 'mind-hidden-text');
-        }, 300);
-
-        // 5. 颜文字
-        document.getElementById('mind-kaomoji-display').innerText = state.kaomoji;
-
-        // --- 显示卡片 ---
-        card.classList.add('active');
+        return;
     }
+
+    if (!currentChatId || !friendsData[currentChatId]) return;
+
+    refreshMindCardUI(currentChatId, true);
+    card.classList.add('active');
 }
+
 
 
 /**
@@ -2232,10 +2540,15 @@ async function loadFriendsData() {
         }
 
         // 3. 应用数据
-        if (savedData) {
-            friendsData = savedData;
-            console.log("好友数据加载成功 (IndexedDB)");
-        } else {
+    if (savedData) {
+    friendsData = savedData;
+    normalizeAllFriendsMindFields();
+    normalizeAllFriendsSummaryFields();
+    saveFriendsData();
+    console.log("好友数据加载成功 (IndexedDB)");
+}
+
+ else {
             console.log("无好友数据，初始化默认...");
             resetDefaultFriendData();
         }
@@ -2558,19 +2871,10 @@ async function loadWorldBooks() {
         if(data && Array.isArray(data)) {
             worldBooks = data;
         } else {
-            // 初始化默认数据
-            worldBooks = [{
-                id: 'wb_' + Date.now(),
-                title: "示例：魔法世界",
-                category: "Magic",
-                global: true,
-                strategy: "depth",
-                entries: [
-                    { keys: "魔法, 魔力", content: "在这个世界中，魔法由以太构成，每个人出生都带有魔力属性。", comment: "基础设定", enabled: true }
-                ]
-            }];
-            saveWorldBooksData(); // 保存初始状态
-        }
+    // 初始化一个空的世界书列表
+    worldBooks = [];
+    saveWorldBooksData(); // 保存这个空状态
+}
 
         console.log(`世界书加载完毕，共 ${worldBooks.length} 本`);
         
@@ -2681,7 +2985,7 @@ function renderEntriesList() {
         item.className = 'wb-entry-item';
         item.innerHTML = `
             <div class="wb-entry-info">
-                <div class="wb-entry-keys">${entry.keys || '(No Keywords)'}</div>
+                <div class="wb-entry-keys">${entry.comment || '(No Comment)'}</div>
                 <div class="wb-entry-preview">${entry.content || '...'}</div>
             </div>
             <div style="font-size:12px; color:${entry.enabled ? '#07c160' : '#ccc'};">
@@ -3126,32 +3430,7 @@ window.deleteMoment = function(momentId) {
     renderMomentsFeed();
 };
 
-// 自己发表评论
-window.addMomentComment = function(momentId) {
-    const card = document.querySelector(`.moment-card[data-moment-id="${momentId}"]`);
-    if (!card) return;
-    const input = card.querySelector('.moment-comment-input');
-    if (!input) return;
-    const text = (input.value || '').trim();
-    if (!text) return;
 
-    const m = momentsFeed.find(x => x.id === momentId);
-    if (!m) return;
-    if (!m.comments) m.comments = [];
-
-    const comment = {
-        id: 'c_' + Date.now(),
-        authorId: 'ME',
-        authorName: '我',
-        text,
-        isAI: false,
-        time: Date.now
-    };
-    m.comments.push(comment);
-    input.value = '';
-    saveMomentsFeed();
-    renderMomentsFeed();
-};
 
 // 长按 / 右键编辑 AI 评论
 window.editMomentComment = function(momentId, commentId) {
@@ -3207,16 +3486,9 @@ async function saveMessageToHistory(chatId, msgData) {
         if (nameTag && nameTag.innerText.trim() === chatId) {
             const previewTag = item.querySelector('.wc-msg-preview');
                         if (previewTag) {
-                let previewText = msgData.text;
-                // === 拦截亲密付标签，让外面列表显示得干干净净 ===
-                if (previewText.startsWith('[INTIMATE_')) {
-                    previewText = '[亲密付消息]';
-                } else if (msgData.isOffline) {
-                    previewText = '[故事进展]';
-                } else if (previewText.length > 25) {
-                    previewText = previewText.substring(0, 25) + '...';
-                }
-                previewTag.innerText = previewText;
+                let previewText = formatChatPreviewText(msgData.text, !!msgData.isOffline);
+previewTag.innerText = previewText;
+
             }
 
             const timeTag = item.querySelector('.wc-time');
@@ -3224,19 +3496,24 @@ async function saveMessageToHistory(chatId, msgData) {
         }
     });
     
-    // === 【新增】自动总结触发逻辑 ===
-    const friend = friendsData[chatId];
-    if (friend && friend.summaryConfig) {
-        const config = friend.summaryConfig;
-        const turnCount = parseInt(config.turnCount, 10);
-        // 检查是否达到触发轮数 (一问一答算2轮)
-        if (turnCount > 0 && chatHistory.length > 0 && chatHistory.length % turnCount === 0) {
-            console.log(`达到 ${turnCount} 轮，触发自动总结...`);
-            // 截取最近的 turnCount 条记录
-            const recentMessages = chatHistory.slice(-turnCount);
-            generateAutoSummary(recentMessages);
-        }
+    // === 【修改后】自动总结触发逻辑 ===
+const friend = friendsData[chatId];
+if (friend) {
+    ensureFriendSummaryFields(friend);
+
+    const config = friend.summaryConfig || {};
+    const turnCount = parseInt(config.turnCount, 10) || 20;
+
+    if (turnCount > 0 && chatHistory.length >= turnCount && chatHistory.length % turnCount === 0) {
+        console.log(`达到 ${turnCount} 轮，触发自动总结...`);
+        const recentMessages = chatHistory.slice(-turnCount);
+        const startTurn = chatHistory.length - turnCount + 1;
+        const endTurn = chatHistory.length;
+
+        generateAutoSummary(chatId, recentMessages, startTurn, endTurn);
     }
+}
+
 }
 
 
@@ -3262,7 +3539,8 @@ function restoreFriendListUI() {
     // 2. 【保留】遍历所有好友数据，重新画出来
     Object.keys(friendsData).forEach(id => {
         const friend = friendsData[id];
-        const previewMsg = friend.lastMessage || getEffectiveGreeting(friend) || '点击开始聊天';
+        const previewMsg = formatChatPreviewText(friend.lastMessage || getEffectiveGreeting(friend));
+
         
         // 兼容你可能存在的旧头像数据
         const avatarUrl = friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.realName || id}`;
@@ -3365,6 +3643,80 @@ window.handleChatImage = function(input) {
     reader.readAsDataURL(file);
     input.value = '';
 }
+/* =========================================
+   [新增] 描述图片发送功能
+   ========================================= */
+
+window.openImageDescModal = function() {
+    const modal = document.getElementById('image-desc-modal');
+    const input = document.getElementById('image-desc-input');
+    const previewText = document.getElementById('image-desc-preview-text');
+
+    if (input) input.value = '';
+    if (previewText) previewText.innerText = '这里会显示你输入的描述内容';
+
+    if (modal) modal.classList.add('active');
+};
+
+window.closeImageDescModal = function() {
+    const modal = document.getElementById('image-desc-modal');
+    if (modal) modal.classList.remove('active');
+};
+
+window.syncImageDescPreview = function() {
+    const input = document.getElementById('image-desc-input');
+    const previewText = document.getElementById('image-desc-preview-text');
+    if (!input || !previewText) return;
+
+    const val = input.value.trim();
+    previewText.innerText = val || '这里会显示你输入的描述内容';
+};
+
+window.confirmSendImageDesc = async function() {
+    const input = document.getElementById('image-desc-input');
+    const desc = (input?.value || '').trim();
+
+    if (!desc) {
+        alert('请先输入图片描述');
+        return;
+    }
+
+    const rawText = `[IMG_DESC]${desc}`;
+
+    // 只上屏，不立刻触发AI
+    appendMessage(rawText, 'sent');
+
+    if (currentChatId) {
+        await saveMessageToHistory(currentChatId, {
+            text: rawText,
+            type: 'sent',
+            senderName: 'ME'
+        });
+    }
+
+    closeImageDescModal();
+
+    const panel = document.getElementById('chat-extra-panels');
+    if (panel) panel.classList.remove('open');
+};
+
+window.toggleFakeImageDesc = function(card) {
+    if (!card) return;
+
+    const descBox = card.querySelector('.fake-image-desc');
+    if (!descBox) return;
+
+    const encoded = card.getAttribute('data-desc') || '';
+    const currentText = decodeURIComponent(encoded);
+
+    card.classList.toggle('expanded');
+
+    if (card.classList.contains('expanded')) {
+        descBox.innerText = currentText;
+    } else {
+        descBox.innerText = '';
+    }
+};
 
 // --- 功能 B: 发送位置 ---
 window.sendLocation = function() {
@@ -3515,12 +3867,7 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
     // 3. 气泡容器 (保留原有逻辑)
     const contentWrapper = document.createElement('div');
     contentWrapper.className = 'message-content-wrapper';
-    if (type === 'received' && senderName) {
-        const nameLabel = document.createElement('div');
-        nameLabel.className = 'chat-sender-name';
-        nameLabel.innerText = senderName;
-        contentWrapper.appendChild(nameLabel);
-    }
+ 
 
     const bubble = document.createElement('div');
     bubble.className = `message-bubble ${type}`;
@@ -3560,6 +3907,27 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
         isRichContent = true;
         // 注意：这里不添加 rich-bubble 类名，让它保持普通气泡的底色和圆角
     } 
+        else if (text.startsWith('[IMG_DESC]')) {
+        bubble.classList.add('rich-bubble');
+        const desc = text.replace('[IMG_DESC]', '').trim();
+        const encodedDesc = encodeURIComponent(desc);
+
+        // 使用全新的雾灰飘雪结构
+        contentHtml = `
+            <div class="chat-fake-image-card" data-desc="${encodedDesc}" onclick="toggleFakeImageDesc(this)">
+                <div class="weather-snow-layer"></div>
+                
+                <div class="fake-image-content">
+                    <i class="far fa-image"></i>
+                    <span>点击查看照片</span>
+                </div>
+
+                <div class="fake-image-desc"></div>
+            </div>
+        `;
+        isRichContent = true;
+    }
+
         // === [韩系美化版] 实时解析亲密付 Tag，生成无缝卡片 ===
     else if (text.startsWith('[INTIMATE_')) {
         bubble.classList.add('rich-bubble');
@@ -5253,199 +5621,7 @@ window.handleCommentAdmin = function(e, momentId, commentId) {
         }
     }
 };
-/* =========================================
-   [NEW] Live App Logic (K-Style)
-   ========================================= */
 
-// 打开 App
-window.openLiveApp = function() {
-    const app = document.getElementById('liveApp');
-    if(app) {
-        app.classList.add('open');
-        renderKFeed(); // 生成推荐流
-    }
-}
-
-// 关闭 App
-window.closeLiveApp = function() {
-    document.getElementById('liveApp').classList.remove('open');
-}
-
-// 切换 Tab
-window.switchLiveTab = function(tabName, btnEl) {
-    document.querySelectorAll('.k-tab-content').forEach(el => el.style.display = 'none');
-    document.getElementById(`lv-tab-${tabName}`).style.display = 'block';
-
-    const dock = document.querySelector('.k-dock');
-    dock.querySelectorAll('.k-dock-item').forEach(el => el.classList.remove('active'));
-    
-    // 如果不是中间那个白色按钮，就高亮图标
-    if (!btnEl.querySelector('.k-btn-center')) {
-        btnEl.classList.add('active');
-    }
-}
-
-// 生成杂志风 Feed 流
-function renderKFeed() {
-    const container = document.getElementById('lv-feed-container');
-    if (!container || container.children.length > 0) return; 
-
-    // 这些标题和图片都要显得“冷淡”、“高级”
-    const data = [
-        { title: "SEOUL VIBE.", user: "Hannah", img: "1534528741775-53994a69daeb" },
-        { title: "NOISE / SILENCE", user: "AI_02", img: "1507679721516-fed88ce46ea2" },
-        { title: "MIDNIGHT.", user: "System", img: "1517841905240-472988babdf9" },
-        { title: "COFFEE RUN", user: "User99", img: "1497935586351-b67a49e012bf" },
-        { title: "STUDY W/ ME", user: "Bot_X", img: "1516321497487-e288fb19713f" },
-        { title: "CINEMA 4D", user: "Render", img: "1618005182384-a83a8bd57fbe" }
-    ];
-
-    data.forEach((item, index) => {
-        // 随机高度差异，但不要太夸张
-        const height = index % 2 === 0 ? '240px' : '180px';
-        
-        const card = document.createElement('div');
-        card.className = 'k-card';
-        card.innerHTML = `
-            <div style="position:relative;">
-                <div class="k-live-tag"><span class="k-blink-dot"></span>LIVE</div>
-                <img src="https://images.unsplash.com/photo-${item.img}?q=80&w=300&auto=format&fit=crop" 
-                     class="k-card-img" style="height: ${height}">
-            </div>
-            <div class="k-card-info">
-                <div class="k-card-title">${item.title}</div>
-                <div class="k-card-user">${item.user}</div>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-/* =========================================
-   [新增] 直播APP - 发布作品逻辑
-   ========================================= */
-
-// 存储作品的数组 (模拟数据库)
-let myLiveWorks = [
-    {
-        id: 'work_init_1',
-        img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=300&auto=format&fit=crop',
-        desc: 'Hello World! #Daily',
-        likes: 120,
-        comments: 45,
-        shares: 12
-    }
-];
-
-// 初始化：页面加载时渲染已有的作品
-document.addEventListener('DOMContentLoaded', () => {
-    renderLiveWorks();
-});
-
-// 1. 打开/关闭发布弹窗
-window.openLivePublishModal = function() {
-    // 重置表单
-    document.getElementById('live-preview-img').src = '';
-    document.getElementById('live-preview-img').style.display = 'none';
-    document.getElementById('live-upload-icon').style.display = 'block';
-    document.getElementById('live-desc').value = '';
-    document.getElementById('live-file-input').value = '';
-    
-    document.getElementById('livePublishModal').classList.add('show');
-}
-
-window.closeLivePublishModal = function() {
-    document.getElementById('livePublishModal').classList.remove('show');
-}
-
-// 2. 图片预览
-window.handleLiveFilePreview = function(input) {
-    const file = input.files[0];
-    if(file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = document.getElementById('live-preview-img');
-            img.src = e.target.result;
-            img.style.display = 'block';
-            document.getElementById('live-upload-icon').style.display = 'none';
-        }
-        reader.readAsDataURL(file);
-    }
-}
-
-// 3. 确认发布
-window.confirmPublishWork = function() {
-    const imgEl = document.getElementById('live-preview-img');
-    const desc = document.getElementById('live-desc').value;
-    const tag = document.getElementById('live-tag').value;
-    
-    // 简单校验
-    if (imgEl.style.display === 'none') {
-        alert("请先上传一张图片/视频封面！");
-        return;
-    }
-    
-    // 创建新作品对象
-    const newWork = {
-        id: 'work_' + Date.now(),
-        img: imgEl.src,
-        desc: desc + ' ' + tag,
-        likes: 0,
-        comments: 0,
-        shares: 0
-    };
-    
-    // 存入数组 (插到最前面)
-    myLiveWorks.unshift(newWork);
-    
-    // 重新渲染列表
-    renderLiveWorks();
-    
-    // 关闭弹窗并提示
-    closeLivePublishModal();
-    alert("发布成功！");
-}
-
-// 4. 渲染作品列表到个人主页
-function renderLiveWorks() {
-    const container = document.getElementById('k-my-works-grid');
-    if (!container) return;
-    
-    container.innerHTML = ''; // 清空
-    
-    myLiveWorks.forEach(work => {
-        const item = document.createElement('div');
-        item.className = 'k-work-item';
-        item.onclick = () => openWorkDetail(work.id);
-        
-        item.innerHTML = `
-            <img src="${work.img}">
-            <div class="k-work-stats">
-                <i class="far fa-heart"></i> ${work.likes}
-            </div>
-        `;
-        container.appendChild(item);
-    });
-}
-
-// 5. 打开作品详情页
-window.openWorkDetail = function(workId) {
-    const work = myLiveWorks.find(w => w.id === workId);
-    if (!work) return;
-    
-    // 填充数据
-    document.getElementById('work-detail-img').src = work.img;
-    document.getElementById('work-detail-likes').innerText = work.likes;
-    document.getElementById('work-detail-comments').innerText = work.comments;
-    document.getElementById('work-detail-shares').innerText = work.shares;
-    document.getElementById('work-detail-desc').innerText = work.desc;
-    
-    // 显示弹窗
-    document.getElementById('liveWorkDetailModal').classList.add('show');
-}
-
-window.closeWorkDetailModal = function() {
-    document.getElementById('liveWorkDetailModal').classList.remove('show');
-}
 
 /* =========================================
    [新增] Page 4 电子小票逻辑
@@ -5575,26 +5751,42 @@ ${mesExample}
    // ... 在 importTavernCard 函数内部 ...
 
     friendsData[finalId] = {
-        realName: charName,
-        remark: charName,
-        persona: fullPersona,
-        worldbook: linkedWorldBookIds,
-        greetingList: greetingList, // <--- 关键：新增这一行，把解析好的列表存进去
-        greetingSelected: 0,
-        tavernGreeting: firstMes || '',
-        greetingMode: (greetingList.length ? 'tavern' : 'custom'),
-        greetingCustom: '',
-        greeting: firstMes || '',
-        avatar: finalAvatar,
-        chatSettings: {
-
-            memoryLimit: 20,
-            translationMode: 'off',
-            targetOutputLang: '',
-            inactivityEnabled: false,
-            statusRegexEnabled: false
-        }
-    };
+    realName: charName,
+    remark: charName,
+    persona: fullPersona,
+    worldbook: linkedWorldBookIds,
+    greetingList: greetingList,
+    greetingSelected: 0,
+    tavernGreeting: firstMes || '',
+    greetingMode: (greetingList.length ? 'tavern' : 'custom'),
+    greetingCustom: '',
+    greeting: firstMes || '',
+    avatar: finalAvatar,
+    affection: 0,
+    mindState: {
+        action: "正在整理刚导入的人设",
+        location: "角色初始化空间",
+        weather: "晴",
+        murmur: "新的人设已经套上来了。我在适应你的世界，也在确认要怎么和你开口。",
+        hiddenThought: "先不把真正的心思露出来。看看你会把我带进怎样的剧情里。",
+        kaomoji: "( ˙W˙ )",
+        bgm: "No BGM"
+    },
+    chatSettings: {
+        memoryLimit: 20,
+        translationMode: 'off',
+        targetOutputLang: '',
+        inactivityEnabled: false,
+        statusRegexEnabled: false
+    },
+    summaryConfig: {
+        turnCount: 20,
+        wordCount: 200,
+        prompt: ''
+    },
+    summaries: [],
+    relationshipLog: []
+};
 
     // 5. 保存并刷新
     saveFriendsData();
@@ -7071,58 +7263,65 @@ window.sendOfflineMessage = async function(isRegen = false) {
         `${h.type==='sent'?'User':friend.realName}: ${h.isOffline?h.text:'(Online Memory: '+h.text+')'}`
     ).join('\n');
 
-    const limit = parseInt(offlineConfig.maxLength) || 200;
-    
-    let systemPrompt = `
-    [IMPORTANT SYSTEM INSTRUCTION]
-    Response Length Constraint: strictly aim for approximately ${limit} words.
-    
-    [🛑 SYSTEM: VISUAL FORMATTING RULES (HIGHEST PRIORITY)]
-    1. **MANDATORY PARAGRAPHING**: Use double line breaks (\\n\\n) to separate Dialogue, Actions, and Narration. Max 3-4 lines per paragraph.
-    2. **TYPOGRAPHY**: Wrap ALL actions/narration in *asterisks*. Wrap ALL spoken dialogue in 「brackets」 or "quotes".
+const limit = parseInt(offlineConfig.maxLength) || 200;
+const currentAffection = Number(friend.affection || 0);
+const affectionStage = getAffectionStage(currentAffection);
 
-       [🛑 CORE ROLEPLAY PROTOCOLS]
-    1. **NO USER PLAY**: You represent [${friend.realName}]. NEVER describe the User's actions, thoughts, or speech.
-    2. **PROACTIVE AGENT**: Drive the plot forward proactively. Do not overdo environmental or psychological descriptions. Keep dialogue moderate, and focus on actions and interactions that advance the story (环境、心理等描写不要过多，对话数量也要适中，多通过具体的动作和互动来主动推进剧情).
+let systemPrompt = `
+[IMPORTANT SYSTEM INSTRUCTION]
+Response Length Constraint: strictly aim for approximately ${limit} words.
 
-    [👤 CHARACTER DATA] Name: ${friend.realName} | Persona: ${friend.persona}
-    ${friend.worldbook ? `[🌍 WORLD DATA] Setting: ${friend.worldbook}` : ''}
-    ${preset.jailbreak || ''}
-    
-    [📦 REQUIRED OUTPUT FORMAT]
-    Structure your reply as a novel segment. At the very END, append blocks based on user toggles:
-    
-    [DANMAKU_START]
-    (Generate 5-8 funny netizen comments. STRICTLY PROHIBITED: No misogynistic or derogatory words towards women / 绝对禁止生成辱女类脏话)
-    [DANMAKU_END]
+[🛑 SYSTEM: VISUAL FORMATTING RULES (HIGHEST PRIORITY)]
+1. Use double line breaks (\\n\\n) to separate Dialogue, Actions, and Narration.
+2. Wrap actions/narration in *asterisks*. Wrap spoken dialogue in 「brackets」 or "quotes".
 
-    
-    [STATUS_START]
-    Action: (Current action)
-    Location: (Current location)
-    Weather: (Current weather)
-    Murmur: (Character's inner thought)
-    Secret: (Hidden feeling/secret)
-    Kaomoji: (Face emoji)
-    [STATUS_END]
-    `;
+[🛑 CORE ROLEPLAY PROTOCOLS]
+1. You represent [${friend.realName}]. Never describe the User's inner thoughts.
+2. Drive the plot forward proactively.
 
-    // ★ 核心注入：如果开启了选项开关，命令 AI 生成【用户】的选项 ★
-    if (isOfflineOptionsOn) {
-        systemPrompt += `
-    [OPTIONS_INSTRUCTION]
-    Because the user has enabled the "Options" feature, you MUST generate 3 distinct actions **that the USER (the player) can perform next.**
-    - These are the PLAYER'S choices.
-    - Write them from the USER'S perspective (e.g., "Gently hold her hand", "Remain silent and observe", "Turn around and leave").
-    - CRITICAL: Describe ONLY the action itself. DO NOT describe the outcome or the AI character's reaction to the action.
-    - Format them exactly as follows at the very end of your response:
-    [OPTIONS_START]
-    1. (Action 1 for the user)
-    2. (Action 2 for the user)
-    3. (Action 3 for the user)
-    [OPTIONS_END]
-        `;
-    }
+[👤 CHARACTER DATA]
+Name: ${friend.realName}
+Persona: ${friend.persona}
+${friend.worldbook ? `[🌍 WORLD DATA] Setting: ${friend.worldbook}` : ''}
+${preset.jailbreak || ''}
+
+[RELATIONSHIP STATE]
+Current affection toward the user: ${currentAffection}/100
+Current relationship stage: ${affectionStage}
+This turn can only change affection by an integer from -2 to 2.
+
+[📦 REQUIRED OUTPUT FORMAT]
+At the very end, append:
+
+[DANMAKU_START]
+(Generate 5-8 funny netizen comments in Simplified Chinese. No misogynistic or derogatory slurs.)
+[DANMAKU_END]
+
+[STATUS_START]
+AffectionDelta: (integer only, from -2 to 2)
+Action: (current action)
+Location: (current location)
+Weather: (current weather)
+BGM: (one fitting bgm title, format: Title - Artist/Style)
+Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
+Secret: (3 to 4 longer sentences, first-person self-talk, hidden deeper thoughts, in character voice)
+Kaomoji: (matching face)
+[STATUS_END]
+`;
+
+if (isOfflineOptionsOn) {
+    systemPrompt += `
+[OPTIONS_INSTRUCTION]
+Because the user has enabled the "Options" feature, you MUST generate 3 distinct actions that the USER can perform next.
+Write them from the USER'S perspective.
+Format:
+[OPTIONS_START]
+1. (Action 1)
+2. (Action 2)
+3. (Action 3)
+[OPTIONS_END]
+`;
+}
 
     try {
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
@@ -7280,24 +7479,9 @@ window.sendOfflineMessage = async function(isRegen = false) {
 
 // [辅助函数] 从文本更新状态
 function updateMindStateFromText(statusBlock, charId) {
-    const getVal = (key) => {
-        const reg = new RegExp(key + "[:：]\\s*(.*)", "i");
-        const m = statusBlock.match(reg);
-        return m ? m[1].trim() : null;
-    };
-    
-    if (friendsData[charId]) {
-        friendsData[charId].mindState = {
-            action: getVal("Action") || "...",
-            location: getVal("Location") || "...",
-            weather: getVal("Weather") || "...",
-            murmur: getVal("Murmur") || "...",
-            hiddenThought: getVal("Secret") || "...",
-            kaomoji: getVal("Kaomoji") || "( ˙W˙ )"
-        };
-        saveFriendsData();
-    }
+    parseAndApplyMindStateBlock(charId, statusBlock);
 }
+
 
 // 6. 数据管理辅助函数
 async function deleteOfflineMessage(msgId) {
@@ -7440,57 +7624,13 @@ window.createNewPreset = function() {
     openPresetEditor(null);
 }
 
-window.openPresetEditor = function(id) {
-    currentEditingPresetId = id;
-    const editor = document.getElementById('preset-editor');
-    
-    if (id) {
-        const p = tavernPresets.find(x => x.id === id);
-        document.getElementById('pe-name').value = p.name;
-        document.getElementById('pe-sys-prompt').value = p.systemPrompt;
-        document.getElementById('pe-regex').value = p.regex;
-        document.getElementById('pe-jailbreak').value = p.jailbreak || '';
-    } else {
-        // 新建
-        document.getElementById('pe-name').value = 'New Preset';
-        document.getElementById('pe-sys-prompt').value = '';
-        document.getElementById('pe-regex').value = '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
-        document.getElementById('pe-jailbreak').value = '';
-    }
-    
-    editor.classList.add('show');
-}
+
 
 window.closePresetEditor = function() {
     document.getElementById('preset-editor').classList.remove('show');
 }
 
-window.savePresetEditor = function() {
-    const name = document.getElementById('pe-name').value;
-    const sys = document.getElementById('pe-sys-prompt').value;
-    const reg = document.getElementById('pe-regex').value;
-    const jail = document.getElementById('pe-jailbreak').value;
-    
-    if(!name) return alert('Name required');
 
-    if (currentEditingPresetId) {
-        const p = tavernPresets.find(x => x.id === currentEditingPresetId);
-        p.name = name; p.systemPrompt = sys; p.regex = reg; p.jailbreak = jail;
-    } else {
-        const newP = {
-            id: 'pre_' + Date.now(),
-            name: name,
-            systemPrompt: sys,
-            regex: reg,
-            jailbreak: jail
-        };
-        tavernPresets.push(newP);
-    }
-    
-    localStorage.setItem(PRESETS_DATA_KEY, JSON.stringify(tavernPresets));
-    renderPresetsList();
-    closePresetEditor();
-}
 
 window.deleteCurrentPreset = function() {
     if(!currentEditingPresetId) return;
@@ -7649,7 +7789,6 @@ window.addRegexScriptItem = function() {
 }
 
 // 修改 openPresetEditor 以支持正则列表渲染
-const originalOpenPreset = window.openPresetEditor;
 window.openPresetEditor = function(id) {
     originalOpenPreset(id);
     
@@ -7662,7 +7801,6 @@ window.openPresetEditor = function(id) {
 }
 
 // 修改 savePresetEditor 以保存正则列表
-const originalSavePreset = window.savePresetEditor;
 window.savePresetEditor = function() {
     // 1. 收集正则脚本数据
     const scriptEls = document.querySelectorAll('.regex-script-item');
@@ -8351,7 +8489,7 @@ window.closeSummaryPage = function() {
 async function renderSummaryUI() {
     const friend = friendsData[currentChatId];
     if (!friend) return;
-
+ensureFriendSummaryFields(friend);
     // --- A. 渲染设置数据 ---
     const config = friend.summaryConfig || { turnCount: 20, wordCount: 200, prompt: '' };
     document.getElementById('summary-turn-count').value = config.turnCount;
@@ -8408,21 +8546,23 @@ async function renderSummaryUI() {
     }
 }
 
-// 辅助函数：创建加宽的、带轮数标记的可编辑项
+// 辅助函数：创建高定版的可编辑项
 function createEditableItem(index, text, type, startTurn = null, endTurn = null) {
     const item = document.createElement('div');
-    item.className = 'summary-item';
+    item.className = 'sk-memory-item'; 
     
-    // 如果是剧情总结，显示一下它是哪一轮到哪一轮的
     let badgeHtml = '';
     if (type === 'summary' && startTurn !== null && endTurn !== null) {
-        badgeHtml = `<div style="font-size:10px; color:#fff; background:#2b2b2b; padding:2px 6px; border-radius:4px; position:absolute; top:-8px; left:10px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">T ${startTurn} - ${endTurn}</div>`;
+        let label = startTurn === "All" ? "宏观大串联" : `Turn ${startTurn} - ${endTurn}`;
+        badgeHtml = `<div class="sk-memory-badge">${label}</div>`;
+    } else if (type === 'relationship') {
+        badgeHtml = `<div class="sk-memory-badge" style="background:#ff7e67;">重大事件</div>`;
     }
 
     item.innerHTML = `
         ${badgeHtml}
-        <textarea class="summary-item-text" spellcheck="false">${text}</textarea>
-        <div class="summary-item-actions">
+        <textarea class="sk-memory-textarea" spellcheck="false">${text}</textarea>
+        <div class="sk-memory-actions">
             <i class="fas fa-save" title="保存修改" onclick="saveItem(${index}, '${type}', this)"></i>
             <i class="fas fa-trash" title="删除" onclick="deleteItem(${index}, '${type}', this)"></i>
         </div>
@@ -8433,7 +8573,8 @@ function createEditableItem(index, text, type, startTurn = null, endTurn = null)
 // 3. 各种保存/添加/删除 操作
 window.saveSummaryConfig = function() {
     if (!friendsData[currentChatId]) friendsData[currentChatId] = {};
-    if (!friendsData[currentChatId].summaryConfig) friendsData[currentChatId].summaryConfig = {};
+ensureFriendSummaryFields(friendsData[currentChatId]);
+
 
     friendsData[currentChatId].summaryConfig.turnCount = document.getElementById('summary-turn-count').value;
     friendsData[currentChatId].summaryConfig.wordCount = document.getElementById('summary-word-count').value;
@@ -8444,8 +8585,9 @@ window.saveSummaryConfig = function() {
 
 window.saveItem = function(index, type, buttonEl) {
     const friend = friendsData[currentChatId];
-    const itemEl = buttonEl.closest('.summary-item');
-    const newText = itemEl.querySelector('.summary-item-text').value;
+    // 这里因为 HTML 类名变了，所以匹配的类名也要改成新的
+    const itemEl = buttonEl.closest('.sk-memory-item');
+    const newText = itemEl.querySelector('.sk-memory-textarea').value;
 
     if (type === 'summary' && friend.summaries[index]) {
         friend.summaries[index].text = newText;
@@ -8540,7 +8682,8 @@ window.generateManualSummary = async function() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提取中...';
     btn.style.pointerEvents = 'none';
 
-    await executeSummaryProcess(messagesToSummarize, start, end);
+    await executeSummaryProcess(currentChatId, messagesToSummarize, start, end);
+
 
     btn.innerHTML = '<i class="fas fa-crosshairs"></i> 提取指定区间';
     btn.style.pointerEvents = 'auto';
@@ -8566,57 +8709,62 @@ window.generateSummarySinceLast = async function() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在浓缩记忆...';
     btn.style.pointerEvents = 'none';
 
-    await executeSummaryProcess(messagesToSummarize, start, end);
+    await executeSummaryProcess(currentChatId, messagesToSummarize, start, end);
+
 
     btn.innerHTML = '<i class="fas fa-bolt"></i> 一键总结最新未总结部分';
     btn.style.pointerEvents = 'auto';
 }
 
 // C. 后台自动触发总结 (修改为带有轮数标记)
-window.generateAutoSummary = async function(messagesToSummarize) {
-    const history = await loadChatHistory(currentChatId);
-    const end = history.length;
-    const start = end - messagesToSummarize.length + 1;
-    
-    // 静默执行，不更新按钮状态
-    await executeSummaryProcess(messagesToSummarize, start, end);
+window.generateAutoSummary = async function(chatId, messagesToSummarize, startTurn = null, endTurn = null) {
+    if (!chatId || !Array.isArray(messagesToSummarize) || messagesToSummarize.length === 0) return;
+
+    const history = await loadChatHistory(chatId);
+    const end = endTurn || history.length;
+    const start = startTurn || (end - messagesToSummarize.length + 1);
+
+    await executeSummaryProcess(chatId, messagesToSummarize, start, end);
 }
 
+
 // 核心执行逻辑 (组装文本、发送请求、保存)
-async function executeSummaryProcess(messagesArr, startTurn, endTurn) {
-    const friend = friendsData[currentChatId];
+async function executeSummaryProcess(chatId, messagesArr, startTurn, endTurn) {
+    const friend = friendsData[chatId];
+    if (!friend) return;
+
+    ensureFriendSummaryFields(friend);
+
     const config = friend.summaryConfig || {};
     const basePrompt = config.prompt || `请以角色 ${friend.realName} 的第一人称视角，用简练的日记体总结这段时间内发生的事情。`;
     const wordCount = config.wordCount || 200;
-    
-    // 将提取出的对象数组转为可读文本
+
     const contentToSummarize = messagesArr.map(m => {
         let text = m.text;
-        if(m.isOffline) { text = `(剧情/动作: ${text})`; }
+        if (m.isOffline) text = `(剧情/动作: ${text})`;
         return `${m.senderName === 'ME' ? '我(User)' : m.senderName}: ${text}`;
     }).join('\n');
 
     const finalPrompt = `${basePrompt}\n要求字数控制在 ${wordCount} 字左右。\n请直接输出总结正文，不要加引号或解释。\n\n[需要总结的历史记录如下]：\n${contentToSummarize}`;
 
     const summaryText = await callAiForSpecialTask(finalPrompt);
-    
+
     if (summaryText) {
-        if (!friend.summaries) friend.summaries = [];
-        // 推入带轮数标记的对象
-        friend.summaries.push({ 
-            text: summaryText, 
+        friend.summaries.push({
+            text: summaryText,
             timestamp: Date.now(),
             startTurn: startTurn,
             endTurn: endTurn
         });
+
         await saveFriendsData();
-        
-        // 如果用户正好停留在总结页面，立刻刷新看到最新结果
-        if (document.getElementById('summaryPageView').classList.contains('show')) {
+
+        if (document.getElementById('summaryPageView').classList.contains('show') && currentChatId === chatId) {
             renderSummaryUI();
         }
     }
 }
+
 
 // 5. 大融合总结 (宏观上帝视角)
 window.generateGrandSummary = async function() {
@@ -8882,83 +9030,94 @@ window.openPaySubPage = function(pageId) {
 // ==========================================
 // [新增架构] 统一的高级定制弹窗系统 (替代 native alert/prompt)
 // ==========================================
-function showKAlert(desc, callback = null) {
-    const overlay = document.getElementById('k-dialog-overlay');
-    document.getElementById('k-dialog-title').innerText = "提示";
-    document.getElementById('k-dialog-desc').innerHTML = desc; // 支持HTML换行
-    document.getElementById('k-dialog-input').style.display = 'none';
-    document.getElementById('k-dialog-cancel').style.display = 'none'; // 警告框只有确定
-    
-    const confirmBtn = document.getElementById('k-dialog-confirm');
-    
-    // 清理旧事件
-    const newBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
-    
-    newBtn.onclick = () => {
-        overlay.classList.remove('active');
-        if(callback) callback();
+function getKDialogElements() {
+    return {
+        overlay: document.getElementById('k-dialog-overlay'),
+        title: document.getElementById('k-dialog-title'),
+        desc: document.getElementById('k-dialog-desc'),
+        input: document.getElementById('k-dialog-input'),
+        confirmBtn: document.getElementById('k-dialog-confirm'),
+        cancelBtn: document.getElementById('k-dialog-cancel')
     };
-    overlay.classList.add('active');
 }
 
-function showKPrompt(title, desc, placeholder, callback) {
-    const overlay = document.getElementById('k-dialog-overlay');
-    document.getElementById('k-dialog-title').innerText = title;
-    document.getElementById('k-dialog-desc').innerHTML = desc;
-    
-    const input = document.getElementById('k-dialog-input');
-    input.style.display = 'block';
-    input.placeholder = placeholder;
-    input.value = ''; // 清空
-    
-    document.getElementById('k-dialog-cancel').style.display = 'block';
-    
-    const confirmBtn = document.getElementById('k-dialog-confirm');
-    const cancelBtn = document.getElementById('k-dialog-cancel');
-    
-    // 清理旧事件
-    const newConfirm = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
-    const newCancel = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-    
-    newCancel.onclick = () => overlay.classList.remove('active');
-    newConfirm.onclick = () => {
-        overlay.classList.remove('active');
-        if(callback) callback(input.value);
-    };
-    
-    overlay.classList.add('active');
-    setTimeout(() => input.focus(), 300);
+function resetKDialogButton(button) {
+    const newButton = button.cloneNode(true);
+    button.parentNode.replaceChild(newButton, button);
+    return newButton;
 }
-// === 新增：高级定制版 Confirm 确认弹窗 ===
-window.showKConfirm = function(title, desc, onConfirm, onCancel) {
-    const overlay = document.getElementById('k-dialog-overlay');
-    document.getElementById('k-dialog-title').innerText = title;
-    document.getElementById('k-dialog-desc').innerHTML = desc;
-    document.getElementById('k-dialog-input').style.display = 'none'; // 隐藏输入框
-    document.getElementById('k-dialog-cancel').style.display = 'block'; // 显示取消按钮
-    
-    const confirmBtn = document.getElementById('k-dialog-confirm');
-    const cancelBtn = document.getElementById('k-dialog-cancel');
-    
-    // 清理旧事件
-    const newConfirm = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
-    const newCancel = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-    
+
+function openKDialog({
+    title = "提示",
+    desc = "",
+    showInput = false,
+    placeholder = "",
+    showCancel = false,
+    focusInput = false,
+    onConfirm = null,
+    onCancel = null
+} = {}) {
+    const { overlay, title: titleEl, desc: descEl, input, confirmBtn, cancelBtn } = getKDialogElements();
+
+    titleEl.innerText = title;
+    descEl.innerHTML = desc;
+    input.style.display = showInput ? 'block' : 'none';
+    input.value = '';
+    input.placeholder = placeholder;
+    cancelBtn.style.display = showCancel ? 'block' : 'none';
+
+    const newConfirm = resetKDialogButton(confirmBtn);
+    const newCancel = resetKDialogButton(cancelBtn);
+
     newCancel.onclick = () => {
         overlay.classList.remove('active');
         if(onCancel) onCancel();
     };
+
     newConfirm.onclick = () => {
+        const value = input.value;
         overlay.classList.remove('active');
-        if(onConfirm) onConfirm();
+        if(onConfirm) onConfirm(value);
     };
-    
+
     overlay.classList.add('active');
+
+    if (showInput && focusInput) {
+        setTimeout(() => input.focus(), 300);
+    }
+}
+
+function showKAlert(desc, callback = null) {
+    openKDialog({
+        desc,
+        onConfirm: () => {
+            if(callback) callback();
+        }
+    });
+}
+
+function showKPrompt(title, desc, placeholder, callback) {
+    openKDialog({
+        title,
+        desc,
+        showInput: true,
+        placeholder,
+        showCancel: true,
+        focusInput: true,
+        onConfirm: (value) => {
+            if(callback) callback(value);
+        }
+    });
+}
+// === 新增：高级定制版 Confirm 确认弹窗 ===
+window.showKConfirm = function(title, desc, onConfirm, onCancel) {
+    openKDialog({
+        title,
+        desc,
+        showCancel: true,
+        onConfirm,
+        onCancel
+    });
 }
 
 
@@ -11688,6 +11847,12 @@ let ls2PendingAiId = null;      // 正在邀请的对象
 let fridgeTimerInterval = null; // 冰箱倒计时刷新
 
 // ===== 小工具：兼容你有/没有 showKPrompt 的情况 =====
+function stripDialogHtml(html = '') {
+  return String(html)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, '');
+}
+
 function ls2Prompt(title, desc, placeholder = '', cb) {
   if (typeof showKPrompt === 'function') return showKPrompt(title, desc, placeholder, cb);
   const v = prompt(`${title}\n${desc}`, placeholder);
@@ -11695,12 +11860,12 @@ function ls2Prompt(title, desc, placeholder = '', cb) {
 }
 function ls2Alert(html, cb) {
   if (typeof showKAlert === 'function') return showKAlert(html, cb);
-  alert(html.replace(/<br>/g, '\n').replace(/<[^>]*>/g, ''));
+  alert(stripDialogHtml(html));
   if (cb) cb();
 }
 function ls2Confirm(title, desc, onOk, onCancel) {
   if (typeof showKConfirm === 'function') return showKConfirm(title, desc, onOk, onCancel);
-  if (confirm(`${title}\n\n${desc.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')}`)) onOk();
+  if (confirm(`${title}\n\n${stripDialogHtml(desc)}`)) onOk();
   else if (onCancel) onCancel();
 }
 
@@ -15042,10 +15207,6 @@ window.g11_reset = function() {
   g11dRenderChips('ai');
 };
 
-// 新增全局浮动文字函数
-function spawnFloatingText(L, x, y, text, color) {
-    L.texts.push({x, y, text, color, life: 50, maxLife: 50});
-}
 // --- 浮动文字特效工具 ---
 function spawnFloatingText(L, x, y, text, color) {
     L.texts.push({x, y, text, color, life: 50, maxLife: 50});
@@ -15116,14 +15277,6 @@ function g11dLoop() {
     g11dAnim = requestAnimationFrame(g11dLoop);
   }
 }
-// ↑↑↑ 补到这里 ↑↑↑
-
-window.g11d_holdStart = function() {
-  if (!g11dState?.running || g11dState.me.dead) return;
-  g11dState.me.hold = true; 
-};
-
-
 
 window.g11d_holdStart = function() {
   if (!g11dState?.running || g11dState.me.dead) return;
@@ -15664,4 +15817,974 @@ async function g7_triggerAiTurn() {
     // 恢复按钮
     tryBtn.innerHTML = `让 <span id="g7-ai-partner-name">${ai.remark || ai.realName}</span> 再试一次`;
     tryBtn.disabled = false;
+}
+/* =========================================
+   [全新] 地图 APP (韩系黑白灰艺术风格) - 修复版
+   ========================================= */
+
+// --- 1. 全局变量与数据结构 ---
+const MAPS_DATA_KEY = 'myCoolPhone_mapsData';
+let mapsData = {}; // 所有地图的数据 { mapId: { name, locations: [...] } }
+let currentMapId = null; // 当前正在查看的地图 ID
+let currentEditingLocationId = null; // 正在编辑的地点 ID
+
+// --- 2. App 入口与主流程控制 ---
+window.openMapApp = function() {
+    const app = document.getElementById('mapApp');
+    if (app) {
+        app.classList.add('open');
+        loadMapsData(); 
+        const mapIds = Object.keys(mapsData);
+        if (mapIds.length > 0) {
+            switchMapView(mapIds[0]);
+        } else {
+            openMapSetup(true); // 传入 true 表示是新建
+        }
+        renderMapList(); 
+    }
+};
+
+window.closeMapApp = function() {
+    const app = document.getElementById('mapApp');
+    if (app) {
+        app.classList.remove('open');
+    }
+};
+
+function loadMapsData() {
+    const raw = localStorage.getItem(MAPS_DATA_KEY);
+    mapsData = raw ? JSON.parse(raw) : {};
+}
+
+function saveMapsData() {
+    localStorage.setItem(MAPS_DATA_KEY, JSON.stringify(mapsData));
+}
+
+function switchMapView(mapId) {
+    currentMapId = mapId;
+    renderMapView();
+    toggleMapSidebar(false); 
+}
+
+// --- 3. 侧边栏与地图列表 ---
+window.toggleMapSidebar = function(forceOpen) {
+    const sidebar = document.getElementById('map-sidebar');
+    if (forceOpen === true) {
+        sidebar.classList.add('open');
+    } else if (forceOpen === false) {
+        sidebar.classList.remove('open');
+    } else {
+        sidebar.classList.toggle('open');
+    }
+};
+
+function renderMapList() {
+    const container = document.getElementById('map-list-container');
+    container.innerHTML = '';
+    Object.keys(mapsData).forEach(id => {
+        const map = mapsData[id];
+        const item = document.createElement('div');
+        item.className = 'sidebar-btn map-list-item';
+        if (id === currentMapId) {
+            item.classList.add('active');
+        }
+        item.innerHTML = `<i class="fas fa-map"></i> ${map.name}`;
+        item.onclick = () => switchMapView(id);
+        container.appendChild(item);
+    });
+}
+
+window.deleteCurrentMap = function() {
+    if (!currentMapId || !mapsData[currentMapId]) {
+        alert("没有可删除的地图。");
+        return;
+    }
+    if (confirm(`确定要删除地图「${mapsData[currentMapId].name}」吗？`)) {
+        delete mapsData[currentMapId];
+        saveMapsData();
+        currentMapId = null;
+        closeMapApp();
+    }
+}
+
+// --- 4. 地图生成设置 ---
+
+// 【已补回】这个函数在上次修改中被意外删除了
+function populateChecklist(containerId, items, selectedIds = []) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (!items || items.length === 0) {
+        container.innerHTML = '<div style="font-size:12px; color:#aaa; padding:10px;">无可用选项</div>';
+        return;
+    }
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'checklist-item';
+        div.innerHTML = `
+            <input type="checkbox" value="${item.id}" ${selectedIds.includes(item.id) ? 'checked' : ''}>
+            ${item.avatar ? `<img src="${item.avatar}" class="checklist-avatar">` : ''}
+            <span class="checklist-name">${item.name}</span>
+        `;
+        container.appendChild(div);
+    });
+}
+
+window.openMapSetup = function(isNew = false) {
+    const setupView = document.getElementById('map-setup-view');
+    const mainView = document.getElementById('map-main-view');
+    mainView.style.display = 'none';
+    setupView.style.display = 'flex';
+
+    document.getElementById('map-setup-name').value = isNew ? '' : (mapsData[currentMapId]?.name || '');
+    document.getElementById('map-setup-loc-count').value = '5';
+
+    // 现在 populateChecklist 函数存在了，可以正常调用
+    populateChecklist('map-setup-worldbooks', worldBooks.map(wb => ({ id: wb.id, name: wb.title })));
+    populateChecklist('map-setup-characters', Object.values(friendsData).map(f => ({ id: f.realName, name: f.remark || f.realName, avatar: f.avatar })));
+};
+
+window.closeMapSetup = function() {
+    const setupView = document.getElementById('map-setup-view');
+    const mainView = document.getElementById('map-main-view');
+    
+    // 【核心修复】如果当前没有任何地图数据，用户又取消了生成地图，则直接退出地图App
+    if (Object.keys(mapsData).length === 0) {
+        closeMapApp();
+        // 恢复默认视图显示状态，以便下次打开不出错
+        setupView.style.display = 'none';
+        mainView.style.display = 'flex';
+        return;
+    }
+
+    setupView.style.display = 'none';
+    mainView.style.display = 'flex';
+};
+
+
+window.confirmGenerateMap = async function() {
+    const mapName = document.getElementById('map-setup-name').value.trim() || "未命名地图";
+    const locCount = parseInt(document.getElementById('map-setup-loc-count').value) || 5;
+
+    const headerAction = document.querySelector('#map-setup-view .header-action');
+    headerAction.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    headerAction.style.pointerEvents = 'none';
+
+    try {
+        // --- 1. 获取上下文信息 ---
+        const selectedWbCheckboxes = document.querySelectorAll('#map-setup-worldbooks input:checked');
+        const selectedCharCheckboxes = document.querySelectorAll('#map-setup-characters input:checked');
+
+        const worldbookContents = Array.from(selectedWbCheckboxes).map(cb => {
+            const wb = worldBooks.find(w => w.id === cb.value);
+            if (!wb) return '';
+            const entriesText = (wb.entries || [])
+                .filter(entry => entry.enabled !== false)
+                .map(entry => `关键词: ${entry.keys}\n设定: ${entry.content}`)
+                .join('\n\n');
+            return `【世界书: ${wb.title}】\n${entriesText}`;
+        }).filter(Boolean).join('\n\n---\n\n');
+
+        const characterPersonas = Array.from(selectedCharCheckboxes).map(cb => {
+            const charRealName = cb.value;
+            const characterId = Object.keys(friendsData).find(id => friendsData[id].realName === charRealName);
+            const char = characterId ? friendsData[characterId] : null;
+            if (!char) return '';
+            return `【角色: ${char.remark || char.realName}】\n人设: ${char.persona}`;
+        }).filter(Boolean).join('\n\n---\n\n');
+
+        // --- 2. 构建 Prompt ---
+        const systemPrompt = `You are an expert world-building assistant. You MUST respond in a valid JSON array format, and nothing else.`;
+        const userPrompt = `
+        Please generate ${locCount} significant locations for a map named "${mapName}".
+
+        **Rules:**
+        1.  Locations must be "macro" (e.g., districts, universities, landmarks), not "micro" (e.g., a specific bench).
+        2.  The 'name' and 'desc' fields MUST be in Chinese.
+        3.  The 'reason' field should explain the inspiration.
+        4.  Use the provided context for inspiration. If no context, be creative.
+
+        **Context:**
+        [World-building Info]
+        ${worldbookContents || "No specific world-building info provided."}
+
+        [Character Info]
+        ${characterPersonas || "No specific character info provided."}
+
+        **Return ONLY a JSON array, like this example:**
+        [
+          {
+            "name": "第七大道商业区",
+            "desc": "城市最繁华的商业街，以其巨大的全息广告牌和奢侈品店而闻名。",
+            "reason": "为角色'赛博黑客'提供一个执行任务或消费的典型场景。"
+          }
+        ]
+        `.trim();
+
+        // --- 3. 独立 API 调用 ---
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        if (!settings.apiKey || !settings.model) {
+            throw new Error("请先在“API设置”中配置好 Key 和模型。");
+        }
+        
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+        const payload = {
+            model: settings.model,
+            messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+            temperature: 0.7 
+        };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`API 请求失败: HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const result = data.choices?.[0]?.message?.content;
+
+        if (!result) {
+            console.error("API 返回了空内容, 原始数据:", data);
+            throw new Error("AI 未能返回任何内容。");
+        }
+
+        const cleanResult = result.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const locations = JSON.parse(cleanResult);
+
+        if (!Array.isArray(locations)) {
+            throw new Error("AI 返回的格式不是一个有效的数组。");
+        }
+        
+        // --- 4. 成功后创建地图 ---
+        const newMapId = 'map_' + Date.now();
+        mapsData[newMapId] = {
+            id: newMapId,
+            name: mapName,
+            locations: []
+        };
+
+        locations.forEach(loc => {
+            if (loc.name) {
+                mapsData[newMapId].locations.push({
+                    id: 'loc_' + Date.now() + Math.random(),
+                    name: loc.name,
+                    desc: loc.desc || `(AI理由: ${loc.reason || '无'})`,
+                    x: 10 + Math.random() * 80,
+                    y: 15 + Math.random() * 70,
+                    boundChars: []
+                });
+            }
+        });
+
+        saveMapsData();
+        renderMapList();
+        switchMapView(newMapId);
+        closeMapSetup(); // 只有成功才关闭设置页
+
+    } catch (error) {
+        console.error("地图生成失败:", error);
+        
+        // 【核心修改】只弹窗提示，不创建空白地图，也不关闭设置页
+        const errorMessage = `地图生成失败<br><br><b>错误:</b> ${error.message}<br><br>请检查您的 API 设置或网络连接后重试。`;
+        if (typeof showKAlert === 'function') {
+            showKAlert(errorMessage);
+        } else {
+            alert(errorMessage.replace(/<br\s*\/?>/g, '\n'));
+        }
+        
+    } finally {
+        // 无论成功失败，都恢复按钮状态
+        headerAction.innerHTML = '生成';
+        headerAction.style.pointerEvents = 'auto';
+    }
+};
+function renderMapView() {
+    const map = mapsData[currentMapId];
+    if (!map) return;
+
+    document.getElementById('map-header-title').innerText = map.name;
+    const canvas = document.getElementById('map-canvas');
+    canvas.innerHTML = ''; 
+
+    // --- 原有的地点渲染逻辑 (保持不变) ---
+    map.locations.forEach(loc => {
+        const pin = document.createElement('div');
+        pin.className = 'map-location-pin';
+        pin.style.top = `${loc.y}%`;
+        pin.style.left = `${loc.x}%`;
+        pin.style.zIndex = Math.round(loc.y);
+        pin.innerHTML = `
+            <div class="pin-dot"></div>
+            <div class="pin-label">${loc.name}</div>
+        `;
+        // [修改] 将点击事件统一到一个新函数
+        pin.onclick = () => handleMapMarkerClick('location', loc.id);
+        canvas.appendChild(pin);
+    });
+
+}
+
+function handleMapMarkerClick(type, id) {
+    if (type === 'location') {
+        const map = mapsData[currentMapId];
+        const loc = map.locations.find(l => l.id === id);
+        if (loc) {
+            openSceneModal(loc);
+        }
+    }
+}
+
+
+
+// --- 6. 地点编辑器弹窗 ---
+
+window.openLocationEditor = function(locationId) {
+    currentEditingLocationId = locationId;
+    const modal = document.getElementById('map-location-editor-modal');
+    const title = document.getElementById('location-editor-title');
+    const deleteBtn = document.getElementById('location-delete-btn');
+
+    if (locationId) { // 编辑
+        const loc = mapsData[currentMapId].locations.find(l => l.id === locationId);
+        title.innerText = "编辑地点";
+        document.getElementById('location-editor-name').value = loc.name;
+        document.getElementById('location-editor-desc').value = loc.desc;
+        populateChecklist('location-editor-chars', Object.values(friendsData).map(f => ({ id: f.realName, name: f.remark || f.realName, avatar: f.avatar })), loc.boundChars);
+        deleteBtn.style.display = 'block';
+    } else { // 新增
+        title.innerText = "添加新地点";
+        document.getElementById('location-editor-name').value = '';
+        document.getElementById('location-editor-desc').value = '';
+        populateChecklist('location-editor-chars', Object.values(friendsData).map(f => ({ id: f.realName, name: f.remark || f.realName, avatar: f.avatar })), []);
+        deleteBtn.style.display = 'none';
+    }
+    modal.classList.add('active');
+};
+
+window.closeLocationEditor = function() {
+    document.getElementById('map-location-editor-modal').classList.remove('active');
+    currentEditingLocationId = null;
+};
+
+window.confirmSaveLocation = function() {
+    const name = document.getElementById('location-editor-name').value.trim();
+    if (!name) {
+        alert("地点名称不能为空！");
+        return;
+    }
+
+    const desc = document.getElementById('location-editor-desc').value.trim();
+    const charCheckboxes = document.querySelectorAll('#location-editor-chars input:checked');
+    const boundChars = Array.from(charCheckboxes).map(cb => cb.value);
+
+    if (currentEditingLocationId) { // 更新
+        const loc = mapsData[currentMapId].locations.find(l => l.id === currentEditingLocationId);
+        loc.name = name;
+        loc.desc = desc;
+        loc.boundChars = boundChars;
+    } else { // 新增
+        mapsData[currentMapId].locations.push({
+            id: 'loc_' + Date.now(),
+            name: name,
+            desc: desc,
+            x: 20 + Math.random() * 60,
+            y: 20 + Math.random() * 60,
+            boundChars: boundChars
+        });
+    }
+
+    saveMapsData();
+    renderMapView();
+    closeLocationEditor();
+};
+
+window.deleteCurrentLocation = function() {
+    if (!currentEditingLocationId) return;
+    if (confirm("确定要删除这个地点吗？")) {
+        const map = mapsData[currentMapId];
+        map.locations = map.locations.filter(l => l.id !== currentEditingLocationId);
+        saveMapsData();
+        renderMapView();
+        closeLocationEditor();
+    }
+}
+
+// --- 7. 角色选择器弹窗 ---
+
+function openCharSelector(location) {
+    const modal = document.getElementById('map-char-selector-modal');
+    document.getElementById('char-selector-title').innerText = `探索「${location.name}」`;
+    const list = document.getElementById('char-selector-list');
+    list.innerHTML = '';
+
+    // 添加绑定的角色
+    location.boundChars.forEach(charId => {
+        const friend = Object.values(friendsData).find(f => f.realName === charId);
+        if (friend) {
+            const item = document.createElement('div');
+            item.className = 'char-selector-item';
+            item.innerHTML = `
+                <div class="char-selector-avatar"><img src="${friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.realName}`}"></div>
+                <div class="char-selector-name">${friend.remark || friend.realName}</div>
+                <i class="fas fa-chevron-right" style="color:#ccc;"></i>
+            `;
+            item.onclick = () => {
+                alert(`以 ${friend.remark || friend.realName} 的身份开始探索...`);
+                closeCharSelector();
+            };
+            list.appendChild(item);
+        }
+    });
+
+    // 查找包含这些角色的群聊
+    Object.values(groupsData).forEach(group => {
+        const hasAll = location.boundChars.every(charId => group.members.includes(charId));
+        if (hasAll) {
+            const item = document.createElement('div');
+            item.className = 'char-selector-item is-group';
+            item.innerHTML = `
+                <div class="char-selector-avatar"><img src="https://api.dicebear.com/7.x/initials/svg?seed=${group.name}&backgroundColor=e5e5e5"></div>
+                <div class="char-selector-name">${group.name} (群聊)</div>
+                <i class="fas fa-chevron-right" style="color:#ccc;"></i>
+            `;
+            item.onclick = () => {
+                alert(`以群聊「${group.name}」的模式开始探索...`);
+                closeCharSelector();
+            };
+            list.appendChild(item);
+        }
+    });
+
+    modal.classList.add('active');
+}
+
+window.closeCharSelector = function() {
+    document.getElementById('map-char-selector-modal').classList.remove('active');
+}
+// --- 8. 【新功能】场景探索 (Situation Exploration) ---
+
+let currentSceneLocation = null; // 记录当前探索的地点
+
+// 打开场景简介/探索弹窗
+function openSceneModal(location) {
+    currentSceneLocation = location;
+    const modal = document.getElementById('map-scene-modal');
+    const title = document.getElementById('scene-modal-title');
+    const desc = document.getElementById('scene-desc-text');
+    const choicesArea = document.getElementById('scene-choices-area');
+    
+    title.innerText = location.name;
+    desc.innerText = location.desc || "这里似乎没什么特别的...";
+    choicesArea.innerHTML = ''; // 清空旧选项
+    choicesArea.style.display = 'none'; // 默认隐藏选项区
+
+    modal.classList.add('active');
+}
+
+// 关闭场景弹窗
+window.closeSceneModal = function() {
+    document.getElementById('map-scene-modal').classList.remove('active');
+    currentSceneLocation = null;
+}
+
+// 修正后的代码
+window.openLocationEditorForCurrent = function() {
+    if (!currentSceneLocation) return;
+
+    // 【核心修正】在关闭弹窗之前，先把需要的信息存起来
+    const locationToEdit = currentSceneLocation;
+
+    closeSceneModal(); // 现在可以安全地关闭弹窗了，因为它会把全局的 currentSceneLocation 设为 null
+
+    // 延迟打开，避免动画冲突
+    setTimeout(() => {
+        // 使用刚才保存的局部变量 locationToEdit，而不是已经被清空的全局变量
+        openLocationEditor(locationToEdit.id);
+    }, 100);
+}
+/* =========================================
+   [复刻版] Live App (保留原样式 + 抖音全屏 + 全局世界观)
+   ========================================= */
+
+const LIVE_DATA_KEY = 'myCoolPhone_liveData';
+
+let liveData = {
+    bio: "记录闪耀的碎片 ✦",
+    following: 0,
+    followers: 0,
+    likes: 0,
+    posts: [],          
+    discover: [],       
+    friends: [],        
+    notifications: [],  
+    worldbook: ""       // 核心：全局 LIVE 世界书
+};
+
+let currentTikTokPostId = null;
+
+// 1. 数据初始化
+async function loadLiveData() {
+    try {
+        const raw = await IDB.get(LIVE_DATA_KEY);
+        if (raw) {
+            liveData = { ...liveData, ...raw };
+            if(!liveData.worldbook) liveData.worldbook = "";
+        }
+    } catch(e) {}
+}
+async function saveLiveData() {
+    try { await IDB.set(LIVE_DATA_KEY, liveData); } catch(e) {}
+}
+
+// 2. 渲染 UI (使用你原来的 CSS 类名)
+function renderLiveUI() {
+    document.getElementById('live-stat-following').innerText = liveData.following || 0;
+    document.getElementById('live-stat-followers').innerText = liveData.followers || 0;
+    document.getElementById('live-stat-likes').innerText = liveData.likes || 0;
+    const bioEl = document.getElementById('live-me-bio');
+    if(bioEl) bioEl.innerText = liveData.bio || '记录闪耀的碎片 ✦';
+
+    // A. 个人主页作品 (原版样式 lp-work-item)
+    const worksContainer = document.getElementById('live-me-works');
+    if (worksContainer) {
+        worksContainer.innerHTML = '';
+        liveData.posts.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'lp-work-item';
+            div.style.cursor = 'pointer';
+            div.onclick = () => openTikTokView(p.id); 
+            
+            if (p.mediaType === 'video') {
+                div.innerHTML = `<video src="${p.media}" style="width:100%;height:100%;object-fit:cover;"></video><i class="fas fa-video" style="position:absolute;top:5px;right:5px;color:#fff;font-size:10px;"></i>`;
+                div.style.position = 'relative';
+            } else if (p.media) {
+                div.innerHTML = `<img src="${p.media}" style="width:100%;height:100%;object-fit:cover;">`;
+            } else {
+                div.innerHTML = `<div style="width:100%;height:100%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;text-align:center;">${p.imgDesc || 'TEXT'}</div>`;
+            }
+            worksContainer.appendChild(div);
+        });
+    }
+
+    // B. 发现页 (原版样式 live-feed-card, live-tag)
+    const discContainer = document.getElementById('live-discover-list');
+    if (discContainer) {
+        discContainer.innerHTML = '';
+        liveData.discover.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'live-feed-card';
+            div.style.cursor = 'pointer';
+            div.onclick = () => openTikTokView(p.id);
+
+            let mediaHtml = '';
+            if (p.mediaType === 'video') {
+                mediaHtml = `<video src="${p.media}" style="width:100%;aspect-ratio:3/4;object-fit:cover;"></video><i class="fas fa-play-circle" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,0.8);font-size:36px;pointer-events:none;"></i>`;
+            } else if (p.media) {
+                mediaHtml = `<img src="${p.media}" style="width:100%;aspect-ratio:3/4;object-fit:cover;">`;
+            } else {
+                mediaHtml = `<div style="width:100%;aspect-ratio:3/4;background:#eee;display:flex;align-items:center;justify-content:center;padding:20px;font-size:12px;color:#555;text-align:center;">${p.imgDesc || 'TEXT POST'}</div>`;
+            }
+
+            // 完全套用你原来的 CSS 排版
+            div.innerHTML = `
+                <div style="position:relative;">
+                    ${mediaHtml}
+                    <span class="tag live-tag"><i class="fas fa-circle pulse-dot"></i> ${p.mediaType==='video'?'VLOG':'POST'}</span>
+                </div>
+                <div class="feed-card-info">
+                    <div class="feed-title">${p.text}</div>
+                </div>
+            `;
+            discContainer.appendChild(div);
+        });
+    }
+
+    // C. 消息通知 (原版样式 live-msg-row)
+    const msgContainer = document.getElementById('live-msg-list-container');
+    if (msgContainer) {
+        msgContainer.innerHTML = '';
+        liveData.notifications.forEach(n => {
+            const div = document.createElement('div');
+            div.className = 'live-msg-row';
+            if (n.postId) {
+                div.style.cursor = 'pointer';
+                div.onclick = () => openTikTokView(n.postId);
+            }
+            div.innerHTML = `
+                <div class="lm-avatar"><img src="${n.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=sys'}"></div>
+                <div class="lm-info">
+                    <div class="lm-name">${n.name} <span>${n.action}</span></div>
+                    <div class="lm-time">${n.time}</div>
+                </div>
+            `;
+            msgContainer.appendChild(div);
+        });
+    }
+}
+
+// 3. Tab切换与打开应用
+window.openLiveApp = async function() {
+    const app = document.getElementById('liveApp');
+    if (app) {
+        app.classList.add('open');
+        await loadLiveData();
+        switchLiveTab('discover', 'D I S C O V E R', document.querySelector('.lb-nav-item'));
+        syncLiveIdentity();
+        renderLiveUI();
+    }
+}
+
+window.closeLiveApp = function() {
+    document.getElementById('liveApp').classList.remove('open');
+    closeTikTokView();
+}
+
+window.switchLiveTab = function(tabId, titleText, clickedBtn) {
+    document.querySelectorAll('.live-tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.lb-nav-item').forEach(el => el.classList.remove('active'));
+    document.getElementById(`live-tab-${tabId}`).classList.add('active');
+    if (clickedBtn) clickedBtn.classList.add('active');
+
+    const topBar = document.querySelector('.live-top-bar');
+    const titleEl = document.getElementById('live-top-title');
+    
+    if (tabId === 'mylive') {
+        topBar.style.display = 'none';
+    } else {
+        topBar.style.display = 'flex';
+        titleEl.innerText = titleText;
+    }
+}
+
+// 4. 【极简】身份切换系统 (只选不改)
+function syncLiveIdentity() {
+    const me = personasMeta[currentPersonaId];
+    if (me) {
+        const avaUrl = me.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Me`;
+        document.getElementById('live-me-avatar').src = avaUrl;
+        document.getElementById('live-me-name').innerText = me.name || 'User';
+    }
+}
+
+window.openLiveQuickIdentityModal = function() {
+    const list = document.getElementById('live-quick-identity-list');
+    list.innerHTML = '';
+    Object.values(personasMeta).forEach(p => {
+        const isActive = p.id === currentPersonaId;
+        const div = document.createElement('div');
+        div.style.cssText = `display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; margin-bottom:10px; cursor:pointer; background:${isActive ? '#111' : '#f5f5f5'}; color:${isActive ? '#fff' : '#333'}; transition:0.2s;`;
+        div.onclick = () => {
+            currentPersonaId = p.id;
+            localStorage.setItem(CURRENT_PERSONA_KEY, p.id);
+            syncLiveIdentity();
+            document.getElementById('live-quick-identity-modal').classList.remove('active');
+            if(typeof showToast === 'function') showToast("当前身份：" + p.name);
+        };
+        div.innerHTML = `
+            <img src="${p.avatar}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">
+            <div style="font-weight:700; font-size:14px;">${p.name}</div>
+            ${isActive ? '<i class="fas fa-check" style="margin-left:auto; color:#07c160;"></i>' : ''}
+        `;
+        list.appendChild(div);
+    });
+    document.getElementById('live-quick-identity-modal').classList.add('active');
+}
+
+// 5. 【全局】世界书设定
+window.openGlobalLiveWbModal = function() {
+    document.getElementById('live-global-wb-modal').classList.add('active');
+    document.getElementById('live-global-wb-content').value = liveData.worldbook || '';
+}
+
+window.saveGlobalLiveWb = async function() {
+    liveData.worldbook = document.getElementById('live-global-wb-content').value.trim();
+    await saveLiveData();
+    document.getElementById('live-global-wb-modal').classList.remove('active');
+    if(typeof showToast === 'function') showToast("🌍 全局世界观已应用");
+}
+
+// 6. 发布模块 (支持短视频)
+window.handleLiveMediaUpload = function(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const isVideo = file.type.startsWith('video');
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            let resData = e.target.result;
+            const preview = document.getElementById('live-post-media-preview');
+            
+            if (isVideo) {
+                preview.innerHTML = `<i class="fas fa-play-circle" style="color:#fff; font-size:24px; position:absolute; z-index:2;"></i><video src="${resData}" style="width:100%;height:100%;object-fit:cover;"></video>`;
+                preview.dataset.type = 'video';
+            } else {
+                if (typeof compressImage === 'function') resData = await compressImage(resData, 500);
+                preview.innerHTML = `<img src="${resData}" style="width:100%;height:100%;object-fit:cover;">`;
+                preview.dataset.type = 'image';
+            }
+            preview.dataset.src = resData;
+            document.getElementById('live-post-img-desc').value = ''; 
+        }
+        reader.readAsDataURL(file);
+    }
+    input.value = '';
+};
+
+window.generateLivePostByAI = async function() {
+    const promptInput = document.getElementById('live-ai-prompt').value.trim() || '随意的日常';
+    if(typeof showToast === 'function') showToast('构思中...');
+    
+    const me = personasMeta[currentPersonaId] || { name: 'User', persona: '普通人' };
+    const wbContext = liveData.worldbook ? `\n[APP Global World Setting]:\n${liveData.worldbook}` : "";
+
+    const prompt = `
+    [System] You are generating a short video/photo post for a trendy app.
+    Author: ${me.name} - ${me.persona}
+    ${wbContext}
+    Topic: "${promptInput}"
+    
+    Return JSON ONLY:
+    {
+       "text": "Post caption (short, aesthetic)",
+       "tags": "#tag1 #tag2",
+       "imgDesc": "Visual description of the scene (Chinese)"
+    }
+    `;
+    const res = await callAiForSpecialTask(prompt);
+    if (res) {
+        try {
+            const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+            document.getElementById('live-post-text').value = data.text || '';
+            document.getElementById('live-post-tags').value = data.tags || '';
+            document.getElementById('live-post-img-desc').value = data.imgDesc || '';
+        } catch (e) { if(typeof showToast === 'function') showToast('生成失败'); }
+    }
+}
+
+window.publishLivePost = async function() {
+    const text = document.getElementById('live-post-text').value.trim();
+    const tags = document.getElementById('live-post-tags').value.trim();
+    const preview = document.getElementById('live-post-media-preview');
+    const media = preview.dataset.src || '';
+    const mediaType = preview.dataset.type || 'image'; 
+    const imgDesc = document.getElementById('live-post-img-desc').value.trim();
+    
+    if (!text && !media && !imgDesc) return;
+    
+    const post = {
+        id: 'lp_' + Date.now(),
+        text, tags, media, mediaType, imgDesc,
+        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        likes: 0,
+        likedByMe: false,
+        comments: [] 
+    };
+    
+    liveData.posts.unshift(post);
+    liveData.discover.unshift(post);
+    
+    document.getElementById('live-post-text').value = '';
+    document.getElementById('live-post-tags').value = '';
+    document.getElementById('live-post-img-desc').value = '';
+    preview.innerHTML = '<i class="fas fa-camera" style="color:#aaa; font-size:20px;"></i>';
+    preview.dataset.src = '';
+    preview.dataset.type = '';
+    
+    await saveLiveData();
+    renderLiveUI();
+    if(typeof showToast === 'function') showToast('发布成功！');
+    
+    switchLiveTab('me', 'P R O F I L E', document.querySelectorAll('.lb-nav-item')[4]);
+    triggerLiveReactions(post);
+}
+
+// 7. 社交联动 (写入聊天记忆 + AI互动)
+async function triggerLiveReactions(post) {
+    const aiIds = Object.keys(friendsData);
+    if (aiIds.length === 0) return;
+    
+    const memText = `[系统记录：我在短视频平台发布了新作品。内容：“${post.text}” 画面：“${post.imgDesc||(post.mediaType==='video'?'一段视频':'一张照片')}”]`;
+    for (const id of aiIds) {
+        await saveMessageToHistory(id, { text: memText, type: 'sent', senderName: 'ME', isOffline: true });
+    }
+    
+    const mainAiId = aiIds[Math.floor(Math.random() * aiIds.length)];
+    const ai = friendsData[mainAiId];
+    const wbContext = liveData.worldbook ? `\n[APP Global World Setting]:\n${liveData.worldbook}` : "";
+    
+    const prompt = `
+    [System] User posted on social media: "${post.text}". Visuals: ${post.imgDesc||'Video/Photo'}.
+    ${wbContext}
+    
+    1. Gen followers/likes increment (10-100).
+    2. One random netizen comment (funny Chinese).
+    3. You are ${ai.realName} (Persona: ${ai.persona}). Write your comment.
+    4. Write a WeChat DM to the User reacting to this post.
+    
+    JSON: { "followersInc": 20, "likesInc": 50, "netizenComment": "火钳刘明！", "aiComment": "好看", "aiWeChatMessage": "刷到你视频了~" }
+    `;
+    
+    setTimeout(async () => {
+        const res = await callAiForSpecialTask(prompt);
+        if (res) {
+            try {
+                const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+                liveData.followers += (data.followersInc || 0);
+                liveData.likes += (data.likesInc || 0);
+                
+                const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const thePost = liveData.posts.find(p => p.id === post.id);
+                if (thePost) {
+                    thePost.likes = (thePost.likes || 0) + (data.likesInc || 0);
+                    if (data.netizenComment) {
+                        thePost.comments.push({ id: Date.now()+1, name: '路人粉', text: data.netizenComment });
+                        liveData.notifications.unshift({ name: '匿名粉丝', action: `评论了: "${data.netizenComment}"`, time: timeStr, postId: post.id });
+                    }
+                    if (data.aiComment) {
+                        thePost.comments.push({ id: Date.now()+2, name: ai.remark || ai.realName, text: data.aiComment, isAI: true, avatar: ai.avatar });
+                        liveData.notifications.unshift({ name: ai.realName || ai.remark, avatar: ai.avatar, action: `评论了: "${data.aiComment}"`, time: timeStr, postId: post.id });
+                    }
+                }
+                await saveLiveData();
+                if (document.getElementById('liveApp').classList.contains('open')) renderLiveUI();
+                
+                if (data.aiWeChatMessage) {
+                    await saveMessageToHistory(mainAiId, { text: data.aiWeChatMessage, type: 'received', senderName: ai.realName, customAvatar: ai.avatar });
+                    const dockDot = document.getElementById('dock-dot');
+                    if (dockDot) dockDot.style.display = 'block';
+                    if(typeof showToast === 'function') showToast(`<i class="fab fa-weixin" style="color:#07c160;"></i> 微信新消息：${ai.remark || ai.realName}`);
+                }
+            } catch (e) {}
+        }
+    }, 5000); 
+}
+
+// 8. 【全屏沉浸】抖音式播放器逻辑
+window.openTikTokView = function(postId) {
+    let targetPost = liveData.posts.find(p => p.id === postId) || liveData.discover.find(p => p.id === postId);
+    if (!targetPost) return;
+    currentTikTokPostId = postId;
+
+    const modal = document.getElementById('live-tiktok-modal');
+    const mediaContainer = document.getElementById('tk-media-container');
+    
+    // 渲染媒体
+    if (targetPost.mediaType === 'video') {
+        mediaContainer.innerHTML = `<video src="${targetPost.media}" autoplay loop playsinline style="width:100%; height:100%; object-fit:contain;"></video>`;
+    } else if (targetPost.media) {
+        mediaContainer.innerHTML = `<img src="${targetPost.media}" style="width:100%; height:100%; object-fit:contain;">`;
+    } else {
+        mediaContainer.innerHTML = `<div style="width:100%; height:100%; background:linear-gradient(135deg, #2b2b2b, #111); display:flex; align-items:center; justify-content:center; padding:40px; color:#fff; font-size:18px; font-family:'Songti SC', serif; text-align:center; line-height:1.6;">${targetPost.imgDesc || 'TEXT POST'}</div>`;
+    }
+
+    const me = personasMeta[currentPersonaId] || { name: 'User' };
+    document.getElementById('tk-avatar').src = me.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Me`;
+    document.getElementById('tk-author').innerText = `@${me.name}`;
+    document.getElementById('tk-desc').innerText = targetPost.text || '';
+    document.getElementById('tk-tags').innerText = targetPost.tags || '';
+    
+    const heartIcon = document.getElementById('tk-heart-icon');
+    if (targetPost.likedByMe) heartIcon.style.color = '#ff2c55';
+    else heartIcon.style.color = '#fff';
+    
+    document.getElementById('tk-likes').innerText = targetPost.likes || 0;
+    document.getElementById('tk-comments-count').innerText = targetPost.comments ? targetPost.comments.length : 0;
+
+    modal.style.display = 'flex';
+    setTimeout(() => { modal.style.transform = 'translateY(0)'; }, 10);
+}
+
+window.closeTikTokView = function() {
+    const modal = document.getElementById('live-tiktok-modal');
+    const mediaContainer = document.getElementById('tk-media-container');
+    modal.style.transform = 'translateY(100%)';
+    setTimeout(() => { 
+        modal.style.display = 'none'; 
+        mediaContainer.innerHTML = ''; 
+    }, 300);
+    closeTikTokComments(); 
+}
+
+window.toggleTikTokLike = function() {
+    if(!currentTikTokPostId) return;
+    let targetPost = liveData.posts.find(p => p.id === currentTikTokPostId) || liveData.discover.find(p => p.id === currentTikTokPostId);
+    if(!targetPost) return;
+
+    const heartIcon = document.getElementById('tk-heart-icon');
+    if (targetPost.likedByMe) {
+        targetPost.likedByMe = false;
+        targetPost.likes = Math.max(0, (targetPost.likes || 0) - 1);
+        heartIcon.style.color = '#fff';
+    } else {
+        targetPost.likedByMe = true;
+        targetPost.likes = (targetPost.likes || 0) + 1;
+        heartIcon.style.color = '#ff2c55';
+    }
+    document.getElementById('tk-likes').innerText = targetPost.likes;
+    saveLiveData();
+}
+
+window.openTikTokComments = function() {
+    if(!currentTikTokPostId) return;
+    let targetPost = liveData.posts.find(p => p.id === currentTikTokPostId) || liveData.discover.find(p => p.id === currentTikTokPostId);
+    if(!targetPost) return;
+
+    const sheet = document.getElementById('tk-comments-sheet');
+    const list = document.getElementById('tk-comments-list');
+    document.getElementById('tk-sheet-title').innerText = `共 ${targetPost.comments ? targetPost.comments.length : 0} 条评论`;
+    
+    list.innerHTML = '';
+    if (targetPost.comments && targetPost.comments.length > 0) {
+        targetPost.comments.forEach(c => {
+            list.innerHTML += `
+                <div style="display:flex; gap:12px;">
+                    <img src="${c.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed='+c.name}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">
+                    <div style="flex:1;">
+                        <div style="font-size:12px; font-weight:700; color:${c.isAI ? '#ff2c55' : '#888'}; margin-bottom:4px;">${c.name}</div>
+                        <div style="font-size:14px; color:#333; line-height:1.4;">${c.text}</div>
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        list.innerHTML = `<div style="text-align:center; color:#ccc; font-size:12px; margin-top:40px;">留下第一条评论吧</div>`;
+    }
+    sheet.style.transform = 'translateY(0)';
+}
+
+window.closeTikTokComments = function() {
+    document.getElementById('tk-comments-sheet').style.transform = 'translateY(100%)';
+}
+
+window.submitTikTokComment = function() {
+    const input = document.getElementById('tk-my-comment-input');
+    const text = input.value.trim();
+    if(!text || !currentTikTokPostId) return;
+
+    let targetPost = liveData.posts.find(p => p.id === currentTikTokPostId) || liveData.discover.find(p => p.id === currentTikTokPostId);
+    if(!targetPost) return;
+
+    if(!targetPost.comments) targetPost.comments = [];
+    const me = personasMeta[currentPersonaId] || { name: 'User' };
+    
+    targetPost.comments.push({ id: Date.now(), name: me.name, avatar: me.avatar, text: text, isAI: false });
+    
+    input.value = '';
+    saveLiveData();
+    openTikTokComments();
+    document.getElementById('tk-comments-count').innerText = targetPost.comments.length;
+}
+
+window.editLiveBio = function() {
+    const val = prompt('请输入你的个性签名：', liveData.bio);
+    if (val !== null) {
+        liveData.bio = val;
+        saveLiveData();
+        renderLiveUI();
+    }
 }

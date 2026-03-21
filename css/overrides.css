@@ -2,14 +2,17 @@
    移动端终极防闪屏与性能优化补丁
    ========================================= */
 
-/* 1) 修复手机视口抖动与原生回弹闪烁 */
 html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
   height: 100%;
   min-height: 100dvh;
-  /* 禁用下拉刷新和边界橡皮筋效果，防止图层撕裂 */
-  overscroll-behavior-y: none; 
+  overflow: hidden;
+  overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
 }
+
 
 /* 2) 强制开启 GPU 硬件加速 
    给所有全屏滑动面板加上 3D 属性，防止动画过程中掉帧闪屏 */

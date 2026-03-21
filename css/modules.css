@@ -3,18 +3,6 @@
    [极致美化] 线下模式沉浸式排版与剧情选项
    ========================================= */
 
-
-.vn-option-btn:hover {
-    background: #000;
-    transform: translateY(-2px);
-    box-shadow: 0 12px 25px rgba(0,0,0,0.2);
-    border-color: #fff;
-}
-
-.vn-option-btn:active {
-    transform: scale(0.98);
-}
-
 textarea#custom-css-input {
     width: 100%;
     height: 120px;
@@ -68,13 +56,7 @@ textarea#custom-css-input:focus {
    全局变量修正 (韩系高定配色系统 - 纯净版)
    ========================================= */
 :root {
-    /* 基础变量 */
-    --bg-color: #f7f7f7;
-    --phone-bg-image: none;
-    --global-font: 'Montserrat', sans-serif;
-    --font-scale: 1;
-    --theme-text-color: #222222;
-    
+  
     /* === 韩系纯净风格变量 === */
     --k-bg: #fcfcfc;                /* 极亮奶白背景 (无波点) */
     --k-card: #ffffff;              /* 纯白卡片 */
@@ -130,13 +112,12 @@ textarea#custom-css-input:focus {
     border-bottom-left-radius: 4px;
     align-self: flex-start; 
 }
-
-/* 输入框区域 */
 .chat-input-area { 
-    padding: 15px 20px 35px;
-    background: #fff;
-    border-top: var(--k-border);
+    padding: 10px 16px 20px;
+    background: transparent;
+    border-top: none;
 }
+
 
 .chat-input-form:focus-within { background: #fff; border-color: #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 .chat-input-form input { font-size: 14px; color: #333; }
@@ -502,13 +483,11 @@ textarea#custom-css-input:focus {
     border: 2px solid #fff; /* 给头像加个白边，更精致 */
 }
 
-/* 5. 调整气泡样式，去掉之前的绝对定位装饰，防止错位 */
 .message-bubble {
-    max-width: 70% !important; /* 因为加了头像，气泡最大宽度稍微减小 */
-    margin: 0 !important; /* 去掉默认边距，由 chat-row 控制 */
-    position: relative;
-    top: 10px; /* 稍微往下一点，跟头像视觉中心对齐更好看 */
+    max-width: 70% !important;
+    margin: 0 !important;
 }
+
 
 /* 修正：把之前气泡的小装饰点去掉，保持干净 */
 .message-bubble.received::before {
@@ -777,14 +756,7 @@ textarea#custom-css-input:focus {
     color: #333;
 }
 
-/* 群聊中：在气泡上方显示发送者名字 */
-.chat-sender-name {
-    font-size: 11px;
-    color: #999;
-    margin-bottom: 4px;
-    margin-left: 4px; /* 对齐气泡 */
-    line-height: 1;
-}
+
 
 /* 调整群聊时的接收消息布局，使其适应名字显示 */
 .chat-row.received .message-content-wrapper {
@@ -1054,13 +1026,13 @@ textarea#custom-css-input:focus {
     white-space: pre; 
     overflow-x: auto;
 }
-/* === 新增：消息内容包装器样式 (修复竖排问题) === */
 .message-content-wrapper {
     display: flex;
     flex-direction: column;
-    flex: 1; /* 关键：让它能占满剩余空间 */
-    min-width: 0; /* 关键：允许弹性收缩 */
-    max-width: calc(100% - 60px); /* 减去头像和间距的宽度 */
+    flex: 1;
+    min-width: 0;
+    max-width: calc(100% - 60px);
+    margin-top: -4px;
 }
 
 
@@ -1191,7 +1163,7 @@ textarea#custom-css-input:focus {
     height: 0;
     overflow: hidden;
     transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-    border-top: 1px solid rgba(0,0,0,0.05);
+    
 }
 .chat-panels-container.open {
     height: 220px; /* 面板展开高度 */
@@ -1662,422 +1634,7 @@ textarea#custom-css-input:focus {
     z-index: 100;
     pointer-events: none;
 }
-/* =========================================
-   [NEW] K-Style Black & White Live App
-   ========================================= */
 
-/* 1. 容器：极简白底，带一点点噪点纹理（高级感） */
-#liveApp {
-    background-color: #ffffff;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-    z-index: 180;
-    color: #111;
-    font-family: 'Montserrat', sans-serif; /* 必须用无衬线体 */
-}
-
-/* 2. 顶部导航 */
-.k-header {
-    height: 60px; padding: 40px 24px 0;
-    display: flex; justify-content: space-between; align-items: flex-end;
-    background: #fff;
-    position: sticky; top: 0; z-index: 10;
-}
-.k-header i { font-size: 20px; color: #111; }
-.k-tabs-top { display: flex; gap: 20px; font-weight: 700; letter-spacing: 1px; font-size: 13px; }
-.k-tabs-top span { color: #ccc; transition: 0.3s; cursor: pointer; }
-.k-tabs-top span.active { color: #111; border-bottom: 2px solid #111; padding-bottom: 2px; }
-
-/* 3. 内容区 */
-.k-body-container {
-    padding: 20px 24px 100px; /* 底部留够空间给 Dock */
-    overflow-y: auto; height: calc(100% - 60px);
-}
-.k-body-container::-webkit-scrollbar { display: none; }
-
-/* 4. Tab 1: 杂志风排版 */
-.k-hero-banner {
-    height: 280px; width: 100%;
-    background: #111; /* 纯黑背景块 */
-    color: #fff;
-    padding: 30px;
-    display: flex; flex-direction: column; justify-content: flex-end;
-    margin-bottom: 30px;
-    position: relative;
-}
-/* 装饰性图片，黑白滤镜 */
-.k-hero-banner::before {
-    content: ''; position: absolute; top:0; right:0; width: 60%; height: 100%;
-    /* 替换了失效的 404 图片 */
-    background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop') center/cover;
-    filter: grayscale(100%) contrast(1.2);
-    opacity: 0.5;
-    mask-image: linear-gradient(to right, transparent, black);
-    -webkit-mask-image: linear-gradient(to right, transparent, black);
-}
-
-.k-hero-tag { font-size: 10px; letter-spacing: 2px; border: 1px solid #fff; display: inline-block; padding: 4px 8px; width: fit-content; margin-bottom: 10px; }
-.k-hero-title { font-family: 'Playfair Display', serif; font-size: 36px; line-height: 1; z-index: 2; }
-.k-hero-subtitle { font-size: 10px; color: #999; margin-top: 10px; letter-spacing: 1px; z-index: 2; }
-
-/* 瀑布流卡片 */
-.k-masonry-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
-}
-.k-card {
-    background: #fff;
-    /* 去掉边框，改用投影会更高级，或者保留边框 */
-    border: none; 
-    padding-bottom: 10px;
-    cursor: pointer;
-    transition: transform 0.3s;
-    
-    /* ★ 新增：圆角设置 */
-    border-radius: 16px; 
-    /* ★ 新增：溢出隐藏 (这句很重要，否则图片直角会盖住卡片的圆角) */
-    overflow: hidden;
-    /* ★ 可选：加一点淡淡的投影让它浮起来 */
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-.k-card:hover { transform: translateY(-3px); }
-.k-card-img {
-    width: 100%; height: 200px; object-fit: cover;
-    filter: grayscale(20%); /* 稍微去色，显高级 */
-}
-/* 状态标签：黑底白字 */
-.k-live-tag {
-    position: absolute; top: 10px; left: 10px;
-    background: #000; color: #fff;
-    font-size: 9px; font-weight: 700;
-    padding: 3px 6px; letter-spacing: 1px;
-}
-.k-blink-dot {
-    display: inline-block; width: 6px; height: 6px; background: red; border-radius: 50%; margin-right: 4px;
-    animation: blink 1s infinite;
-}
-.k-card-info { padding: 12px 10px 0; }
-.k-card-title { font-size: 12px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
-.k-card-user { font-size: 10px; color: #888; display: flex; align-items: center; gap: 5px; text-transform: uppercase; }
-
-/* 5. Tab 2: 开播界面 */
-.k-broadcast-wrap { height: 100%; display: flex; flex-direction: column; background: #000; margin: -20px -24px; }
-.k-cam-preview { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #666; font-size: 10px; letter-spacing: 2px; }
-.k-broadcast-ui { padding: 40px; background: #fff; border-radius: 30px 30px 0 0; }
-.k-live-input {
-    width: 100%; 
-    /* 改成全包围的边框 */
-    border: 1px solid #eee; 
-    background: #f9f9f9;
-    font-size: 16px; 
-    /* 增加内边距 */
-    padding: 15px 20px; 
-    font-family: 'Playfair Display', serif;
-    margin-bottom: 30px; 
-    outline: none; 
-    
-    /* ★ 新增：大圆角 */
-    border-radius: 20px; 
-}
-
-.k-start-btn {
-    width: 100%; height: 50px; background: #111; color: #fff;
-    border: none; font-size: 14px; letter-spacing: 2px; font-weight: 700;
-    cursor: pointer; transition: 0.3s;
-}
-.k-start-btn:hover { background: #333; letter-spacing: 4px; }
-
-/* 6. Tab 3: 私信 */
-.k-page-title { font-family: 'Playfair Display', serif; font-size: 32px; margin-bottom: 30px; }
-.k-msg-item { display: flex; gap: 15px; margin-bottom: 25px; align-items: center; }
-.k-avatar-sq {
-    width: 50px; height: 50px; background: #f0f0f0;
-    display: flex; justify-content: center; align-items: center;
-    font-weight: 700; font-size: 18px; border: 1px solid #111;
-}
-.k-msg-text { flex: 1; border-bottom: 1px solid #f5f5f5; padding-bottom: 15px; }
-.k-msg-text .top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-.k-msg-text .top .time { font-weight: 400; color: #ccc; font-size: 10px; }
-.k-msg-text .btm { font-size: 11px; color: #888; }
-
-/* 7. Tab 4: 个人主页 */
-.k-profile-cover { position: relative; height: 350px; margin: -20px -24px 20px; overflow: hidden; }
-.k-profile-cover img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); }
-.k-profile-overlay {
-    position: absolute; bottom: 0; left: 0; width: 100%;
-    padding: 30px;
-    background: linear-gradient(to top, #fff 10%, transparent);
-}
-.k-p-name { font-family: 'Playfair Display', serif; font-size: 36px; line-height: 1; }
-.k-p-bio { font-size: 10px; letter-spacing: 1px; margin-top: 5px; color: #555; }
-.k-stats-bar { display: flex; gap: 30px; margin-bottom: 30px; }
-.k-stats-bar div { display: flex; flex-direction: column; }
-.k-stats-bar b { font-size: 18px; font-weight: 400; }
-.k-stats-bar span { font-size: 9px; color: #aaa; letter-spacing: 1px; }
-.k-section-header { font-size: 10px; font-weight: 700; border-bottom: 2px solid #111; padding-bottom: 5px; margin-bottom: 15px; display: inline-block; }
-.k-archive-grid { 
-    display: grid; 
-    grid-template-columns: repeat(3, 1fr); 
-    gap: 8px; /* 间距变大 */
-}.k-archive-item { 
-    padding-top: 100%; 
-    background: #eee;
-    
-    /* ★ 新增：圆角 */
-    border-radius: 12px; 
-}
-
-
-/* 8. 底部悬浮 Dock (黑色胶囊) */
-.k-dock-wrapper {
-    position: absolute; bottom: 30px; left: 0; right: 0;
-    display: flex; justify-content: center; z-index: 100;
-}
-.k-dock {
-    height: 60px; width: 260px;
-    background: #111; /* 纯黑 */
-    border-radius: 30px;
-    display: flex; justify-content: space-evenly; align-items: center;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    padding: 0 10px;
-}
-.k-dock-item {
-    color: #555; font-size: 20px; width: 40px; height: 40px;
-    display: flex; justify-content: center; align-items: center;
-    cursor: pointer; transition: 0.3s;
-}
-.k-dock-item.active { color: #fff; }
-
-/* 特殊的开播按钮 (白色圆点) */
-.k-btn-center {
-    width: 36px; height: 36px; background: #fff; color: #111;
-    border-radius: 50%; display: flex; justify-content: center; align-items: center;
-    font-size: 16px; transition: 0.3s;
-}
-.k-dock-item:hover .k-btn-center { transform: scale(1.1); }
-/* =========================================
-   [新增] 直播APP - 发布作品与详情页样式
-   ========================================= */
-
-/* 1. 个人主页发布按钮 */
-.k-profile-actions {
-    padding: 0 24px;
-    margin-bottom: 25px;
-}
-.k-btn-publish {
-    width: 100%;
-    height: 44px;
-    background: #111;
-    color: #fff;
-    border: none;
-    border-radius: 22px;
-    font-size: 14px;
-    font-weight: 600;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: 0.2s;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-.k-btn-publish:active { transform: scale(0.98); }
-
-/* 2. 通用全屏弹窗 (用于发布页和详情页) */
-.k-full-modal {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: #fff;
-    z-index: 200; /* 比底栏高 */
-    display: flex;
-    flex-direction: column;
-    transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.k-full-modal.show { transform: translateY(0); }
-
-/* 弹窗头部 */
-.k-modal-header {
-    height: 50px;
-    padding: 0 20px;
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 1px solid #f5f5f5;
-    font-weight: 700;
-    font-size: 16px;
-    flex-shrink: 0;
-}
-
-/* 3. 发布页内容 */
-.k-publish-body {
-    flex: 1; padding: 20px; overflow-y: auto;
-}
-.k-upload-box {
-    width: 100px; height: 100px;
-    background: #f0f0f0;
-    border-radius: 12px;
-    display: flex; justify-content: center; align-items: center;
-    color: #999; font-size: 24px;
-    cursor: pointer;
-    margin-bottom: 20px;
-    overflow: hidden;
-    position: relative;
-}
-.k-upload-box img { width: 100%; height: 100%; object-fit: cover; }
-
-.k-input-group { margin-bottom: 20px; }
-.k-input-group label { display: block; font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 600; }
-.k-input-textarea {
-    width: 100%; border: none; background: #f9f9f9;
-    padding: 15px; border-radius: 12px; font-family: inherit;
-    resize: none; font-size: 14px; outline: none;
-}
-.k-tag-select, .k-visibility-select {
-    width: 100%; height: 40px; border: 1px solid #eee;
-    border-radius: 8px; padding: 0 10px; background: #fff;
-}
-
-/* 4. 作品详情页 (仿抖音风格) */
-.k-detail-media {
-    flex: 1;
-    background: #000;
-    display: flex; justify-content: center; align-items: center;
-    position: relative;
-    overflow: hidden;
-}
-.k-detail-media img { width: 100%; height: 100%; object-fit: contain; }
-
-.k-detail-overlay {
-    position: absolute; bottom: 0; left: 0; width: 100%;
-    padding: 20px;
-    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-    color: #fff;
-}
-.k-detail-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-.k-detail-tags { font-size: 12px; color: #ddd; margin-bottom: 15px; }
-
-/* 侧边互动栏 */
-.k-interaction-sidebar {
-    position: absolute; right: 10px; bottom: 100px;
-    display: flex; flex-direction: column; gap: 20px;
-    align-items: center;
-}
-.k-action-btn {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-}
-.k-action-icon {
-    width: 40px; height: 40px; background: rgba(255,255,255,0.2);
-    border-radius: 50%; display: flex; justify-content: center; align-items: center;
-    font-size: 20px; color: #fff; backdrop-filter: blur(5px); transition: 0.2s;
-}
-.k-action-btn:active .k-action-icon { transform: scale(1.2); background: rgba(255,40,40,0.8); }
-.k-action-num { font-size: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-
-/* 作品列表的封面 */
-.k-work-item {
-    position: relative;
-    padding-top: 130%; /* 竖屏比例 */
-    background: #eee;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-}
-.k-work-item img {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
-}
-.k-work-stats {
-    position: absolute; bottom: 5px; left: 5px;
-    color: #fff; font-size: 10px; display: flex; align-items: center; gap: 3px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-/* =========================================
-   [覆盖更新] 第三页极简黑白风样式
-   ========================================= */
-
-/* 1. 强制图标颜色为纯黑 */
-.page#p3 .icon-box i {
-    color: #333 !important; /* 强制深灰色/黑色 */
-    text-shadow: none !important; /* 去掉发光 */
-    background: none !important; /* 去掉渐变背景 */
-    -webkit-text-fill-color: #333 !important;
-}
-
-/* 2. 极简小组件容器 */
-.life-dashboard-widget.minimal-style {
-    background: #fff !important; /* 纯白背景 */
-    border-radius: 20px !important;
-    padding: 25px !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.04) !important; /* 极淡的影子 */
-    border: 1px solid rgba(0,0,0,0.03) !important;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    position: relative;
-    overflow: hidden;
-}
-
-/* 去掉之前的彩色光斑 */
-.life-dashboard-widget.minimal-style::before {
-    display: none !important;
-}
-
-/* 上半部分布局 */
-.widget-row-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-/* 天气块 */
-.weather-box {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.weather-box i {
-    font-size: 28px;
-    color: #333 !important; /* 黑色太阳 */
-}
-.temp-big {
-    font-size: 36px;
-    font-weight: 300; /* 细字体显得高级 */
-    color: #333;
-    font-family: 'Montserrat', sans-serif;
-    letter-spacing: -2px;
-}
-
-/* 地点日期块 */
-.location-box {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-.city-name {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: #333;
-}
-.date-small {
-    font-size: 10px;
-    color: #999;
-    margin-top: 4px;
-}
-
-/* 分割线 */
-.widget-divider {
-    width: 100%;
-    height: 1px;
-    background: #f0f0f0;
-}
-
-/* 底部语录 */
-.daily-quote-minimal {
-    font-family: 'Playfair Display', serif; /* 衬线体 */
-    font-size: 14px;
-    font-style: italic;
-    color: #555;
-    text-align: center;
-    margin-top: 5px;
-}
-/* === [新增] 韩系Ins风拼贴组件样式 === */
 
 /* 容器：相对定位，为了让里面的元素可以重叠 */
 .k-mood-board {
@@ -2715,13 +2272,15 @@ textarea#custom-css-input:focus {
 .bb-days-counter { font-size: 9px; color: #aaa; font-weight: 400; letter-spacing: 0.5px; }
 
 .bb-chat-container {
-    flex: 1; 
-    background-color: #bbd3e3; /* 经典 Bubble 蓝色背景，或换成 #f0f0f0 纯灰 */
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiAvPgo8cmVjdCB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjZTllOWU5IiAvPgo8L3N2Zz4='); /* 微弱的纹理 */
-    padding: 20px 15px;
+    flex: 1;
+    background-color: #f2f4f5;
+    padding: 15px;
     overflow-y: auto;
-    display: flex; flex-direction: column; gap: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
+
 
 .bb-time-stamp {
     text-align: center; font-size: 10px; 
@@ -2933,11 +2492,6 @@ textarea#custom-css-input:focus {
     100% { transform: translateX(-100%); }
 }
 
-/* 2. 聊天区域背景优化 */
-.bb-chat-container {
-    background-color: #f2f4f5; /* 类似 Bubble 的淡灰底色 */
-    padding: 15px;
-}
 
 /* 3. 爱豆的气泡 (VIP样式) */
 .bb-msg-row.idol {
@@ -3378,6 +2932,38 @@ textarea#custom-css-input:focus {
     width: 4px; height: 4px; background: #111; border-radius: 50%;
     margin-top: 6px; opacity: 0.4;
 }
+.offline-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px 24px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 22px;
+}
+
+.offline-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    animation: fadeUp 0.35s ease;
+}
+
+.offline-entry.ai {
+    align-items: flex-start;
+}
+
+.offline-entry.user {
+    align-items: flex-end;
+}
+
+.oe-text {
+    max-width: 100%;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 
 
 /* 隐藏滚动条 */
@@ -3477,20 +3063,6 @@ textarea#custom-css-input:focus {
    [新增] 线下模式操作栏与设置 (Offline Enhancements)
    ========================================= */
 
-/* 1. 消息下方的操作栏 */
-.oe-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 6px;
-    opacity: 0; /* 默认隐藏，悬停显示 */
-    transition: opacity 0.2s;
-}
-/* 鼠标悬停或点击时显示 */
-.offline-entry:hover .oe-actions,
-.offline-entry:active .oe-actions {
-    opacity: 1;
-}
 
 .oe-btn {
     font-size: 10px;
@@ -3562,16 +3134,6 @@ textarea#custom-css-input:focus {
 .presets-list {
     display: flex; flex-direction: column; gap: 15px; padding: 20px;
 }
-.preset-card {
-    background: #fff; padding: 15px; border-radius: 16px;
-    border: 1px solid #f0f0f0;
-    display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-    cursor: pointer; transition: 0.2s;
-}
-.preset-card.active { border: 2px solid #2b2b2b; background: #fafafa; }
-.preset-info h4 { margin: 0 0 5px 0; font-size: 14px; }
-.preset-info p { margin: 0; font-size: 11px; color: #999; }
 
 .preset-editor-overlay {
     position: absolute; inset: 0; background: #fff; z-index: 200;
@@ -3669,15 +3231,19 @@ textarea#custom-css-input:focus {
    ========================================= */
 
 
-/* 7. 操作栏美化 */
 .oe-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
     margin-top: 10px;
-    opacity: 0.2; /* 平时不完全隐藏，保留一点点痕迹 */
+    opacity: 0.2;
     transition: 0.3s;
 }
-.offline-entry:hover .oe-actions {
+.offline-entry:hover .oe-actions,
+.offline-entry:active .oe-actions {
     opacity: 1;
 }
+
 /* =========================================
    [新增] 线下模式交互优化补丁
    ========================================= */
@@ -3826,10 +3392,7 @@ textarea#custom-css-input:focus {
     background: #fff;
 }
 
-#cs-greeting-list {
-    margin-bottom: 10px;
-    max-height: 140px;
-}
+
 /* =========================================
    [修复] 聊天设置中开场白列表单选按钮样式
    ========================================= */
@@ -3843,124 +3406,117 @@ textarea#custom-css-input:focus {
 }
 
 #cs-greeting-list {
-    max-height: 180px; /* 稍微调高一点，防止显示不全 */
+    margin-bottom: 10px;
+    max-height: 180px;
 }
+
 
 /* =========================================
-   [终极美化版] 剧情总结与记录界面样式
+   [全新] 记忆中枢 (Summary) 韩系高定 UI
    ========================================= */
 
-/* 1. 总结列表外部大容器：解除高度限制，让它能容纳巨大的文本框 */
-.summary-list-container {
-    max-height: none; /* 去掉之前的 200px 限制 */
-    min-height: 250px;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    padding: 5px 0;
-    border: none;
+/* 容器卡片 */
+.summary-k-card {
+    background: #ffffff; border-radius: 20px; padding: 24px 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.03);
 }
 
-/* 暂无内容时的提示 */
-.summary-empty-state {
-    text-align: center;
-    color: #bbb;
-    font-size: 13px;
-    padding: 40px 20px;
-    background: #fdfdfd;
-    border: 1px dashed #e0e0e0;
-    border-radius: 16px;
-    letter-spacing: 1px;
-}
+/* 标题 */
+.sk-title { font-size: 14px; font-weight: 800; color: #111; display: flex; align-items: center; gap: 8px; }
+.sk-title i { color: #888; font-size: 13px; }
 
-/* 2. 单条记忆卡片（大号卡片设计） */
-.summary-item {
-    background: #ffffff;
-    border: 1px solid rgba(0,0,0,0.06);
-    border-radius: 16px;
-    padding: 25px 20px 15px 20px; /* 顶部留足空间给轮数标签 */
-    position: relative;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.04);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.summary-item:hover {
-    box-shadow: 0 12px 35px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
-}
+/* 分割线 */
+.sk-divider { height: 1px; background: #f0f0f0; margin: 20px 0; }
 
-/* 3. ★ 核心：可编辑文本区域 ★ */
-.summary-item-text {
-    width: 100%;
-    min-height: 120px; /* 初始高度大幅增加，原本是40px */
-    border: none;
-    outline: none;
-    resize: vertical; /* 允许垂直拉伸，无限变大 */
-    background: transparent;
-    font-family: 'Montserrat', 'PingFang SC', sans-serif;
-    font-size: 14.5px; /* 字号放大 */
-    line-height: 1.8; /* 行高增大，阅读更舒服 */
-    color: #333;
-    letter-spacing: 0.5px;
-    text-align: justify;
-}
-/* 获得焦点时，边框周围不要有突兀的黑框 */
-.summary-item-text:focus {
-    box-shadow: none !important;
-}
+/* 统计大字 */
+.sk-stat-box { display: flex; flex-direction: column; gap: 4px; }
+.sk-stat-box .label { font-size: 11px; color: #999; font-weight: 600; letter-spacing: 0.5px; }
+.sk-stat-box .value { font-size: 32px; font-weight: 300; color: #111; font-family: 'Montserrat', sans-serif; line-height: 1; }
+.sk-stat-box .value small { font-size: 12px; font-weight: 600; color: #aaa; margin-left: 2px; }
 
-/* 4. 底部操作按钮区域 */
-.summary-item-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 15px;
-    border-top: 1px dashed #f0f0f0;
-    padding-top: 12px;
+/* 按钮组 */
+.sk-btn-primary { 
+    width: 100%; padding: 14px; background: #111; color: #fff; 
+    border: none; border-radius: 14px; font-weight: 700; font-size: 13px; 
+    cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
 }
-.summary-item-actions i {
-    cursor: pointer;
-    color: #aaa;
-    font-size: 16px; /* 图标放大 */
-    padding: 6px;
-    transition: all 0.2s;
-    background: #f9f9f9;
-    border-radius: 8px;
-}
-.summary-item-actions i.fa-trash:hover {
-    color: #fff;
-    background: #ff4d4f;
-}
-.summary-item-actions i.fa-save:hover {
-    color: #fff;
-    background: #07c160;
-}
+.sk-btn-primary:active { transform: scale(0.98); }
 
-/* 5. 顶部的设置输入框统一美化 */
-#summaryPageView .input-group input,
-#summaryPageView .input-group textarea {
-    width: 100%;
-    padding: 14px 16px;
-    border: 1px solid #e5e5e5;
-    background: #fdfdfd;
-    border-radius: 12px;
-    font-family: inherit;
-    font-size: 13.5px;
-    outline: none;
-    transition: all 0.3s;
-    box-sizing: border-box;
+.sk-btn-secondary { 
+    background: #fff; color: #111; border: 1px solid #111; 
+    padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 11px; 
+    cursor: pointer; transition: 0.2s; white-space: nowrap; 
 }
-#summaryPageView .input-group input:focus,
-#summaryPageView .input-group textarea:focus {
-    border-color: #2b2b2b;
-    background: #fff;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+.sk-btn-secondary:active { background: #f0f0f0; transform: scale(0.95); }
+
+.sk-btn-outline { 
+    width: 100%; padding: 14px; background: #fff; color: #111; 
+    border: 1px dashed #111; border-radius: 14px; font-weight: 700; font-size: 13px; 
+    cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; 
 }
-#summaryPageView .input-group textarea {
-    resize: vertical;
-    min-height: 90px;
-    line-height: 1.6;
+.sk-btn-outline:active { background: #fafafa; transform: scale(0.98); }
+
+/* 精准输入区 */
+.sk-mini-input { 
+    flex: 1; min-width: 0; background: #fff; border: 1px solid #ddd; 
+    padding: 8px; border-radius: 8px; text-align: center; 
+    font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 13px; outline: none; transition: 0.2s;
 }
+.sk-mini-input:focus { border-color: #111; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+
+/* 表单行 */
+.sk-input-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #444; }
+.sk-input-row input { 
+    width: 65px; text-align: center; padding: 8px; border: 1px solid #ddd; 
+    border-radius: 8px; font-family: 'Montserrat'; font-weight: 700; background: #fff; outline: none; transition: 0.2s;
+}
+.sk-input-row input:focus { border-color: #111; }
+
+.sk-input-group { display: flex; flex-direction: column; gap: 8px; }
+.sk-input-group textarea { 
+    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; 
+    background: #fff; font-size: 12px; resize: vertical; outline: none; line-height: 1.6; color: #333; transition: 0.2s;
+}
+.sk-input-group textarea:focus { border-color: #111; }
+
+/* 列表头部与容器 */
+.sk-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
+.sk-section-header span { font-size: 14px; font-weight: 800; color: #111; display: flex; align-items: center; gap: 8px; }
+.sk-section-header span i { color: #888; }
+.sk-icon-btn { 
+    width: 30px; height: 30px; border-radius: 50%; background: #f0f0f0; color: #111; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; font-size: 12px;
+}
+.sk-icon-btn:hover { background: #111; color: #fff; }
+.sk-list-container { display: flex; flex-direction: column; gap: 15px; }
+
+/* 空状态 (兼容旧版代码直接调用) */
+.summary-empty-state { text-align: center; color: #999; font-size: 12px; padding: 40px 20px; background: #fafafa; border: 1px dashed #eee; border-radius: 16px; }
+
+/* 记忆生成的卡片 */
+.sk-memory-item { 
+    background: #fff; border-radius: 18px; padding: 18px; 
+    border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 6px 20px rgba(0,0,0,0.02); 
+    position: relative; transition: 0.3s; 
+}
+.sk-memory-item:focus-within { border-color: #111; box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+
+.sk-memory-badge { 
+    display: inline-block; background: #111; color: #fff; 
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; 
+    font-family: 'Montserrat', sans-serif; margin-bottom: 10px;
+}
+.sk-memory-textarea { 
+    width: 100%; min-height: 100px; border: none; background: transparent; 
+    outline: none; resize: vertical; font-size: 13.5px; line-height: 1.6; color: #333; 
+}
+.sk-memory-actions { 
+    display: flex; justify-content: flex-end; gap: 12px; 
+    border-top: 1px solid #f5f5f5; padding-top: 12px; margin-top: 10px; 
+}
+.sk-memory-actions i { color: #aaa; cursor: pointer; padding: 5px; font-size: 14px; transition: 0.2s; }
+.sk-memory-actions i.fa-save:hover { color: #07c160; }
+.sk-memory-actions i.fa-trash:hover { color: #ff4d4f; }
+
 /* =========================================
    [韩系简约灰] Pay (钱包) 专属样式 (全中文版)
    ========================================= */
@@ -5420,37 +4976,6 @@ textarea#custom-css-input:focus {
     animation: card-slide-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-/* 优化大厅伙伴卡片，去掉以前僵硬的黑白滤镜，视觉更清爽 */
-.partner-card {
-    position: relative;
-    border-radius: 20px;
-    overflow: hidden;
-    aspect-ratio: 3/4;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.04);
-    background: #fff;
-    cursor: pointer;
-    transition: transform 0.3s;
-    border: 1px solid rgba(0,0,0,0.03);
-}
-.pc-bg {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.4s;
-}
-.partner-card:hover .pc-bg {
-    transform: scale(1.05);
-}
-.pc-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 15px;
-}
-
 /* 5. 通用艺术卡片 (Art Card) */
 .art-card {
     background: #fff;
@@ -5736,8 +5261,10 @@ textarea#custom-css-input:focus {
     transition: filter 0.4s;
 }
 .partner-card:hover .pc-bg {
+    transform: scale(1.05);
     filter: grayscale(0%);
 }
+
 .pc-overlay {
     position: absolute;
     inset: 0;
@@ -6696,85 +6223,6 @@ textarea#custom-css-input:focus {
 #g11-result-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(15px); z-index: 1000; display: none; justify-content: center; align-items: center; animation: fadeIn 0.3s ease; }
 .g11-result-modal { background: #fff; width: 280px; border-radius: 24px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); border: 1px solid #f0f0f0; text-align: center; transform: scale(0.9); animation: popIn 0.4s forwards; }
 
-
-/* =========================================
-   [补全包] 丢失的 G11、钱包与宠物样式
-   ========================================= */
-
-/* ================= G11: 羁绊跳跳 (Jump Duel) ================= */
-#g11d-prep {
-    background: #fff; border-radius: 20px; padding: 20px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04); text-align: center;
-}
-.g11d-record {
-    font-size: 13px; color: #333; font-weight: 700;
-    background: #fafafa; display: inline-block; padding: 8px 18px;
-    border-radius: 20px; margin-bottom: 20px; border: 1px solid #eee;
-}
-.g11d-wardrobe { margin: 15px 0; text-align: left; }
-.g11d-title {
-    font-size: 12px; font-weight: 800; color: #888;
-    margin-bottom: 8px; padding-left: 5px; border-left: 4px solid #ccc;
-}
-.g11d-chip-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.g11d-chip {
-    width: 44px; height: 44px; border-radius: 14px;
-    background: #fff; border: 2px solid #eee;
-    font-size: 20px; display: flex; justify-content: center; align-items: center;
-    cursor: pointer; transition: all 0.2s; position: relative;
-}
-.g11d-chip.active {
-    border-color: #333; background: #fdfdfd;
-    transform: scale(1.1) translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.06);
-}
-.g11d-chip.locked { opacity: 0.5; filter: grayscale(100%); background: #f9f9f9; }
-.g11d-chip.locked::after { content: '🔒'; position: absolute; font-size: 10px; bottom: 2px; right: 2px; }
-
-#g11d-arena { display: flex; flex-direction: column; gap: 15px; height: 100%; }
-.g11d-lane-card {
-    flex: 1; background: #fff; border-radius: 24px; padding: 10px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.04); border: 2px solid #f0f0f0;
-    position: relative; overflow: hidden; display: flex; flex-direction: column;
-}
-.g11d-lane-head {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 0 10px 8px; z-index: 2;
-}
-.g11d-lane-head span:first-child {
-    font-weight: 900; font-size: 14px; color: #555;
-    background: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 12px;
-}
-.g11d-lane-head span:last-child {
-    font-family: 'Montserrat', sans-serif; font-weight: 700;
-    font-size: 18px; color: #111; text-shadow: 2px 2px 0 #fff;
-}
-.g11d-canvas-wrap {
-    flex: 1; border-radius: 18px; overflow: hidden; position: relative;
-    background: #fdfdfd; box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
-}
-.g11d-canvas-wrap canvas { width: 100%; height: 100%; display: block; }
-.g11d-touch { position: absolute; inset: 0; z-index: 10; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-
-#g11-result-box {
-    text-align: center; border: 1px solid #eee;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.08);
-}
-#g11-result-overlay {
-    position: absolute; inset: 0; background: rgba(255,255,255,0.8);
-    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-    z-index: 1000; display: none; justify-content: center; align-items: center;
-    animation: fadeIn 0.3s ease;
-}
-.g11-result-modal {
-    background: #fff; width: 280px;
-    border-radius: 24px; padding: 25px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.08);
-    border: 1px solid #f0f0f0; text-align: center;
-    transform: scale(0.9); animation: popIn 0.4s forwards;
-}
-
 /* ================= Pay App: 钱包与股票 ================= */
 /* 核心卡片：极简奶白 */
 .pay-korean-card {
@@ -7142,15 +6590,6 @@ textarea#custom-css-input:focus {
     border-radius: 4px;
     box-shadow: inset 0 5px 8px rgba(0,0,0,0.4);
 }
-/* 【第二步：把这段代码粘贴到 modules.css 文件末尾】 */
-
-/* 新增一个轻微震动的动画，给第二次删除用 */
-@keyframes metaScreenShakeMild {
-    0%, 100% { transform: translate(0, 0); }
-    25% { transform: translate(1px, -1px) rotate(0.2deg); }
-    50% { transform: translate(-1px, 1px) rotate(-0.2deg); }
-    75% { transform: translate(1px, 1px) rotate(0.2deg); }
-}
 /* modules.css */
 
 /* =========================================
@@ -7317,16 +6756,6 @@ textarea#custom-css-input:focus {
 
 /* --- 4. 动画库 (更新与新增) --- */
 @keyframes metaSlamIn { from { transform: translate(-50%, -50%) scale(1.2); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-@keyframes metaShake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
-@keyframes metaScreenShakeMild { 0% { transform: translate(0, 0); } 25% { transform: translate(1px, -1px) rotate(0.1deg); } 50% { transform: translate(-1px, 1px) rotate(-0.1deg); } 75% { transform: translate(1px, 1px) rotate(0.1deg); } 100% { transform: translate(0,0); } }
-@keyframes metaTwitch { 0% { margin-left: 0; } 10% { margin-left: 5px; } 20% { margin-left: -5px; } 100% { margin-left: 0; } }
-@keyframes metaFlash { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.2; } }
-@keyframes metaGlitchScreen { 0% { filter: hue-rotate(0deg); transform: translate(0,0); } 20% { filter: hue-rotate(90deg) invert(1); transform: translate(-2px, 2px); } 40% { filter: hue-rotate(0deg); transform: translate(2px, -2px); } 60% { filter: hue-rotate(180deg); transform: translate(-2px, -2px); } 80% { filter: invert(0); transform: translate(2px, 2px); } }
-@keyframes metaGlitchBox { 0% { transform: translate(-50%, -50%) skew(0deg); } 20% { transform: translate(-51%, -49%) skew(2deg); } 40% { transform: translate(-49%, -51%) skew(-2deg); } 100% { transform: translate(-50%, -50%) skew(0deg); } }
-/* modules.css - 找到并替换这两个动画 */
-
-/* --- 4. 动画库 (更新与新增) --- */
-@keyframes metaSlamIn { from { transform: translate(-50%, -50%) scale(1.2); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 
 /* 【已修复】这个动画现在包含了居中，所以主弹窗不会跑偏 */
 @keyframes metaShake {
@@ -7351,3 +6780,685 @@ textarea#custom-css-input:focus {
 /* 【无需修改】这个动画本来就是对的，因为它包含了-50% */
 @keyframes metaGlitchBox { 0% { transform: translate(-50%, -50%) skew(0deg); } 20% { transform: translate(-51%, -49%) skew(2deg); } 40% { transform: translate(-49%, -51%) skew(-2deg); } 100% { transform: translate(-50%, -50%) skew(0deg); } }
 
+/* 心声卡滚动文本 */
+.mind-inline-marquee,
+.marquee-container {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+    white-space: nowrap;
+    mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+}
+
+.mind-inline-marquee b,
+.marquee-container b {
+    display: inline-block;
+    white-space: nowrap;
+    animation: none;
+    padding-left: 0;
+}
+
+.mind-inline-marquee.scrolling b,
+.marquee-container.scrolling b {
+    padding-left: 100%;
+    animation: marquee 10s linear infinite;
+}
+
+.status-tag {
+    min-width: 0;
+}
+
+.status-tag > span {
+    flex-shrink: 0;
+}
+/* =========================================
+   [新增] 聊天：描述图片功能
+   ========================================= */
+
+.image-desc-modal-box {
+    width: 340px;
+    border-radius: 28px;
+    overflow: hidden;
+}
+
+.image-desc-modal-body {
+    background: #fcfcfc;
+}
+
+.image-desc-hero {
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f7f7f7 0%, #ececec 100%);
+    border: 1px solid rgba(0,0,0,0.04);
+}
+
+.image-desc-hero-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 4px;
+}
+
+.image-desc-hero-sub {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.6;
+}
+
+#image-desc-input {
+    width: 100%;
+    min-height: 96px;
+    border-radius: 16px;
+    border: 1px solid #e7e7e7;
+    background: #fff;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+}
+
+#image-desc-input:focus {
+    border-color: #333;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+
+.image-desc-preview-wrap {
+    margin-top: 14px;
+    padding: 14px;
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid rgba(0,0,0,0.04);
+}
+
+.image-desc-preview-title {
+    font-size: 11px;
+    color: #999;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+/* =========================================
+   [极致美化] 唯美视差飘雪 · 韩系高定哑光灰照片卡
+   ========================================= */
+
+/* 1. 核心卡片：修改为与主题一致的高级中性灰 */
+.chat-fake-image-card {
+    width: 210px;
+    max-width: 100%;
+    border-radius: 18px;
+    padding: 16px;
+    
+    /* 核心调色：改为与整体UI高度统一的纯净浅灰 */
+    background-color: #f5f5f5;
+    background-image: 
+        /* 保留极细腻的纸张噪点 */
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E"),
+        /* 背景渐变同样改为柔和的中性灰 */
+        linear-gradient(135deg, #fcfcfc 0%, #ebebeb 100%);
+        
+    border: 1px solid #ffffff; 
+    box-shadow: 
+        inset 0 2px 5px rgba(255,255,255,0.9), 
+        0 8px 25px rgba(0,0,0,0.04);           
+        
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+    box-sizing: border-box;
+}
+
+.message-bubble.rich-bubble .chat-fake-image-card {
+    margin-left: auto;
+}
+
+.chat-fake-image-card:active {
+    transform: scale(0.96);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+/* =========================================
+   2. 🌟 核心特效：高清六角形冰晶飘雪 (极简稀疏版) 
+   ========================================= */
+.weather-snow-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none; 
+    z-index: 1;
+    overflow: hidden;
+    /* 去掉滤色模式，保持白色冰晶的绝对清晰 */
+}
+
+/* 远景雪花：稍小的六角星晶体 */
+.weather-snow-layer::before {
+    content: ''; 
+    position: absolute;
+    inset: -50px; 
+    /* 使用内嵌 SVG 绘制真实的雪花线条 */
+    background-image: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(30 30)' stroke='rgba(255,255,255,0.95)' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='-4' y1='0' x2='4' y2='0'/%3E%3Cline x1='-2' y1='-3.4' x2='2' y2='3.4'/%3E%3Cline x1='-2' y1='3.4' x2='2' y2='-3.4'/%3E%3C/g%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(80 70) rotate(15)' stroke='rgba(255,255,255,0.7)' stroke-width='1.5' stroke-linecap='round'%3E%3Cline x1='-3' y1='0' x2='3' y2='0'/%3E%3Cline x1='-1.5' y1='-2.6' x2='1.5' y2='2.6'/%3E%3Cline x1='-1.5' y1='2.6' x2='1.5' y2='-2.6'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 100px 100px;
+    /* 给雪花加一点点灰色投影，让它在灰底上更显眼 */
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.06));
+    animation: snowParallaxFar 22s linear infinite; 
+}
+
+/* 近景雪花：大的六角形冰晶，间距极大（保证屏幕上只有零星几片） */
+.weather-snow-layer::after {
+    content: ''; 
+    position: absolute;
+    inset: -50px;
+    background-image: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(20 20)' stroke='rgba(255,255,255,1)' stroke-width='2.5' stroke-linecap='round'%3E%3Cline x1='-8' y1='0' x2='8' y2='0'/%3E%3Cline x1='-4' y1='-6.9' x2='4' y2='6.9'/%3E%3Cline x1='-4' y1='6.9' x2='4' y2='-6.9'/%3E%3C/g%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(70 80) rotate(20)' stroke='rgba(255,255,255,0.9)' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='-6' y1='0' x2='6' y2='0'/%3E%3Cline x1='-3' y1='-5.2' x2='3' y2='5.2'/%3E%3Cline x1='-3' y1='5.2' x2='3' y2='-5.2'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 160px 160px; 
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.08)); 
+    animation: snowParallaxNear 16s linear infinite; 
+}
+
+/* 完美循环的风场动画（根据间距重新计算了无缝衔接参数） */
+@keyframes snowParallaxFar {
+    0%   { background-position: 0px 0px, 0px 0px; }
+    100% { background-position: 100px 300px, -100px 400px; } 
+}
+@keyframes snowParallaxNear {
+    0%   { background-position: 0px 0px, 0px 0px; }
+    50%  { background-position: -40px 240px, 40px 240px; } 
+    100% { background-position: -160px 480px, 160px 480px; } 
+}
+
+
+/* =========================================
+   4. 展开文字：毛玻璃质感面板
+   ========================================= */
+.fake-image-desc {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    
+    /* 磨砂玻璃文字底板 */
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px) saturate(150%);
+    border: 1px solid #ffffff;
+    border-radius: 12px;
+    
+    color: #444444; /* 深灰文字，清晰易读 */
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: justify;
+    box-sizing: border-box;
+    word-break: break-word;
+}
+
+/* 点击展开状态 */
+.chat-fake-image-card.expanded .fake-image-desc {
+    max-height: 300px;
+    opacity: 1;
+    padding: 14px;
+    margin-top: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+}
+
+/* 预览框特殊处理 (默认完全展开) */
+.chat-fake-image-card.preview {
+    width: 100%;
+    margin-left: 0;
+}
+.chat-fake-image-card.preview .fake-image-desc {
+    max-height: none;
+    opacity: 1;
+    padding: 14px;
+    margin-top: 10px;
+}
+/* =========================================
+   [全新] 地图 APP (韩系黑白灰艺术风格)
+   ========================================= */
+
+#mapApp {
+    background-color: #f7f7f7; /* 极浅的灰色背景 */
+    font-family: 'Montserrat', 'PingFang SC', sans-serif;
+    color: #111;
+}
+
+.map-view {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    animation: fadeIn 0.4s ease;
+}
+
+.map-view.active {
+    display: flex;
+}
+
+/* 顶部导航 */
+.map-header {
+    height: 100px;
+    padding: 50px 24px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    flex-shrink: 0;
+    z-index: 100;
+}
+#map-header-title {
+    font-weight: 800;
+    font-size: 16px;
+    color: #2b2b2b;
+    letter-spacing: 1px;
+}
+.map-header i {
+    font-size: 18px;
+    color: #555;
+    cursor: pointer;
+    padding: 8px;
+}
+.map-header .header-action {
+    font-size: 14px;
+    font-weight: 700;
+    color: #07c160;
+    cursor: pointer;
+}
+
+/* 地图画布 */
+#map-canvas {
+    flex: 1;
+    position: relative;
+    overflow: auto; /* 允许拖动和缩放 */
+    background-color: #f7f8fa; /* 画布背景色 */
+    background-image: 
+        /* 细微的网格线，增加设计感 */
+        linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+}
+
+/* 地点标记 */
+.map-location-pin {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.map-location-pin:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+    z-index: 50 !important; /* 悬停时置顶 */
+}
+.pin-dot {
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border: 3px solid #111; /* 核心：黑白高对比度 */
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: 0.2s;
+}
+.map-location-pin:hover .pin-dot {
+    background: #111;
+    border-color: #fff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+.pin-label {
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #333;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* 右侧侧边栏 */
+#map-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    box-shadow: -10px 0 40px rgba(0,0,0,0.1);
+    border-left: 1px solid rgba(0,0,0,0.05);
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+}
+#map-sidebar.open {
+    transform: translateX(0);
+}
+.sidebar-header {
+    padding: 50px 20px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 16px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+.sidebar-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+.sidebar-btn {
+    width: 100%;
+    padding: 12px 15px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sidebar-btn:hover { background: #f5f5f5; }
+.sidebar-btn i { color: #888; }
+.sidebar-divider {
+    border: none;
+    border-top: 1px dashed #ccc;
+    margin: 20px 0;
+}
+#map-list-container .map-list-item {
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+}
+#map-list-container .map-list-item:hover { background: #f0f0f0; }
+#map-list-container .map-list-item.active { background: #2b2b2b; color: #fff; }
+
+/* 设置页面样式 */
+.map-setup-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+.setup-group {
+    margin-bottom: 25px;
+}
+.setup-group label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #888;
+    margin-bottom: 8px;
+    display: block;
+}
+.setup-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+}
+.setup-group input:focus { border-color: #333; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+
+/* 复用世界书的 Checkbox 样式 */
+.map-checklist-container {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    background: #fff;
+    padding: 5px;
+}
+
+/* 角色选择器弹窗 */
+#char-selector-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.char-selector-item {
+    background: #fff;
+    padding: 15px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    border: 1px solid #eee;
+    transition: 0.2s;
+}
+.char-selector-item:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+}
+.char-selector-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.char-selector-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.char-selector-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 700;
+}
+.char-selector-item.is-group .char-selector-name {
+    color: #07c160; /* 群聊用绿色区分 */
+}
+/* =========================================
+   [地图APP增强] 场景探索弹窗样式
+   ========================================= */
+
+#scene-description-area {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid #f0f0f0;
+}
+
+#scene-choices-area .choice-btn {
+    width: 100%;
+    padding: 12px 15px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#scene-choices-area .choice-btn:hover {
+    background: #f5f5f5;
+    border-color: #333;
+    transform: translateY(-2px);
+}
+
+/* =========================================
+   [极致美化] LIVE APP (韩系五Tab版)
+   ========================================= */
+
+/* 背景与全局排版 */
+.live-polka-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: radial-gradient(#d0d0d0 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+    opacity: 0.3; z-index: 0; pointer-events: none;
+}
+
+/* 顶部导航 */
+.live-top-bar {
+    height: 90px; padding: 50px 24px 15px;
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255,255,255,0.8); backdrop-filter: blur(15px);
+    z-index: 50; position: relative;
+}
+.live-top-bar i { font-size: 18px; color: #111; cursor: pointer; }
+.live-top-title { font-size: 11px; font-weight: 800; letter-spacing: 4px; color: #111; }
+
+/* 核心内容区 */
+.live-body-container {
+    flex: 1; position: relative; overflow: hidden; z-index: 10;
+}
+.live-tab-content {
+    position: absolute; inset: 0; padding: 10px 24px 100px;
+    overflow-y: auto; display: none; flex-direction: column;
+    animation: fadeUp 0.4s ease;
+}
+.live-tab-content::-webkit-scrollbar { display: none; }
+.live-tab-content.active { display: flex; }
+
+/* 杂志风文字 */
+.live-page-header { margin-bottom: 25px; margin-top: 10px; }
+.mag-headline { 
+    font-family: 'Montserrat', sans-serif; 
+    font-size: 26px; /* 发现页、朋友页的标题降到 26px，显得更秀气 */
+    line-height: 1.2; 
+    font-weight: 800; 
+    color: #111; 
+    letter-spacing: -0.5px; 
+    margin-bottom: 8px;
+}
+
+
+.mag-sub { font-family: 'Songti SC', serif; font-size: 12px; color: #888; letter-spacing: 1px; font-weight: bold;}
+.mag-vol { font-size: 10px; color: #999; letter-spacing: 3px; font-weight: 600; margin-bottom: 5px; }
+
+/* 瀑布流 / 宫格卡片 (发现页) */
+.live-grid-2col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+.live-feed-card {
+    background: #fff; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.03); position: relative;
+    display: flex; flex-direction: column;
+}
+/* 图片不再变灰，保持原生色彩，只给一个柔和的圆角 */
+.live-feed-card img { width: 100%; aspect-ratio: 3/4; object-fit: cover; }
+.feed-card-info { padding: 12px; }
+.feed-title { font-size: 12px; font-weight: 600; color: #333; margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
+.live-tag, .video-tag { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 10px; font-size: 9px; font-weight: bold; backdrop-filter: blur(4px); display: flex; align-items: center; gap: 4px;}
+.live-tag .pulse-dot { width: 6px; height: 6px; background: #ff4d4f; border-radius: 50%; animation: pulseWarning 1.5s infinite; }
+.video-tag i { color: #fff; font-size: 8px; }
+
+/* 朋友页：顶部 Story */
+.live-story-scroll { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 10px; }
+.live-story-scroll::-webkit-scrollbar { display: none; }
+.story-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.story-avatar { width: 56px; height: 56px; border-radius: 50%; padding: 2px; border: 2px solid #ddd; overflow: hidden; }
+.story-item.active .story-avatar { border-color: #111; }
+.story-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.story-item span { font-size: 10px; color: #555; font-weight: 600; }
+
+/* 朋友页：大卡片 */
+.live-feed-card.large { margin-bottom: 20px; }
+.live-feed-card.large img { aspect-ratio: 4/3; }
+.feed-author { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #666; margin-bottom: 8px;}
+.feed-author img { width: 24px; height: 24px; border-radius: 50%; }
+
+/* 自己直播页 (杂志封面核心) */
+.live-magazine-start { padding: 10px 0; display: flex; flex-direction: column; align-items: center; }
+.live-image-box {
+    position: relative; width: 100%; aspect-ratio: 3/4;
+    border-radius: 24px; overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.06);
+    border: 4px solid #fff;
+}
+.live-image-box img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: 0.3s; }
+.live-image-box img:active { transform: scale(0.98); }
+.live-cover-hint { position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.5); color: #fff; padding: 6px 12px; border-radius: 12px; font-size: 10px; backdrop-filter: blur(5px); pointer-events: none; }
+.live-btn-primary { width: 100%; height: 54px; background: #111; color: #fff; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 2px; border-radius: 27px; border: none; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.15); transition: 0.2s;}
+.live-btn-primary:active { transform: scale(0.95); }
+
+/* 消息列表 */
+.live-msg-list { display: flex; flex-direction: column; gap: 15px; }
+.live-msg-row { display: flex; align-items: center; gap: 15px; background: #fff; padding: 16px; border-radius: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
+.lm-avatar { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.lm-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.lm-avatar.system { background: #f0f0f0; display: flex; justify-content: center; align-items: center; color: #111; font-size: 16px; }
+.lm-info { flex: 1; }
+.lm-name { font-size: 13px; font-weight: 700; color: #111; }
+.lm-name span { font-weight: 400; color: #666; font-size: 12px; margin-left: 5px; }
+.lm-time { font-size: 10px; color: #aaa; margin-top: 4px; }
+
+/* 个人主页 */
+.live-profile-header { display: flex; flex-direction: column; align-items: center; padding: 20px 0; }
+.lp-avatar-box { width: 80px; height: 80px; border-radius: 50%; padding: 4px; border: 1px solid #ddd; margin-bottom: 15px; }
+.lp-avatar-box img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.lp-name { font-size: 20px; font-weight: 800; color: #111; margin-bottom: 5px; }
+.lp-bio { font-size: 11px; color: #888; font-family: 'Songti SC', serif; margin-bottom: 20px;}
+.lp-stats { display: flex; align-items: center; gap: 25px; }
+.lp-stats div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lp-stats b { font-size: 16px; font-family: 'Montserrat'; color: #111; }
+.lp-stats span { font-size: 10px; color: #999; }
+.lp-stats .divider { width: 1px; height: 20px; background: #eee; }
+
+.live-profile-tabs { display: flex; justify-content: space-around; border-bottom: 1px solid #eee; margin-bottom: 15px; padding-bottom: 10px; }
+.live-profile-tabs span { font-size: 12px; font-weight: 600; color: #aaa; cursor: pointer; }
+.live-profile-tabs span.active { color: #111; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: -11px; }
+
+.live-grid-3col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.lp-work-item { aspect-ratio: 1; background: #eee; border-radius: 8px; overflow: hidden; }
+.lp-work-item img { width: 100%; height: 100%; object-fit: cover; }
+
+/* === 底部 5 Tab 导航 === */
+.live-bottom-nav {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 85px;
+    background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    display: flex; justify-content: space-around; align-items: center;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 100;
+}
+.lb-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: #b0b0b0; font-size: 9px; cursor: pointer; transition: 0.2s; width: 50px;
+}
+.lb-nav-item i { font-size: 20px; margin-bottom: 2px; }
+.lb-nav-item span { font-weight: 600; letter-spacing: 0.5px; }
+.lb-nav-item.active { color: #111; }
+.lb-nav-item.active i { font-weight: 900; } /* 激活时图标变实心或加粗 */
+
+/* 中间大加号按钮 */
+.lb-nav-item.center-btn { position: relative; top: -15px; }
+.center-circle {
+    width: 48px; height: 48px; background: #111; color: #fff;
+    border-radius: 50%; display: flex; justify-content: center; align-items: center;
+    font-size: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.2); transition: 0.2s;
+    border: 3px solid #fff;
+}
+.lb-nav-item.center-btn:active .center-circle { transform: scale(0.9); }
+/* 视频播放居中按钮隐藏动画 */
+#live-tiktok-modal video {
+    background-color: #000;
+}

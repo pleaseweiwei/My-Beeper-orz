@@ -11,14 +11,13 @@
 
     <!-- PWA 图标及全屏支持 -->
     <link rel="manifest" href="manifest.json">
-    
-    <!-- iOS 专属配置：允许全屏 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- iOS 状态栏样式：black-translucent 会让内容通顶，black 会黑条 -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Bono机">
-</head>
+    <meta name="mobile-web-app-capable" content="yes">
 
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="My Beeper">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon.png">
     <!-- 外部字体和图标 -->
     <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Montserrat:wght@200;300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -29,14 +28,7 @@
     
     <!-- [新增] 这里专门用来放你输入的自定义CSS -->
     <style id="dynamic-custom-css"></style>
-    
-    <!-- PWA 图标及苹果设备支持 -->
-    <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="icon.png">
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Bono小手机">
+
 </head>
 <body>
 
@@ -140,7 +132,13 @@
            <div class="app-cell" data-app-id="lovespace" onclick="openLoveSpaceApp()"><div class="icon-box"><i class="fas fa-heart" style="color:#e91e63;"></i></div><span class="app-label">Love Space</span></div>
             <div class="app-cell" data-app-id="worldbook"><div class="icon-box"><i class="fas fa-globe-asia"></i></div><span class="app-label">WorldBook</span></div>
             <div class="app-cell" data-app-id="presets" onclick="openPresetsApp()"><div class="icon-box"><i class="fas fa-sliders-h"></i></div><span class="app-label">Presets</span></div>
-           <div class="app-cell" data-app-id="game" onclick="openGameApp()"><div class="icon-box" style="background:#111; color:#fff;"><i class="fas fa-gamepad"></i></div><span class="app-label">ARCADE</span></div>
+          <div class="app-cell" data-app-id="game" onclick="openGameApp()">
+    <div class="icon-box">
+        <i class="fas fa-gamepad"></i>
+    </div>
+    <span class="app-label">game</span>
+</div>
+
 
             <div class="app-cell" data-app-id="novel"><div class="icon-box"><i class="fas fa-book-open"></i></div><span class="app-label">Novel</span></div>
         </div>
@@ -161,11 +159,12 @@
 
         <div class="grid-apps">
             <div class="app-cell" data-app-id="pay" onclick="openPayApp()"><div class="icon-box"><i class="fas fa-qrcode"></i></div><span class="app-label">Pay</span></div>
-            <div class="app-cell" data-app-id="map"><div class="icon-box"><i class="fas fa-map-marker-alt"></i></div><span class="app-label">Map</span></div>
-            <div class="app-cell" data-app-id="live" onclick="openLiveApp()">
-                <div class="icon-box" style="background: #111; border: 1px solid rgba(255,255,255,0.1);"><i class="fas fa-satellite-dish" style="color: #fff;"></i></div>
-                <span class="app-label" style="font-weight:600; color:#333;">LIVE.</span>
-            </div>
+            <div class="app-cell" data-app-id="map" onclick="openMapApp()"><div class="icon-box"><i class="fas fa-map-marker-alt"></i></div><span class="app-label">Map</span></div>
+           <div class="app-cell" data-app-id="live" onclick="openLiveApp()">
+    <div class="icon-box" style="background: #fff; border: 1px solid rgba(0,0,0,0.03); box-shadow: 0 10px 25px rgba(0,0,0,0.02);"><i class="fas fa-satellite-dish" style="color: #111;"></i></div>
+    <span class="app-label" style="font-weight:600; color:#333;">LIVE.</span>
+</div>
+
             <div class="app-cell" data-app-id="cam"><div class="icon-box"><i class="fas fa-camera"></i></div><span class="app-label">Cam</span></div>
         </div>
     </div>
@@ -563,6 +562,11 @@
                     <div class="plus-icon"><i class="fas fa-image"></i></div>
                     <span>照片</span>
                 </div>
+                <div class="plus-item" onclick="openImageDescModal()">
+    <div class="plus-icon"><i class="fas fa-image"></i></div>
+    <span>描述图片</span>
+</div>
+
                 <div class="plus-item" onclick="sendLocation()">
                     <div class="plus-icon"><i class="fas fa-map-marker-alt"></i></div>
                     <span>位置</span>
@@ -1410,6 +1414,142 @@
 
 </div>
 <!-- ============================================== -->
+<!-- [全新] 地图 APP (韩系黑白灰艺术风格)               -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="mapApp">
+
+    <!-- 视图 1: 地图主界面 -->
+    <div id="map-main-view" class="map-view active">
+        <!-- 顶部导航 -->
+        <div class="map-header">
+            <i class="fas fa-chevron-left" onclick="closeMapApp()"></i>
+            <span id="map-header-title">地图</span>
+            <i class="fas fa-bars" onclick="toggleMapSidebar()"></i>
+        </div>
+
+        <!-- 地图画布 -->
+        <div id="map-canvas">
+            <!-- 地点标记将由 JS 动态生成 -->
+            <!-- 示例: 
+            <div class="map-location-pin" style="top: 30%; left: 50%;">
+                <div class="pin-dot"></div>
+                <div class="pin-label">涩谷区</div>
+            </div> 
+            -->
+        </div>
+
+        <!-- 右侧悬浮侧边栏 -->
+        <div id="map-sidebar">
+            <div class="sidebar-header">
+                <span>地图管理</span>
+                <i class="fas fa-times" onclick="toggleMapSidebar()"></i>
+            </div>
+            <div class="sidebar-content">
+                <button class="sidebar-btn" onclick="openMapSetup(true)"><i class="fas fa-plus"></i> 新建地图</button>
+                <div id="map-list-container">
+                    <!-- 保存的地图列表 -->
+                </div>
+                <hr class="sidebar-divider">
+                <button class="sidebar-btn" onclick="openLocationEditor(null)"><i class="fas fa-map-marker-alt"></i> 添加新地点</button>
+                <button class="sidebar-btn" onclick="deleteCurrentMap()"><i class="fas fa-trash"></i> 删除当前地图</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 视图 2: 地图生成设置 -->
+    <div id="map-setup-view" class="map-view">
+        <div class="map-header">
+            <i class="fas fa-times" onclick="closeMapSetup()"></i>
+            <span>生成地图设置</span>
+            <span class="header-action" onclick="confirmGenerateMap()">生成</span>
+        </div>
+        <div class="map-setup-content">
+            <div class="setup-group">
+                <label>地图名称</label>
+                <input type="text" id="map-setup-name" placeholder="例如：我的东京冒险">
+            </div>
+            <div class="setup-group">
+                <label>选择世界书 (可选, 用于生成相关地点)</label>
+                <div id="map-setup-worldbooks" class="map-checklist-container"></div>
+            </div>
+            <div class="setup-group">
+                <label>选择角色卡 (可选, 用于生成角色相关地点)</label>
+                <div id="map-setup-characters" class="map-checklist-container"></div>
+            </div>
+            <div class="setup-group">
+                <label>自动生成地点个数</label>
+                <input type="number" id="map-setup-loc-count" value="5" min="0" max="20">
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 弹窗 1: 地点编辑器 (增/改) -->
+    <div id="map-location-editor-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="location-editor-title">添加新地点</span>
+                <i class="fas fa-times" onclick="closeLocationEditor()"></i>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>地点名称</label>
+                    <input type="text" id="location-editor-name" placeholder="例如：晚风吹拂的屋顶">
+                </div>
+                <div class="input-group">
+                    <label>地点描述 (可选)</label>
+                    <textarea id="location-editor-desc" rows="2" placeholder="关于这个地方的简短说明..."></textarea>
+                </div>
+                <div class="input-group">
+                    <label>绑定角色 (可多选)</label>
+                    <div id="location-editor-chars" class="map-checklist-container" style="max-height: 150px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" style="color: #ff4d4f;" id="location-delete-btn" onclick="deleteCurrentLocation()">删除地点</button>
+                <button class="btn-confirm" onclick="confirmSaveLocation()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗 2: 探索角色选择器 -->
+    <div id="map-char-selector-modal" class="modal-overlay">
+        <div class="modal-box" style="width: 340px; background: #f9f9f9; padding: 0;">
+            <div class="modal-header" style="background: #fff;">
+                <span id="char-selector-title">选择探索角色</span>
+                <i class="fas fa-times" onclick="closeCharSelector()"></i>
+            </div>
+            <div id="char-selector-list" class="modal-body" style="padding: 20px;">
+                <!-- 角色列表将由 JS 动态生成 -->
+            </div>
+        </div>
+    </div>
+        <!-- 弹窗 3: [新功能] 地点详情与情景探索 -->
+    <div id="map-scene-modal" class="modal-overlay">
+        <div class="modal-box" style="width: 340px;">
+            <div class="modal-header">
+                <span id="scene-modal-title">地点详情</span>
+                <i class="fas fa-times" onclick="closeSceneModal()"></i>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <!-- 场景描述区 -->
+                <div id="scene-description-area">
+                    <p id="scene-desc-text" style="font-size: 14px; line-height: 1.6; color: #555; min-height: 60px; white-space: pre-wrap;"></p>
+                </div>
+                <!-- 探索选项区 -->
+                <div id="scene-choices-area" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                    <!-- JS动态生成选项按钮 -->
+                </div>
+            </div>
+            <div class="modal-footer" id="scene-modal-footer">
+                <button class="btn-cancel" onclick="openLocationEditorForCurrent()">编辑地点</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ============================================== -->
 <!-- [多开隔离 V5.0] 韩系高定艺术书风 情侣空间 APP -->
 <!-- ============================================== -->
 <div class="app-fullscreen-view" id="loveSpaceApp" style="background: #fdfdfd; font-family: 'Montserrat', 'PingFang SC', sans-serif;">
@@ -1885,223 +2025,217 @@
         </div>
     </div>
 </div>
-<!-- === 韩系高定黑白直播 APP === -->
-<div class="app-fullscreen-view" id="liveApp">
+<!-- ============================================== -->
+<!-- [全新5 Tab版] LIVE APP (恢复原版韩系波点杂志风) -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="liveApp" style="background: #fafafa; font-family: 'Montserrat', 'PingFang SC', sans-serif;">
     
-    <!-- 顶部导航：透明背景，极简文字 -->
-    <div class="k-header">
-        <div class="k-header-left">
-            <i class="fas fa-arrow-left" onclick="closeLiveApp()"></i>
-        </div>
-        <div class="k-tabs-top">
-            <span class="active">推荐</span>
-            <span>附近</span>
-        </div>
-        <div class="k-header-right">
-            <i class="fas fa-search"></i>
-        </div>
-    </div>
+    <!-- 全局柔和波点背景 (纯CSS) -->
+    <div class="live-polka-bg"></div>
 
-    <!-- 内容滚动区 -->
-    <div class="k-body-container">
+    <!-- 顶部控制栏 (全局公用) -->
+    <div class="live-top-bar">
+        <i class="fas fa-chevron-down" onclick="closeLiveApp()"></i>
+        <div class="live-top-title" id="live-top-title">D I S C O V E R</div>
         
-        <!-- Tab 1: 首页推荐 (杂志排版流) -->
-        <div class="k-tab-content active" id="lv-tab-recommend">
-            <!-- 顶部大图 Banner -->
-            <div class="k-hero-banner">
-    <div class="k-hero-tag">FEATURED</div>
-    <div class="k-hero-title">Late Night<br>Talks.</div>
-    <div class="k-hero-subtitle">主播：Hannah AI</div>
-</div>
-            
-            <!-- 瀑布流内容 -->
-            <div class="k-masonry-grid" id="lv-feed-container">
-                <!-- JS 自动填充 -->
+        <!-- 【新增】右上角：全局世界书 & 极简身份切换 & 原本的铃铛 -->
+        <div style="display:flex; align-items:center; gap:12px;">
+            <i class="fas fa-globe-asia" onclick="openGlobalLiveWbModal()" style="font-size:16px; cursor:pointer;" title="全局世界书"></i>
+            <i class="fas fa-user-circle" onclick="openLiveQuickIdentityModal()" style="font-size:16px; cursor:pointer;" title="切换身份"></i>
+            <i class="far fa-bell"></i>
+        </div>
+    </div>
+
+    <!-- 核心内容区 -->
+    <div class="live-body-container">
+        
+        <!-- === 1. 发现 (Discover) === -->
+        <div id="live-tab-discover" class="live-tab-content active">
+            <div class="live-page-header">
+                <div class="mag-headline">Explore<br>The World.</div>
+                <div class="mag-sub">发现不同频率的闪耀瞬间 ✦</div>
             </div>
-            
-            <!-- 底部留白，防止被 Dock 遮挡 -->
-            <div style="height: 100px;"></div>
+            <!-- 瀑布流卡片 -->
+            <div class="live-grid-2col" id="live-discover-list"></div>
         </div>
 
-        <!-- Tab 2: 我要开播 (极简黑白界面) -->
-        <div class="k-tab-content" id="lv-tab-broadcast" style="display:none;">
-            <div class="k-broadcast-wrap">
-               <div class="k-cam-preview">
-    <i class="fas fa-circle-notch fa-spin"></i>
-    <p>INITIALIZING CAMERA...</p>
-</div>
-<div class="k-broadcast-ui">
-    <!-- 注意：这里 placeholder 改成了中文 -->
-    <input type="text" class="k-live-input" placeholder="输入直播标题...">
-    <button class="k-start-btn">GO LIVE</button>
-</div>
-
+        <!-- === 2. 朋友 (Friends) === -->
+        <div id="live-tab-friends" class="live-tab-content">
+            <div class="live-page-header">
+                <div class="mag-headline">Following<br>Updates.</div>
+                <div class="mag-sub">朋友们的最新动态</div>
             </div>
+            <div class="live-feed-list" id="live-friends-list"></div>
         </div>
 
-        <!-- Tab 3: 私信 (极简列表) -->
-        <div class="k-tab-content" id="lv-tab-messages" style="display:none;">
-            <div class="k-page-title">INBOX.</div>
-            <div class="k-msg-list" id="lv-msg-list">
-                <!-- 静态模拟 -->
-                <div class="k-msg-item">
-                    <div class="k-avatar-sq">H</div>
-                    <div class="k-msg-text">
-                        <div class="top"><span>Hannah AI</span> <span class="time">12:00</span></div>
-                        <div class="btm">Are you ready for the stream?</div>
+        <!-- === 3. 自己发布 (保持原有的杂志封面排版) === -->
+        <div id="live-tab-mylive" class="live-tab-content">
+            <div class="live-magazine-start">
+                <div class="live-mag-text" style="text-align: center; margin-top: 10px;">
+                    <div class="mag-vol">O N  A I R</div>
+                    <div class="mag-headline">Midnight<br>Whispers.</div>
+                    <div class="mag-sub">准备好向世界分享你的声音了吗？</div>
+                </div>
+                
+                <!-- 发帖输入区 (融入原版风格) -->
+                <div style="width:100%; margin-top: 20px; background:rgba(255,255,255,0.8); padding:15px; border-radius:20px; border:1px solid #fff; box-shadow:0 10px 25px rgba(0,0,0,0.03);">
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <input type="text" id="live-ai-prompt" placeholder="一键灵感：如在海边看日落..." style="flex:1; border:none; background:#f5f5f5; border-radius:12px; padding:10px; font-size:12px; outline:none;">
+                        <button class="black-pill-btn" onclick="generateLivePostByAI()"><i class="fas fa-magic"></i></button>
+                    </div>
+                    
+                    <textarea id="live-post-text" placeholder="记录这一刻的想法..." rows="3" style="width:100%; border:none; background:#f5f5f5; border-radius:12px; padding:10px; font-size:12px; margin-bottom:10px; outline:none; resize:none;"></textarea>
+                    
+                    <input type="text" id="live-post-tags" placeholder="标签 #OOTD" style="width:100%; border:none; background:#f5f5f5; border-radius:12px; padding:10px; font-size:12px; margin-bottom:15px; outline:none;">
+                    
+                    <!-- 【修改】支持视频/图片的上传框 -->
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div id="live-post-media-preview" style="width:60px; height:60px; background:#eee; border-radius:12px; display:flex; justify-content:center; align-items:center; cursor:pointer; overflow:hidden; flex-shrink:0;" onclick="document.getElementById('live-post-file').click()">
+                            <i class="fas fa-camera" style="color:#aaa; font-size:20px;"></i>
+                        </div>
+                        <input type="file" id="live-post-file" accept="image/*,video/*" style="display:none;" onchange="handleLiveMediaUpload(this)">
+                        <textarea id="live-post-img-desc" placeholder="如果不发照片，AI将根据此描述生成高级意境图..." style="flex:1; height:60px; border:none; background:#f5f5f5; border-radius:12px; padding:10px; font-size:11px; outline:none; resize:none;"></textarea>
                     </div>
                 </div>
+
+                <button class="live-btn-primary" style="margin-top:20px;" onclick="publishLivePost()">S T A R T  L I V E  ✦</button>
             </div>
         </div>
 
-               <!-- Tab 4: 个人主页 (极简大图风) -->
-        <div class="k-tab-content" id="lv-tab-profile" style="display:none;">
-            <div class="k-profile-cover">
-                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&auto=format&fit=crop">
-                <div class="k-profile-overlay">
-                    <div class="k-p-name">USER.001</div>
-                    <div class="k-p-bio">Digital Nomad / AI Streamer</div>
+        <!-- === 4. 消息 (Messages) === -->
+        <div id="live-tab-messages" class="live-tab-content">
+            <div class="live-page-header">
+                <div class="mag-headline">Inbox.</div>
+                <div class="mag-sub">收到的小星星与留言 💌</div>
+            </div>
+            <div class="live-msg-list" id="live-msg-list-container"></div>
+        </div>
+
+        <!-- === 5. 个人主页 (Profile) === -->
+        <div id="live-tab-me" class="live-tab-content">
+            <div class="live-profile-header">
+                <div class="lp-avatar-box">
+                    <img id="live-me-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop">
+                </div>
+                <div class="lp-name" id="live-me-name">Hannah</div>
+                <div class="lp-bio" id="live-me-bio" onclick="editLiveBio()">记录闪耀的碎片 ✦</div>
+                <div class="lp-stats">
+                    <div><b id="live-stat-following">128</b><span>关注</span></div>
+                    <div class="divider"></div>
+                    <div><b id="live-stat-followers">8.5k</b><span>粉丝</span></div>
+                    <div class="divider"></div>
+                    <div><b id="live-stat-likes">10w</b><span>获赞</span></div>
                 </div>
             </div>
             
-            <div class="k-stats-bar">
-                <div><b>12.5k</b><span>Followers</span></div>
-                <div><b>89</b><span>Following</span></div>
-                <div><b>1.2M</b><span>Likes</span></div>
-            </div>
-
-            <!-- 新增：发布按钮 -->
-            <div class="k-profile-actions">
-                <button class="k-btn-publish" onclick="openLivePublishModal()">
-                    <i class="fas fa-plus"></i> 发布作品 (Post)
-                </button>
-            </div>
-
-            <!-- 新增：我的作品区域 -->
-            <div class="k-section-header">我的作品 (Works)</div>
-            <div class="k-archive-grid" id="k-my-works-grid">
-                <!-- JS 会在这里插入新发布的作品 -->
+            <div class="live-profile-tabs">
+                <span class="active">动态 (Works)</span>
+                <span>收藏 (Saved)</span>
             </div>
             
-            <!-- 原有：往期回放 (放在作品下面) -->
-            <div class="k-section-header" style="margin-top:20px;">往期回放 (Replays)</div>
-            <div class="k-archive-grid">
-                <div class="k-archive-item" style="background:#eee;"></div>
-                <div class="k-archive-item" style="background:#ddd;"></div>
-                <div class="k-archive-item" style="background:#ccc;"></div>
-            </div>
-            
-            <div style="height: 100px;"></div> <!-- 底部垫高 -->
+            <div class="live-grid-3col" id="live-me-works"></div>
         </div>
-            <!-- === 新增：发布作品弹窗 === -->
-    <div class="k-full-modal" id="livePublishModal">
-        <div class="k-modal-header">
-            <i class="fas fa-times" onclick="closeLivePublishModal()" style="cursor:pointer; font-size:18px;"></i>
-            <span>发布作品</span>
-            <span onclick="confirmPublishWork()" style="color:#2b2b2b; cursor:pointer;">发布</span>
-        </div>
-        <div class="k-publish-body">
-            <!-- 图片/视频上传 -->
-            <div class="k-upload-box" onclick="document.getElementById('live-file-input').click()">
-                <img id="live-preview-img" style="display:none;">
-                <i id="live-upload-icon" class="fas fa-camera"></i>
-            </div>
-            <input type="file" id="live-file-input" accept="image/*" style="display:none;" onchange="handleLiveFilePreview(this)">
-            
-            <!-- 文案 -->
-            <div class="k-input-group">
-                <textarea class="k-input-textarea" id="live-desc" rows="4" placeholder="写点什么... (Add a caption)"></textarea>
-            </div>
-
-            <!-- 标签 -->
-            <div class="k-input-group">
-                <label>选择标签 (Tags)</label>
-                <select id="live-tag" class="k-tag-select">
-                    <option value="#Daily">#日常 (Daily)</option>
-                    <option value="#OOTD">#穿搭 (OOTD)</option>
-                    <option value="#Food">#美食 (Food)</option>
-                    <option value="#Travel">#旅行 (Travel)</option>
-                </select>
-            </div>
-
-            <!-- 谁可以看 -->
-            <div class="k-input-group">
-                <label>谁可以看 (Visibility)</label>
-                <select id="live-visibility" class="k-visibility-select">
-                    <option value="public">公开 (Public)</option>
-                    <option value="friends">仅好友 (Friends)</option>
-                    <option value="private">私密 (Private)</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <!-- === 新增：作品详情弹窗 (仿抖音) === -->
-    <div class="k-full-modal" id="liveWorkDetailModal" style="background:#000;">
-        <!-- 顶部透明导航 -->
-        <div style="position:absolute; top:40px; left:20px; z-index:10; color:#fff;">
-            <i class="fas fa-chevron-left" onclick="closeWorkDetailModal()" style="font-size:24px; cursor:pointer; text-shadow:0 1px 3px rgba(0,0,0,0.5);"></i>
-        </div>
-
-        <div class="k-detail-media">
-            <img id="work-detail-img" src="">
-            
-            <!-- 侧边互动栏 -->
-            <div class="k-interaction-sidebar">
-                <div class="k-action-btn">
-                    <div class="k-avatar-sq" style="width:40px; height:40px; border-radius:50%; border:2px solid #fff; margin-bottom:10px;">
-                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" style="width:100%; height:100%; border-radius:50%;">
-                    </div>
-                </div>
-                <div class="k-action-btn">
-                    <div class="k-action-icon"><i class="fas fa-heart"></i></div>
-                    <span class="k-action-num" id="work-detail-likes">0</span>
-                </div>
-                <div class="k-action-btn">
-                    <div class="k-action-icon"><i class="fas fa-comment-dots"></i></div>
-                    <span class="k-action-num" id="work-detail-comments">0</span>
-                </div>
-                <div class="k-action-btn">
-                    <div class="k-action-icon"><i class="fas fa-share"></i></div>
-                    <span class="k-action-num" id="work-detail-shares">0</span>
-                </div>
-            </div>
-
-            <!-- 底部信息 -->
-            <div class="k-detail-overlay">
-                <div class="k-detail-title">@USER.001</div>
-                <div class="k-detail-tags" id="work-detail-desc"></div>
-                <div style="font-size:12px; opacity:0.8;">
-                    <i class="fas fa-music"></i> 原声 - USER.001 的创作
-                </div>
-            </div>
-        </div>
-    </div>
-
-
 
     </div>
 
-    <!-- 底部 Dock (黑色悬浮胶囊) -->
-    <div class="k-dock-wrapper">
-        <div class="k-dock">
-            <div class="k-dock-item active" onclick="switchLiveTab('recommend', this)">
-                <i class="fas fa-compass"></i>
-            </div>
-            <div class="k-dock-item" onclick="switchLiveTab('broadcast', this)">
-                <!-- 中间的开播按钮是个实心圆 -->
-                <div class="k-btn-center"><i class="fas fa-plus"></i></div>
-            </div>
-            <div class="k-dock-item" onclick="switchLiveTab('messages', this)">
-                <i class="far fa-comment-dots"></i> <!-- 空心图标更高级 -->
-            </div>
-            <div class="k-dock-item" onclick="switchLiveTab('profile', this)">
-                   <i class="far fa-user"></i>
-            </div>
+    <!-- 底部 5 Tab 导航 (完全恢复你的原本设计) -->
+    <div class="live-bottom-nav">
+        <div class="lb-nav-item active" onclick="switchLiveTab('discover', 'D I S C O V E R', this)">
+            <i class="far fa-compass"></i><span>发现</span>
+        </div>
+        <div class="lb-nav-item" onclick="switchLiveTab('friends', 'F R I E N D S', this)">
+            <i class="far fa-user-circle"></i><span>朋友</span>
+        </div>
+        <div class="lb-nav-item center-btn" onclick="switchLiveTab('mylive', '', this)">
+            <div class="center-circle"><i class="fas fa-plus"></i></div>
+        </div>
+        <div class="lb-nav-item" onclick="switchLiveTab('messages', 'I N B O X', this)">
+            <i class="far fa-envelope"></i><span>消息</span>
+        </div>
+        <div class="lb-nav-item" onclick="switchLiveTab('me', 'P R O F I L E', this)">
+            <i class="far fa-user"></i><span>我的</span>
         </div>
     </div>
-    
-    </div> 
+</div>
+
+<!-- ============================================== -->
+<!-- [隐藏弹窗区] 不干扰原布局，层级极高 -->
+<!-- ============================================== -->
+
+<!-- 1. 纯净版身份切换 (仅选不改) -->
+<div id="live-quick-identity-modal" class="modal-overlay" style="z-index: 5000;">
+    <div class="modal-box" style="width: 260px; border-radius: 20px; background: #fff;">
+        <div style="padding: 15px; font-weight:700; text-align:center; border-bottom:1px solid #eee;">切换身份</div>
+        <div id="live-quick-identity-list" style="max-height: 300px; overflow-y:auto; padding: 10px;"></div>
+        <div style="padding: 12px; text-align:center; border-top:1px solid #eee; color:#999; font-size:12px; cursor:pointer;" onclick="document.getElementById('live-quick-identity-modal').classList.remove('active')">取消</div>
+    </div>
+</div>
+
+<!-- 2. 全局世界书 -->
+<div id="live-global-wb-modal" class="modal-overlay" style="z-index: 5000;">
+    <div class="modal-box" style="width: 320px; border-radius: 20px;">
+        <div class="modal-header">
+            <span>🌍 全局 LIVE 世界书</span>
+            <i class="fas fa-times" onclick="document.getElementById('live-global-wb-modal').classList.remove('active')"></i>
+        </div>
+        <div class="modal-body">
+            <div style="font-size:11px; color:#888; margin-bottom:10px;">此设定将影响整个 LIVE App 里 AI 给你点赞、评论和发微信的语气及背景。</div>
+            <textarea id="live-global-wb-content" rows="6" placeholder="例如：当前是末世求生世界...或者我是豪门千金..." style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; background:#fafafa; font-size:12px; resize:vertical; outline:none;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-confirm" style="width:100%; background:#111;" onclick="saveGlobalLiveWb()">应用设定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. 抖音沉浸式播放器 (绝对定位覆盖全屏) -->
+<div id="live-tiktok-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:#000; display:none; flex-direction:column; transform:translateY(100%); transition:transform 0.3s ease;">
+    <!-- 返回键 -->
+    <div style="position:absolute; top:50px; left:20px; z-index:50; width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; cursor:pointer;" onclick="closeTikTokView()">
+        <i class="fas fa-chevron-left" style="color:#fff; font-size:18px;"></i>
+    </div>
+
+    <!-- 媒体区 -->
+    <div id="tk-media-container" style="flex:1; width:100%; height:100%; position:relative; display:flex; justify-content:center; align-items:center;"></div>
+
+    <!-- 右侧点赞评论 -->
+    <div style="position:absolute; right:15px; bottom:120px; display:flex; flex-direction:column; gap:20px; align-items:center; z-index:20;">
+        <div style="width:46px; height:46px; border-radius:50%; border:2px solid #fff; overflow:hidden;">
+            <img id="tk-avatar" src="" style="width:100%; height:100%; object-fit:cover;">
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.8); cursor:pointer;" onclick="toggleTikTokLike()">
+            <i class="fas fa-heart" style="font-size:32px; margin-bottom:4px;" id="tk-heart-icon"></i>
+            <span id="tk-likes" style="font-size:12px; font-weight:700;">0</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.8); cursor:pointer;" onclick="openTikTokComments()">
+            <i class="fas fa-comment-dots" style="font-size:30px; margin-bottom:4px;"></i>
+            <span id="tk-comments-count" style="font-size:12px; font-weight:700;">0</span>
+        </div>
+    </div>
+
+    <!-- 底部文案 -->
+    <div style="position:absolute; left:15px; right:70px; bottom:30px; z-index:20; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.8);">
+        <div id="tk-author" style="font-size:16px; font-weight:800; margin-bottom:8px;">@User</div>
+        <div id="tk-desc" style="font-size:14px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">文案</div>
+        <div id="tk-tags" style="font-size:13px; font-weight:700; margin-top:6px; color:#ffda44;">#Tags</div>
+    </div>
+
+    <!-- 评论上滑面板 -->
+    <div id="tk-comments-sheet" style="position:absolute; bottom:0; left:0; width:100%; height:65%; background:#fff; border-radius:24px 24px 0 0; z-index:100; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); display:flex; flex-direction:column;">
+        <div style="text-align:center; padding:15px; font-size:13px; font-weight:800; border-bottom:1px solid #eee; position:relative;">
+            <span id="tk-sheet-title">共 0 条评论</span>
+            <i class="fas fa-times" style="position:absolute; right:20px; top:15px; font-size:16px; color:#999; cursor:pointer;" onclick="closeTikTokComments()"></i>
+        </div>
+        <div id="tk-comments-list" style="flex:1; overflow-y:auto; padding:20px; background:#fafafa; display:flex; flex-direction:column; gap:15px;"></div>
+        <div style="padding:15px 20px; background:#fff; border-top:1px solid #eee; display:flex; gap:10px;">
+            <input type="text" id="tk-my-comment-input" placeholder="留下你的评论..." style="flex:1; background:#f5f5f5; border:none; border-radius:20px; padding:10px 15px; font-size:13px; outline:none;">
+            <button style="background:#ff2c55; color:#fff; border:none; border-radius:20px; padding:0 20px; font-weight:700;" onclick="submitTikTokComment()">发送</button>
+        </div>
+    </div>
+</div>
+
+
+
         <!-- ============================================== -->
     <!-- [新增] Bubble App (韩系黑白双模式版) -->
     <!-- ============================================== -->
@@ -2318,7 +2452,7 @@
                 <div class="affection-bar-container">
                     <div class="affection-bar-label">
                         <span>好感度</span>
-                        <span id="affection-percent-text">75%</span>
+                        <span id="affection-percent-text">0%</span>
                     </div>
                     <div class="affection-progress-bar">
                         <div id="affection-fill"></div>
@@ -2334,10 +2468,12 @@
             
             <!-- 第一排左边：地点 -->
             <div class="status-tag">
-                <i class="fas fa-map-marker-alt"></i>
-                <span>Loc:</span>
-                <b id="mind-location-val">图书馆</b>
-            </div>
+    <i class="fas fa-map-marker-alt"></i>
+    <span>Loc:</span>
+    <div class="mind-inline-marquee">
+        <b id="mind-location-val">未知地点</b>
+    </div>
+</div>
 
             <!-- 第一排右边：天气 -->
             <div class="status-tag">
@@ -2347,10 +2483,12 @@
 
             <!-- 第二排：动作 (加了 full-row 样式，让它独占一行) -->
             <div class="status-tag full-row">
-                <i class="fas fa-user-clock"></i>
-                <span>Action:</span>
-                <b id="mind-action-val">正在整理书架</b>
-            </div>
+    <i class="fas fa-user-clock"></i>
+    <span>Action:</span>
+    <div class="mind-inline-marquee">
+        <b id="mind-action-val">正在发呆</b>
+    </div>
+</div>
 
             <!-- 第三排：BGM (本来就是独占一行) -->
             <div class="status-tag now-playing-tag">
@@ -2373,9 +2511,11 @@
                 <div class="bubble-content" id="mind-hidden-text">...</div>
             </div>
         </div>
+        
 
     </div>
 </div>
+
 <input type="file" id="global-img-changer" accept="image/*" style="display:none" onchange="handleImageFileChange(this)">
 <!-- === [新增] 发布朋友圈弹窗 === -->
 <div id="post-moment-modal" class="modal-overlay">
@@ -2681,102 +2821,148 @@
         </div>
     </div>
 </div>
+<!-- === [新增] 聊天：描述图片弹窗 === -->
+<div id="image-desc-modal" class="modal-overlay">
+    <div class="modal-box image-desc-modal-box">
+        <div class="modal-header">
+            <span>发送意境卡片</span>
+            <i class="fas fa-times" onclick="closeImageDescModal()"></i>
+        </div>
+
+        <div class="modal-body image-desc-modal-body">
+            <div class="image-desc-hero">
+                <div class="image-desc-hero-title">发送给 TA 的隐藏图片</div>
+                <div class="image-desc-hero-sub">文字将被包装为图片发送，TA 将“看到”你描述的画面。</div>
+            </div>
+
+            <div class="input-group" style="margin-top:14px;">
+                <label>请输入画面描述</label>
+                <textarea
+                    id="image-desc-input"
+                    rows="4"
+                    placeholder="例如：窗外下着小雪，桌上放着两杯热咖啡和一本翻开的书..."
+                    oninput="syncImageDescPreview()"
+                ></textarea>
+            </div>
+
+            <div class="image-desc-preview-wrap">
+                <div class="image-desc-preview-title">气泡预览 (Preview)</div>
+
+                <!-- 这个就是预览用的纯净卡片 -->
+                <div id="image-desc-preview-card" class="chat-fake-image-card preview expanded">
+                    <div class="weather-snow-layer"></div>
+                    <div class="fake-image-content">
+                        <i class="far fa-image"></i>
+                        <span>MEMORY CARD</span>
+                    </div>
+                    <div class="fake-image-desc" id="image-desc-preview-text">这里会显示你输入的描述内容</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeImageDescModal()">取消</button>
+            <button class="btn-confirm" onclick="confirmSendImageDesc()">发送</button>
+        </div>
+    </div>
+</div>
+
 <!-- ========================================= -->
-<!-- [全面升级版] 剧情总结与关系 全屏页面 -->
+<!-- [全新精美版] 记忆中枢 (剧情总结与关系) -->
 <!-- ========================================= -->
-<div id="summaryPageView" class="chat-settings-page-view">
-    <div class="chat-settings-page-header">
-        <i class="fas fa-chevron-left" onclick="closeSummaryPage()"></i>
-        <span>剧情总结与关系</span>
-        <!-- 顶部直接放一个一键清空按钮，用红色警示 -->
-        <i class="fas fa-trash-alt" onclick="clearAllSummaries()" style="color:#ff4d4f; font-size: 16px;" title="一键清空记忆"></i>
+<div id="summaryPageView" class="chat-settings-page-view" style="background:#fcfcfc;">
+    <!-- 极简头部 -->
+    <div class="chat-settings-page-header" style="background:rgba(255,255,255,0.9); border-bottom:none; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <i class="fas fa-chevron-left" onclick="closeSummaryPage()" style="color:#333;"></i>
+        <span style="font-weight:800; font-size:16px; color:#111; letter-spacing:1px;">记忆中枢 <small style="color:#999; font-weight:500; font-family:'Montserrat'; letter-spacing:0px;">MEMORY</small></span>
+        <i class="fas fa-trash-alt" onclick="clearAllSummaries()" style="color:#ff4d4f; font-size:15px; background:#ffecec; padding:6px; border-radius:50%;" title="一键清空记忆"></i>
     </div>
     
-    <div class="chat-settings-page-content">
+    <div class="chat-settings-page-content" style="padding: 15px 20px 40px; display:flex; flex-direction:column; gap:20px; background:transparent;">
         
-        <!-- 1. 新增：当前对话状态与手动总结控制台 -->
-        <div class="summary-settings-section" style="background: #fff; padding: 15px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-            <div class="settings-section-title" style="margin-top:0; border-left-color: #07c160;">进度监控面板</div>
-            <div style="font-size:13px; color:#555; margin-bottom:15px; background: #f9f9f9; padding: 10px 15px; border-radius: 8px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span>当前总对话轮数：</span>
-                    <span style="font-weight:800; color:#111;" id="current-total-turns">0</span>
+        <!-- 1. 记忆仪表盘 -->
+        <div class="summary-k-card">
+            <div class="sk-title"><i class="fas fa-chart-pie"></i> 记忆仪表盘</div>
+            <div style="display:flex; justify-content:space-between; margin-top:20px; padding:0 10px;">
+                <div class="sk-stat-box">
+                    <span class="label">当前总对话</span>
+                    <span class="value"><span id="current-total-turns">0</span><small> 轮</small></span>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>最新已总结至：</span>
-                    <span style="font-weight:800; color:#07c160;">第 <span id="last-summarized-turn">0</span> 轮</span>
+                <div style="width:1px; background:#eee;"></div>
+                <div class="sk-stat-box" style="text-align:right;">
+                    <span class="label">已凝练至</span>
+                    <span class="value" style="color:#111;"><span id="last-summarized-turn">0</span><small> 轮</small></span>
                 </div>
-            </div>
-
-            <div class="settings-section-title" style="border-left-color: #ff7e67;">手动精准总结</div>
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;">
-                <span style="font-size:12px; color:#666;">从第</span>
-                <input type="number" id="manual-sum-start" placeholder="1" style="width:70px; height:36px; border-radius:8px; border:1px solid #ddd; text-align:center; font-family:inherit;">
-                <span style="font-size:12px; color:#666;">至</span>
-                <input type="number" id="manual-sum-end" placeholder="20" style="width:70px; height:36px; border-radius:8px; border:1px solid #ddd; text-align:center; font-family:inherit;">
-                <span style="font-size:12px; color:#666;">轮</span>
             </div>
             
-            <div style="display:flex; flex-direction: column; gap:10px;">
-                <button id="btn-manual-range" class="btn-secondary" onclick="generateManualSummary()" style="height: 40px; background:#f0f0f0; border:none; color:#333; font-weight:600;">
-                    <i class="fas fa-crosshairs"></i> 提取指定区间
-                </button>
-                <button id="btn-manual-latest" class="btn-confirm" onclick="generateSummarySinceLast()" style="height: 40px; border-radius: 10px;">
-                    <i class="fas fa-bolt"></i> 一键总结最新未总结部分
-                </button>
+            <div class="sk-divider"></div>
+            
+            <div class="sk-title" style="margin-bottom:12px;"><i class="fas fa-bolt" style="color:#f59e0b;"></i> 快捷收录</div>
+            <button id="btn-manual-latest" class="sk-btn-primary" onclick="generateSummarySinceLast()">
+                收录最新未总结记忆
+            </button>
+            
+            <div style="display:flex; align-items:center; gap:8px; margin-top:12px; padding:10px; background:#f9f9f9; border-radius:12px; border:1px solid #f0f0f0;">
+                <span style="font-size:11px; color:#888; font-weight:600;">从</span>
+                <input type="number" id="manual-sum-start" placeholder="1" class="sk-mini-input">
+                <span style="font-size:11px; color:#888; font-weight:600;">至</span>
+                <input type="number" id="manual-sum-end" placeholder="20" class="sk-mini-input">
+                <button id="btn-manual-range" class="sk-btn-secondary" onclick="generateManualSummary()">提取区间</button>
             </div>
         </div>
 
-        <!-- 2. 自动总结设置区 -->
-        <div class="summary-settings-section">
-            <div class="settings-section-title">自动触发设置</div>
-            <div class="input-group">
-                <label>每 N 轮对话自动总结 (设为0关闭)</label>
-                <input type="number" id="summary-turn-count" value="20" onchange="saveSummaryConfig()">
+        <!-- 2. 自动记忆设定 -->
+        <div class="summary-k-card">
+            <div class="sk-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                <span><i class="fas fa-robot"></i> 自动运转设定</span>
             </div>
-            <div class="input-group">
-                <label>自动总结字数 (约)</label>
-                <input type="number" id="summary-word-count" value="200" onchange="saveSummaryConfig()">
-            </div>
-            <div class="input-group">
-                <label>AI 总结提示词 (Prompt)</label>
-                <textarea id="summary-prompt" rows="2" onchange="saveSummaryConfig()" placeholder="例如：请以我的口吻，用亲昵的语气总结我们最近的进展。"></textarea>
+            <div style="font-size:10px; color:#999; margin-bottom:15px; line-height:1.4;">设置AI在后台自动收录剧情的规则。(设为 0 则关闭)</div>
+            
+            <div id="summary-auto-config-box" style="background:#fafafa; border-radius:12px; padding:15px; border:1px solid #eee;">
+                <div class="sk-input-row" style="margin-bottom:15px;">
+                    <label style="font-weight:600;">每 N 轮触发总结</label>
+                    <input type="number" id="summary-turn-count" value="20" onchange="saveSummaryConfig()">
+                </div>
+                <div class="sk-input-row">
+                    <label style="font-weight:600;">凝练字数 (约)</label>
+                    <input type="number" id="summary-word-count" value="200" onchange="saveSummaryConfig()">
+                </div>
+                <div class="sk-input-group" style="margin-top:15px; border-top:1px dashed #ddd; padding-top:15px;">
+                    <label style="font-weight:600; color:#333;">AI 视角提示词 (Prompt)</label>
+                    <textarea id="summary-prompt" rows="2" onchange="saveSummaryConfig()" placeholder="例如：请以我的口吻，用亲昵的语气总结我们最近的进展。"></textarea>
+                </div>
             </div>
         </div>
 
-        <hr class="settings-divider" style="margin: 20px 0;">
-
-        <!-- 3. 已有总结列表 (放大版) -->
+        <!-- 3. 记忆存档列表 -->
         <div>
-            <div class="settings-section-title" style="display: flex; justify-content: space-between; align-items: center;">
-                <span>已生成的记忆存档</span>
-                <button class="btn-secondary" onclick="addNewSummaryItem()" style="height: 28px; width:auto; padding: 0 12px; font-size: 11px; background:#fff; border:1px solid #ddd;">+ 手动编写</button>
+            <div class="sk-section-header">
+                <span><i class="fas fa-book-open"></i> 剧情记忆存档</span>
+                <button class="sk-icon-btn" onclick="addNewSummaryItem()" title="手写补充"><i class="fas fa-plus"></i></button>
             </div>
-            <div id="summary-list-container" class="summary-list-container">
+            <div id="summary-list-container" class="sk-list-container">
                 <!-- JS 动态填充 -->
-                <div class="summary-empty-state">大脑空空，暂无记忆</div>
             </div>
-            <button id="grand-summary-btn" class="btn-secondary" onclick="generateGrandSummary()" style="width: 100%; margin-top: 15px; height: 44px; border:1px solid #111; color:#111;">
-                <i class="fas fa-brain"></i> 对以上所有记忆进行【大融合】
+            <button id="grand-summary-btn" class="sk-btn-outline" onclick="generateGrandSummary()" style="margin-top:15px;">
+                <i class="fas fa-brain"></i> 记忆大融合 (生成长篇小传)
             </button>
         </div>
 
-        <hr class="settings-divider" style="margin: 25px 0;">
-
-        <!-- 4. 关系进度条 -->
+        <!-- 4. 关系节点 -->
         <div>
-            <div class="settings-section-title" style="display: flex; justify-content: space-between; align-items: center;">
-                <span>好感度与关系事件</span>
-                <button class="btn-secondary" onclick="addRelationshipLog()" style="height: 28px; width:auto; padding: 0 12px; font-size: 11px; background:#fff; border:1px solid #ddd;">+ 添加节点</button>
+            <div class="sk-section-header">
+                <span><i class="fas fa-heartbeat" style="color:#ff7e67;"></i> 关系跃升节点</span>
+                <button class="sk-icon-btn" onclick="addRelationshipLog()" title="添加大事件"><i class="fas fa-plus"></i></button>
             </div>
-            <div id="relationship-log-container" class="summary-list-container" style="max-height: 250px;">
+            <div id="relationship-log-container" class="sk-list-container">
                 <!-- JS 动态填充 -->
-                <div class="summary-empty-state">暂无关系跃升事件</div>
             </div>
         </div>
-        <div style="height: 60px;"></div> <!-- 底部留白防遮挡 -->
+        
+        <div style="height: 60px;"></div>
     </div>
 </div>
+
 <!-- ============================================== -->
 <!-- [NEW] ARCADE 双人游乐场 APP (韩系柔和轻杂志风) -->
 <!-- ============================================== -->
