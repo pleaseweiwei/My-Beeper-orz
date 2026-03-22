@@ -9120,3 +9120,172 @@ window.refreshEmojiPanels = function() {
         renderChatSettingsStickerCheckboxes();
     }
 }
+/* =========================================
+   [新增] 无损强制更新 App (不丢失本地数据)
+   ========================================= */
+window.forceUpdateAppLossless = function() {
+    if (confirm("这将会获取 GitHub 上的最新界面代码，你的聊天记录和好感度数据【绝对不会】丢失。是否继续？")) {
+        let hasServiceWorker = false;
+        
+        // 1. 注销所有的 Service Worker (解决缓存锁死)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                    hasServiceWorker = true;
+                }
+            });
+        }
+
+        // 2. 清除 Cache Storage 里的静态文件 (HTML/CSS/JS)，不碰 IndexedDB/LocalStorage
+        if ('caches' in window) {
+            caches.keys().then(function(keyList) {
+                return Promise.all(keyList.map(function(key) {
+                    return caches.delete(key);
+                }));
+            }).then(function() {
+                // 3. 给 URL 加个随机时间戳，强制绕过浏览器硬缓存刷新页面
+                const newUrl = window.location.origin + window.location.pathname + '?update=' + new Date().getTime();
+                window.location.href = newUrl;
+            });
+        } else {
+            // 如果不支持 caches，直接强制刷新
+            window.location.reload(true);
+        }
+    }
+};
+/* =========================================
+   [新增] 全量数据备份与恢复 (LocalStorage + IndexedDB)
+   ========================================= */
+
+// 1. 导出全量数据
+window.exportFullAppData = async function() {
+    try {
+        if(typeof showToast === 'function') showToast('<i class="fas fa-spinner fa-spin"></i> 正在打包数据，请稍候...');
+        
+        const backupData = {
+            version: "2.0",
+            timestamp: new Date().toISOString(),
+            localStorage: {},
+            indexedDB: {}
+        };
+
+        // A. 抓取 LocalStorage 中所有我们的数据
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            // 抓取带有项目前缀或聊天记录前缀的 key
+            if (key.startsWith('myCoolPhone_') || key.startsWith('chat_history_')) {
+                backupData.localStorage[key] = localStorage.getItem(key);
+            }
+        }
+
+        // B. 抓取 IndexedDB 大仓库里的所有聊天记录和人物数据
+        if (!IDB.db) await IDB.init();
+        const idbData = await new Promise((resolve, reject) => {
+            const tx = IDB.db.transaction('largeDataStore', 'readonly');
+            const store = tx.objectStore('largeDataStore');
+            const reqData = store.getAll();
+            const reqKeys = store.getAllKeys();
+            
+            reqData.onsuccess = () => {
+                reqKeys.onsuccess = () => {
+                    const result = {};
+                    for (let i = 0; i < reqKeys.result.length; i++) {
+                        result[reqKeys.result[i]] = reqData.result[i];
+                    }
+                    resolve(result);
+                };
+            };
+            reqData.onerror = () => reject(reqData.error);
+        });
+        
+        backupData.indexedDB = idbData;
+
+        // C. 触发下载
+        const jsonString = JSON.stringify(backupData);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement("a");
+        a.href = url;
+        // 文件名带上当天的日期
+        const dateStr = new Date().toLocaleDateString().replace(/\//g, '-');
+        a.download = `MyBeeper_Backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        if(typeof showToast === 'function') showToast('<i class="fas fa-check" style="color:#07c160;"></i> 存档导出成功！');
+    } catch (e) {
+        console.error(e);
+        alert("导出失败，请检查控制台: " + e.message);
+    }
+};
+
+// 2. 导入全量数据
+window.importFullAppData = function(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (!confirm("⚠️ 危险操作警告：\n\n导入存档将【彻底抹除并覆盖】你当前手机里的所有聊天记录、好感度、人设和主题设置。\n\n确定要继续导入吗？")) {
+        input.value = '';
+        return;
+    }
+
+    if(typeof showToast === 'function') showToast('<i class="fas fa-spinner fa-spin"></i> 正在恢复时空数据...');
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        try {
+            const backupData = JSON.parse(e.target.result);
+            
+            if (!backupData.localStorage && !backupData.indexedDB) {
+                throw new Error("这不是有效的 MyBeeper 存档文件。");
+            }
+
+            // A. 恢复 LocalStorage
+            if (backupData.localStorage) {
+                Object.keys(backupData.localStorage).forEach(key => {
+                    localStorage.setItem(key, backupData.localStorage[key]);
+                });
+            }
+
+            // B. 恢复 IndexedDB 里的巨量数据
+            if (backupData.indexedDB) {
+                if (!IDB.db) await IDB.init();
+                const entries = Object.entries(backupData.indexedDB);
+                
+                await new Promise((resolve, reject) => {
+                    const tx = IDB.db.transaction('largeDataStore', 'readwrite');
+                    const store = tx.objectStore('largeDataStore');
+                    
+                    // 先清空现有的数据库，保证不残留幽灵数据
+                    store.clear().onsuccess = () => {
+                        let i = 0;
+                        function putNext() {
+                            if (i < entries.length) {
+                                store.put(entries[i][1], entries[i][0]).onsuccess = putNext;
+                                i++;
+                            } else {
+                                resolve();
+                            }
+                        }
+                        putNext();
+                    };
+                    tx.onerror = () => reject(tx.error);
+                });
+            }
+
+            alert("🎉 时空回溯完成！应用即将重启以加载存档。");
+            window.location.reload(true);
+            
+        } catch (err) {
+            console.error(err);
+            alert("导入失败: " + err.message);
+        }
+        input.value = ''; // 允许重复上传同一个文件
+    };
+    
+    reader.readAsText(file);
+};

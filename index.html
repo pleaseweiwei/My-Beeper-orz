@@ -727,8 +727,33 @@
                             <button id="save-preset-btn" type="button">Save</button>
                         </div>
                     </div>
+                                        <!-- === 新增：全量数据备份与恢复入口 (完美适配现有的灰色主题) === -->
+                    <hr class="settings-divider">
+                    <div class="form-group">
+                        <label>全量数据存档与恢复</label>
+                        <div style="display:flex; gap:10px;">
+                            <button type="button" class="btn-secondary" onclick="exportFullAppData()">
+                                <i class="fas fa-file-export"></i> 导出存档
+                            </button>
+                            <label class="btn-secondary file-btn" style="margin:0;">
+                                <i class="fas fa-file-import"></i> 导入恢复
+                                <input type="file" id="import-full-data-input" accept=".json" style="display:none;" onchange="importFullAppData(this)">
+                            </label>
+                        </div>
+                        <div class="form-text">打包所有的聊天记录、人设、图库和配置，生成 JSON 文件。</div>
+                    </div>
 
                     <button id="save-settings-btn" class="btn-save">保存所有设置</button>
+<hr class="settings-divider">
+                    <div class="form-group">
+                        <label>系统维护</label>
+                        <button type="button" class="btn-secondary" onclick="forceUpdateAppLossless()" style="width: 100%;">
+                            <i class="fas fa-sync-alt"></i> 无损检测并更新应用 (不丢数据)
+                        </button>
+                        <div class="form-text">当网页在手机上和电脑预览不一致时点击</div>
+                    </div>
+
+
                 </div>
 
                 <!-- Tab 2: 主题美化 -->
