@@ -1566,14 +1566,13 @@
 <!-- ============================================== -->
 <div class="app-fullscreen-view" id="loveSpaceApp" style="background: #fdfdfd; font-family: 'Montserrat', 'PingFang SC', sans-serif;">
     
-    <!-- 0. 大厅界面：温馨圆润排版 -->
+       <!-- 0. 大厅界面：温馨圆润排版 -->
     <div id="ls2-lobby-view" class="ls2-view active" style="display:flex; flex-direction:column; height:100%; background:#fcfcfc;">
-        <div class="k-header" style="background:transparent; border-bottom:none; margin-top:20px; padding-bottom: 10px; padding-top:20px;">
+        <div class="k-header" style="background:transparent; border-bottom:none; margin-top:20px; padding: 20px 24px 10px; display: flex; justify-content: space-between; align-items: center;">
             <i class="fas fa-chevron-left" onclick="closeLoveSpaceApp()" style="cursor:pointer; font-size:20px; color:#333;"></i>
             <span style="font-weight: 700; font-size: 16px; color:#333; letter-spacing: 1px;">双人宇宙</span>
             <div style="width: 20px;"></div>
         </div>
-        
         <div style="padding: 20px 24px; display:flex; justify-content:space-between; align-items:center; background:#fff; margin: 0 20px 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);">
             <div>
                 <div style="font-size: 10px; color: #999; letter-spacing: 1px; margin-bottom:5px;">CURRENT IDENTITY</div>
@@ -2843,6 +2842,79 @@
         </div>
     </div>
 </div>
+<!-- === [修改] 发送聊天定位弹窗 (双模式) === -->
+<div id="location-share-modal" class="modal-overlay" style="z-index: 3600;">
+    <div class="modal-box" style="width: 320px; border-radius: 24px; background: #fff;">
+        <div class="modal-header" style="border-bottom:none; padding-bottom:15px;">
+            <span>发送定位</span>
+            <i class="fas fa-times" onclick="closeLocationShareModal()"></i>
+        </div>
+        
+        <!-- Tab 切换 -->
+        <div style="display:flex; background:#fafafa; border-radius:12px; margin: 0 20px; padding: 4px;">
+            <div class="loc-tab-btn active" id="tab-btn-loc-single" onclick="switchLocTab('single')" style="flex:1; text-align:center; padding: 8px 0; font-size:12px; font-weight:700; cursor:pointer; border-radius:10px; transition:0.2s;">我的位置</div>
+            <div class="loc-tab-btn" id="tab-btn-loc-radar" onclick="switchLocTab('radar')" style="flex:1; text-align:center; padding: 8px 0; font-size:12px; font-weight:700; cursor:pointer; border-radius:10px; transition:0.2s;">双人雷达</div>
+        </div>
+
+        <div class="modal-body" style="padding: 20px; min-height: 280px;">
+            
+            <!-- 模式1: 我的位置 -->
+            <div id="loc-panel-single" style="display:block; animation: fadeIn 0.3s ease;">
+                <div class="form-group">
+                    <label style="font-weight: 700; color: #333;">📍 位置名称 (必填)</label>
+                    <div style="display:flex; gap:10px;">
+                        <select id="loc-single-select" style="flex:1; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none;"></select>
+                        <button class="btn-secondary" style="width:auto; padding:0 12px; border-radius:12px;" onclick="promptNewLocation('single')">新建</button>
+                    </div>
+                    <input type="text" id="loc-single-new" placeholder="输入新地点名..." style="display:none; margin-top:10px; width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none;">
+                </div>
+                <div class="form-group" style="margin-top:15px;">
+                    <label style="color: #666;">详细地址 (选填)</label>
+                    <input type="text" id="loc-single-addr" placeholder="例如：静安区南京西路1618号..." style="width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none;">
+                </div>
+                <div class="form-group" style="margin-top:15px;">
+                    <label style="color: #666;">位置描述 (选填)</label>
+                    <input type="text" id="loc-single-desc" placeholder="例如：在一家复古风的咖啡馆等雨停" style="width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none;">
+                </div>
+            </div>
+
+            <!-- 模式2: 双人雷达 -->
+            <div id="loc-panel-radar" style="display:none; animation: fadeIn 0.3s ease;">
+                <div style="font-size:11px; color:#888; margin-bottom:15px; line-height:1.5;">选择你们各自的位置，系统将生成实时距离雷达卡片。</div>
+                <div class="form-group">
+                    <label style="font-weight: 700; color: #4facfe;">📍 你在哪？(Me)</label>
+                    <div style="display:flex; gap:10px;">
+                        <select id="loc-me-select" style="flex:1; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none;"></select>
+                        <button class="btn-secondary" style="width:auto; padding:0 12px; border-radius:12px;" onclick="promptNewLocation('me')">新建</button>
+                    </div>
+                    <input type="text" id="loc-me-new" placeholder="输入新地点名..." style="display:none; margin-top:10px; width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none;">
+                </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label style="font-weight: 700; color: #ff7e67;">📍 TA在哪？(AI)</label>
+                    <div style="display:flex; gap:10px;">
+                        <select id="loc-ai-select" style="flex:1; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none;"></select>
+                        <button class="btn-secondary" style="width:auto; padding:0 12px; border-radius:12px;" onclick="promptNewLocation('ai')">新建</button>
+                    </div>
+                    <input type="text" id="loc-ai-new" placeholder="输入新地点名..." style="display:none; margin-top:10px; width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none;">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; justify-content:space-between; margin-top:25px; padding-top: 15px; border-top: 1px dashed #eee;">
+                    <label style="margin:0; font-weight:700; color:#333;">显示沿途路线 🐾</label>
+                    <label class="switch" style="transform:scale(0.8);">
+                        <input type="checkbox" id="loc-show-route" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            
+        </div>
+        <div class="modal-footer" style="padding: 15px 20px;">
+            <button class="btn-cancel" onclick="closeLocationShareModal()" style="border-radius:14px;">取消</button>
+            <button class="btn-confirm" onclick="confirmSendLocation()" style="border-radius:14px; background:#2b2b2b;">分享定位</button>
+        </div>
+    </div>
+</div>
+
+
 <!-- === [新增] 聊天：描述图片弹窗 === -->
 <div id="image-desc-modal" class="modal-overlay">
     <div class="modal-box image-desc-modal-box">
@@ -2870,17 +2942,14 @@
             <div class="image-desc-preview-wrap">
                 <div class="image-desc-preview-title">气泡预览 (Preview)</div>
 
-                <!-- 这个就是预览用的纯净卡片 -->
+                               <!-- 这个就是预览用的纯净卡片 -->
                 <div id="image-desc-preview-card" class="chat-fake-image-card preview expanded">
-                    <div class="weather-snow-layer"></div>
                     <div class="fake-image-content">
                         <i class="far fa-image"></i>
-                        <span>MEMORY CARD</span>
+                        <span>PHOTO</span>
                     </div>
                     <div class="fake-image-desc" id="image-desc-preview-text">这里会显示你输入的描述内容</div>
                 </div>
-            </div>
-        </div>
 
         <div class="modal-footer">
             <button class="btn-cancel" onclick="closeImageDescModal()">取消</button>
@@ -4449,11 +4518,10 @@
     <!-- 分类命名 -->
     <input type="text" id="sm-batch-group-name" placeholder="为这组表情命名分类 (必填)" style="width:100%; border:1px solid #eee; background:#f9f9f9; border-radius:12px; padding:12px 15px; font-size:13px; margin-bottom:10px; outline:none; color:#333; transition:0.2s;" onfocus="this.style.borderColor='#111'; this.style.background='#fff';">
     
-    <!-- 【修复：新增】使用权限选择 -->
     <select id="sm-batch-scope" style="width:100%; border:1px solid #eee; background:#f9f9f9; border-radius:12px; padding:12px 15px; font-size:13px; font-weight:600; color:#333; margin-bottom:10px; outline:none;">
-        <option value="global">🌍 公共图库 (所有人可用)</option>
-        <option value="exclusive">🔒 当前角色专属</option>
-    </select>
+    <option value="global">🌍 公共图库 (所有人可用)</option>
+    <option value="custom">📁 自定义 (需在聊天设置勾选授权)</option>
+</select>
     
     <textarea id="sm-batch-text" rows="4" placeholder="例如：&#10;摸鱼 https://img.com/a.jpg&#10;叹气: https://img.com/b.png" style="width:100%; border:none; background:#f9f9f9; border-radius:12px; padding:15px; font-size:13px; resize:vertical; outline:none; color:#333; margin-bottom:15px;"></textarea>
     
@@ -4502,9 +4570,9 @@
            <div class="input-group" style="margin-top:20px;">
                <label style="font-size:12px; font-weight:700; color:#555;">使用权限</label>
                <select id="slp-scope" style="width:100%; border:1px solid #eee; background:#fafafa; border-radius:12px; padding:14px 10px; font-size:13px; font-weight:600; color:#333; outline:none;">
-                   <option value="global">🌍 公共图库 (所有人可用)</option>
-                   <option value="exclusive">🔒 当前角色专属</option>
-               </select>
+    <option value="global">🌍 公共图库 (所有人可用)</option>
+    <option value="custom">📁 自定义 (需在聊天设置勾选授权)</option>
+</select>
            </div>
        </div>
        <div style="display:flex; gap:12px; padding: 0 20px 20px;">

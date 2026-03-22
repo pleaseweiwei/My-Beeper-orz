@@ -500,35 +500,35 @@ textarea#custom-css-input:focus {
    新增：微信右上角下拉菜单样式
    ========================================= */
 
-/* 菜单容器：默认隐藏，绝对定位 */
+/* 菜单容器：防闪屏精简版 */
 .wc-plus-dropdown {
     position: absolute;
     top: 40px;
     right: -10px;
     width: 160px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px); /* 磨砂玻璃效果 */
+    background: #ffffff; /* 改用纯白背景，删掉毛玻璃特效 */
     border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.15); /* 漂亮的阴影 */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
     border: 1px solid rgba(0,0,0,0.05);
-    
     padding: 8px 0;
     z-index: 1000;
     
-    /* 动画初始状态 */
+    /* 删掉缩放动画，只保留简单的透明度变化 */
     opacity: 0;
-    transform: translateY(-10px) scale(0.95);
-    pointer-events: none; /* 看不见时不能点 */
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    transform-origin: top right;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.2s, transform 0.2s, visibility 0s 0.2s;
 }
 
 /* 菜单激活显示状态 */
 .wc-plus-dropdown.active {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    visibility: visible;
+    transform: translateY(0);
+    transition: opacity 0.2s, transform 0.2s, visibility 0s;
     pointer-events: auto;
 }
+
 
 /* 菜单里的小选项 */
 .wc-menu-option {
@@ -565,6 +565,7 @@ textarea#custom-css-input:focus {
 
 /* 加上一个小三角形指向图标，显得更精致 */
 .wc-plus-dropdown::before {
+    display: none !important; /* 加上这句，隐藏这个容易导致闪屏的三角形 */
     content: '';
     position: absolute;
     top: -6px;
@@ -883,8 +884,6 @@ textarea#custom-css-input:focus {
 
 /* BGM 的转圈动画保留 */
 .status-tag.now-playing-tag i { color: #ff7e67; animation: spin 4s linear infinite; }
-.marquee-container { flex: 1; overflow: hidden; white-space: nowrap; position: relative; mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%); }
-.marquee-container b { display: inline-block; animation: marquee 8s linear infinite; padding-left: 100%; }
 
 /* --- 底部心声 --- */
 .mind-thoughts-container { display: flex; flex-direction: column; gap: 12px; }
@@ -1313,13 +1312,26 @@ textarea#custom-css-input:focus {
     min-width: 0; /* 防止溢出 */
     margin: 0 5px;
 }
-
-/* [修改] AI 星星图标悬停效果 */
-#triggerAiReply:hover {
-    transform: scale(1.2) rotate(20deg); /* 稍微放大并旋转 */
-    color: #ffd700 !important; /* 悬停时变成金色星星，或者用 #555 变成深灰 */
-    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); /* 加一点发光效果 */
+/* [修改] AI 星星图标悬停效果 (适配手机防卡顿) */
+@media (hover: hover) {
+    #triggerAiReply:hover {
+        transform: scale(1.2) rotate(20deg); 
+        color: #ffd700 !important; 
+        text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); 
+    }
 }
+/* 触摸/点击时的收缩反馈 */
+#triggerAiReply:active {
+    transform: scale(0.9);
+}
+/* 处理中(等待AI回复)的旋转发光状态 */
+#triggerAiReply.processing {
+    color: #ffd700 !important;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    animation: fa-spin 2s infinite linear;
+    pointer-events: none; /* 防止重复点击 */
+}
+
 
 /* 发送按钮样式调整 */
 .chat-input-form button {
@@ -2941,8 +2953,9 @@ textarea#custom-css-input:focus {
     padding: 24px 24px 10px;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: flex-start; /* 修复长文本无法向上滚动的问题 */
     gap: 22px;
+    -webkit-overflow-scrolling: touch; /* 提升手机端滑动流畅度 */
 }
 
 .offline-entry {
@@ -4276,12 +4289,6 @@ textarea#custom-css-input:focus {
 .j-action:hover { color: #111; }
 
 .dashed-divider { height: 1px; width: 100%; border-top: 1px dashed #ccc; margin: 20px 0; }
-
-.j-textarea {
-    width: 100%; border: none; background: rgba(255,255,255,0.8);
-    padding: 10px; font-family: 'Songti SC', serif; font-size: 13px; line-height: 1.6;
-    min-height: 100px; resize: none; outline: none;
-}
 .j-tools { position: absolute; right: 0; bottom: -30px; display: flex; gap: 10px; }
 .round-tool-btn {
     width: 36px; height: 36px; border-radius: 50%; background: #fff;
@@ -4699,13 +4706,6 @@ textarea#custom-css-input:focus {
     display: block !important; perspective: 1500px; z-index: 10;
 }
 
-.journal-cover, .journal-inner {
-    position: absolute; inset: 0; 
-    border-radius: 4px 16px 16px 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.1);
-}
-
-.journal-inner { display: flex; flex-direction: column; }
-
 #journal-paper {
     flex: 1; display: flex; flex-direction: column; overflow: hidden;
     border-radius: 0 16px 16px 4px; margin-bottom: 0; padding: 0 !important;
@@ -4723,7 +4723,8 @@ textarea#custom-css-input:focus {
 }
 .journal-pagination i:hover { background: #111; color: #fff; }
 
-.j-page-content { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.j-page-content { flex: 1; flex-direction: column; position: relative; overflow: hidden; }
+
 .j-textarea {
     flex: 1; width: 100%; overflow-y: auto; background: transparent; border: none; outline: none; resize: none;
     padding: 20px;
@@ -5445,7 +5446,7 @@ textarea#custom-css-input:focus {
     z-index: 10; cursor: grab; transition: top 3s linear, left 3s linear, transform 0.3s ease;
     display: flex; justify-content: center; align-items: flex-end;
 }
-.pet-entity.flipped .pet-img-wrapper img { transform: scaleX(-1); }
+
 .pet-img-wrapper img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%); }
 
 .pet-ui-container {
@@ -5988,36 +5989,25 @@ textarea#custom-css-input:focus {
 }
 
 /* =========================================
-   [极致美化] 唯美视差飘雪 · 韩系高定哑光灰照片卡
+   [极简美化] 韩系高级哑光灰照片卡片
    ========================================= */
 
-/* 1. 核心卡片：修改为与主题一致的高级中性灰 */
+/* 1. 核心卡片：直接使用更深的灰色色块，不带阴影，极其干净 */
 .chat-fake-image-card {
     width: 210px;
     max-width: 100%;
-    border-radius: 18px;
-    padding: 16px;
-    
-    /* 核心调色：改为与整体UI高度统一的纯净浅灰 */
-    background-color: #f5f5f5;
-    background-image: 
-        /* 保留极细腻的纸张噪点 */
-        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E"),
-        /* 背景渐变同样改为柔和的中性灰 */
-        linear-gradient(135deg, #fcfcfc 0%, #ebebeb 100%);
-        
-    border: 1px solid #ffffff; 
-    box-shadow: 
-        inset 0 2px 5px rgba(255,255,255,0.9), 
-        0 8px 25px rgba(0,0,0,0.04);           
-        
+    border-radius: 16px;
+    padding: 20px 16px;
+    background-color: #f0f0f0; /* 直接使用深一点的灰色，与背景彻底拉开差距 */
+    border: 1px solid #e8e8e8; /* 同色系细边框 */
+    box-shadow: none;          /* 完全去掉阴影，走扁平极简风 */
     position: relative;
     overflow: hidden;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+    transition: transform 0.2s ease, background-color 0.2s ease;
     box-sizing: border-box;
 }
 
@@ -6025,82 +6015,49 @@ textarea#custom-css-input:focus {
     margin-left: auto;
 }
 
+/* 鼠标悬停和点击时颜色进一步加深 */
+.chat-fake-image-card:hover {
+    background-color: #e8e8e8; 
+}
+
 .chat-fake-image-card:active {
-    transform: scale(0.96);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    transform: scale(0.97);
+    background-color: #e0e0e0; 
 }
 
-/* =========================================
-   2. 🌟 核心特效：高清六角形冰晶飘雪 (极简稀疏版) 
-   ========================================= */
-.weather-snow-layer {
-    position: absolute;
-    inset: 0;
-    pointer-events: none; 
-    z-index: 1;
-    overflow: hidden;
-    /* 去掉滤色模式，保持白色冰晶的绝对清晰 */
+/* 2. 图标与提示文字：深灰色，保持对比度 */
+.fake-image-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 }
 
-/* 远景雪花：稍小的六角星晶体 */
-.weather-snow-layer::before {
-    content: ''; 
-    position: absolute;
-    inset: -50px; 
-    /* 使用内嵌 SVG 绘制真实的雪花线条 */
-    background-image: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(30 30)' stroke='rgba(255,255,255,0.95)' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='-4' y1='0' x2='4' y2='0'/%3E%3Cline x1='-2' y1='-3.4' x2='2' y2='3.4'/%3E%3Cline x1='-2' y1='3.4' x2='2' y2='-3.4'/%3E%3C/g%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(80 70) rotate(15)' stroke='rgba(255,255,255,0.7)' stroke-width='1.5' stroke-linecap='round'%3E%3Cline x1='-3' y1='0' x2='3' y2='0'/%3E%3Cline x1='-1.5' y1='-2.6' x2='1.5' y2='2.6'/%3E%3Cline x1='-1.5' y1='2.6' x2='1.5' y2='-2.6'/%3E%3C/g%3E%3C/svg%3E");
-    background-size: 100px 100px;
-    /* 给雪花加一点点灰色投影，让它在灰底上更显眼 */
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.06));
-    animation: snowParallaxFar 22s linear infinite; 
+.fake-image-content i {
+    font-size: 24px;
+    color: #888; 
 }
 
-/* 近景雪花：大的六角形冰晶，间距极大（保证屏幕上只有零星几片） */
-.weather-snow-layer::after {
-    content: ''; 
-    position: absolute;
-    inset: -50px;
-    background-image: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(20 20)' stroke='rgba(255,255,255,1)' stroke-width='2.5' stroke-linecap='round'%3E%3Cline x1='-8' y1='0' x2='8' y2='0'/%3E%3Cline x1='-4' y1='-6.9' x2='4' y2='6.9'/%3E%3Cline x1='-4' y1='6.9' x2='4' y2='-6.9'/%3E%3C/g%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate(70 80) rotate(20)' stroke='rgba(255,255,255,0.9)' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='-6' y1='0' x2='6' y2='0'/%3E%3Cline x1='-3' y1='-5.2' x2='3' y2='5.2'/%3E%3Cline x1='-3' y1='5.2' x2='3' y2='-5.2'/%3E%3C/g%3E%3C/svg%3E");
-    background-size: 160px 160px; 
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.08)); 
-    animation: snowParallaxNear 16s linear infinite; 
+.fake-image-content span {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: #777; 
 }
 
-/* 完美循环的风场动画（根据间距重新计算了无缝衔接参数） */
-@keyframes snowParallaxFar {
-    0%   { background-position: 0px 0px, 0px 0px; }
-    100% { background-position: 100px 300px, -100px 400px; } 
-}
-@keyframes snowParallaxNear {
-    0%   { background-position: 0px 0px, 0px 0px; }
-    50%  { background-position: -40px 240px, 40px 240px; } 
-    100% { background-position: -160px 480px, 160px 480px; } 
-}
-
-
-/* =========================================
-   4. 展开文字：毛玻璃质感面板
-   ========================================= */
+/* 3. 展开后的文字描述：灰色卡片中内嵌一张“纯白纸片” */
 .fake-image-desc {
     position: relative;
-    z-index: 2;
     width: 100%;
     max-height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
     
-    /* 磨砂玻璃文字底板 */
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px) saturate(150%);
-    border: 1px solid #ffffff;
-    border-radius: 12px;
-    
-    color: #444444; /* 深灰文字，清晰易读 */
+    background: #ffffff; /* 展开的文字区用纯白，和外部的灰色形成高级的反差 */
+    border-radius: 10px;
+    color: #333; /* 文字颜色用深黑，清晰易读 */
     font-size: 12px;
     line-height: 1.6;
     text-align: justify;
@@ -6112,12 +6069,12 @@ textarea#custom-css-input:focus {
 .chat-fake-image-card.expanded .fake-image-desc {
     max-height: 300px;
     opacity: 1;
-    padding: 14px;
-    margin-top: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    padding: 14px 14px;
+    margin-top: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03); /* 给白纸加极淡的内阴影质感 */
 }
 
-/* 预览框特殊处理 (默认完全展开) */
+/* 发送前预览框的特殊处理 */
 .chat-fake-image-card.preview {
     width: 100%;
     margin-left: 0;
@@ -6125,9 +6082,12 @@ textarea#custom-css-input:focus {
 .chat-fake-image-card.preview .fake-image-desc {
     max-height: none;
     opacity: 1;
-    padding: 14px;
-    margin-top: 10px;
+    padding: 14px 14px;
+    margin-top: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
+
+
 /* =========================================
    [全新] 地图 APP (韩系黑白灰艺术风格)
    ========================================= */
@@ -6712,28 +6672,7 @@ img.msg-sticker-img {
     border-radius: 8px;
     filter: drop-shadow(0 2px 5px rgba(0,0,0,0.05)); /* 给透明底表情加上微光 */
 }
-/* 隐藏表情包面板顶部的横向滚动条 */
-.emoji-tabs::-webkit-scrollbar { display: none; }
-.emoji-tabs { -ms-overflow-style: none; scrollbar-width: none; }
-/* =========================================
-   【修复1】表情包管理中枢优化补丁
-   ========================================= */
-#sm-tab-category {
-    overflow: visible !important; 
-}
-#sm-stickers-grid {
-    overflow: visible !important; 
-}
 
-/* 隐藏所有多余的滚动条，只保留功能，视觉上绝对干净 */
-.chat-settings-page-content::-webkit-scrollbar,
-.emoji-tabs::-webkit-scrollbar {
-    display: none;
-}
-.emoji-tabs, .chat-settings-page-content {
-    -ms-overflow-style: none; 
-    scrollbar-width: none; 
-}
 /* =========================================
    【究极修复】彻底消灭双重滑动条 & 按钮高级美化
    ========================================= */
@@ -6856,4 +6795,118 @@ img.msg-sticker-img {
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: center;
+}
+/* 新增：表情包容器与底部名字样式 */
+.msg-sticker-container {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 4px;
+    vertical-align: bottom;
+}
+
+.msg-sticker-name {
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+    text-align: center;
+    font-weight: 600;
+}
+/* =========================================
+   [新增] 聊天地图定位卡片样式
+   ========================================= */
+.chat-map-card {
+    width: 240px;
+    max-width: 100%;
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.04);
+    font-family: 'Montserrat', 'PingFang SC', sans-serif;
+}
+
+.cmc-header {
+    background: #fafafa;
+    padding: 12px 16px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #999;
+    letter-spacing: 2px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex; 
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cmc-body {
+    padding: 20px 16px;
+    position: relative;
+    /* 模拟地图微网格底纹 */
+    background-color: #fff;
+    background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 15px 15px;
+}
+
+.cmc-point {
+    display: flex; 
+    align-items: center; 
+    gap: 10px;
+    background: rgba(255,255,255,0.95);
+    padding: 10px 14px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    position: relative;
+    z-index: 2;
+    border: 1px solid #f5f5f5;
+}
+
+.cmc-point i { font-size: 16px; }
+.cmc-point.me i { color: #4facfe; }
+.cmc-point.ta i { color: #ff7e67; }
+.cmc-name { font-size: 13px; font-weight: 700; color: #333; }
+
+.cmc-route {
+    padding: 20px 0 20px 24px;
+    border-left: 2px dashed #ddd;
+    margin-left: 26px;
+    position: relative;
+}
+
+.cmc-distance {
+    position: absolute; 
+    left: 15px; 
+    top: 50%; 
+    transform: translateY(-50%);
+    background: #333; 
+    color: #fff;
+    padding: 4px 10px; 
+    border-radius: 12px;
+    font-size: 10px; 
+    font-weight: 700; 
+    border: 2px solid #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.cmc-line {
+    font-size: 12px; 
+    color: #bbb; 
+    letter-spacing: 4px; 
+    padding-left: 65px;
+    opacity: 0.7;
+}
+
+.cmc-via {
+    font-size: 9px; 
+    color: #aaa; 
+    margin-top: 6px; 
+    padding-left: 65px;
+    font-weight: 600;
+}
+/* 定位弹窗 Tab 样式 */
+.loc-tab-btn { color: #999; }
+.loc-tab-btn.active { 
+    background: #fff; 
+    color: #2b2b2b; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); 
 }

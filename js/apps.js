@@ -414,24 +414,28 @@ applyPersonaToUI();
         const chatForm = document.getElementById('chatForm');
     if(chatForm) {
         // 1. 发送按钮 / 回车键逻辑：只发送普通文本，不再判断语音模式
-        chatForm.addEventListener('submit', (e) => {
+         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const input = document.getElementById('chatInput');
             const message = input.value.trim();
             if (!message) return;
 
             lastUserMessageForAI = message;
+            
+            const msgId = 'msg_user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-            // 强制上屏普通的文本气泡
-            appendMessage(message, 'sent');
+            // 强制上屏普通的文本气泡，传入唯一的 msgId
+            appendMessage(message, 'sent', null, null, null, msgId);
 
             if (currentChatId) {
                 saveMessageToHistory(currentChatId, {
+                    id: msgId,
                     text: message,
                     type: 'sent',
                     senderName: 'ME'
                 });
             }
+
 
             // 清空输入框
             input.value = '';
@@ -488,48 +492,50 @@ applyPersonaToUI();
 
 
         
-        // 2. AI 回复图标逻辑：点击后触发 AI (智能读取上下文)
+                // 2. AI 回复图标逻辑：点击后触发 AI (智能读取上下文)
         const aiBtn = document.getElementById('triggerAiReply');
         if (aiBtn) {
             aiBtn.addEventListener('click', async () => {
-                // 1. 获取当前聊天的历史记录
                 const history = await loadChatHistory(currentChatId);
                 let contextMessages = [];
 
-                // 2. 倒序查找，直到找到最后一条 AI 发的消息 (type === 'received')
-                // 这样就把“上一次回复到现在”的所有用户消息都收集起来了
+                // 倒序查找，直到找到最后一条 AI 发的消息 (type === 'received')
                 for (let i = history.length - 1; i >= 0; i--) {
                     if (history[i].type === 'received') {
                         break; // 停止收集
                     }
                     if (history[i].type === 'sent') {
-    contextMessages.unshift(formatSpecialMessageForAI(history[i].text));
-}
-
+                        contextMessages.unshift(history[i].text);
+                    }
+                    // 新增：如果你撤回了消息，把撤回动作告诉AI
+                    if (history[i].type === 'system' && history[i].isRevoked) {
+                        contextMessages.unshift(`[System: The user just revoked a message saying "${history[i].originalText}". You can playfully tease them about it.]`);
+                    }
                 }
 
-                // 3. 检查输入框里是否还有没发出去的字，如果有，也算进去
+                // 检查输入框里是否还有没发出去的字，如果有，算进去并帮你发出去
                 const currentInput = document.getElementById('chatInput').value.trim();
                 if (currentInput) {
-                    // 自动帮用户发出去
                     document.getElementById('chatForm').dispatchEvent(new Event('submit'));
                     contextMessages.push(currentInput);
                 }
 
-                // 4. 发送合并后的消息
+                // 发送合并后的消息
                 if (contextMessages.length > 0) {
-                    // 添加视觉反馈
-                    aiBtn.classList.add('fa-spin');
-                    setTimeout(() => aiBtn.classList.remove('fa-spin'), 1000);
+                    aiBtn.classList.add('processing'); // 让星星变成黄色并开始旋转
                     
-                    // 用换行符拼接所有未回复的消息
                     const combinedMessage = contextMessages.join('\n');
-                    sendMessageToAI(combinedMessage);
+                    
+                    // 等待发送完成后，必定会移除旋转状态，彻底解决卡死问题
+                    sendMessageToAI(combinedMessage).finally(() => {
+                        aiBtn.classList.remove('processing');
+                    });
                 } else {
                     alert("没有新的用户消息需要回复，或请先发送一条消息。");
                 }
             });
         }
+
 
     }
     // 初始化 Pay 数据
@@ -1288,8 +1294,6 @@ window.renderGreetingListUI = function(friend) {
 
 
 
-// 3. 打开具体的聊天窗口 (连接AI)
-// --- 修改后的打开聊天函数 (支持加载历史记录 + 强制同步最新头像) ---
 window.openChatDetail = async function(name) {
     document.getElementById('dock-dot').style.display = 'none';
     stopDanmakuLoop();
@@ -1302,66 +1306,73 @@ window.openChatDetail = async function(name) {
 
     const chatView = document.getElementById('chatLayer');
     if(chatView) {
-        // 更新顶部标题
         const titleEl = chatView.querySelector('.chat-header span');
-        // 如果有备注用备注，没备注用名字
         const displayName = (friendsData[name] && friendsData[name].remark) ? friendsData[name].remark : name;
-        
         if(titleEl) {
              titleEl.innerHTML = `${displayName}<small style="font-size:9px; color:#aaa; font-weight:400; letter-spacing:1px; text-transform:uppercase;">Online</small>`;
         }
         chatView.classList.add('show');
     }
 
-    // 清空界面
     const chatMessages = document.getElementById('chatMessages');
     chatMessages.innerHTML = ''; 
 
-    // 加载历史
     const history = await loadChatHistory(name);
 
     if (history.length > 0) {
         chatMessages.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">History</span></div>`;
         
-        // ★★★ 核心修复：获取该好友最新的头像 ★★★
         let currentRealAvatar = null;
         if (friendsData[name] && friendsData[name].avatar) {
             currentRealAvatar = friendsData[name].avatar;
         }
 
         history.forEach(msg => {
-            // ★ 新增：拦截线下模式产生的剧情消息，防止在线上微信里像小说一样显示出来
             if (msg.isOffline) return; 
 
-            // 如果是对方发的消息(received)，强制使用最新头像覆盖历史记录里的旧头像
+            // 【核心修复】渲染撤回消息状态
+            if (msg.isRevoked) {
+                const systemTip = document.createElement('div');
+                systemTip.className = 'msg-system-revoke';
+                const escapedText = (msg.originalText || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                systemTip.innerHTML = `<span>你撤回了一条消息 <span style="color:#576b95;cursor:pointer;" onclick="document.getElementById('chatInput').value='${escapedText}'">重新编辑</span></span>`;
+                
+                const row = document.createElement('div');
+                row.className = `chat-row system`;
+                row.setAttribute('data-msg-id', msg.id); 
+                row.appendChild(systemTip);
+                chatMessages.appendChild(row);
+                return;
+            }
+
             let displayAvatar = msg.customAvatar;
             if (msg.type === 'received' && currentRealAvatar) {
                 displayAvatar = currentRealAvatar;
             }
             
-            appendMessage(msg.text, msg.type, displayAvatar, msg.senderName, msg.translation);
+            // 【核心修复】必须传入 msg.id 才能保证与数据库挂钩
+            appendMessage(msg.text, msg.type, displayAvatar, msg.senderName, msg.translation, msg.id);
         });
-        
         setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 100);
 
     } else {
-        // 开场白逻辑
         const friend = friendsData[name];
-       const greetingText = getEffectiveGreeting(friend);
-if (friend && greetingText) {
-    const avatar = friend.avatar || null;
-    appendMessage(greetingText, 'system', avatar, name);
+        const greetingText = getEffectiveGreeting(friend);
+        if (friend && greetingText) {
+            const avatar = friend.avatar || null;
+            const msgId = 'msg_sys_' + Date.now();
+            appendMessage(greetingText, 'system', avatar, name, null, msgId);
 
-    saveMessageToHistory(name, {
-        text: greetingText,
-        type: 'system',
-        senderName: name,
-        customAvatar: avatar
-    });
-} else {
-    chatMessages.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">Today</span></div>`;
-}
-
+            saveMessageToHistory(name, {
+                id: msgId,
+                text: greetingText,
+                type: 'system',
+                senderName: name,
+                customAvatar: avatar
+            });
+        } else {
+            chatMessages.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">Today</span></div>`;
+        }
     }
 }
 
@@ -1680,7 +1691,35 @@ async function sendMessageToAI(userMessage) {
     // 获取当前聊天对象的详细设置 (从 friendsData 获取)
     let f = friendsData[currentChatId] || {};
     let chatSettings = f.chatSettings || {}; // 获取可能存在的设置
-    
+        // --- 【新增】预处理 userMessage 中的表情包和语音 ---
+    if (typeof userMessage === 'string') {
+        userMessage = userMessage.split('\n').map(line => {
+            let processed = line.trim();
+            // 解析表情
+            if (/^\[表情:.*?\]$/.test(processed)) {
+                const name = processed.match(/^\[表情:(.*?)\]$/)[1];
+                let sticker = (window.allStickers || []).find(s => s.name === name);
+                if (sticker) {
+                    if (chatSettings.visionStickerEnabled) {
+                        return `[System: User sent a sticker named "${name}". IMAGE_CONTENT:${sticker.url}]`;
+                    } else {
+                        return `[System: User sent a sticker/meme named "${name}". Please react to it appropriately.]`;
+                    }
+                }
+            }
+            // 解析语音
+            if (processed.startsWith('[VOICE]')) {
+                const voiceText = processed.replace('[VOICE]', '').trim();
+                if (voiceText && voiceText !== '（语音消息）' && voiceText !== '（未识别到文字）') {
+                    return `[System: User sent a voice message saying: "${voiceText}"]`;
+                } else {
+                    return `[System: User sent a voice message but no text could be extracted.]`;
+                }
+            }
+            return line; // 没匹配到就原样返回
+        }).join('\n');
+    }
+
     // --- [新增点] 翻译模式检查 ---
     const TRANS_SEPARATOR = "___TRANSLATION_SEP___";
 
@@ -1749,14 +1788,14 @@ AI 原始输出示例 2：[表情:嫌弃]
         [User Input]
         User sent: "${userMessage}"
         
-        [Speaking Style Rules - CRITICAL]
-        1. Refuse Robot Speak: Absolutely NO lists (1. 2. 3.), NO formal connectors (However, Therefore).
-        2. Visual Rhythm: 
-           - Keep sentences SHORT (5-20 chars). 
+                [Speaking Style Rules - CRITICAL]
+        1. Refuse Robot Speak: Absolutely NO lists (1. 2. 3.), NO formal connectors (However, Therefore). No long paragraphs.
+        2. Visual Rhythm & Length: 
+           - Keep sentences EXTREMELY SHORT (5-20 chars). MAXIMUM 2 lines per character.
            - NO periods (。) at the end of lines.
            - Use newlines for pauses if needed.
         3. Tone: Casual, spoken language, slang allowed. Mimic real friends chatting.
-        
+
         [Instruction]
         1. Decide which characters should reply (one or multiple).
         2. Characters can reply to the User or to each other.
@@ -1789,13 +1828,17 @@ AI 原始输出示例 2：[表情:嫌弃]
 
         ${f.worldbook ? `[World Setting]: ${f.worldbook}` : ''}
 
-        [CORE RULES - CRITICAL]
+                [CORE RULES - CRITICAL]
         1. 场景限制：你们的互动【仅限于线上聊天软件】，严禁发展为线下见面。
         2. 非通话警告：这【不是电话通话】。你们是通过类似微信/QQ的软件进行交流，因此【绝对禁止】使用“挂断”、“挂电话”、“挂了”等与语音通话相关的词语。
         3. 角色一致性：你的所有言行举止都必须严格遵循你的角色设定，不要崩人设。
-        4. 对话节奏与格式：模拟真实的线上真人聊天习惯，鼓励一次性生成多条短消息。
+        // === 将下面的第 4 点替换成这样 ===
+        4. 对话节奏与格式（最高优先级）：模拟真实的线上真人聊天习惯，【极度简短】！
+           - **你的聊天正文总字数【绝对不要超过 50 字】！**
+           - **每次最多只回复 1 到 3 句话。能用两三个字回答的，就不要写一行。严禁长篇大论或过度解释。**
            - **必须使用换行符（回车）来切分你要连发的多条消息。**（例如每一行短句代表一个独立发送的聊天气泡）。
-           - 语气自然口语化，不要像机器人在回答问题。
+           - 语气必须随意、口语化，拒绝机械感。
+
         `;
 
        
@@ -1809,6 +1852,13 @@ AI 原始输出示例 2：[表情:嫌弃]
         If the user acts spoiled, complains about being poor, or if you simply want to show affection/buy them a gift, you can GRANT them Intimate Pay (a shared credit limit).
         To do this, include this exact tag anywhere in your reply: [GRANT_PAY:Amount] (e.g. [GRANT_PAY:5200] or [GRANT_PAY:无限]).
         Only use this when emotionally appropriate.
+        `;
+        // === [新增] 定位发送与创建规则 ===
+        systemPrompt += `
+        \n[LOCATION RADAR SYSTEM]
+        If you want to share a location radar card with the user, include this exact tag anywhere in your reply: [SEND_MAP:YourLocationName|UserLocationName|DistanceKm]
+        Example: [SEND_MAP:星巴克|中央公园|2.5]
+        If you invent a completely new location name in the tag, the system will automatically build it on the user's Map App. Use this to creatively drive the roleplay forward!
         `;
 
         // === 【升级版】强制 AI 生成：中文弹幕 + 实时心声状态 ===
@@ -1922,10 +1972,11 @@ Kaomoji: ( ｡•̀ᴗ-)✧
          
          IMPORTANT: Do NOT put translation at the very end. Put it BEFORE the status blocks.
          `;
-     } else {
+         } else {
           // 如果没开启翻译，保持原有的简单指令
-          systemPrompt += `\nInstruction: Respond shortly and naturally.`;
+          systemPrompt += `\nInstruction: Respond extremely shortly and naturally. Your main chat text MUST be under 50 characters!`;
      }
+
 
     }
     // ============================================
@@ -1959,16 +2010,38 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
                 // 截取最近的 N 条
                 const recentHistory = history.slice(-memoryLimit);
                 
-                contextMessages = recentHistory.map(msg => {
-    let finalContent = formatSpecialMessageForAI(msg.text);
-    if (msg.isOffline) {
-        finalContent = `(Offline Event Memory: ${finalContent})`;
-    }
-    return {
-        role: msg.type === 'sent' ? 'user' : 'assistant',
-        content: finalContent
-    };
-});
+                             contextMessages = recentHistory.map(msg => {
+                    let finalContent = formatSpecialMessageForAI(msg.text);
+                    
+                    // 【处理历史记录中表情包与语音的视觉/文本转换】
+                    if (/^\[表情:.*?\]$/.test(finalContent.trim())) {
+                        const name = finalContent.trim().match(/^\[表情:(.*?)\]$/)[1];
+                        let sticker = (window.allStickers || []).find(s => s.name === name);
+                        if (sticker) {
+                            if (chatSettings.visionStickerEnabled) {
+                                finalContent = `[System: User sent a sticker named "${name}". IMAGE_CONTENT:${sticker.url}]`;
+                            } else {
+                                finalContent = `[System: User sent a sticker/meme named "${name}". Please react to it appropriately.]`;
+                            }
+                        }
+                    } else if (finalContent.startsWith('[VOICE]')) {
+                        const voiceText = finalContent.replace('[VOICE]', '').trim();
+                        if (voiceText && voiceText !== '（语音消息）' && voiceText !== '（未识别到文字）') {
+                            finalContent = `[System: User sent a voice message saying: "${voiceText}"]`;
+                        } else {
+                            finalContent = `[System: User sent a voice message but no text could be extracted.]`;
+                        }
+                    }
+
+                    if (msg.isOffline) {
+                        finalContent = `(Offline Event Memory: ${finalContent})`;
+                    }
+                    return {
+                        role: msg.type === 'sent' ? 'user' : 'assistant',
+                        content: finalContent
+                    };
+                });
+
 
             } catch (e) {
                 console.error("加载历史记录失败:", e);
@@ -2209,6 +2282,53 @@ if (statusMatch) {
                     saveMessageToHistory(currentChatId, { text: tagText, type: 'received', senderName: friendsData[currentChatId].realName });
                 }, 1000);
             }
+            // === [新增] 解析 AI 主动发送的定位卡片 ===
+            const mapRegex = /\[SEND_MAP:([^|]+)\|([^|]+)\|([^\]]+)\]/i;
+            const mapMatch = rawReply.match(mapRegex);
+            if (mapMatch) {
+                const aiLoc = mapMatch[1].trim();
+                const meLoc = mapMatch[2].trim();
+                const dist = mapMatch[3].trim();
+                // 剔除标记不显示在文字中
+                rawReply = rawReply.replace(mapRegex, '').trim();
+                
+                // 延迟 500ms 自动帮它写入 MapApp 数据库并上屏
+                setTimeout(() => {
+                    if (typeof loadMapsData === 'function') loadMapsData();
+                    let defaultMapId = Object.keys(mapsData || {})[0];
+                    if (!defaultMapId) {
+                        defaultMapId = 'map_' + Date.now();
+                        mapsData[defaultMapId] = { id: defaultMapId, name: '我们的世界', locations: [] };
+                    }
+                    
+                    // 检查是否存在，不存在就自动新建
+                    const existAi = mapsData[defaultMapId].locations.find(l => l.name === aiLoc);
+                    if (!existAi) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now(), name: aiLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: [currentChatId]});
+                    
+                    const existMe = mapsData[defaultMapId].locations.find(l => l.name === meLoc);
+                    if (!existMe) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now()+'_2', name: meLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: []});
+                    
+                    if (typeof saveMapsData === 'function') saveMapsData();
+
+                    // 生成标准的 MAP_CARD 给前端渲染
+                    const tagText = `[MAP_CARD:${meLoc}|${aiLoc}|${dist}||true]`;
+                    const msgId = 'msg_aimap_' + Date.now();
+                    
+                    // 获取当前聊天人设的真实名字和头像
+                    const fName = friendsData[currentChatId]?.remark || friendsData[currentChatId]?.realName;
+                    const fAvatar = friendsData[currentChatId]?.avatar;
+                    
+                    appendMessage(tagText, 'received', fAvatar, fName, null, msgId);
+                    
+                    saveMessageToHistory(currentChatId, {
+                        id: msgId,
+                        text: tagText,
+                        type: 'received',
+                        senderName: fName,
+                        customAvatar: fAvatar
+                    });
+                }, 800);
+            }
 
             // 3. 朋友圈 [MOMENT] & [MOMENT_IMG]，从 rawReply 中完全移除
             const momentBlockRegex = /\[MOMENT\]([\s\S]*?)\[\/MOMENT\]/i;
@@ -2257,29 +2377,24 @@ if (!avatarUrl) {
 
                 let cumulativeDelay = 0; // 累计延迟时间
 
-                // 3. 循环发送每一个气泡
+                 // 3. 循环发送每一个气泡
                 textSegments.forEach((seg, index) => {
-                    // 计算自然延迟：基础延迟 + 根据字数增加阅读时间
-                    // 第一条消息几乎立即发送 (延迟很短)，后续消息依次排队
                     const delay = index === 0 ? 100 : (800 + seg.length * 50);
                     cumulativeDelay += delay;
 
                     setTimeout(() => {
-                        // 尝试匹配对应的翻译段落
                         let currentTrans = null;
                         if (transSegments.length > 0) {
-                            // 简单索引对应：第1段正文配第1段翻译
-                            if (index < transSegments.length) {
-                                currentTrans = transSegments[index];
-                            }
-                            // 如果是最后一段正文，但翻译还有多余的行，把剩余翻译全拼接到这最后一条里（防止翻译丢失）
+                            if (index < transSegments.length) currentTrans = transSegments[index];
                             if (index === textSegments.length - 1 && transSegments.length > textSegments.length) {
                                 currentTrans = transSegments.slice(index).join('<br>');
                             }
                         }
 
-                        // 上屏 (appendMessage 内部会自动处理虚线分割翻译)
-                        appendMessage(seg, 'received', avatarUrl, null, currentTrans);
+                        const aiMsgId = 'msg_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+                        // 上屏，必须带上 aiMsgId
+                        appendMessage(seg, 'received', avatarUrl, null, currentTrans, aiMsgId);
 
                         // 红点提醒逻辑
                         const chatLayer = document.getElementById('chatLayer');
@@ -2288,9 +2403,10 @@ if (!avatarUrl) {
                             if (dockDot) dockDot.style.display = 'block';
                         }
 
-                        // 每一条气泡都单独保存到历史记录
+                         // 确保使用同一个 ID 存入历史记录
                         if (currentName) {
                             saveMessageToHistory(currentName, {
+                                id: aiMsgId,
                                 text: seg,
                                 type: 'received',
                                 customAvatar: avatarUrl,
@@ -3311,12 +3427,14 @@ window.confirmSendImageDesc = async function() {
     }
 
     const rawText = `[IMG_DESC]${desc}`;
+    const msgId = 'msg_user_imgdesc_' + Date.now();
 
-    // 只上屏，不立刻触发AI
-    appendMessage(rawText, 'sent');
+    // 核心修复：传入 msgId
+    appendMessage(rawText, 'sent', null, null, null, msgId);
 
     if (currentChatId) {
         await saveMessageToHistory(currentChatId, {
+            id: msgId,
             text: rawText,
             type: 'sent',
             senderName: 'ME'
@@ -3324,10 +3442,10 @@ window.confirmSendImageDesc = async function() {
     }
 
     closeImageDescModal();
-
     const panel = document.getElementById('chat-extra-panels');
     if (panel) panel.classList.remove('open');
 };
+
 
 window.toggleFakeImageDesc = function(card) {
     if (!card) return;
@@ -3347,19 +3465,192 @@ window.toggleFakeImageDesc = function(card) {
     }
 };
 
-// --- 功能 B: 发送位置 ---
+// --- 功能 B: 发送位置 (双模式弹窗) ---
+let isLocMeNew = false;
+let isLocAiNew = false;
+let isLocSingleNew = false;
+let currentLocMode = 'single'; // 'single' 或 'radar'
+
 window.sendLocation = function() {
-    const html = `
-        <div class="msg-location-card">
-            <div class="loc-info">
-                <div class="loc-title">My Current Location</div>
-                <div class="loc-addr">Shanghai, China</div>
-            </div>
-            <div class="loc-map"></div>
-        </div>
-    `;
-    sendRichMessage(html, '', `[System: User shared their location (Shanghai). Ask if they want to meet up or comment on the location.]`);
+    openLocationShareModal();
 }
+
+window.switchLocTab = function(mode) {
+    currentLocMode = mode;
+    document.getElementById('tab-btn-loc-single').classList.remove('active');
+    document.getElementById('tab-btn-loc-radar').classList.remove('active');
+    document.getElementById('loc-panel-single').style.display = 'none';
+    document.getElementById('loc-panel-radar').style.display = 'none';
+
+    document.getElementById(`tab-btn-loc-${mode}`).classList.add('active');
+    document.getElementById(`loc-panel-${mode}`).style.display = 'block';
+}
+
+window.openLocationShareModal = function() {
+    document.getElementById('location-share-modal').classList.add('active');
+    
+    // 初始化状态
+    switchLocTab('single');
+    isLocMeNew = false;
+    isLocAiNew = false;
+    isLocSingleNew = false;
+    document.getElementById('loc-single-new').style.display = 'none';
+    document.getElementById('loc-me-new').style.display = 'none';
+    document.getElementById('loc-ai-new').style.display = 'none';
+    document.getElementById('loc-single-select').style.display = 'block';
+    document.getElementById('loc-me-select').style.display = 'block';
+    document.getElementById('loc-ai-select').style.display = 'block';
+    
+    // 清空文本框
+    document.getElementById('loc-single-addr').value = '';
+    document.getElementById('loc-single-desc').value = '';
+    
+    // 载入地图数据
+    if (typeof loadMapsData === 'function') loadMapsData();
+    let allLocs = [];
+    if (typeof mapsData !== 'undefined') {
+        Object.values(mapsData).forEach(map => {
+            if (map.locations) {
+                map.locations.forEach(loc => {
+                    allLocs.push({ id: loc.id, name: loc.name, mapName: map.name, x: loc.x, y: loc.y });
+                });
+            }
+        });
+    }
+
+    let optionsHtml = '';
+    if (allLocs.length === 0) {
+        optionsHtml = '<option value="">暂无地点，请点击新建</option>';
+    } else {
+        allLocs.forEach(l => {
+            optionsHtml += `<option value="${l.name}" data-x="${l.x}" data-y="${l.y}">${l.name} (${l.mapName})</option>`;
+        });
+    }
+    document.getElementById('loc-single-select').innerHTML = optionsHtml;
+    document.getElementById('loc-me-select').innerHTML = optionsHtml;
+    document.getElementById('loc-ai-select').innerHTML = optionsHtml;
+}
+
+window.closeLocationShareModal = function() {
+    document.getElementById('location-share-modal').classList.remove('active');
+}
+
+window.promptNewLocation = function(type) {
+    if (type === 'single') {
+        isLocSingleNew = true;
+        document.getElementById('loc-single-select').style.display = 'none';
+        document.getElementById('loc-single-new').style.display = 'block';
+        document.getElementById('loc-single-new').value = '';
+        document.getElementById('loc-single-new').focus();
+    } else if (type === 'me') {
+        isLocMeNew = true;
+        document.getElementById('loc-me-select').style.display = 'none';
+        document.getElementById('loc-me-new').style.display = 'block';
+        document.getElementById('loc-me-new').value = '';
+        document.getElementById('loc-me-new').focus();
+    } else {
+        isLocAiNew = true;
+        document.getElementById('loc-ai-select').style.display = 'none';
+        document.getElementById('loc-ai-new').style.display = 'block';
+        document.getElementById('loc-ai-new').value = '';
+        document.getElementById('loc-ai-new').focus();
+    }
+}
+
+window.confirmSendLocation = function() {
+    if (typeof loadMapsData === 'function') loadMapsData();
+    let defaultMapId = Object.keys(mapsData || {})[0];
+    if (!defaultMapId) {
+        defaultMapId = 'map_' + Date.now();
+        mapsData[defaultMapId] = { id: defaultMapId, name: '我们的世界', locations: [] };
+    }
+
+    if (currentLocMode === 'single') {
+        // --- 模式1：只发我的位置 ---
+        let locName = '';
+        if (isLocSingleNew) {
+            locName = document.getElementById('loc-single-new').value.trim();
+            if (!locName) { alert('请输入位置名称'); return; }
+            mapsData[defaultMapId].locations.push({
+                id: 'loc_' + Date.now() + Math.random(),
+                name: locName, desc: '单人定位自动创建', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: []
+            });
+            if (typeof saveMapsData === 'function') saveMapsData();
+        } else {
+            locName = document.getElementById('loc-single-select').value;
+            if(!locName) { alert('请选择或新建位置'); return; }
+        }
+
+        const addr = document.getElementById('loc-single-addr').value.replace(/\|/g, ' ').trim();
+        const desc = document.getElementById('loc-single-desc').value.replace(/\|/g, ' ').trim();
+
+        const tagText = `[MY_LOC:${locName}|${addr}|${desc}]`;
+        const msgId = 'msg_loc_' + Date.now();
+        
+        appendMessage(tagText, 'sent', null, null, null, msgId);
+        if (currentChatId) {
+            saveMessageToHistory(currentChatId, { text: tagText, type: 'sent', senderName: 'ME', id: msgId });
+        }
+
+
+    } else {
+        // --- 模式2：双人雷达 ---
+        let meLocName = '', aiLocName = '';
+        let meX = 50, meY = 50, aiX = 50, aiY = 50;
+
+        if (isLocMeNew) {
+            meLocName = document.getElementById('loc-me-new').value.trim();
+            if (!meLocName) { alert('请输入我的新地点'); return; }
+            meX = Math.round(Math.random()*80 + 10); meY = Math.round(Math.random()*80 + 10);
+            mapsData[defaultMapId].locations.push({ id: 'loc_' + Date.now() + Math.random(), name: meLocName, desc: '雷达建立', x: meX, y: meY, boundChars: [] });
+        } else {
+            const sel = document.getElementById('loc-me-select');
+            meLocName = sel.value;
+            if(!meLocName) { alert('请选择或新建位置'); return; }
+            const opt = sel.options[sel.selectedIndex];
+            if(opt) { meX = parseFloat(opt.getAttribute('data-x'))||50; meY = parseFloat(opt.getAttribute('data-y'))||50; }
+        }
+
+        if (isLocAiNew) {
+            aiLocName = document.getElementById('loc-ai-new').value.trim();
+            if (!aiLocName) { alert('请输入TA的新地点'); return; }
+            aiX = Math.round(Math.random()*80 + 10); aiY = Math.round(Math.random()*80 + 10);
+            mapsData[defaultMapId].locations.push({ id: 'loc_' + Date.now() + Math.random(), name: aiLocName, desc: '雷达建立', x: aiX, y: aiY, boundChars: [currentChatId] });
+        } else {
+            const sel = document.getElementById('loc-ai-select');
+            aiLocName = sel.value;
+            if(!aiLocName) { alert('请选择或新建位置'); return; }
+            const opt = sel.options[sel.selectedIndex];
+            if(opt) { aiX = parseFloat(opt.getAttribute('data-x'))||50; aiY = parseFloat(opt.getAttribute('data-y'))||50; }
+        }
+
+        if (typeof saveMapsData === 'function') saveMapsData();
+
+        const showRoute = document.getElementById('loc-show-route').checked;
+        let dist = Math.round(Math.sqrt(Math.pow(meX - aiX, 2) + Math.pow(meY - aiY, 2)) * 0.5 * 10) / 10;
+        if (meLocName === aiLocName) dist = 0;
+        
+        let viaText = '';
+        if (showRoute && dist > 2) {
+            const mapLocs = mapsData[defaultMapId].locations;
+            const others = mapLocs.filter(l => l.name !== meLocName && l.name !== aiLocName);
+            if (others.length > 0) {
+                const randVia = others[Math.floor(Math.random()*others.length)];
+                viaText = `途径: ${randVia.name}`;
+            }
+        }
+
+        const tagText = `[MAP_CARD:${meLocName}|${aiLocName}|${dist}|${viaText}|${showRoute}]`;
+        const msgId = 'msg_map_' + Date.now();
+        appendMessage(tagText, 'sent', null, null, null, msgId);
+        if (currentChatId) saveMessageToHistory(currentChatId, { text: tagText, type: 'sent', senderName: 'ME', id: msgId });
+    }
+
+    closeLocationShareModal();
+    document.getElementById('chat-extra-panels').classList.remove('open');
+}
+
+
 
 // --- 功能 C: 拍一拍 ---
 window.triggerNudge = function() {
@@ -3544,26 +3835,24 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
         isRichContent = true;
         // 注意：这里不添加 rich-bubble 类名，让它保持普通气泡的底色和圆角
     } 
-        else if (text.startsWith('[IMG_DESC]')) {
+          else if (text.startsWith('[IMG_DESC]')) {
         bubble.classList.add('rich-bubble');
         const desc = text.replace('[IMG_DESC]', '').trim();
         const encodedDesc = encodeURIComponent(desc);
 
-        // 使用全新的雾灰飘雪结构
+        // 使用极简韩系结构
         contentHtml = `
             <div class="chat-fake-image-card" data-desc="${encodedDesc}" onclick="toggleFakeImageDesc(this)">
-                <div class="weather-snow-layer"></div>
-                
                 <div class="fake-image-content">
                     <i class="far fa-image"></i>
-                    <span>点击查看照片</span>
+                    <span>PHOTO</span>
                 </div>
-
                 <div class="fake-image-desc"></div>
             </div>
         `;
         isRichContent = true;
     }
+
 
         // === [韩系美化版] 实时解析亲密付 Tag，生成无缝卡片 ===
     else if (text.startsWith('[INTIMATE_')) {
@@ -3609,6 +3898,99 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
             </div>
         `;
     }
+           // === [韩系美化版] 地图定位分享卡片 (双人雷达) ===
+    else if (text.startsWith('[MAP_CARD:')) {
+        bubble.classList.add('rich-bubble');
+        isRichContent = true;
+        
+        const cleanText = text.replace('[MAP_CARD:', '').replace(']', '');
+        const parts = cleanText.split('|');
+        const meLoc = parts[0] || '未知';
+        const aiLoc = parts[1] || '未知';
+        const dist = parseFloat(parts[2]) || 0;
+        const via = parts[3] || '';
+        const showRoute = parts[4] === 'true';
+
+        let routeHtml = '';
+        if (showRoute && dist > 0) {
+            routeHtml = `
+                <div class="cmc-route">
+                    <div class="cmc-distance">相距 ${dist}km</div>
+                    <div class="cmc-line">🐾 🐾 🐾</div>
+                    ${via ? `<div class="cmc-via">${via}</div>` : ''}
+                </div>
+            `;
+        } else {
+            routeHtml = `
+                <div class="cmc-route" style="border-left:none;">
+                    <div class="cmc-distance" style="position:relative; left:0; transform:none; margin:10px 0;">${dist === 0 ? '就在彼此身边 💖' : `相距 ${dist}km`}</div>
+                </div>
+            `;
+        }
+
+        contentHtml = `
+            <div class="chat-map-card">
+                <div class="cmc-header">
+                    <span>LOCATION RADAR</span>
+                    <i class="fas fa-location-arrow"></i>
+                </div>
+                <div class="cmc-body">
+                    <div class="cmc-point me">
+                        <i class="fas fa-street-view"></i> <span class="cmc-name">${meLoc}</span>
+                    </div>
+                    ${routeHtml}
+                    <div class="cmc-point ta">
+                        <i class="fas fa-map-marker-alt"></i> <span class="cmc-name">${aiLoc}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+        // === [新增] 单人位置分享卡片 (我的位置) ===
+    else if (text.startsWith('[MY_LOC:')) {
+        bubble.classList.add('rich-bubble');
+        isRichContent = true;
+        
+        const cleanText = text.replace('[MY_LOC:', '').replace(']', '');
+        const parts = cleanText.split('|');
+        const locName = parts[0] || '未知位置';
+        const addr = parts[1] || '';
+        const desc = parts[2] || '';
+        
+        contentHtml = `
+            <div class="msg-location-card">
+                <div class="loc-info">
+                    <div class="loc-title">${locName}</div>
+                    <div class="loc-addr">${addr ? addr : (desc ? desc : '位置信息已共享')}</div>
+                </div>
+                
+                <!-- 纯 CSS 代码绘制的浅灰色极简地图 (不需要任何图片，秒加载) -->
+                <div class="loc-map" style="position:relative; height:100px; background-color:#f4f5f7; 
+                    background-image: 
+                        linear-gradient(to right, #e8e9eb 2px, transparent 2px),
+                        linear-gradient(to bottom, #e8e9eb 2px, transparent 2px); 
+                    background-size: 20px 20px; 
+                    border-radius: 0 0 16px 16px; overflow: hidden;">
+                    
+                    <!-- 用 CSS 画两条交叉的白色主干道 -->
+                    <div style="position:absolute; top:45%; left:-10%; width:120%; height:8px; background:#fff; transform:rotate(-12deg); box-shadow: 0 1px 2px rgba(0,0,0,0.03);"></div>
+                    <div style="position:absolute; top:-10%; left:55%; width:8px; height:120%; background:#fff; transform:rotate(18deg); box-shadow: 0 1px 2px rgba(0,0,0,0.03);"></div>
+                    
+                    <!-- 用 CSS 画一块极简的浅绿公园地块 -->
+                    <div style="position:absolute; bottom:20px; right:15px; width:45px; height:30px; background:#e2ecd9; border-radius:6px; opacity:0.8;"></div>
+
+                    <!-- 极简的中心定位针 (深灰/黑色系，高级感) -->
+                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); z-index: 10; display:flex; flex-direction:column; align-items:center;">
+                        <div style="width:14px; height:14px; background-color:#333; border-radius:50%; border:3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15);"></div>
+                        <div style="width:3px; height:8px; background-color:#333; border-radius: 0 0 2px 2px;"></div>
+                    </div>
+
+                    <!-- 描述文字层 (白色半透明底，黑色字) -->
+                    ${desc ? `<div style="position:absolute; bottom:0; left:0; width:100%; background:rgba(255,255,255,0.9); color:#555; font-size:11px; padding:6px 10px; z-index:20; text-align:left; box-sizing:border-box; border-top:1px solid #f0f0f0;">${desc}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }
 
 
         // 检测 [IMAGE] 指令 -> 变图片
@@ -3627,20 +4009,23 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
     const mainContent = document.createElement('div');
     mainContent.className = 'bubble-content-main';
     
-    // === [修改位置] 将换行转义与表情包渲染合并处理 ===
+     // === [修改位置] 将换行转义与表情包渲染合并处理 ===
     let parsedText = text.replace(/\n/g, '<br>');
     
-    // 捕获形如 [表情:流汗黄豆] 的占位符，替换为真实的 img 标签
+    // 捕获形如 [表情:xxx] 的占位符，替换为纯图片（不显示名字）
     parsedText = parsedText.replace(/\[表情:(.*?)\]/g, (match, p1) => {
         let name = p1.trim();
         let sticker = (window.allStickers || []).find(s => s.name === name);
         if (sticker) {
-            // 匹配到了图库里的表情，渲染为图片
-            return `<img src="${sticker.url}" class="msg-sticker-img" alt="${name}" title="${name}">`;
+            return `<div class="msg-sticker-container">
+                        <img src="${sticker.url}" class="msg-sticker-img" alt="${name}" title="${name}">
+                    </div>`;
         }
         // 没匹配到（AI幻觉生造的），就保持原样输出文字
         return match; 
     });
+
+
 
     if (isRichContent) {
         mainContent.innerHTML = contentHtml; // 直接渲染其他富媒体 (语音/转账等)HTML
@@ -5703,22 +6088,32 @@ window.handleMenuAction = function(action) {
 }
 
 // --- 撤回核心逻辑 ---
-function performRevoke(msgId, originalText, rowElement) {
-    // 1. 替换 DOM 为系统提示
+async function performRevoke(msgId, originalText, rowElement) {
     const systemTip = document.createElement('div');
     systemTip.className = 'msg-system-revoke';
-    systemTip.innerHTML = `<span>你撤回了一条消息 <span style="color:#576b95;cursor:pointer;" onclick="document.getElementById('chatInput').value='${originalText}'">重新编辑</span></span>`;
+    const escapedText = originalText.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+    systemTip.innerHTML = `<span>你撤回了一条消息 <span style="color:#576b95;cursor:pointer;" onclick="document.getElementById('chatInput').value='${escapedText}'">重新编辑</span></span>`;
     
-    // 替换原有的 row
     if(rowElement.parentNode) {
         rowElement.parentNode.replaceChild(systemTip, rowElement);
     }
     
-    // 2. 【AI 互动】告诉 AI 用户撤回了消息 (隐藏指令)
-    const aiHiddenPrompt = `[System: The user just sent "${originalText}" but immediately REVOKED (deleted) it. You definitely saw it. React to this revocation playfully. Ask them what they are hiding, or tease them about being indecisive. DO NOT repeat the exact revoked text.]`;
+    // 【核心修复】更新数据库状态为已撤回，防止重进聊天又复活
+    if (currentChatId) {
+        let history = await loadChatHistory(currentChatId);
+        if (history) {
+            const index = history.findIndex(m => m.id === msgId);
+            if (index !== -1) {
+                history[index].isRevoked = true;
+                history[index].originalText = originalText;
+                history[index].type = 'system';
+                await IDB.set(scopedChatKey(currentChatId), history);
+            }
+        }
+    }
     
-    sendMessageToAI(aiHiddenPrompt);
 }
+
 
 // --- 多选转发逻辑 ---
 
@@ -6004,7 +6399,7 @@ function showBubbleMenu(e, id, text, type, rowElement) {
     }, 100);
 }
 // === [新增] 多选删除逻辑 ===
-window.executeMultiDelete = function() {
+window.executeMultiDelete = async function() {
     const selectedCheckboxes = document.querySelectorAll('.wc-msg-checkbox.checked');
     
     if (selectedCheckboxes.length === 0) {
@@ -6013,10 +6408,16 @@ window.executeMultiDelete = function() {
     }
 
     if (confirm(`确定删除这 ${selectedCheckboxes.length} 条消息吗？`)) {
+        let history = await loadChatHistory(currentChatId);
+        let idsToDelete = [];
+
         selectedCheckboxes.forEach(cb => {
             // 找到对应的整行 chat-row
             const row = cb.closest('.chat-row');
             if (row) {
+                const msgId = row.getAttribute('data-msg-id');
+                if (msgId) idsToDelete.push(msgId);
+                
                 // 动画效果
                 row.style.opacity = '0';
                 row.style.transform = 'translateX(-20px)';
@@ -6027,11 +6428,14 @@ window.executeMultiDelete = function() {
         // 退出多选模式
         exitMultiSelectMode();
         
-        // 注意：这里仅删除了界面的 DOM 元素。
-        // 如果需要同步删除 LocalStorage 里的历史记录，需要根据 msg-id 去遍历数据并删除，
-        // 逻辑会比较复杂，这里暂只实现界面删除。
+        // 彻底删除底层数据库(IDB)记录
+        if (history && idsToDelete.length > 0) {
+            history = history.filter(m => !idsToDelete.includes(m.id));
+            await IDB.set(scopedChatKey(currentChatId), history);
+        }
     }
 }
+
 // === [新增] 打开聊天记录详情 ===
 window.openHistoryDetail = function(forwardId) {
     const modal = document.getElementById('history-detail-modal');
@@ -6256,10 +6660,23 @@ window.sendOfflineMessage = async function(isRegen = false) {
 const limit = parseInt(offlineConfig.maxLength) || 200;
 const currentAffection = Number(friend.affection || 0);
 const affectionStage = getAffectionStage(currentAffection);
+const currentLocation = friend.mindState?.location || '当前约会场景';
 
 let systemPrompt = `
 [IMPORTANT SYSTEM INSTRUCTION]
 Response Length Constraint: strictly aim for approximately ${limit} words.
+
+【解除线上封印】
+你现在已经不再是通过手机和用户聊天了。你现在正在和用户进行面对面的、真实的线下约会。
+
+【感官与动作描写铁律（最重要）】
+你的回复不能仅仅是说话。你【必须】使用星号（如：*轻轻牵起你的手* 或 *笑着看向你*）来详细描写你的面部表情、肢体动作、呼吸节奏、以及你们之间的物理接触。
+
+【环境感知】
+请注意你们当前所处的约会地点是：【${currentLocation}】。你的行为举止和对话必须符合当前的环境氛围。例如在电影院你需要压低声音，在海边可能风会很大。
+
+【互动节奏】
+你不再需要像网聊那样发很多条短消息（气泡）。你的回复应该是一段连贯的描写，包含你的动作和你说的话，就像在写一本沉浸式的小说。
 
 [🛑 SYSTEM: VISUAL FORMATTING RULES (HIGHEST PRIORITY)]
 1. Use double line breaks (\\n\\n) to separate Dialogue, Actions, and Narration.
@@ -6977,14 +7394,21 @@ async function performOnlineRegen(rowElement) {
 async function rebuildHistoryFromChatDom(chatId) {
     const rows = Array.from(document.querySelectorAll('#chatMessages .chat-row'));
     const rebuilt = rows.map(r => {
-        const type = r.classList.contains('sent') ? 'sent' : 'received';
+        let type = 'received';
+        if (r.classList.contains('sent')) type = 'sent';
+        if (r.classList.contains('system')) type = 'system';
+        
         const text = r.getAttribute('data-msg-text') ||
-                     r.querySelector('.bubble-content-main')?.innerText || '';
+                     r.querySelector('.bubble-content-main')?.innerText || 
+                     r.querySelector('.msg-system-greeting')?.innerText || '';
         const translation = r.querySelector('.bubble-translation')?.innerText || null;
         const senderName = r.getAttribute('data-msg-sender') || (type === 'sent' ? 'ME' : currentChatId);
         const customAvatar = type === 'received' ? (r.querySelector('.chat-avatar-img')?.src || '') : '';
+        // 核心修复：找回原来的 ID，丢了 ID 就删不掉了
+        const msgId = r.getAttribute('data-msg-id') || ('msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
 
         return {
+            id: msgId,
             text,
             type,
             senderName,
@@ -6994,8 +7418,9 @@ async function rebuildHistoryFromChatDom(chatId) {
         };
     });
 
-    await IDB.set('chat_history_' + chatId, rebuilt);
+    await IDB.set(scopedChatKey(chatId), rebuilt);
 }
+
 
 async function triggerAIReplyForPendingContext() {
     const history = await loadChatHistory(currentChatId);
@@ -7146,7 +7571,6 @@ window.switchVoiceTab = function(tab) {
 }
 
 // 4. 伪语音发送事件
-// 4. 伪语音发送事件
 window.sendFakeVoice = function() {
     const text = document.getElementById('fake-voice-input').value.trim();
     if (text) {
@@ -7155,7 +7579,7 @@ window.sendFakeVoice = function() {
             // 【关键修改】：存入历史记录时，前面加上 [VOICE]
             saveMessageToHistory(currentChatId, { text: '[VOICE]' + text, type: 'sent', senderName: 'ME' });
             // 发给AI时还是发纯文本
-            sendMessageToAI(text);
+           
         }
     } else {
         // 不填文字时的无字假语音
@@ -7191,7 +7615,6 @@ window.sendFakeVoice = function() {
             // 【关键修改】：无字假语音也存入标签
             saveMessageToHistory(currentChatId, { text: '[VOICE]（语音消息）', type: 'sent', senderName: 'ME' });
         }
-        sendMessageToAI(`[System: User sent a voice message. Reply with a text message, BUT imply that you listened to it.]`);
     }
 
     closeVoiceActionModal();
@@ -7336,7 +7759,6 @@ async function stopHoldRecord() {
             await saveMessageToHistory(currentChatId, {
                 text: '[VOICE]' + text, type: 'sent', senderName: 'ME'
             });
-            sendMessageToAI(text);
         } else if (currentChatId) {
             await saveMessageToHistory(currentChatId, {
                 text: '[VOICE]（未识别到文字）', type: 'sent', senderName: 'ME'
@@ -8512,8 +8934,7 @@ window.renderStickerManagerGrid = function() {
     }
     let groups = {};
     window.allStickers.forEach(s => {
-        let ownerName = s.owner ? (friendsData[s.owner]?.remark || s.owner) : '未知';
-        let key = s.scope === 'global' ? `[通用图库] ${s.category}` : `[专属: ${ownerName}] ${s.category}`;
+        let key = s.scope === 'global' ? `[通用图库] ${s.category}` : `[自定义] ${s.category}`;
         if(!groups[key]) groups[key] = [];
         groups[key].push(s);
     });
@@ -8531,6 +8952,7 @@ window.renderStickerManagerGrid = function() {
         });
     });
 }
+
 window.batchMoveStickers = function() {
     const checkboxes = document.querySelectorAll('.sm-sticker-checkbox:checked');
     if(checkboxes.length === 0) return alert('请先点选要移动的表情！');
@@ -8563,7 +8985,7 @@ window.renderChatSettingsStickerCheckboxes = function() {
     let legalCategories = new Set();
     window.allStickers.forEach(s => {
         if (s.scope === 'global') legalCategories.add(`global|${s.category}`);
-        else if (s.scope === 'exclusive' && s.owner === currentChatId) legalCategories.add(`exclusive|${s.category}`);
+        else if (s.scope === 'custom' || s.scope === 'exclusive') legalCategories.add(`custom|${s.category}`); // 兼容新老数据
     });
     if (legalCategories.size === 0) {
         container.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">暂无分类，请点击上方按钮导入。</div>';
@@ -8572,7 +8994,7 @@ window.renderChatSettingsStickerCheckboxes = function() {
     legalCategories.forEach(catStr => {
         const [scope, catName] = catStr.split('|');
         const isChecked = activeCategories.includes(catStr) ? 'checked' : '';
-        const displayName = scope === 'global' ? `<span style="color:#07c160;">[通用]</span> ${catName}` : `<span style="color:#ff7e67;">[专属]</span> ${catName}`;
+        const displayName = scope === 'global' ? `<span style="color:#07c160;">[通用]</span> ${catName}` : `<span style="color:#ff7e67;">[自定义]</span> ${catName}`;
         const item = document.createElement('div');
         item.className = 'wb-checklist-item';
         item.innerHTML = `<input type="checkbox" value="${catStr}" ${isChecked}><span class="wb-checklist-name">${displayName}</span>`;
@@ -8580,6 +9002,7 @@ window.renderChatSettingsStickerCheckboxes = function() {
         container.appendChild(item);
     });
 }
+
 
 // ================= 模块 D：聊天输入框表情面板 (分组显示) =================
 const _originalToggleChatPanel = window.toggleChatPanel;
@@ -8591,12 +9014,12 @@ window.toggleChatPanel = function(type) {
         renderEmojiPanel(); // 每次打开重新渲染
     }
 }
-
 window.renderEmojiPanel = function() {
     const panel = document.getElementById('panel-emoji');
     if (!panel) return;
     
-    let availableStickers = window.allStickers.filter(s => s.scope === 'global' || (s.scope === 'exclusive' && s.owner === currentChatId));
+    // 你是机主，发送面板不受限制，可以直接看到图库里所有的表情包
+    let availableStickers = window.allStickers;
     
     let groups = {};
     availableStickers.forEach(s => {
@@ -8615,8 +9038,7 @@ window.renderEmojiPanel = function() {
     
     tabsHtml += `<div onclick="openStickerManager()" style="margin-top: 10px; font-size:11px; color:#111; background:#f5f5f5; padding:6px 10px; border-radius:12px; cursor:pointer; font-weight:600; display:flex; justify-content:center; align-items:center; gap:4px; transition:0.2s;"><i class="fas fa-cog"></i> 管理表情包中枢</div>`;
     
-    // 【修复：干掉写死的内部滚动限制，让外层自动滚】
-let contentHtml = `<div id="emoji-content-area" style="margin-top: 15px; padding-bottom: 20px;">`;
+    let contentHtml = `<div id="emoji-content-area" style="margin-top: 15px; padding-bottom: 20px;">`;
 
     // 系统自带表情
     contentHtml += `<div class="emoji-grid" id="emoji-cat-emoji_default">
@@ -8628,9 +9050,16 @@ let contentHtml = `<div id="emoji-content-area" style="margin-top: 15px; padding
     
     // 分类表情组
     categories.forEach(cat => {
-        contentHtml += `<div class="sticker-grid" id="emoji-cat-${cat}" style="display:none; grid-template-columns: repeat(4, 1fr); gap: 10px;">`;
+        // 这里加了 align-items: start; 保证即使名字长短不一也不会错位
+        contentHtml += `<div class="sticker-grid" id="emoji-cat-${cat}" style="display:none; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: start;">`;
         groups[cat].forEach(s => {
-            contentHtml += `<img src="${s.url}" title="${s.name}" onclick="sendStickerFromPanel('${s.name}', '${s.url}')" style="width:60px; height:60px; object-fit:contain; cursor:pointer; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.05)); border-radius:6px;">`;
+            // 【核心修改】：原本只有 img 标签，现在用 div 包裹了图片和底下的文字
+            contentHtml += `
+                <div onclick="sendStickerFromPanel('${s.name}', '${s.url}')" style="display:flex; flex-direction:column; align-items:center; cursor:pointer; gap:4px;">
+                    <img src="${s.url}" title="${s.name}" style="width:60px; height:60px; object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.05)); border-radius:6px;">
+                    <span style="font-size:10px; color:#666; text-align:center; width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.name}</span>
+                </div>
+            `;
         });
         contentHtml += `</div>`;
     });
@@ -8638,6 +9067,8 @@ let contentHtml = `<div id="emoji-content-area" style="margin-top: 15px; padding
     contentHtml += `</div>`;
     panel.innerHTML = tabsHtml + contentHtml;
 }
+
+
 
 window.switchEmojiCat = function(cat, el) {
     document.querySelectorAll('.emoji-cat-tab').forEach(t => {
@@ -8676,7 +9107,6 @@ window.sendStickerFromPanel = function(name, url) {
         saveMessageToHistory(currentChatId, { text: `[表情:${name}]`, type: 'sent', senderName: 'ME' });
     }
 
-    sendMessageToAI(hiddenPrompt);
     document.getElementById('chat-extra-panels').classList.remove('open');
 }
 // 【修复3】全局统一的表情包面板刷新器

@@ -77,7 +77,6 @@ body {
     opacity: 0.8;
 }
 
-
 .screen-container {
     height: 100%;
     width: 100%;
@@ -86,10 +85,10 @@ body {
     
     /* === 修改部分开始 === */
     scroll-snap-type: x mandatory;
-    scroll-snap-stop: always;     /* 【核心修改】强制每次滑动必须停在下一页，不能跳页 */
     overscroll-behavior-x: none;  /* 禁止左右边缘的橡皮筋回弹效果，手感更“硬” */
     /* === 修改部分结束 === */
 }
+
 
 .screen-container::-webkit-scrollbar { display: none; }
 
@@ -98,12 +97,14 @@ body {
     height: 100%;
     padding: 60px 24px 80px 24px;
     scroll-snap-align: start;
+    scroll-snap-stop: always; /* 👈 就是加了这行，让它强制刹车 */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 25px;
     position: relative;
 }
+
 
 .page::-webkit-scrollbar { display: none; }
 
