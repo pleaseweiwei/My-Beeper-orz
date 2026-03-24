@@ -7149,17 +7149,21 @@ img.msg-sticker-img {
     color: #111;
 }
 
-.pb-input-wrapper input, 
+/* --- 灵动输入框 (Hover & Focus 交互) --- */
+.pb-input-wrapper input {
+    width: 100%; border: none; background: transparent;
+    font-size: 13px; font-weight: 600; color: #222;
+    outline: none; line-height: 1.5; font-family: inherit;
+    padding: 0;
+}
+
 .pb-input-wrapper textarea {
     width: 100%; border: none; background: transparent;
     font-size: 13px; font-weight: 600; color: #222;
     outline: none; line-height: 1.5; font-family: inherit;
-    padding: 0; resize: none;
+    padding: 0; resize: vertical; min-height: 44px; /* 增加多行高度和垂直拉伸 */
 }
-.pb-input-wrapper input::placeholder,
-.pb-input-wrapper textarea::placeholder {
-    color: #ddd; font-weight: 500;
-}
+
 
 /* --- AI 填装成功的呼吸发光动画 --- */
 @keyframes bentoHighlight {

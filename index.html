@@ -4571,13 +4571,17 @@
 <div class="app-fullscreen-view" id="personaBuilderApp" style="background: #f4f5f7;">
     
     <!-- 悬浮毛玻璃头部 -->
+        <!-- 悬浮毛玻璃头部 -->
     <div class="pb-magic-header">
         <i class="fas fa-chevron-down pb-back-btn" onclick="closePersonaBuilder()"></i>
-        <div class="pb-title-box">
-            <span class="pb-title-main">MY UNIVERSE</span>
-            <span class="pb-title-sub">User Persona Identity</span>
+        <div class="pb-title-box" onclick="openIdentityModal(event)" style="cursor: pointer;">
+            <span class="pb-title-main" id="pb-current-persona-name">MY UNIVERSE <i class="fas fa-caret-down" style="font-size:12px;"></i></span>
+            <span class="pb-title-sub">点击切换多个人设</span>
         </div>
-        <div class="pb-save-btn" onclick="savePersonaBuilder()"><i class="fas fa-check"></i></div>
+        <div style="display:flex; gap: 10px;">
+            <div class="pb-save-btn" onclick="exportPersonaTxt()" title="导出TXT"><i class="fas fa-file-export"></i></div>
+            <div class="pb-save-btn" onclick="savePersonaBuilder()" title="保存"><i class="fas fa-check"></i></div>
+        </div>
     </div>
 
     <div class="pb-scroll-container">
@@ -4597,6 +4601,19 @@
             </button>
         </div>
 
+        <!-- 模块0：人设头像 -->
+        <div class="pb-section-label">00 / AVATAR.</div>
+        <div class="pb-bento-grid" style="grid-template-columns: 1fr;">
+            <div class="pb-input-wrapper" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <img id="pb_avatar_preview" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #eee;">
+                    <div style="font-size: 12px; font-weight: bold; color: #555;">设置此人设的专属头像</div>
+                </div>
+                <button class="btn-secondary" style="width: auto; padding: 6px 16px; border-radius: 12px; height: auto;" onclick="document.getElementById('pb_avatar_upload').click()">更换</button>
+                <input type="file" id="pb_avatar_upload" style="display:none" accept="image/*" onchange="handlePbAvatarUpload(this)">
+            </div>
+        </div>
+
         <!-- 模块一：基础档案 (Bento Box) -->
         <div class="pb-section-label">01 / BASIC INFO.</div>
         <div class="pb-bento-grid">
@@ -4604,79 +4621,80 @@
             <div class="pb-input-wrapper"><label><i class="fas fa-id-card"></i> 真实姓名</label><input type="text" id="pb_realName"></div>
             <div class="pb-input-wrapper"><label><i class="fas fa-venus-mars"></i> 性别/取向</label><input type="text" id="pb_gender"></div>
             <div class="pb-input-wrapper"><label><i class="fas fa-birthday-cake"></i> 年龄阶段</label><input type="text" id="pb_age"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-map-marker-alt"></i> 所在城市</label><input type="text" id="pb_location"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-briefcase"></i> 职业/身份</label><input type="text" id="pb_occupation"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-graduation-cap"></i> 学历经历</label><input type="text" id="pb_education"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-wallet"></i> 消费水平</label><input type="text" id="pb_income"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-clock"></i> 作息习惯</label><input type="text" id="pb_routine" placeholder="早睡/熬夜/阴间作息..."></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-hashtag"></i> 印象标签 (Tag)</label><input type="text" id="pb_tags" placeholder="#感性 #颜控 #宅..."></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-map-marker-alt"></i> 所在城市</label><textarea id="pb_location" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-briefcase"></i> 职业/身份</label><textarea id="pb_occupation" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-graduation-cap"></i> 学历经历</label><textarea id="pb_education" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-wallet"></i> 消费水平</label><textarea id="pb_income" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-clock"></i> 作息习惯</label><textarea id="pb_routine" rows="2" placeholder="早睡/熬夜/阴间作息..."></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-hashtag"></i> 印象标签 (Tag)</label><textarea id="pb_tags" rows="2" placeholder="#感性 #颜控 #宅..."></textarea></div>
         </div>
 
         <!-- 模块二：视觉形象 -->
         <div class="pb-section-label">02 / VISUAL AURA.</div>
         <div class="pb-bento-grid">
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-sparkles"></i> 整体氛围感 (Vibe)</label><input type="text" id="pb_vibeTags" placeholder="清冷 / 钓系 / 破碎感..."></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-ruler-vertical"></i> 身高体型</label><input type="text" id="pb_physique"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-user-circle"></i> 五官特征</label><input type="text" id="pb_face" placeholder="泪痣/桃花眼..."></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-cut"></i> 发型发色</label><input type="text" id="pb_hair"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-tshirt"></i> 穿搭风格</label><input type="text" id="pb_style" placeholder="极简/废土/千禧..."></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-palette"></i> 常用色系</label><input type="text" id="pb_colors"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-ring"></i> 配饰习惯</label><input type="text" id="pb_accessories"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-microphone-alt"></i> 声音质感</label><input type="text" id="pb_voice" placeholder="沙哑/清脆/慢条斯理..."></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-camera-retro"></i> 拍照习惯</label><input type="text" id="pb_expression"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-wind"></i> 专属气质</label><input type="text" id="pb_aura"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-sparkles"></i> 整体氛围感 (Vibe)</label><textarea id="pb_vibeTags" rows="2" placeholder="清冷 / 钓系 / 破碎感..."></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-ruler-vertical"></i> 身高体型</label><textarea id="pb_physique" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-user-circle"></i> 五官特征</label><textarea id="pb_face" rows="2" placeholder="泪痣/桃花眼..."></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-cut"></i> 发型发色</label><textarea id="pb_hair" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-tshirt"></i> 穿搭风格</label><textarea id="pb_style" rows="2" placeholder="极简/废土/千禧..."></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-palette"></i> 常用色系</label><textarea id="pb_colors" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-ring"></i> 配饰习惯</label><textarea id="pb_accessories" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-microphone-alt"></i> 声音质感</label><textarea id="pb_voice" rows="2" placeholder="沙哑/清脆/慢条斯理..."></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-camera-retro"></i> 拍照习惯</label><textarea id="pb_expression" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-wind"></i> 专属气质</label><textarea id="pb_aura" rows="2"></textarea></div>
         </div>
 
         <!-- 模块三：原生背景 -->
         <div class="pb-section-label">03 / BACKGROUND.</div>
         <div class="pb-bento-grid">
-            <div class="pb-input-wrapper"><label><i class="fas fa-home"></i> 家庭结构</label><input type="text" id="pb_family"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-coins"></i> 家境情况</label><input type="text" id="pb_wealth"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-child"></i> 童年经历</label><input type="text" id="pb_childhood"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-tree"></i> 成长环境</label><input type="text" id="pb_hometown"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-yin-yang"></i> 原生优缺</label><input type="text" id="pb_prosCons"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-film"></i> 过往高光/感情史</label><textarea id="pb_pastExp" rows="2"></textarea></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-route"></i> 命运转折点 (核心事件)</label><textarea id="pb_turningPoint" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-home"></i> 家庭结构</label><textarea id="pb_family" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-coins"></i> 家境情况</label><textarea id="pb_wealth" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-child"></i> 童年经历</label><textarea id="pb_childhood" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-tree"></i> 成长环境</label><textarea id="pb_hometown" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-yin-yang"></i> 原生优缺</label><textarea id="pb_prosCons" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-film"></i> 过往高光/感情史</label><textarea id="pb_pastExp" rows="3"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-route"></i> 命运转折点 (核心事件)</label><textarea id="pb_turningPoint" rows="3"></textarea></div>
         </div>
 
         <!-- 模块四：性格内核 -->
         <div class="pb-section-label">04 / INNER SOUL.</div>
         <div class="pb-bento-grid">
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-heart"></i> 核心性格</label><input type="text" id="pb_coreTrait"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-mask"></i> 社交面具 (显性)</label><input type="text" id="pb_apparentTrait"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-lock"></i> 真实自我 (隐性)</label><input type="text" id="pb_hiddenTrait"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-brain"></i> 思维方式</label><input type="text" id="pb_thinking" placeholder="敏感/多想/直线..."></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-water"></i> 情绪模式</label><input type="text" id="pb_emotion" placeholder="容易内耗/压抑..."></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-shield-alt"></i> 软肋与底线</label><input type="text" id="pb_weakness"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-compass"></i> 人生三观</label><textarea id="pb_values" rows="2"></textarea></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-star"></i> 内心极度渴望</label><input type="text" id="pb_desire"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-skull-crossbones"></i> 最深的恐惧</label><input type="text" id="pb_fear"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-key"></i> 执念、心结与小秘密</label><input type="text" id="pb_secret"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-heart"></i> 核心性格</label><textarea id="pb_coreTrait" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-mask"></i> 社交面具 (显性)</label><textarea id="pb_apparentTrait" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-lock"></i> 真实自我 (隐性)</label><textarea id="pb_hiddenTrait" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-brain"></i> 思维方式</label><textarea id="pb_thinking" rows="2" placeholder="敏感/多想/直线..."></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-water"></i> 情绪模式</label><textarea id="pb_emotion" rows="2" placeholder="容易内耗/压抑..."></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-shield-alt"></i> 软肋与底线</label><textarea id="pb_weakness" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-compass"></i> 人生三观</label><textarea id="pb_values" rows="3"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-star"></i> 内心极度渴望</label><textarea id="pb_desire" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-skull-crossbones"></i> 最深的恐惧</label><textarea id="pb_fear" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-key"></i> 执念、心结与小秘密</label><textarea id="pb_secret" rows="2"></textarea></div>
         </div>
 
         <!-- 模块五：行为与社交 -->
         <div class="pb-section-label">05 / HABITS & SOCIAL.</div>
         <div class="pb-bento-grid">
-            <div class="pb-input-wrapper"><label><i class="fas fa-coffee"></i> 生活习惯</label><input type="text" id="pb_livingHabit"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-comments"></i> 社交习惯</label><input type="text" id="pb_socialHabit" placeholder="秒回/意念回复..."></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-quote-left"></i> 口头禅</label><input type="text" id="pb_languageHabit"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-gamepad"></i> 兴趣爱好</label><input type="text" id="pb_hobbies"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-thumbs-up"></i> 极度喜欢 / 极度雷点</label><input type="text" id="pb_likesDislikes"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-utensils"></i> 饮食忌口</label><input type="text" id="pb_diet"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-bed"></i> 独处/解压方式</label><input type="text" id="pb_soloTime"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-clock"></i> 日常一天时间表</label><textarea id="pb_dailySchedule" rows="2"></textarea></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-paw"></i> 下意识的小动作/癖好</label><input type="text" id="pb_quirks"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-coffee"></i> 生活习惯</label><textarea id="pb_livingHabit" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-comments"></i> 社交习惯</label><textarea id="pb_socialHabit" rows="2" placeholder="秒回/意念回复..."></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-quote-left"></i> 口头禅</label><textarea id="pb_languageHabit" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-gamepad"></i> 兴趣爱好</label><textarea id="pb_hobbies" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-thumbs-up"></i> 极度喜欢 / 极度雷点</label><textarea id="pb_likesDislikes" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-utensils"></i> 饮食忌口</label><textarea id="pb_diet" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-bed"></i> 独处/解压方式</label><textarea id="pb_soloTime" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-clock"></i> 日常一天时间表</label><textarea id="pb_dailySchedule" rows="3"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-paw"></i> 下意识的小动作/癖好</label><textarea id="pb_quirks" rows="2"></textarea></div>
             
-            <div class="pb-input-wrapper col-span-2" style="margin-top: 10px;"><label><i class="fas fa-users"></i> 社交圈层 (小众/广泛)</label><input type="text" id="pb_socialCircle"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-heartbeat"></i> 恋爱状态与偏好</label><input type="text" id="pb_romance"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-user-friends"></i> 喜欢的同类</label><input type="text" id="pb_friendType"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-user-slash"></i> 厌恶的同类</label><input type="text" id="pb_hateType"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-home"></i> 对待家人态度</label><input type="text" id="pb_familyAttitude"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-user"></i> 对待陌生人态度</label><input type="text" id="pb_strangerAttitude"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-briefcase"></i> 对待同事态度</label><input type="text" id="pb_colleagueAttitude"></div>
-            <div class="pb-input-wrapper"><label><i class="fas fa-handshake"></i> 信任的人</label><input type="text" id="pb_trust"></div>
-            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-door-closed"></i> 最逃避的人际关系</label><input type="text" id="pb_fearRelation"></div>
+            <div class="pb-input-wrapper col-span-2" style="margin-top: 10px;"><label><i class="fas fa-users"></i> 社交圈层 (小众/广泛)</label><textarea id="pb_socialCircle" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-heartbeat"></i> 恋爱状态与偏好</label><textarea id="pb_romance" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-user-friends"></i> 喜欢的同类</label><textarea id="pb_friendType" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-user-slash"></i> 厌恶的同类</label><textarea id="pb_hateType" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-home"></i> 对待家人态度</label><textarea id="pb_familyAttitude" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-user"></i> 对待陌生人态度</label><textarea id="pb_strangerAttitude" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-briefcase"></i> 对待同事态度</label><textarea id="pb_colleagueAttitude" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-handshake"></i> 信任的人</label><textarea id="pb_trust" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-door-closed"></i> 最逃避的人际关系</label><textarea id="pb_fearRelation" rows="2"></textarea></div>
         </div>
+
         
         <div style="height: 60px;"></div>
     </div>

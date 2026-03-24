@@ -8614,9 +8614,9 @@ window.quickCreateIdentity = async function() {
     closeIdentityModal();
     applyPersonaToUI();
     
-    // 延迟一点打开生成器，等DOM渲染完
-    setTimeout(() => {
+        setTimeout(() => {
         if(typeof openPersonaBuilder === 'function') openPersonaBuilder();
+        if(typeof loadDataIntoBuilder === 'function') loadDataIntoBuilder();
     }, 100);
 };
 
@@ -8638,6 +8638,9 @@ window.quickSwitchIdentity = async function() {
     await loadFriendsData();
     loadMomentsFeed();
     applyPersonaToUI();
+      if (document.getElementById('personaBuilderApp') && document.getElementById('personaBuilderApp').classList.contains('open')) {
+        if(typeof loadDataIntoBuilder === 'function') loadDataIntoBuilder();
+    }
     showToast("身份已切换为: " + personasMeta[currentPersonaId].name);
 };
 

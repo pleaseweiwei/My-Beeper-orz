@@ -56,7 +56,6 @@ function renderPbWorldbooksAndChars() {
     }
 }
 
-// 将 IndexedDB 中的存档数据反填入输入框
 function loadDataIntoBuilder() {
     const p = personasMeta[currentPersonaId];
     if (!p) return;
@@ -66,6 +65,18 @@ function loadDataIntoBuilder() {
         const el = document.getElementById(key);
         if (el) el.value = d[key] || '';
     });
+    
+    // 渲染头像预览
+    const avatarImg = document.getElementById('pb_avatar_preview');
+    if (avatarImg) {
+        avatarImg.src = p.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPersonaId}`;
+    }
+    
+    // 渲染标题处的动态名称指示器
+    const titleName = document.getElementById('pb-current-persona-name');
+    if (titleName) {
+        titleName.innerHTML = `${p.name || 'MY UNIVERSE'} <i class="fas fa-caret-down" style="font-size:12px;"></i>`;
+    }
 }
 
 // 提取数据组装成巨大的 Prompt 并保存
@@ -217,3 +228,51 @@ ${jsonFormat}
         btn.style.pointerEvents = 'auto';
     }
 };
+window.handlePbAvatarUpload = function(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            let base64 = e.target.result;
+            // 如果全局有压缩函数，顺便压缩一下节约空间
+            if (typeof compressImage === 'function') {
+                base64 = await compressImage(base64, 300);
+            }
+            
+            document.getElementById('pb_avatar_preview').src = base64;
+            
+            // 实时保存到全局
+            if (personasMeta[currentPersonaId]) {
+                personasMeta[currentPersonaId].avatar = base64;
+                await IDB.set(PERSONA_META_KEY, personasMeta);
+                if(typeof applyPersonaToUI === 'function') applyPersonaToUI();
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+    input.value = '';
+}
+
+// === 追加：一键导出 TXT 文本 ===
+window.exportPersonaTxt = async function() {
+    // 自动先替用户保存最新改动
+    await window.savePersonaBuilder();
+    
+    const p = personasMeta[currentPersonaId];
+    if (!p || !p.persona) {
+        alert("当前没有可导出的数据！");
+        return;
+    }
+    
+    // 创建一个纯文本文件进行下载
+    const blob = new Blob([p.persona], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${p.name || 'UserPersona'}_专属设定.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    if(typeof showToast === 'function') showToast("<i class='fas fa-check'></i> 设定 TXT 已保存到本地！");
+}
