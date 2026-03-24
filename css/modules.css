@@ -6990,185 +6990,193 @@ img.msg-sticker-img {
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); 
 }
 /* =========================================
-   [NEW] 人设研究所 (Persona Builder) 极致高级感重构版
+   [NEW] USER 人设生成器 (灵动便当盒 / 手账风)
    ========================================= */
 
-/* 1. 主背景与头部重构 */
 #personaBuilderApp {
-    background-color: #f4f5f7 !important; /* 极淡雾灰白，凸显高级感 */
-}
-
-#personaBuilderApp .k-header {
-    background: rgba(255, 255, 255, 0.85) !important;
-    backdrop-filter: blur(15px);
-    border-bottom: none !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
-}
-
-/* 2. 高定版药丸 Tab 切换栏 */
-.pb-tabs {
-    display: flex; 
-    gap: 8px !important; 
-    padding: 15px 20px 10px !important;
-    background: transparent !important;
-    border-bottom: none !important;
-    overflow-x: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-.pb-tabs::-webkit-scrollbar { display: none; }
-
-.pb-tab {
-    padding: 10px 18px !important; 
-    font-size: 13px !important; 
-    font-weight: 700 !important; 
-    color: #888 !important;
-    background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
-    cursor: pointer; 
-    white-space: nowrap; 
-    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important; 
-}
-/* 去除丑陋的下划线 */
-.pb-tab::after { display: none !important; } 
-
-.pb-tab.active { 
-    color: #fff !important; 
-    background: #111 !important; 
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    transform: translateY(-2px);
-}
-/* 联动生成按钮特殊高亮 */
-.pb-tab:last-child {
-    color: #ff7e67 !important;
-}
-.pb-tab.active:last-child {
-    background: linear-gradient(135deg, #ff7e67, #ff5e5e) !important;
-    color: #fff !important;
-    box-shadow: 0 8px 20px rgba(255,126,103,0.3);
-}
-
-/* 3. 档案卡片 (高级留白与悬浮感) */
-.pb-card {
-    background: #ffffff !important; 
-    border-radius: 24px !important; 
-    padding: 24px !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.03) !important;
-    border: 1px solid rgba(0,0,0,0.02) !important; 
-    margin-bottom: 20px !important;
-    transition: transform 0.3s ease;
-}
-.pb-card:hover { transform: translateY(-2px); }
-
-/* 4. 模块标题 (杂志风/档案风) */
-.pb-section-title {
-    font-size: 11px !important; 
-    font-weight: 800 !important; 
-    color: #999 !important; 
-    margin-bottom: 20px !important;
-    padding-left: 0 !important; 
-    border-left: none !important; 
-    line-height: 1.1 !important;
-    letter-spacing: 2px;
-    text-transform: uppercase;
     display: flex;
+    flex-direction: column;
+}
+
+/* 悬浮毛玻璃头部 */
+.pb-magic-header {
+    background: rgba(244, 245, 247, 0.85);
+    backdrop-filter: blur(20px);
+    height: 70px;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    z-index: 100;
+    flex-shrink: 0;
 }
-.pb-section-title::before {
-    content: '';
-    display: block;
-    width: 6px;
-    height: 6px;
-    background: #111;
-    border-radius: 50%;
+.pb-back-btn {
+    width: 36px; height: 36px;
+    background: #fff; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    color: #111; cursor: pointer; transition: 0.2s;
 }
+.pb-back-btn:active { transform: scale(0.9); }
 
-/* 5. 高级细线分割 */
-.pb-divider {
-    border: none !important; 
-    height: 1px;
-    background: linear-gradient(90deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.05) 50%, transparent 50%);
-    background-size: 10px 1px;
-    margin: 25px 0 !important;
-}
+.pb-title-box { text-align: center; display: flex; flex-direction: column; }
+.pb-title-main { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 900; letter-spacing: 2px; color: #111; }
+.pb-title-sub { font-size: 9px; font-weight: 600; color: #aaa; letter-spacing: 1px; }
 
-/* 6. 拟态表单区 */
-.pb-input-group { margin-bottom: 20px !important; }
-.pb-input-group label {
-    display: block; 
-    font-size: 12px !important; 
-    font-weight: 700 !important; 
-    color: #444 !important; 
-    margin-bottom: 10px !important;
+.pb-save-btn {
+    width: 36px; height: 36px;
+    background: #111; color: #fff; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    cursor: pointer; transition: 0.2s;
 }
-.pb-input-group input, 
-.pb-input-group select, 
-.pb-input-group textarea {
+.pb-save-btn:active { transform: scale(0.9); }
+
+/* 容器隐藏滚动条 */
+.pb-scroll-container {
+    flex: 1; overflow-y: auto; padding: 20px 24px;
+    display: flex; flex-direction: column; gap: 25px;
+    -ms-overflow-style: none; scrollbar-width: none;
+}
+.pb-scroll-container::-webkit-scrollbar { display: none; }
+
+/* --- 流光魔法 AI 区域 --- */
+.pb-ai-magic-card {
+    background: linear-gradient(135deg, #ffffff 0%, #fffcfb 100%);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: 0 15px 35px rgba(255, 126, 103, 0.08), inset 0 0 0 1px rgba(255, 126, 103, 0.15);
+    position: relative;
+    animation: fadeUpBento 0.5s ease backwards;
+}
+.pb-ai-badge {
+    display: inline-block; background: #ff7e67; color: #fff;
+    padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 800;
+    margin-bottom: 12px; box-shadow: 0 4px 10px rgba(255, 126, 103, 0.3);
+}
+.pb-ai-textarea {
+    width: 100%; border: none; background: transparent;
+    font-size: 14px; line-height: 1.6; color: #333; resize: none; outline: none;
+}
+.pb-ai-textarea::placeholder { color: #fca593; font-weight: 300; }
+
+.pb-ai-selects { 
+    display: flex; 
+    gap: 10px; 
+    margin-top: 15px; 
     width: 100%; 
-    background: #f7f8fa !important; 
-    border: 2px solid transparent !important; 
-    border-radius: 14px !important;
-    padding: 14px 16px !important; 
-    font-size: 14px !important; 
-    color: #111 !important; 
-    outline: none; 
-    font-family: inherit;
-    box-sizing: border-box; 
-    transition: all 0.3s ease !important;
 }
-.pb-input-group input::placeholder, 
-.pb-input-group textarea::placeholder {
-    color: #bbb;
-    font-weight: 400;
-}
-.pb-input-group textarea { 
-    resize: vertical; 
-    min-height: 80px !important; 
-    line-height: 1.6;
-}
-.pb-input-group input:focus, 
-.pb-input-group select:focus, 
-.pb-input-group textarea:focus {
-    background: #fff !important; 
-    border-color: #111 !important; 
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06) !important;
+.pb-ai-selects select {
+    flex: 1; 
+    padding: 10px 12px; 
+    border-radius: 16px; 
+    border: none;
+    background: rgba(255, 126, 103, 0.05); 
+    color: #ff7e67; 
+    font-size: 11px; 
+    font-weight: 700; 
+    outline: none;
+    
+    /* === 核心修复：防止内容过长撑爆父容器 === */
+    min-width: 0; 
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
-/* 7. 主操作按钮 */
-.pb-btn-generate {
-    width: 100%; 
-    background: #111 !important; 
-    color: #fff !important; 
-    font-weight: 800 !important; 
-    font-size: 14px !important;
-    letter-spacing: 1px;
-    padding: 16px !important; 
-    border-radius: 16px !important; 
-    border: none; 
-    cursor: pointer; 
-    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; 
-    margin-top: 10px !important;
+
+.pb-btn-magic {
+    width: 100%; margin-top: 15px; padding: 16px; border-radius: 20px; border: none;
+    background: linear-gradient(135deg, #ff7e67, #ff4d4f); color: #fff;
+    font-size: 13px; font-weight: 800; letter-spacing: 1px;
+    box-shadow: 0 8px 25px rgba(255, 77, 79, 0.3); cursor: pointer; transition: 0.2s;
 }
-.pb-btn-generate:active { 
-    transform: scale(0.96) !important; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+.pb-btn-magic:active { transform: scale(0.96); box-shadow: 0 4px 10px rgba(255, 77, 79, 0.2); }
+
+/* --- 模块分类标题 --- */
+.pb-section-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px; font-weight: 800; color: #999;
+    letter-spacing: 2px; margin-bottom: -10px;
+    padding-left: 5px;
 }
 
-/* 8. 生成结果杂志风展示 */
-#pb-story-output {
-    background: #fff !important;
-    padding: 30px 24px !important;
-    font-family: 'Songti SC', 'Playfair Display', serif !important;
-    font-size: 15px !important;
-    line-height: 1.8 !important;
-    color: #222 !important;
-    border-left: 4px solid #111 !important;
-    border-radius: 0 24px 24px 0 !important;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.06) !important;
+/* --- 便当盒网格 (Bento Grid) --- */
+.pb-bento-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
 }
+.col-span-2 { grid-column: span 2; }
+
+/* --- 灵动输入框 (Hover & Focus 交互) --- */
+.pb-input-wrapper {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 14px 16px;
+    border: 1px solid rgba(0,0,0,0.02);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    animation: fadeUpBento 0.5s ease backwards;
+}
+
+/* 给各个模块加上轻微延迟，实现瀑布流加载感 */
+.pb-bento-grid:nth-of-type(1) .pb-input-wrapper { animation-delay: 0.1s; }
+.pb-bento-grid:nth-of-type(2) .pb-input-wrapper { animation-delay: 0.2s; }
+.pb-bento-grid:nth-of-type(3) .pb-input-wrapper { animation-delay: 0.3s; }
+.pb-bento-grid:nth-of-type(4) .pb-input-wrapper { animation-delay: 0.4s; }
+
+/* 核心：点击输入时的浮起效果 */
+.pb-input-wrapper:focus-within {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+    border-color: #2b2b2b;
+    z-index: 10;
+}
+
+.pb-input-wrapper label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; font-weight: 700; color: #a0a0a0;
+    margin-bottom: 6px; letter-spacing: 0.5px;
+}
+.pb-input-wrapper label i { color: #ccc; font-size: 12px; }
+
+/* 聚焦时图标变黑 */
+.pb-input-wrapper:focus-within label i,
+.pb-input-wrapper:focus-within label {
+    color: #111;
+}
+
+.pb-input-wrapper input, 
+.pb-input-wrapper textarea {
+    width: 100%; border: none; background: transparent;
+    font-size: 13px; font-weight: 600; color: #222;
+    outline: none; line-height: 1.5; font-family: inherit;
+    padding: 0; resize: none;
+}
+.pb-input-wrapper input::placeholder,
+.pb-input-wrapper textarea::placeholder {
+    color: #ddd; font-weight: 500;
+}
+
+/* --- AI 填装成功的呼吸发光动画 --- */
+@keyframes bentoHighlight {
+    0% { background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transform: scale(1); }
+    50% { background: #fffdf5; box-shadow: 0 10px 30px rgba(255, 126, 103, 0.15); transform: scale(1.02); border-color: #ff7e67; }
+    100% { background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transform: scale(1); border-color: rgba(0,0,0,0.02); }
+}
+.ai-filled-flash {
+    animation: bentoHighlight 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes fadeUpBento {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
 
 /* =========================================
    [性能修复] 多页面闪屏 / 闪白 / 抖动优化补丁

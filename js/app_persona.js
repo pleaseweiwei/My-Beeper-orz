@@ -1,336 +1,219 @@
 /* =========================================
-   [NEW] 人设研究所 (Persona Builder) 完整逻辑
+   [NEW] USER 人设生成系统 (无 Tab 滚动填表 + 灵动魔法动画版)
    ========================================= */
 
-function pbQueueUiWrite(fn) {
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => requestAnimationFrame(fn));
-    } else {
-        setTimeout(fn, 16);
-    }
-}
-
-function pbSetSoftDisplay(el, visible, displayMode = 'block') {
-    if (!el) return;
-    if (visible) {
-        el.hidden = false;
-        el.style.display = displayMode;
-    } else {
-        el.hidden = true;
-        el.style.display = 'none';
-    }
-}
+// 定义所有的 input id 键值，用于保存和AI回填
+const PB_KEYS = [
+    'pb_name', 'pb_realName', 'pb_gender', 'pb_age', 'pb_location', 'pb_occupation', 'pb_education', 'pb_income', 'pb_routine', 'pb_tags',
+    'pb_vibeTags', 'pb_physique', 'pb_face', 'pb_hair', 'pb_style', 'pb_colors', 'pb_accessories', 'pb_voice', 'pb_expression', 'pb_aura',
+    'pb_family', 'pb_wealth', 'pb_childhood', 'pb_hometown', 'pb_prosCons', 'pb_pastExp', 'pb_turningPoint',
+    'pb_coreTrait', 'pb_apparentTrait', 'pb_hiddenTrait', 'pb_thinking', 'pb_emotion', 'pb_weakness', 'pb_values', 'pb_desire', 'pb_fear', 'pb_secret',
+    'pb_livingHabit', 'pb_socialHabit', 'pb_languageHabit', 'pb_hobbies', 'pb_likesDislikes', 'pb_diet', 'pb_soloTime', 'pb_quirks', 'pb_dailySchedule',
+    'pb_romance', 'pb_friendType', 'pb_hateType', 'pb_strangerAttitude', 'pb_fearRelation', 'pb_socialCircle', 'pb_familyAttitude', 'pb_colleagueAttitude', 'pb_trust'
+];
 
 window.openPersonaBuilder = function() {
     const app = document.getElementById('personaBuilderApp');
     if (!app) return;
     
-    // 加载当前身份数据
+    // 1. 加载下拉框：世界书 和 已有AI角色
+    renderPbWorldbooksAndChars();
+    
+    // 2. 加载当前用户的存档数据
     loadDataIntoBuilder();
-    // 渲染世界书下拉框
-    renderPbWorldbooks();
     
     app.classList.add('open');
-    switchPbTab('core');
 };
 
 window.closePersonaBuilder = function() {
     document.getElementById('personaBuilderApp').classList.remove('open');
 };
 
-// Tab 切换逻辑
-window.switchPbTab = function(tabName) {
-    document.querySelectorAll('.pb-tab').forEach(t => t.classList.remove('active'));
-
-    if (typeof event !== 'undefined' && event.currentTarget) {
-        event.currentTarget.classList.add('active');
+// 渲染顶部 AI 参考下拉框
+function renderPbWorldbooksAndChars() {
+    const wbSelect = document.getElementById('pb-ai-worldbook');
+    const charSelect = document.getElementById('pb-ai-character');
+    
+    if (wbSelect) {
+        wbSelect.innerHTML = '<option value="">🌍 融入世界观 (可选)</option>';
+        if (typeof worldBooks !== 'undefined') {
+            worldBooks.forEach(wb => {
+                const opt = document.createElement('option');
+                opt.value = wb.title; opt.text = wb.title;
+                wbSelect.appendChild(opt);
+            });
+        }
     }
-
-    pbQueueUiWrite(() => {
-        document.querySelectorAll('.pb-content').forEach(c => pbSetSoftDisplay(c, false));
-        pbSetSoftDisplay(document.getElementById(`pb-tab-${tabName}`), true, 'block');
-    });
-};
-
-// 下拉框联动自定义输入框
-window.toggleCustomInput = function(selectId, customInputId) {
-    const sel = document.getElementById(selectId);
-    const inp = document.getElementById(customInputId);
-    if(sel.value === 'custom') {
-        pbQueueUiWrite(() => {
-            pbSetSoftDisplay(inp, true, 'block');
-            inp.focus();
-        });
-    } else {
-        pbQueueUiWrite(() => {
-            pbSetSoftDisplay(inp, false);
+    
+    if (charSelect) {
+        charSelect.innerHTML = '<option value="">🎭 针对攻略角色 (可选)</option>';
+        Object.values(friendsData || {}).forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f.persona; // 直接把对象的 persona 取出来准备喂给 AI
+            opt.text = f.remark || f.realName;
+            charSelect.appendChild(opt);
         });
     }
-};
+}
 
-// 1. 读取数据填充表单
+// 将 IndexedDB 中的存档数据反填入输入框
 function loadDataIntoBuilder() {
     const p = personasMeta[currentPersonaId];
     if (!p) return;
     const d = p.pbData || {};
 
-    // 模块一
-    document.getElementById('pb-name').value = p.name || '';
-    setSelectOrCustom('pb-gender', 'pb-gender-custom', d.gender);
-    setSelectOrCustom('pb-bio-sex', 'pb-bio-sex-custom', d.bioSex);
-    document.getElementById('pb-age-num').value = d.ageNum || '';
-    if(d.ageStage) document.getElementById('pb-age-stage').value = d.ageStage;
-    document.getElementById('pb-race').value = d.race || '';
-    document.getElementById('pb-faction').value = d.faction || '';
-    document.getElementById('pb-keywords').value = d.keywords || '';
-
-    // 模块二
-    document.getElementById('pb-aura').value = d.aura || '';
-    document.getElementById('pb-height').value = d.height || '';
-    document.getElementById('pb-weight').value = d.weight || '';
-    setSelectOrCustom('pb-body-type', 'pb-body-type-custom', d.bodyType);
-    document.getElementById('pb-body-ratio').value = d.bodyRatio || '';
-    document.getElementById('pb-posture').value = d.posture || '';
-    document.getElementById('pb-bone-spec').value = d.boneSpec || '';
-    if(d.faceShape) document.getElementById('pb-face-shape').value = d.faceShape;
-    document.getElementById('pb-eyes').value = d.eyes || '';
-    document.getElementById('pb-skin-hair').value = d.skinHair || '';
-    document.getElementById('pb-skin-spec').value = d.skinSpec || '';
-    document.getElementById('pb-sensory').value = d.sensory || '';
-
-    // 模块三
-    document.getElementById('pb-persona-out').value = d.personaOut || '';
-    document.getElementById('pb-persona-in').value = d.personaIn || '';
-    document.getElementById('pb-mbti').value = d.mbti || '';
-    document.getElementById('pb-enneagram').value = d.enneagram || '';
-    document.getElementById('pb-goal').value = d.goal || '';
-    document.getElementById('pb-fear').value = d.fear || '';
-    document.getElementById('pb-conflict').value = d.conflict || '';
-    document.getElementById('pb-weakness').value = d.weakness || '';
-    document.getElementById('pb-backstory').value = d.backstory || '';
-
-    // 模块四
-    document.getElementById('pb-emo-joy').value = d.emoJoy || '';
-    document.getElementById('pb-emo-anger').value = d.emoAnger || '';
-    document.getElementById('pb-emo-sorrow').value = d.emoSorrow || '';
-    document.getElementById('pb-emo-pleasure').value = d.emoPleasure || '';
-    document.getElementById('pb-health').value = d.health || '';
-    document.getElementById('pb-stimulus').value = d.stimulus || '';
-    document.getElementById('pb-habit-action').value = d.habitAction || '';
-    document.getElementById('pb-habit-life').value = d.habitLife || '';
-    document.getElementById('pb-habit-diet').value = d.habitDiet || '';
+    PB_KEYS.forEach(key => {
+        const el = document.getElementById(key);
+        if (el) el.value = d[key] || '';
+    });
 }
 
-function setSelectOrCustom(selectId, customId, val) {
-    if(!val) return;
-    const sel = document.getElementById(selectId);
-    const inp = document.getElementById(customId);
-    let found = false;
-    for(let i=0; i<sel.options.length; i++) {
-        if(sel.options[i].value === val) { found = true; break; }
-    }
-    if(found) {
-        sel.value = val;
-        pbSetSoftDisplay(inp, false);
-    } else {
-        sel.value = 'custom';
-        pbSetSoftDisplay(inp, true, 'block');
-        inp.value = val;
-    }
-}
-
-function getSelectOrCustom(selectId, customId) {
-    const sel = document.getElementById(selectId);
-    const inp = document.getElementById(customId);
-    if(sel.value === 'custom') return inp.value.trim();
-    return sel.value;
-}
-
-// 2. 将表单组装为大段 Prompt 并保存
+// 提取数据组装成巨大的 Prompt 并保存
 window.savePersonaBuilder = async function() {
     const p = personasMeta[currentPersonaId];
     if (!p) return;
 
-    p.name = document.getElementById('pb-name').value.trim() || '未命名';
-
-    // 收集大纲数据
-    const d = {
-        gender: getSelectOrCustom('pb-gender', 'pb-gender-custom'),
-        bioSex: getSelectOrCustom('pb-bio-sex', 'pb-bio-sex-custom'),
-        ageNum: document.getElementById('pb-age-num').value.trim(),
-        ageStage: document.getElementById('pb-age-stage').value,
-        race: document.getElementById('pb-race').value.trim(),
-        faction: document.getElementById('pb-faction').value.trim(),
-        keywords: document.getElementById('pb-keywords').value.trim(),
-
-        aura: document.getElementById('pb-aura').value.trim(),
-        height: document.getElementById('pb-height').value.trim(),
-        weight: document.getElementById('pb-weight').value.trim(),
-        bodyType: getSelectOrCustom('pb-body-type', 'pb-body-type-custom'),
-        bodyRatio: document.getElementById('pb-body-ratio').value.trim(),
-        posture: document.getElementById('pb-posture').value.trim(),
-        boneSpec: document.getElementById('pb-bone-spec').value.trim(),
-        faceShape: document.getElementById('pb-face-shape').value,
-        eyes: document.getElementById('pb-eyes').value.trim(),
-        skinHair: document.getElementById('pb-skin-hair').value.trim(),
-        skinSpec: document.getElementById('pb-skin-spec').value.trim(),
-        sensory: document.getElementById('pb-sensory').value.trim(),
-
-        personaOut: document.getElementById('pb-persona-out').value.trim(),
-        personaIn: document.getElementById('pb-persona-in').value.trim(),
-        mbti: document.getElementById('pb-mbti').value.trim(),
-        enneagram: document.getElementById('pb-enneagram').value.trim(),
-        goal: document.getElementById('pb-goal').value.trim(),
-        fear: document.getElementById('pb-fear').value.trim(),
-        conflict: document.getElementById('pb-conflict').value.trim(),
-        weakness: document.getElementById('pb-weakness').value.trim(),
-        backstory: document.getElementById('pb-backstory').value.trim(),
-
-        emoJoy: document.getElementById('pb-emo-joy').value.trim(),
-        emoAnger: document.getElementById('pb-emo-anger').value.trim(),
-        emoSorrow: document.getElementById('pb-emo-sorrow').value.trim(),
-        emoPleasure: document.getElementById('pb-emo-pleasure').value.trim(),
-        health: document.getElementById('pb-health').value.trim(),
-        stimulus: document.getElementById('pb-stimulus').value.trim(),
-        habitAction: document.getElementById('pb-habit-action').value.trim(),
-        habitLife: document.getElementById('pb-habit-life').value.trim(),
-        habitDiet: document.getElementById('pb-habit-diet').value.trim(),
-    };
+    // 1. 收集所有输入框
+    const d = {};
+    PB_KEYS.forEach(key => {
+        const el = document.getElementById(key);
+        d[key] = el ? el.value.trim() : '';
+    });
+    
+    // 更新外部显示的名称
+    p.name = d.pb_realName || d.pb_name || 'Me';
     p.pbData = d;
 
-    // 编译终极结构化 Prompt
-    let prompt = `[Character Identity]\nName: ${p.name}\n`;
-    prompt += `Gender/Sex: ${d.gender} / ${d.bioSex}\n`;
-    prompt += `Age: ${d.ageNum} (${d.ageStage})\n`;
-    prompt += `Race & Faction: ${d.race} | ${d.faction}\n`;
-    prompt += `Keywords: ${d.keywords}\n\n`;
+    // 2. 组装成给 AI 读取的终极纯文本
+    let prompt = `[User Identity Profile]
+Name/Nickname: ${d.pb_name} | Real Name: ${d.pb_realName}
+Gender/Orientation: ${d.pb_gender} | Age: ${d.pb_age}
+Location: ${d.pb_location} | Edu: ${d.pb_education} | Occ: ${d.pb_occupation} | Income: ${d.pb_income}
+Routine: ${d.pb_routine} | Tags: ${d.pb_tags}
 
-    prompt += `[Physical Manifestation]\n`;
-    prompt += `Aura: ${d.aura}\n`;
-    prompt += `Physique: ${d.height} / ${d.weight}, ${d.bodyType}, ${d.bodyRatio}\n`;
-    prompt += `Posture & Bones: ${d.posture}, ${d.boneSpec}\n`;
-    prompt += `Facial Features: Shape: ${d.faceShape}, Eyes: ${d.eyes}\n`;
-    prompt += `Hair & Skin: ${d.skinHair}, ${d.skinSpec}\n`;
-    prompt += `Sensory (Voice/Scent): ${d.sensory}\n\n`;
+[Physical Appearance]
+Physique: ${d.pb_physique} | Face: ${d.pb_face} | Hair: ${d.pb_hair}
+Style: ${d.pb_style} | Colors: ${d.pb_colors} | Accessories: ${d.pb_accessories}
+Aura: ${d.pb_aura} | Expression: ${d.pb_expression} | Voice: ${d.pb_voice} | Vibe Tags: ${d.pb_vibeTags}
 
-    prompt += `[Internal Cosmos]\n`;
-    prompt += `Apparent Personality: ${d.personaOut}\n`;
-    prompt += `Implicit Personality: ${d.personaIn}\n`;
-    prompt += `Scales: MBTI(${d.mbti}), Enneagram(${d.enneagram})\n`;
-    prompt += `Drives: Goal(${d.goal}), Fear(${d.fear}), Conflict(${d.conflict}), Weakness(${d.weakness})\n`;
-    prompt += `Backstory:\n${d.backstory}\n\n`;
+[Background & Past]
+Family: ${d.pb_family} | Wealth: ${d.pb_wealth} | Hometown: ${d.pb_hometown}
+Childhood: ${d.pb_childhood} | Pros/Cons from Past: ${d.pb_prosCons}
+Past Exp: ${d.pb_pastExp}
+Turning Point: ${d.pb_turningPoint}
 
-    prompt += `[Dynamic Interaction]\n`;
-    prompt += `Emotions: Joy(${d.emoJoy}), Anger(${d.emoAnger}), Sorrow(${d.emoSorrow}), Pleasure(${d.emoPleasure})\n`;
-    prompt += `Physiology & Reactions: ${d.health} | ${d.stimulus}\n`;
-    prompt += `Habits: Actions(${d.habitAction}), Lifestyle(${d.habitLife}), Diet(${d.habitDiet})\n`;
+[Internal Character]
+Core: ${d.pb_coreTrait} | Apparent: ${d.pb_apparentTrait} | Hidden: ${d.pb_hiddenTrait}
+Thinking: ${d.pb_thinking} | Emotion: ${d.pb_emotion} | Weakness/Limits: ${d.pb_weakness}
+Values: ${d.pb_values}
+Desire: ${d.pb_desire} | Fear: ${d.pb_fear} | Secret/Knot: ${d.pb_secret}
+
+[Habits & Routines]
+Living: ${d.pb_livingHabit} | Social: ${d.pb_socialHabit} | Language: ${d.pb_languageHabit}
+Hobbies: ${d.pb_hobbies} | Likes/Dislikes: ${d.pb_likesDislikes} | Diet: ${d.pb_diet}
+Schedule: ${d.pb_dailySchedule}
+Solo Time: ${d.pb_soloTime} | Quirks: ${d.pb_quirks}
+
+[Relationships]
+Circle: ${d.pb_socialCircle} | Romance: ${d.pb_romance}
+Friends: ${d.pb_friendType} | Hate: ${d.pb_hateType}
+Family Attitude: ${d.pb_familyAttitude} | Stranger: ${d.pb_strangerAttitude} | Colleague: ${d.pb_colleagueAttitude}
+Trust: ${d.pb_trust} | Deepest Fear in Rel: ${d.pb_fearRelation}`;
 
     p.persona = prompt.trim();
+    
+    // 保存进数据库
     await IDB.set(PERSONA_META_KEY, personasMeta);
     
-    applyPersonaToUI();
-    showToast("人设已成功组装并保存！");
+    // 应用到微信等界面的名字同步
+    if(typeof applyPersonaToUI === 'function') applyPersonaToUI();
+    showToast("<i class='fas fa-check'></i> User 人设档案已保存成功！");
 };
 
-// 3. 世界书联动功能
-function renderPbWorldbooks() {
-    const sel = document.getElementById('pb-worldbook-select');
-    if(!sel) return;
-    sel.innerHTML = '<option value="">-- 选择世界书注入世界观 --</option>';
-    if (typeof worldBooks !== 'undefined') {
-        worldBooks.forEach(wb => {
-            const opt = document.createElement('option');
-            opt.value = wb.title; opt.text = wb.title;
-            sel.appendChild(opt);
-        });
-    }
-}
-window.syncPbWorldbook = function() {
-    const val = document.getElementById('pb-worldbook-select').value;
-    if(val) {
-        document.getElementById('pb-race').value = "属于【" + val + "】世界观下的种族";
-        document.getElementById('wb-sync-hint').innerText = "(已联动: " + val + ")";
-    } else {
-        document.getElementById('wb-sync-hint').innerText = "";
-    }
-};
-
-// 4. 智能解析 (调用 AI 帮你填表)
-window.executeSmartParse = async function() {
-    const text = document.getElementById('pb-smart-parse-text').value.trim();
-    if(!text) { alert("请先粘贴角色文案！"); return; }
+// 🌟 核心：AI 一键自动扩写生成逻辑 (附带阶梯发光特效)
+window.generatePersonaByAI = async function() {
+    const brief = document.getElementById('pb-ai-prompt').value.trim();
+    const wb = document.getElementById('pb-ai-worldbook').value;
+    const charPersona = document.getElementById('pb-ai-character').value;
     
-    if(typeof callAiForSpecialTask !== 'function') { alert("无法调用API，检查 apps.js"); return; }
+    if (!brief) {
+        alert("至少写一句你的人设想法吧！");
+        return;
+    }
 
-    const prompt = `
-    请解析以下角色文案，并提取为标准的 JSON 格式，严格按照这些 key 返回，没有的值填 ""。
-    keys: name, gender, bioSex, age, race, faction, keywords, aura, bodyType, eyes, sensory, personaOut, personaIn, goal, backstory, habits.
-    
-    文本：
-    ${text}
+    const btn = document.getElementById('pb-btn-ai');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在注入灵魂，请稍候...';
+    btn.style.pointerEvents = 'none';
+
+    // 构造严格的 JSON 请求结构
+    const jsonFormat = `{
+  "pb_name": "", "pb_realName": "", "pb_gender": "", "pb_age": "", "pb_location": "", "pb_occupation": "", "pb_education": "", "pb_income": "", "pb_routine": "", "pb_tags": "",
+  "pb_vibeTags": "", "pb_physique": "", "pb_face": "", "pb_hair": "", "pb_style": "", "pb_colors": "", "pb_accessories": "", "pb_voice": "", "pb_expression": "", "pb_aura": "",
+  "pb_family": "", "pb_wealth": "", "pb_childhood": "", "pb_hometown": "", "pb_prosCons": "", "pb_pastExp": "", "pb_turningPoint": "",
+  "pb_coreTrait": "", "pb_apparentTrait": "", "pb_hiddenTrait": "", "pb_thinking": "", "pb_emotion": "", "pb_weakness": "", "pb_values": "", "pb_desire": "", "pb_fear": "", "pb_secret": "",
+  "pb_livingHabit": "", "pb_socialHabit": "", "pb_languageHabit": "", "pb_hobbies": "", "pb_likesDislikes": "", "pb_diet": "", "pb_soloTime": "", "pb_quirks": "", "pb_dailySchedule": "",
+  "pb_romance": "", "pb_friendType": "", "pb_hateType": "", "pb_strangerAttitude": "", "pb_fearRelation": "", "pb_socialCircle": "", "pb_familyAttitude": "", "pb_colleagueAttitude": "", "pb_trust": ""
+}`;
+
+    const megaPrompt = `
+You are an expert character designer and writer. Based on the brief ideas provided by the user, please flesh out a COMPLETE, incredibly detailed and vivid character profile (User Identity).
+
+[User's Brief Idea]: 
+"${brief}"
+
+${wb ? `[World Setting Reference]:\n${wb}\nMake sure the occupation, style, and background fit this world.` : ''}
+${charPersona ? `[Interaction Target Reference]:\n${charPersona}\nThis is the AI character the user will interact with. Design the user's personality and secrets so they have interesting chemistry/conflict with this character.` : ''}
+
+[Task]
+Expand the brief idea into a fully detailed 55-point profile. Fill in creative, logically consistent, and charming details. 
+- Use Simplified Chinese (简体中文).
+- Be specific (e.g. instead of "Likes music", write "Always wears wired earphones listening to city pop").
+- STRICT REQUIREMENT: Output NOTHING ELSE BUT a pure JSON object matching this exact structure:
+${jsonFormat}
     `;
-    
-    showToast("AI正在努力解析拆解人设，请稍候...");
-    const result = await callAiForSpecialTask(prompt);
-    
-    if (result) {
-        try {
+
+    try {
+        const result = await callAiForSpecialTask(megaPrompt);
+        if (result) {
             const jsonStr = result.replace(/```json/gi, '').replace(/```/gi, '').trim();
             const data = JSON.parse(jsonStr);
             
-            if(data.name) document.getElementById('pb-name').value = data.name;
-            if(data.gender) setSelectOrCustom('pb-gender', 'pb-gender-custom', data.gender);
-            if(data.race) document.getElementById('pb-race').value = data.race;
-            if(data.faction) document.getElementById('pb-faction').value = data.faction;
-            if(data.keywords) document.getElementById('pb-keywords').value = data.keywords;
-            if(data.aura) document.getElementById('pb-aura').value = data.aura;
-            if(data.eyes) document.getElementById('pb-eyes').value = data.eyes;
-            if(data.sensory) document.getElementById('pb-sensory').value = data.sensory;
-            if(data.personaOut) document.getElementById('pb-persona-out').value = data.personaOut;
-            if(data.personaIn) document.getElementById('pb-persona-in').value = data.personaIn;
-            if(data.goal) document.getElementById('pb-goal').value = data.goal;
-            if(data.backstory) document.getElementById('pb-backstory').value = data.backstory;
-            if(data.habits) document.getElementById('pb-habit-action').value = data.habits;
+            let delay = 0;
+            // 自动回填并加入阶梯发光特效，像魔法注入一样
+            PB_KEYS.forEach(key => {
+                const el = document.getElementById(key);
+                if (el && data[key]) {
+                    el.value = data[key];
+                    
+                    // 获取外层的包裹 div 加上动画
+                    const wrapper = el.closest('.pb-input-wrapper');
+                    if (wrapper) {
+                        setTimeout(() => {
+                            wrapper.classList.remove('ai-filled-flash');
+                            void wrapper.offsetWidth; // 触发重绘
+                            wrapper.classList.add('ai-filled-flash');
+                        }, delay);
+                        delay += 25; // 错开 25ms，形成多米诺骨牌一样的流光效果
+                    }
+                }
+            });
+            showToast("<i class='fas fa-sparkles' style='color:#ff7e67;'></i> 灵魂注入完毕！");
+            
+            // 自动往下滚动展示结果，然后再滚回顶部
+            const scrollBox = document.querySelector('.pb-scroll-container');
+            scrollBox.scrollTo({ top: scrollBox.scrollHeight, behavior: 'smooth' });
+            setTimeout(() => {
+                scrollBox.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 1200);
 
-            showToast("智能填表完成！你可以手动微调了。");
-        } catch(e) {
-            alert("解析失败，AI 返回格式不符合规范。");
+        } else {
+            alert("生成失败，请检查网络或更换 API。");
         }
-    }
-};
-
-// 5. 最终故事生成
-window.generateFinalStory = async function() {
-    const p = personasMeta[currentPersonaId];
-    if(!p || !p.persona) {
-        alert("请先点击右上角保存，确立人设基底！"); return; 
-    }
-    
-    const scenario = document.getElementById('pb-scenario-prompt').value.trim();
-    if(!scenario) { alert("请填写你要生成的情景指令！"); return; }
-    
-    const outputDiv = document.getElementById('pb-story-output');
-    pbQueueUiWrite(() => {
-        pbSetSoftDisplay(outputDiv, true, 'block');
-        outputDiv.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 正在根据人设进行沉浸式生成...';
-    });
-
-    const megaPrompt = `
-    [Preamble: 核心人设设定]
-    ${p.persona}
-    
-    [Instruction: 情景指令]
-    你是一部精彩小说的作者，也是文中主角（即上述人设）。请严格遵循上述角色的性格、外貌、动机、表达方式，描写以下情景。
-    要求文字细腻，展现角色的【外显性格】与【内隐性格】的冲突。
-    
-    情景描述：
-    ${scenario}
-    `;
-
-    const res = await callAiForSpecialTask(megaPrompt);
-    if(res) {
-        outputDiv.innerHTML = res.replace(/\n/g, '<br>');
-    } else {
-        outputDiv.innerHTML = '生成失败，请重试。';
+    } catch (e) {
+        alert("解析失败，AI 返回格式异常: " + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.style.pointerEvents = 'auto';
     }
 };

@@ -4566,264 +4566,122 @@
    </div>
 </div>
 <!-- ============================================== -->
-<!-- [NEW] 角色人设生成器 APP (严格大纲版) -->
+<!-- [NEW] User 人设生成器 APP (灵动便当盒/情绪板版) -->
 <!-- ============================================== -->
-<div class="app-fullscreen-view" id="personaBuilderApp" style="background: #f7f8fa;">
-    <div class="k-header" style="background: #fff; height: 60px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100; border-bottom: 1px solid #f0f0f0;">
-        <i class="fas fa-chevron-down" onclick="closePersonaBuilder()" style="font-size: 18px; color: #555; cursor: pointer;"></i>
-        <span style="font-weight: 800; font-size: 16px; color: #111;">人设研究所</span>
-        <i class="fas fa-save" onclick="savePersonaBuilder()" style="font-size: 18px; color: #07c160; cursor: pointer;"></i>
+<div class="app-fullscreen-view" id="personaBuilderApp" style="background: #f4f5f7;">
+    
+    <!-- 悬浮毛玻璃头部 -->
+    <div class="pb-magic-header">
+        <i class="fas fa-chevron-down pb-back-btn" onclick="closePersonaBuilder()"></i>
+        <div class="pb-title-box">
+            <span class="pb-title-main">MY UNIVERSE</span>
+            <span class="pb-title-sub">User Persona Identity</span>
+        </div>
+        <div class="pb-save-btn" onclick="savePersonaBuilder()"><i class="fas fa-check"></i></div>
     </div>
 
-    <!-- 顶部模块切换 Tabs -->
-    <div style="display: flex; background: #fff; border-bottom: 1px solid #f0f0f0; padding: 0 10px; overflow-x: auto;" class="pb-tabs">
-        <div class="pb-tab active" onclick="switchPbTab('core')">根源标识</div>
-        <div class="pb-tab" onclick="switchPbTab('physique')">外在形态</div>
-        <div class="pb-tab" onclick="switchPbTab('internal')">内在宇宙</div>
-        <div class="pb-tab" onclick="switchPbTab('dynamic')">动态交互</div>
-        <div class="pb-tab" onclick="switchPbTab('generate')" style="color:#ff7e67; font-weight:800;">联动生成</div>
-    </div>
-
-    <div class="k-body-container" style="padding: 20px; overflow-y: auto;">
+    <div class="pb-scroll-container">
         
-        <!-- 模块一：【根源标识】 -->
-        <div id="pb-tab-core" class="pb-content active">
-            <div class="pb-card">
-                <div class="pb-input-group">
-                    <label>姓名/代号 (Name/Codename)</label>
-                    <input type="text" id="pb-name" placeholder="请输入角色名">
-                </div>
-                <div class="pb-input-group">
-                    <label>性别认知 (Gender Identity)</label>
-                    <div style="display: flex; gap: 10px;">
-                        <select id="pb-gender" onchange="toggleCustomInput('pb-gender', 'pb-gender-custom')">
-                            <option value="男">男</option>
-                            <option value="女">女</option>
-                            <option value="无性别">无性别</option>
-                            <option value="流动性别">流动性别</option>
-                            <option value="custom">自定义...</option>
-                        </select>
-                        <input type="text" id="pb-gender-custom" style="display: none;" placeholder="输入自定义性别">
-                    </div>
-                </div>
-                <div class="pb-input-group">
-                    <label>生理性别 (Biological Sex)</label>
-                    <div style="display: flex; gap: 10px;">
-                        <select id="pb-bio-sex" onchange="toggleCustomInput('pb-bio-sex', 'pb-bio-sex-custom')">
-                            <option value="男">男</option>
-                            <option value="女">女</option>
-                            <option value="双性">双性/间性</option>
-                            <option value="custom">自定义...</option>
-                        </select>
-                        <input type="text" id="pb-bio-sex-custom" style="display: none;" placeholder="输入生理性别">
-                    </div>
-                </div>
-                <div class="pb-input-group">
-                    <label>年龄 (Age)</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="number" id="pb-age-num" placeholder="具体年龄" style="width: 80px;">
-                        <select id="pb-age-stage" style="flex: 1;">
-                            <option value="幼年">幼年</option>
-                            <option value="少年">少年</option>
-                            <option value="青年" selected>青年</option>
-                            <option value="中年">中年</option>
-                            <option value="老年">老年</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="pb-input-group">
-                    <label>种族/族裔 (Race/Ethnicity) <span style="color:#07c160; font-weight:normal;" id="wb-sync-hint"></span></label>
-                    <input type="text" id="pb-race" placeholder="例如：精灵、人类、赛博格">
-                </div>
-                <div class="pb-input-group">
-                    <label>归属/阵营 (Affiliation/Faction)</label>
-                    <input type="text" id="pb-faction" placeholder="例如：XX公司、反抗军">
-                </div>
-                <div class="pb-input-group">
-                    <label>核心印象关键词 (Core Keywords)</label>
-                    <input type="text" id="pb-keywords" placeholder="用3-5个词定义，空格或逗号分隔 (如：破碎美人 天真残忍)">
-                </div>
-            </div>
-        </div>
-
-        <!-- 模块二：【外在形态】 -->
-        <div id="pb-tab-physique" class="pb-content" style="display:none;">
-            <div class="pb-card">
-                <div class="pb-section-title">整体氛围 & 体态骨相</div>
-                <div class="pb-input-group">
-                    <label>气质类型 (Aura)</label>
-                    <input type="text" id="pb-aura" placeholder="如：疏离感、神性、脆弱感、精英感">
-                </div>
-                <div class="pb-input-group">
-                    <label>身高 / 体重</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="pb-height" placeholder="身高 (cm)">
-                        <input type="text" id="pb-weight" placeholder="体重 (kg)">
-                    </div>
-                </div>
-                <div class="pb-input-group">
-                    <label>体型描述 & 身体比例</label>
-                    <div style="display: flex; gap: 10px; margin-bottom: 8px;">
-                        <select id="pb-body-type" onchange="toggleCustomInput('pb-body-type', 'pb-body-type-custom')">
-                            <option value="匀称">匀称</option>
-                            <option value="纤细">纤细</option>
-                            <option value="壮硕">壮硕</option>
-                            <option value="骨感">骨感</option>
-                            <option value="肌肉线条分明">肌肉线条分明</option>
-                            <option value="柔软无力">柔软无力</option>
-                            <option value="custom">自定义...</option>
-                        </select>
-                        <input type="text" id="pb-body-type-custom" style="display: none; flex: 1;" placeholder="自定义体型">
-                    </div>
-                    <input type="text" id="pb-body-ratio" placeholder="身体比例 (如：肩宽腰细、四肢修长)">
-                </div>
-                <div class="pb-input-group">
-                    <label>姿态习惯 & 特殊骨相点</label>
-                    <input type="text" id="pb-posture" placeholder="姿态 (如：站姿笔挺、习惯单手插袋)" style="margin-bottom: 8px;">
-                    <input type="text" id="pb-bone-spec" placeholder="特殊骨相 (如：蝴蝶骨、驼峰鼻、精灵耳)">
-                </div>
-                <hr class="pb-divider">
-                
-                <div class="pb-section-title">面容、发肤与感官</div>
-                <div class="pb-input-group">
-                    <label>脸型 (Face Shape)</label>
-                    <select id="pb-face-shape">
-                        <option value="鹅蛋脸">鹅蛋脸</option>
-                        <option value="圆脸">圆脸</option>
-                        <option value="方脸">方脸</option>
-                        <option value="心形脸">心形脸</option>
-                        <option value="钻石脸">钻石脸</option>
-                    </select>
-                </div>
-                <div class="pb-input-group">
-                    <label>眼部 (瞳色/眼型/细节)</label>
-                    <input type="text" id="pb-eyes" placeholder="如：琥珀色桃花眼，有卧蚕">
-                </div>
-                <div class="pb-input-group">
-                    <label>肤质肤色 & 发质发型</label>
-                    <input type="text" id="pb-skin-hair" placeholder="如：冷白皮，乌木黑长直发，发质柔软">
-                </div>
-                <div class="pb-input-group">
-                    <label>身体皮肤细节 & 关键辨识点</label>
-                    <input type="text" id="pb-skin-spec" placeholder="如：后腰胎记，左眉有疤，虎牙，酒窝">
-                </div>
-                <div class="pb-input-group">
-                    <label>感官 (声音/语调/气味/口头禅)</label>
-                    <textarea id="pb-sensory" rows="3" placeholder="如：低沉沙哑，语速偏快；自带冷杉木味；口头禅是“无所谓”"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- 模块三：【内在宇宙】 -->
-        <div id="pb-tab-internal" class="pb-content" style="display:none;">
-            <div class="pb-card">
-                <div class="pb-input-group">
-                    <label>外显性格 (Apparent Personality) - 社交面具</label>
-                    <textarea id="pb-persona-out" rows="2" placeholder="给人的第一印象，如：开朗健谈，实则保持距离"></textarea>
-                </div>
-                <div class="pb-input-group">
-                    <label>内隐性格 (Implicit Personality) - 真实自我</label>
-                    <textarea id="pb-persona-in" rows="2" placeholder="独处或面对信任之人展现的，如：极度缺乏安全感"></textarea>
-                </div>
-                <div class="pb-input-group">
-                    <label>性格量表 (Optional Scales)</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="pb-mbti" placeholder="MBTI (如: INTJ)">
-                        <input type="text" id="pb-enneagram" placeholder="九型人格 (如: 5w4)">
-                    </div>
-                </div>
-                <hr class="pb-divider">
-                <div class="pb-input-group">
-                    <label>最高追求 / 执念 (Ultimate Goal)</label>
-                    <input type="text" id="pb-goal" placeholder="如：复仇、找到失散的家人">
-                </div>
-                <div class="pb-input-group">
-                    <label>最深的恐惧 (Deepest Fear)</label>
-                    <input type="text" id="pb-fear" placeholder="如：被遗忘、失去控制">
-                </div>
-                <div class="pb-input-group">
-                    <label>内在矛盾 / 心结 (Internal Conflict)</label>
-                    <input type="text" id="pb-conflict" placeholder="如：渴望自由又害怕孤独">
-                </div>
-                <div class="pb-input-group">
-                    <label>软肋 / 死穴 (Achilles' Heel)</label>
-                    <input type="text" id="pb-weakness" placeholder="什么人或事能轻易让他失控或妥协？">
-                </div>
-                <hr class="pb-divider">
-                <div class="pb-input-group">
-                    <label>背景故事脉络 (Backstory Outline)</label>
-                    <textarea id="pb-backstory" rows="3" placeholder="成长环境与彻底改变人生的关键转折事件..."></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- 模块四：【动态交互】 -->
-        <div id="pb-tab-dynamic" class="pb-content" style="display:none;">
-            <div class="pb-card">
-                <div class="pb-section-title">情绪表达模式</div>
-                <div class="pb-input-group">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <input type="text" id="pb-emo-joy" placeholder="喜：如(极少表露、会哼歌)">
-                        <input type="text" id="pb-emo-anger" placeholder="怒：如(冷暴力、具攻击性)">
-                        <input type="text" id="pb-emo-sorrow" placeholder="哀：如(独自流泪、暴饮暴食)">
-                        <input type="text" id="pb-emo-pleasure" placeholder="乐：如(捉弄别人)">
-                    </div>
-                </div>
-                <hr class="pb-divider">
-                <div class="pb-input-group">
-                    <label>生理健康 & 对刺激的反应</label>
-                    <input type="text" id="pb-health" placeholder="健康状况(如: 畏寒, 胃病)" style="margin-bottom: 8px;">
-                    <input type="text" id="pb-stimulus" placeholder="刺激反应(如: 酒后坦率, 怕痒)">
-                </div>
-                <div class="pb-input-group">
-                    <label>习惯与偏好 (Habits & Quirks)</label>
-                    <input type="text" id="pb-habit-action" placeholder="小动作(如: 思考转笔, 撒谎闪躲)" style="margin-bottom: 8px;">
-                    <input type="text" id="pb-habit-life" placeholder="生活偏好(如: 下雨天待室内, 收集旧物)" style="margin-bottom: 8px;">
-                    <input type="text" id="pb-habit-diet" placeholder="饮食偏好(如: 只喝黑咖啡, 不吃香菜)">
-                </div>
-            </div>
-        </div>
-
-        <!-- 联动与生成机制 -->
-        <div id="pb-tab-generate" class="pb-content" style="display:none;">
+        <!-- 💡 魔法流光 AI 生成区 -->
+        <div class="pb-ai-magic-card">
+            <div class="pb-ai-badge">✨ AI 灵感扩写</div>
+            <textarea id="pb-ai-prompt" class="pb-ai-textarea" placeholder="随便写点什么...比如：大城市的社畜，表面高冷实则内心戏超多，喜欢听雨声，一撒娇就没辙..."></textarea>
             
-            <!-- 工具：智能导入与世界书 -->
-            <div class="pb-card" style="background:#fffcfb; border-color:#ffdecb;">
-                <div class="pb-section-title" style="color:#ff7e67; border-color:#ff7e67;">① 数据导入 & 预设</div>
-                
-                <div class="pb-input-group">
-                    <label>世界书联动 (World Book Sync)</label>
-                    <select id="pb-worldbook-select" onchange="syncPbWorldbook()">
-                        <option value="">-- 选择世界书注入世界观 --</option>
-                    </select>
-                </div>
-
-                <div class="pb-input-group" style="margin-top: 20px;">
-                    <label>角色卡智能解析 (粘贴文案，AI自动填表)</label>
-                    <textarea id="pb-smart-parse-text" rows="3" placeholder="在此粘贴已有的人设文案或背景故事..."></textarea>
-                    <button class="btn-secondary" style="width:100%; margin-top:10px; background:#fff; border-color:#ff7e67; color:#ff7e67;" onclick="executeSmartParse()"><i class="fas fa-magic"></i> 智能解析并填充表单</button>
-                </div>
-            </div>
-
-            <!-- 最终生成 -->
-            <div class="pb-card">
-                <div class="pb-section-title">② 情景生成 (Final Generation)</div>
-                <div class="pb-input-group">
-                    <label>情景指令输入框</label>
-                    <textarea id="pb-scenario-prompt" rows="4" placeholder="例如：请基于以上人设，写一段他/她在得知被挚友背叛后的详细心理活动，以及后续找到挚友当面对质的场景..."></textarea>
-                </div>
-                <button class="pb-btn-generate" onclick="generateFinalStory()"><i class="fas fa-feather-alt"></i> 基于人设生成专属小说片段</button>
+            <div class="pb-ai-selects">
+                <select id="pb-ai-worldbook"><option value="">🌍 融入世界观 (可选)</option></select>
+                <select id="pb-ai-character"><option value="">🎭 针对攻略角色 (可选)</option></select>
             </div>
             
-            <!-- 生成结果展示 -->
-            <div id="pb-story-output" class="pb-card" style="display:none; background:#fafafa; font-family:'Songti SC', serif; line-height:1.8; color:#333;">
-                <!-- 故事内容将显示在这里 -->
-            </div>
-
+            <button class="pb-btn-magic" id="pb-btn-ai" onclick="generatePersonaByAI()">
+                <i class="fas fa-wand-magic-sparkles"></i> 注入灵魂 (一键生成档案)
+            </button>
         </div>
 
+        <!-- 模块一：基础档案 (Bento Box) -->
+        <div class="pb-section-label">01 / BASIC INFO.</div>
+        <div class="pb-bento-grid">
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-signature"></i> 昵称/代号</label><input type="text" id="pb_name"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-id-card"></i> 真实姓名</label><input type="text" id="pb_realName"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-venus-mars"></i> 性别/取向</label><input type="text" id="pb_gender"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-birthday-cake"></i> 年龄阶段</label><input type="text" id="pb_age"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-map-marker-alt"></i> 所在城市</label><input type="text" id="pb_location"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-briefcase"></i> 职业/身份</label><input type="text" id="pb_occupation"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-graduation-cap"></i> 学历经历</label><input type="text" id="pb_education"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-wallet"></i> 消费水平</label><input type="text" id="pb_income"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-clock"></i> 作息习惯</label><input type="text" id="pb_routine" placeholder="早睡/熬夜/阴间作息..."></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-hashtag"></i> 印象标签 (Tag)</label><input type="text" id="pb_tags" placeholder="#感性 #颜控 #宅..."></div>
+        </div>
+
+        <!-- 模块二：视觉形象 -->
+        <div class="pb-section-label">02 / VISUAL AURA.</div>
+        <div class="pb-bento-grid">
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-sparkles"></i> 整体氛围感 (Vibe)</label><input type="text" id="pb_vibeTags" placeholder="清冷 / 钓系 / 破碎感..."></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-ruler-vertical"></i> 身高体型</label><input type="text" id="pb_physique"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-user-circle"></i> 五官特征</label><input type="text" id="pb_face" placeholder="泪痣/桃花眼..."></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-cut"></i> 发型发色</label><input type="text" id="pb_hair"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-tshirt"></i> 穿搭风格</label><input type="text" id="pb_style" placeholder="极简/废土/千禧..."></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-palette"></i> 常用色系</label><input type="text" id="pb_colors"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-ring"></i> 配饰习惯</label><input type="text" id="pb_accessories"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-microphone-alt"></i> 声音质感</label><input type="text" id="pb_voice" placeholder="沙哑/清脆/慢条斯理..."></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-camera-retro"></i> 拍照习惯</label><input type="text" id="pb_expression"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-wind"></i> 专属气质</label><input type="text" id="pb_aura"></div>
+        </div>
+
+        <!-- 模块三：原生背景 -->
+        <div class="pb-section-label">03 / BACKGROUND.</div>
+        <div class="pb-bento-grid">
+            <div class="pb-input-wrapper"><label><i class="fas fa-home"></i> 家庭结构</label><input type="text" id="pb_family"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-coins"></i> 家境情况</label><input type="text" id="pb_wealth"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-child"></i> 童年经历</label><input type="text" id="pb_childhood"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-tree"></i> 成长环境</label><input type="text" id="pb_hometown"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-yin-yang"></i> 原生优缺</label><input type="text" id="pb_prosCons"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-film"></i> 过往高光/感情史</label><textarea id="pb_pastExp" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-route"></i> 命运转折点 (核心事件)</label><textarea id="pb_turningPoint" rows="2"></textarea></div>
+        </div>
+
+        <!-- 模块四：性格内核 -->
+        <div class="pb-section-label">04 / INNER SOUL.</div>
+        <div class="pb-bento-grid">
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-heart"></i> 核心性格</label><input type="text" id="pb_coreTrait"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-mask"></i> 社交面具 (显性)</label><input type="text" id="pb_apparentTrait"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-lock"></i> 真实自我 (隐性)</label><input type="text" id="pb_hiddenTrait"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-brain"></i> 思维方式</label><input type="text" id="pb_thinking" placeholder="敏感/多想/直线..."></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-water"></i> 情绪模式</label><input type="text" id="pb_emotion" placeholder="容易内耗/压抑..."></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-shield-alt"></i> 软肋与底线</label><input type="text" id="pb_weakness"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-compass"></i> 人生三观</label><textarea id="pb_values" rows="2"></textarea></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-star"></i> 内心极度渴望</label><input type="text" id="pb_desire"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-skull-crossbones"></i> 最深的恐惧</label><input type="text" id="pb_fear"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-key"></i> 执念、心结与小秘密</label><input type="text" id="pb_secret"></div>
+        </div>
+
+        <!-- 模块五：行为与社交 -->
+        <div class="pb-section-label">05 / HABITS & SOCIAL.</div>
+        <div class="pb-bento-grid">
+            <div class="pb-input-wrapper"><label><i class="fas fa-coffee"></i> 生活习惯</label><input type="text" id="pb_livingHabit"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-comments"></i> 社交习惯</label><input type="text" id="pb_socialHabit" placeholder="秒回/意念回复..."></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-quote-left"></i> 口头禅</label><input type="text" id="pb_languageHabit"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-gamepad"></i> 兴趣爱好</label><input type="text" id="pb_hobbies"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-thumbs-up"></i> 极度喜欢 / 极度雷点</label><input type="text" id="pb_likesDislikes"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-utensils"></i> 饮食忌口</label><input type="text" id="pb_diet"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-bed"></i> 独处/解压方式</label><input type="text" id="pb_soloTime"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-clock"></i> 日常一天时间表</label><textarea id="pb_dailySchedule" rows="2"></textarea></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-paw"></i> 下意识的小动作/癖好</label><input type="text" id="pb_quirks"></div>
+            
+            <div class="pb-input-wrapper col-span-2" style="margin-top: 10px;"><label><i class="fas fa-users"></i> 社交圈层 (小众/广泛)</label><input type="text" id="pb_socialCircle"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-heartbeat"></i> 恋爱状态与偏好</label><input type="text" id="pb_romance"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-user-friends"></i> 喜欢的同类</label><input type="text" id="pb_friendType"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-user-slash"></i> 厌恶的同类</label><input type="text" id="pb_hateType"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-home"></i> 对待家人态度</label><input type="text" id="pb_familyAttitude"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-user"></i> 对待陌生人态度</label><input type="text" id="pb_strangerAttitude"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-briefcase"></i> 对待同事态度</label><input type="text" id="pb_colleagueAttitude"></div>
+            <div class="pb-input-wrapper"><label><i class="fas fa-handshake"></i> 信任的人</label><input type="text" id="pb_trust"></div>
+            <div class="pb-input-wrapper col-span-2"><label><i class="fas fa-door-closed"></i> 最逃避的人际关系</label><input type="text" id="pb_fearRelation"></div>
+        </div>
+        
+        <div style="height: 60px;"></div>
     </div>
 </div>
+
 
 
 
