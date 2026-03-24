@@ -56,6 +56,7 @@ function renderPbWorldbooksAndChars() {
     }
 }
 
+// === 覆盖并强化原来的填充函数 (新增自动高度适应) ===
 function loadDataIntoBuilder() {
     const p = personasMeta[currentPersonaId];
     if (!p) return;
@@ -63,7 +64,22 @@ function loadDataIntoBuilder() {
 
     PB_KEYS.forEach(key => {
         const el = document.getElementById(key);
-        if (el) el.value = d[key] || '';
+        if (el) {
+            el.value = d[key] || '';
+            
+            // --- 新增：给多行输入框绑定高度自动伸缩魔法 ---
+            if (el.tagName.toLowerCase() === 'textarea') {
+                // 1. 初始化时根据已有文字调整高度
+                setTimeout(() => {
+                    el.style.height = 'auto';
+                    el.style.height = el.scrollHeight + 'px';
+                }, 10);
+                
+                // 2. 绑定输入事件，打字时自动撑开
+                el.removeEventListener('input', autoResizeTextarea); // 防止重复绑定
+                el.addEventListener('input', autoResizeTextarea);
+            }
+        }
     });
     
     // 渲染头像预览
@@ -78,6 +94,13 @@ function loadDataIntoBuilder() {
         titleName.innerHTML = `${p.name || 'MY UNIVERSE'} <i class="fas fa-caret-down" style="font-size:12px;"></i>`;
     }
 }
+
+// 辅助函数：高度自动伸缩
+function autoResizeTextarea() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+}
+
 
 // 提取数据组装成巨大的 Prompt 并保存
 window.savePersonaBuilder = async function() {

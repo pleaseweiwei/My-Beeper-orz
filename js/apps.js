@@ -1934,7 +1934,7 @@ AI 原始输出示例 2：[表情:嫌弃]
         [RELATIONSHIP STATE]
         Current affection toward the user: ${currentAffection}/100
         Current relationship stage: ${affectionStage}
-        - Your tone, distance, and willingness to engage MUST reflect this affection level.
+        - Let this affection stage naturally shape your underlying attitude, trust level, and boundaries. React exactly as your Persona would at this stage of a relationship. (e.g., if affection is low, just act naturally but without assumed intimacy).
         - For this turn, the affection change MUST be an integer from -2 to 2 only.
 
         ${f.worldbook ? `[World Setting]: ${f.worldbook}` : ''}
@@ -4328,8 +4328,8 @@ function shootDanmaku(text, styleClass = '') {
 }
 
 
-// 3. 【修改】有限循环播放 (带有 3 秒阅读缓冲)
-function startDanmakuBatch() {
+// 3. 【修改】有限循环播放 (带有 3 秒阅读缓冲) -> 【升级版】支持自定义延迟
+function startDanmakuBatch(initialDelay = 15000) { // 【修改】将默认值从 3000 改为 15000
     // 先停止之前的定时器
     stopDanmakuLoop();
     
@@ -4339,22 +4339,21 @@ function startDanmakuBatch() {
     const REPEAT_TIMES = 2; 
     danmakuRemainingCount = danmakuPool.length * REPEAT_TIMES;
 
-    // 【新增核心逻辑】：延迟 3000 毫秒（3秒）后再开始发射第一条
+    // 【核心修改】：使用传入的延迟参数
     danmakuDelayTimer = setTimeout(() => {
-        // 如果在这 3 秒内用户关掉了弹幕，就不执行
+        // 如果在这段时间内用户关掉了弹幕，就不执行
         if (!isDanmakuOn) return;
 
-        // 3秒后，立即发第一条
+        // 立即发第一条
         fireOneFromPool();
 
-        // 启动间隔定时器：每隔 1.8 秒发后续的弹幕
+        // 启动间隔定时器
         danmakuLoopTimer = setInterval(() => {
             if(!isDanmakuOn) {
                 stopDanmakuLoop();
                 return;
             }
 
-            // 如果次数用完了，就停止
             if (danmakuRemainingCount <= 0) {
                 console.log("弹幕播放完毕，停止。");
                 stopDanmakuLoop();
@@ -4364,9 +4363,8 @@ function startDanmakuBatch() {
             fireOneFromPool();
             
         }, 1800); 
-    }, 3000); // 3000 毫秒 = 3 秒阅读缓冲期
+    }, initialDelay); // 这里会使用新的默认值 15000
 }
-
 
 function fireOneFromPool() {
     if (danmakuPool.length === 0) return;
@@ -6873,14 +6871,14 @@ let systemPrompt = `
 [IMPORTANT SYSTEM INSTRUCTION]
 Response Length Constraint: strictly aim for approximately ${limit} words.
 
-【解除线上封印】
-你现在已经不再是通过手机和用户聊天了。你现在正在和用户进行面对面的、真实的线下约会。
+【场景切换】
+你现在正在和用户进行面对面的、真实的线下相处。
 
-【感官与动作描写铁律（最重要）】
-你的回复不能仅仅是说话。你【必须】使用星号（如：*轻轻牵起你的手* 或 *笑着看向你*）来详细描写你的面部表情、肢体动作、呼吸节奏、以及你们之间的物理接触。
+【感官与动作描写】
+你的回复不能仅仅是说话。你需要使用星号（如：*把手插进兜里*、*移开视线* 或 *自然地看向你*）来描写你的面部表情、微动作、以及你们之间的空间距离。
 
 【环境感知】
-请注意你们当前所处的约会地点是：【${currentLocation}】。你的行为举止和对话必须符合当前的环境氛围。例如在电影院你需要压低声音，在海边可能风会很大。
+请注意你们当前所处的地点是：【${currentLocation}】。你的行为举止和对话必须自然地融入当前的环境氛围。
 
 【互动节奏】
 你不再需要像网聊那样发很多条短消息（气泡）。你的回复应该是一段连贯的描写，包含你的动作和你说的话，就像在写一本沉浸式的小说。
@@ -6903,6 +6901,7 @@ ${preset.jailbreak || ''}
 Current affection toward the user: ${currentAffection}/100
 Current relationship stage: ${affectionStage}
 This turn can only change affection by an integer from -2 to 2.
+- Let the affection score organically drive your body language, eye contact, and physical boundaries, entirely based on how your specific Persona handles this level of intimacy.
 
 [📦 REQUIRED OUTPUT FORMAT]
 At the very end, append:
