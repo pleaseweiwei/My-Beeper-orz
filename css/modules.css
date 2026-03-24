@@ -7370,3 +7370,15 @@ img.msg-sticker-img {
 .pay-sub-page {
     overflow: hidden;
 }
+/* 流式输出打字机光标效果 */
+.oe-text.streaming::after {
+    content: '▋';
+    animation: blink 1s step-end infinite;
+    opacity: 1;
+    color: #999;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}

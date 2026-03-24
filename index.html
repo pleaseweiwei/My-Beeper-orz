@@ -2793,7 +2793,14 @@
             <input type="range" id="offline-max-len" min="50" max="5000" step="50" oninput="document.getElementById('off-len-val').innerText=this.value; saveOfflineConfig();">
             <div class="form-text">注意：这只是给 AI 的建议长度，并非绝对截断。</div>
         </div>
-
+<div class="form-group" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+    <label style="margin:0; font-weight:500;">开启流式传输 (Streaming)</label>
+    <label class="switch" style="margin: 0; transform: scale(0.9);">
+        <input type="checkbox" id="offline-streaming-toggle" onchange="saveOfflineConfig()">
+        <span class="slider round"></span>
+    </label>
+</div>
+<div class="form-text" style="margin-top: -10px;">开启后，线下模式的回复将逐字出现。</div>
         <hr class="settings-divider">
 
         <!-- 新增：背景图设置 -->
