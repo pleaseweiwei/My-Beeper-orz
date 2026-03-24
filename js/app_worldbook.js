@@ -9,6 +9,35 @@ let currentBookId = null; // 当前正在编辑的书ID
 let tempEntries = []; // 当前正在编辑的条目缓存
 let editingEntryIndex = -1; // 当前正在编辑的条目索引
 
+function wbQueueUiWrite(fn) {
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(fn));
+    } else {
+        setTimeout(fn, 16);
+    }
+}
+
+function wbSetSoftDisplay(el, visible, displayMode = 'block') {
+    if (!el) return;
+    if (visible) {
+        el.hidden = false;
+        el.style.display = displayMode;
+    } else {
+        el.hidden = true;
+        el.style.display = 'none';
+    }
+}
+
+function wbSwitchMainView(viewName) {
+    const shelfView = document.getElementById('wb-shelf-view');
+    const detailView = document.getElementById('wb-detail-view');
+
+    wbQueueUiWrite(() => {
+        wbSetSoftDisplay(shelfView, viewName === 'shelf', 'block');
+        wbSetSoftDisplay(detailView, viewName === 'detail', 'block');
+    });
+}
+
 // 1. 初始化与打开App
 document.addEventListener('DOMContentLoaded', () => {
     loadWorldBooks();
@@ -87,8 +116,7 @@ window.openWorldBookApp = function() {
         app.classList.add('open');
         renderShelf();
         // 默认显示书架，隐藏详情
-        document.getElementById('wb-shelf-view').style.display = 'block';
-        document.getElementById('wb-detail-view').style.display = 'none';
+        wbSwitchMainView('shelf');
     }
 }
 
@@ -147,8 +175,7 @@ function openBookDetail(id) {
     renderEntriesList();
 
     // 切换视图
-    document.getElementById('wb-shelf-view').style.display = 'none';
-    document.getElementById('wb-detail-view').style.display = 'block';
+    wbSwitchMainView('detail');
 }
 
 function renderEntriesList() {
@@ -173,8 +200,7 @@ function renderEntriesList() {
 }
 
 window.backToShelf = function() {
-    document.getElementById('wb-detail-view').style.display = 'none';
-    document.getElementById('wb-shelf-view').style.display = 'block';
+    wbSwitchMainView('shelf');
     currentBookId = null;
 }
 

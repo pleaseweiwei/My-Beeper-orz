@@ -11,6 +11,57 @@ const FRIENDS_DATA_KEY = 'myCoolPhone_friendsData';
 const HOME_CUSTOM_KEY = 'myCoolPhone_homeCustom';
 const MOMENTS_FEED_KEY = 'myCoolPhone_momentsFeed';
 
+// =========================================
+// 【新增】全局未读红点管理机制
+// =========================================
+window.getMomentsUnreadCount = function() {
+    return parseInt(localStorage.getItem('myCoolPhone_momentsUnreadCount')) || 0;
+};
+window.addMomentsUnreadCount = function(num = 1) {
+    let current = getMomentsUnreadCount();
+    localStorage.setItem('myCoolPhone_momentsUnreadCount', current + num);
+    if (typeof updateMomentsUnreadUI === 'function') updateMomentsUnreadUI();
+};
+window.clearMomentsUnreadCount = function() {
+    localStorage.setItem('myCoolPhone_momentsUnreadCount', 0);
+    if (typeof updateMomentsUnreadUI === 'function') updateMomentsUnreadUI();
+};
+window.updateMomentsUnreadUI = function() {
+    const count = getMomentsUnreadCount();
+    
+    // 更新底部导航栏的数字气泡
+    const badge = document.getElementById('moments-badge');
+    if (badge) {
+        if (count > 0) {
+            badge.innerText = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    
+    // 更新聊天界面左上角的小红点
+    const backDot = document.getElementById('chat-back-dot');
+    if (backDot) {
+        backDot.style.display = count > 0 ? 'block' : 'none';
+    }
+};
+window.updateDockUnreadDot = function() {
+    // 遍历所有人，加总未读数
+    let totalUnread = 0;
+    Object.values(friendsData || {}).forEach(f => { totalUnread += (f.unreadCount || 0); });
+    Object.values(groupsData || {}).forEach(g => { totalUnread += (g.unreadCount || 0); });
+    
+    const dockDot = document.getElementById('dock-dot');
+    if (dockDot) dockDot.style.display = totalUnread > 0 ? 'block' : 'none';
+};
+window.updateChatListUnreadUI = function(chatId) {
+    const item = document.querySelector(`.wc-chat-item[data-chat-id="${chatId}"]`);
+    if (item) {
+        const badge = item.querySelector('.wc-badge');
+        if (badge) badge.remove();
+    }
+};
 
 // === 【新增】存放当前角色的心声状态 ===
 let currentMindState = {
@@ -333,9 +384,6 @@ async function migrateAllChatHistory() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // js/apps.js - DOMContentLoaded 内部顶部
-    
-    // 执行迁移
     await migrateAllChatHistory();
 initPersonaSystem();
 applyPersonaToUI();
@@ -382,8 +430,13 @@ applyPersonaToUI();
 
  // 【新增】页面加载时，从本地存储读取好友数据
     loadFriendsData();
-    // 新增：加载朋友圈数据
+       // 新增：加载朋友圈数据
     loadMomentsFeed();
+
+    // 【新增】初始化全局红点 UI
+    updateMomentsUnreadUI();
+    updateDockUnreadDot();
+
 
 
     // --- 事件绑定 ---
@@ -583,13 +636,51 @@ window.toggleSettings = function(defaultTab = 'ai') {
     }
 }
 
+function queueUiWrite(fn) {
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(fn));
+    } else {
+        setTimeout(fn, 16);
+    }
+}
+
+function setSoftDisplay(el, visible, displayMode = '') {
+    if (!el) return;
+    if (visible) {
+        el.hidden = false;
+        el.style.display = displayMode || '';
+    } else {
+        el.hidden = true;
+        el.style.display = 'none';
+    }
+}
+
+function switchSoftDisplays(items, activeKey) {
+    queueUiWrite(() => {
+        items.forEach(item => {
+            if (!item || !item.el) return;
+            const isActive = item.key === activeKey;
+            setSoftDisplay(item.el, isActive, item.display || '');
+            item.el.classList.toggle('active', isActive);
+        });
+    });
+}
+
 window.switchSettingsTab = function(tabName) {
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    const tabs = Array.from(document.querySelectorAll('.tab-content'));
+    switchSoftDisplays(
+        tabs.map(el => ({
+            key: el.id.replace('tab-content-', ''),
+            el,
+            display: 'block'
+        })),
+        tabName
+    );
+
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(`tab-content-${tabName}`).style.display = 'block';
     const btns = document.querySelectorAll('.tab-btn');
-    if(tabName === 'ai') btns[0].classList.add('active');
-    else btns[1].classList.add('active');
+    if(tabName === 'ai') btns[0]?.classList.add('active');
+    else btns[1]?.classList.add('active');
 };
 
 /* =========================================
@@ -597,13 +688,8 @@ window.switchSettingsTab = function(tabName) {
    ========================================= */
 
 window.toggleFontInput = function(mode) {
-    if(mode === 'custom') {
-        document.getElementById('group-font-preset').style.display = 'none';
-        document.getElementById('group-font-custom').style.display = 'block';
-    } else {
-        document.getElementById('group-font-preset').style.display = 'block';
-        document.getElementById('group-font-custom').style.display = 'none';
-    }
+    setSoftDisplay(document.getElementById('group-font-preset'), mode !== 'custom', 'block');
+    setSoftDisplay(document.getElementById('group-font-custom'), mode === 'custom', 'block');
 }
 
 function initThemeSettings() {
@@ -1006,6 +1092,10 @@ function initSettingsAndPresets() {
         document.getElementById('apiEndpointInput').value = settings.endpoint || '';
         document.getElementById('temperature-slider').value = settings.temperature || 0.7;
         document.getElementById('temperature-value').textContent = settings.temperature || 0.7;
+        
+        const metaToggle = document.getElementById('enable-meta-delete-toggle');
+        if(metaToggle) metaToggle.checked = settings.enableMetaDelete === true;
+
         updateUIForProvider(settings.provider || 'custom');
         const modelSelect = document.getElementById('model-select');
         if (settings.model) {
@@ -1043,10 +1133,13 @@ function initOfflineSystem() {
 function updateUIForProvider(provider) {
     const endpointGroup = document.getElementById('api-endpoint-group');
     const modelSelect = document.getElementById('model-select');
-    if (provider === 'custom' || provider === 'deepseek') {
-        endpointGroup.style.display = 'block';
-        if(provider === 'deepseek' && !document.getElementById('apiEndpointInput').value) document.getElementById('apiEndpointInput').value = 'https://api.deepseek.com';
-    } else { endpointGroup.style.display = 'none'; }
+    const shouldShowEndpoint = provider === 'custom' || provider === 'deepseek';
+
+    setSoftDisplay(endpointGroup, shouldShowEndpoint, 'block');
+    if (provider === 'deepseek' && !document.getElementById('apiEndpointInput').value) {
+        document.getElementById('apiEndpointInput').value = 'https://api.deepseek.com';
+    }
+
     modelSelect.innerHTML = '';
     const models = PREDEFINED_MODELS[provider] || [];
     if (models.length > 0) { models.forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.text = m; modelSelect.appendChild(opt); }); } 
@@ -1058,8 +1151,9 @@ function saveAllSettings() {
         provider: document.getElementById('api-provider-select').value,
         apiKey: document.getElementById('apiKeyInput').value,
         endpoint: document.getElementById('apiEndpointInput').value,
-        model: document.getElementById('model-select').value,
-        temperature: document.getElementById('temperature-slider').value
+       model: document.getElementById('model-select').value,
+        temperature: document.getElementById('temperature-slider').value,
+        enableMetaDelete: document.getElementById('enable-meta-delete-toggle') ? document.getElementById('enable-meta-delete-toggle').checked : false
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     if (typeof toggleSettings === 'function') {
@@ -1072,9 +1166,10 @@ function saveNewPreset() {
     if(!name) return;
     const currentSettings = {
         provider: document.getElementById('api-provider-select').value,
-        endpoint: document.getElementById('apiEndpointInput').value,
+         endpoint: document.getElementById('apiEndpointInput').value,
         model: document.getElementById('model-select').value,
-        temperature: document.getElementById('temperature-slider').value
+        temperature: document.getElementById('temperature-slider').value,
+        enableMetaDelete: document.getElementById('enable-meta-delete-toggle') ? document.getElementById('enable-meta-delete-toggle').checked : false
     };
     let presets = JSON.parse(localStorage.getItem(PRESETS_KEY) || '{}');
     presets[name] = currentSettings;
@@ -1102,6 +1197,10 @@ function applySelectedPreset(e) {
         document.getElementById('apiEndpointInput').value = settings.endpoint || '';
         document.getElementById('temperature-slider').value = settings.temperature;
         document.getElementById('temperature-value').textContent = settings.temperature;
+        
+        const metaToggle = document.getElementById('enable-meta-delete-toggle');
+        if(metaToggle) metaToggle.checked = settings.enableMetaDelete === true;
+
         setTimeout(() => {
             const modelSelect = document.getElementById('model-select');
             let exists = false;
@@ -1189,11 +1288,15 @@ window.openWeChatApp = function() {
 // 2. 切换底部的四个Tab (聊天、通讯录、动态、个人)
 // 【修改版：确保 Chats 和 Contacts 页面右上角是加号菜单】
 window.switchWcTab = function(tabName, clickedBtn) {
-    // 隐藏所有Tab内容
-    document.querySelectorAll('.wc-tab-content').forEach(el => el.style.display = 'none');
-    // 显示选中的Tab
-    const target = document.getElementById(`tab-${tabName}`);
-    if(target) target.style.display = 'block';
+    const tabs = Array.from(document.querySelectorAll('.wc-tab-content'));
+    switchSoftDisplays(
+        tabs.map(el => ({
+            key: el.id.replace('tab-', ''),
+            el,
+            display: 'block'
+        })),
+        tabName
+    );
 
     // 更新按钮变色
     document.querySelectorAll('.wc-tab-item').forEach(el => el.classList.remove('active'));
@@ -1221,7 +1324,7 @@ window.switchWcTab = function(tabName, clickedBtn) {
 
         if (tabName === 'moments') {
             // --- 朋友圈模式：变成“照相机” ---
-            document.getElementById('moments-dot').style.display = 'none';
+            clearMomentsUnreadCount(); // 【新增】只要切到这页，瞬间清除空间红点
             newIcon.className = 'fas fa-camera'; 
             newIcon.onclick = function() { openPostMomentModal(); };
         } else {
@@ -1252,7 +1355,7 @@ function getEffectiveGreeting(friend) {
 window.toggleGreetingEditor = function() {
     const mode = document.getElementById('cs-greeting-mode')?.value || 'custom';
     const box = document.getElementById('cs-greeting-custom-box');
-    if (box) box.style.display = (mode === 'custom') ? 'block' : 'none';
+    setSoftDisplay(box, mode === 'custom', 'block');
 };
 window.renderGreetingListUI = function(friend) {
     const listWrap = document.getElementById('cs-greeting-list');
@@ -1295,8 +1398,16 @@ window.renderGreetingListUI = function(friend) {
 
 
 window.openChatDetail = async function(name) {
-    document.getElementById('dock-dot').style.display = 'none';
+    // 【新增】进入单人聊天时，清除该角色的未读数据
+    if (friendsData[name]) {
+        friendsData[name].unreadCount = 0;
+        saveFriendsData(); // 保存到本地，防止刷新又弹出来
+    }
+    updateChatListUnreadUI(name); // 消除列表上的气泡
+    updateDockUnreadDot();        // 重新计算底部Dock的红点
+
     stopDanmakuLoop();
+
     const dmLayer = document.getElementById('danmaku-layer');
     if(dmLayer) dmLayer.innerHTML = '';
     danmakuPool = [];
@@ -2588,7 +2699,14 @@ function addChatListEntry(id, displayName, lastMsg, avatarUrl, type) {
 
 // 7. 打开群聊窗口逻辑
 window.openGroupChat = function(groupId) {
-     stopDanmakuLoop();
+    // 【新增】进入群聊时，清除该群的未读数据
+    if (groupsData && groupsData[groupId]) {
+        groupsData[groupId].unreadCount = 0;
+    }
+    updateChatListUnreadUI(groupId);
+    updateDockUnreadDot();
+
+    stopDanmakuLoop();
     const dmLayer = document.getElementById('danmaku-layer');
     if(dmLayer) dmLayer.innerHTML = '';
     danmakuPool = [];
@@ -2847,7 +2965,7 @@ renderGreetingListUI(friend);
     inactivityToggle.checked = settings.inactivityEnabled || false;
     document.getElementById('cs-inactivity-time').value = settings.inactivityTime || 300;
     // 根据开关状态决定是否显示时间输入框
-    inactivityTimeBox.style.display = inactivityToggle.checked ? 'block' : 'none';
+    setSoftDisplay(inactivityTimeBox, inactivityToggle.checked, 'block');
 
     // --- 5. 填充状态栏正则设置 (酒馆风格) ---
     const statusToggle = document.getElementById('cs-status-regex-toggle');
@@ -2860,7 +2978,7 @@ renderGreetingListUI(friend);
     document.getElementById('cs-vision-sticker-toggle').checked = settings.visionStickerEnabled || false;
 
     // 根据开关状态决定是否显示正则输入区域
-    statusBox.style.display = statusToggle.checked ? 'flex' : 'none';
+    setSoftDisplay(statusBox, statusToggle.checked, 'flex');
     // 【修复5】渲染允许使用的表情包复选框
     renderChatSettingsStickerCheckboxes();
 
@@ -3135,8 +3253,7 @@ window.createMomentFromAI = function(authorId, text, aiImageDescList = []) {
     momentsFeed.push(moment);
     saveMomentsFeed();
     renderMomentsFeed();
-     const dot = document.getElementById('moments-dot');
-    if (dot) dot.style.display = 'block';
+    addMomentsUnreadCount(1);
 };
 
 
@@ -3204,13 +3321,12 @@ const ONLINE_VOICE_KEY = 'myCoolPhone_onlineVoiceConfig';
 // autoSendAI=false：避免和你现有“点星星回复”冲突（不重复触发）
 
 
-// 1. 保存单条消息到 IndexedDB (已集成自动总结触发器)
+// 1. 保存单条消息到 IndexedDB (已集成自动总结与动态未读触发器)
 async function saveMessageToHistory(chatId, msgData) {
     if (!chatId) return;
     
     let chatHistory = (await IDB.get(scopedChatKey(chatId))) || [];
 
-    
     // 生成唯一ID并保存
     msgData.id = msgData.id || 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     msgData.timestamp = new Date().getTime();
@@ -3218,48 +3334,85 @@ async function saveMessageToHistory(chatId, msgData) {
     
     await IDB.set(scopedChatKey(chatId), chatHistory);
 
+    // 【新增核心】未读数统计逻辑：只有收到的消息，并且当前没看着这个聊天，才增加未读
+    if (msgData.senderName !== 'ME') {
+        const chatLayer = document.getElementById('chatLayer');
+        const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === chatId;
+        
+        if (!isLookingAtThisChat) {
+            if (friendsData[chatId]) {
+                friendsData[chatId].unreadCount = (friendsData[chatId].unreadCount || 0) + 1;
+            } else if (groupsData && groupsData[chatId]) {
+                groupsData[chatId].unreadCount = (groupsData[chatId].unreadCount || 0) + 1;
+            }
+        }
+    }
 
-    // 更新好友列表的预览
     if (friendsData[chatId]) {
         friendsData[chatId].lastMessage = msgData.text; 
         saveFriendsData(); 
     }
+    
+    updateDockUnreadDot();
 
+    // 更新列表预览和红点气泡
     const allChatItems = document.querySelectorAll('.wc-chat-item');
     allChatItems.forEach(item => {
+        const targetId = item.getAttribute('data-chat-id');
         const nameTag = item.querySelector('.wc-name');
-        if (nameTag && nameTag.innerText.trim() === chatId) {
+        
+        // 双重保险验证是这个角色的列表项
+        if (targetId === chatId || (nameTag && nameTag.innerText.trim() === chatId)) {
+            
             const previewTag = item.querySelector('.wc-msg-preview');
-                        if (previewTag) {
-                let previewText = formatChatPreviewText(msgData.text, !!msgData.isOffline);
-previewTag.innerText = previewText;
-
+            if (previewTag) {
+                previewTag.innerText = formatChatPreviewText(msgData.text, !!msgData.isOffline);
             }
 
             const timeTag = item.querySelector('.wc-time');
             if (timeTag) timeTag.innerText = 'Just now';
+
+            // 读取未读数据并渲染气泡
+            let unreadCount = 0;
+            if (friendsData[chatId]) unreadCount = friendsData[chatId].unreadCount || 0;
+            else if (groupsData && groupsData[chatId]) unreadCount = groupsData[chatId].unreadCount || 0;
+
+            let avatarBox = item.querySelector('.wc-avatar');
+            if (avatarBox) {
+                let badge = avatarBox.querySelector('.wc-badge');
+                if (unreadCount > 0) {
+                    let displayCount = unreadCount > 99 ? '99+' : unreadCount;
+                    if (badge) {
+                        badge.innerText = displayCount;
+                    } else {
+                        avatarBox.insertAdjacentHTML('beforeend', `<div class="wc-badge">${displayCount}</div>`);
+                    }
+                } else {
+                    if (badge) badge.remove();
+                }
+            }
         }
     });
     
-    // === 【修改后】自动总结触发逻辑 ===
-const friend = friendsData[chatId];
-if (friend) {
-    ensureFriendSummaryFields(friend);
+    // === 自动总结触发逻辑 ===
+    const friend = friendsData[chatId];
+    if (friend) {
+        ensureFriendSummaryFields(friend);
 
-    const config = friend.summaryConfig || {};
-    const turnCount = parseInt(config.turnCount, 10) || 20;
+        const config = friend.summaryConfig || {};
+        const turnCount = parseInt(config.turnCount, 10) || 20;
 
-    if (turnCount > 0 && chatHistory.length >= turnCount && chatHistory.length % turnCount === 0) {
-        console.log(`达到 ${turnCount} 轮，触发自动总结...`);
-        const recentMessages = chatHistory.slice(-turnCount);
-        const startTurn = chatHistory.length - turnCount + 1;
-        const endTurn = chatHistory.length;
+        if (turnCount > 0 && chatHistory.length >= turnCount && chatHistory.length % turnCount === 0) {
+            console.log(`达到 ${turnCount} 轮，触发自动总结...`);
+            const recentMessages = chatHistory.slice(-turnCount);
+            const startTurn = chatHistory.length - turnCount + 1;
+            const endTurn = chatHistory.length;
 
-        generateAutoSummary(chatId, recentMessages, startTurn, endTurn);
+            generateAutoSummary(chatId, recentMessages, startTurn, endTurn);
+        }
     }
 }
 
-}
 
 
 // 2. 加载指定好友的聊天记录 (异步)
@@ -3304,26 +3457,29 @@ window.toggleChatPanel = function(type) {
     const container = document.getElementById('chat-extra-panels');
     const panelEmoji = document.getElementById('panel-emoji');
     const panelPlus = document.getElementById('panel-plus');
+    if (!container || !panelEmoji || !panelPlus) return;
+
+    const emojiVisible = getComputedStyle(panelEmoji).display !== 'none';
+    const plusVisible = getComputedStyle(panelPlus).display !== 'none';
     
     // 如果点击的是当前已经打开的，就关闭
     if (container.classList.contains('open') && 
-       ((type === 'emoji' && panelEmoji.style.display === 'block') ||
-        (type === 'plus' && panelPlus.style.display === 'block'))) {
+       ((type === 'emoji' && emojiVisible) ||
+        (type === 'plus' && plusVisible))) {
         
         container.classList.remove('open');
-        setTimeout(() => {
-            panelEmoji.style.display = 'none';
-            panelPlus.style.display = 'none';
-        }, 300);
+        queueUiWrite(() => {
+            setSoftDisplay(panelEmoji, false);
+            setSoftDisplay(panelPlus, false);
+        });
         return;
     }
 
     // 切换显示内容
-    panelEmoji.style.display = 'none';
-    panelPlus.style.display = 'none';
-    
-    if (type === 'emoji') panelEmoji.style.display = 'block';
-    if (type === 'plus') panelPlus.style.display = 'block';
+    queueUiWrite(() => {
+        setSoftDisplay(panelEmoji, type === 'emoji', 'block');
+        setSoftDisplay(panelPlus, type === 'plus', 'block');
+    });
 
     // 打开容器
     container.classList.add('open');
@@ -3340,36 +3496,42 @@ window.insertEmoji = function(emoji) {
     input.focus();
 }
 
-// 3. 统一发送富媒体消息的函数
+// 3. 统一发送富媒体消息的函数 (防闪屏错峰优化版)
 function sendRichMessage(htmlContent, typeClass, hiddenTextForAI) {
-    // 1. 渲染用户发的消息
-    const chatMessages = document.getElementById('chatMessages');
-    const row = document.createElement('div');
-    row.className = 'chat-row sent';
-    
-    // 构建头像
-    const avatar = document.createElement('img');
-    avatar.className = 'chat-avatar-img';
-    avatar.src = AVATAR_USER; 
-    
-    // 构建气泡 (使用 rich-bubble 去掉默认样式)
-    const bubble = document.createElement('div');
-    bubble.className = `message-bubble rich-bubble ${typeClass}`;
-    bubble.innerHTML = htmlContent;
-    
-    // 组装
-    row.appendChild(bubble);
-    row.appendChild(avatar);
-    chatMessages.appendChild(row);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // 第一步：先立刻收起底部加号面板（释放手机计算压力）
+    const panel = document.getElementById('chat-extra-panels');
+    if (panel) panel.classList.remove('open');
 
-    // 2. 如果需要 AI 回复，发送隐藏指令
-    if (hiddenTextForAI) {
-        sendMessageToAI(hiddenTextForAI);
-    }
-    
-    // 3. 关闭面板
-    document.getElementById('chat-extra-panels').classList.remove('open');
+    // 第二步：稍微延迟 150 毫秒，等面板动画平稳后，再把消息塞进屏幕
+    setTimeout(() => {
+        const chatMessages = document.getElementById('chatMessages');
+        const row = document.createElement('div');
+        row.className = 'chat-row sent';
+        
+        const avatar = document.createElement('img');
+        avatar.className = 'chat-avatar-img';
+        avatar.src = AVATAR_USER; 
+        
+        const bubble = document.createElement('div');
+        bubble.className = `message-bubble rich-bubble ${typeClass}`;
+        bubble.innerHTML = htmlContent;
+        
+        row.appendChild(bubble);
+        row.appendChild(avatar);
+        chatMessages.appendChild(row);
+
+        // 第三步：利用浏览器的下一帧进行平滑滚动，彻底告别抖动
+        requestAnimationFrame(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // 第四步：再等 100 毫秒后再触发 AI 请求，完美错开所有峰值！
+            if (hiddenTextForAI) {
+                setTimeout(() => {
+                    sendMessageToAI(hiddenTextForAI);
+                }, 100);
+            }
+        });
+    }, 150);
 }
 
 // --- 功能 A: 发送图片 ---
@@ -3479,11 +3641,16 @@ window.switchLocTab = function(mode) {
     currentLocMode = mode;
     document.getElementById('tab-btn-loc-single').classList.remove('active');
     document.getElementById('tab-btn-loc-radar').classList.remove('active');
-    document.getElementById('loc-panel-single').style.display = 'none';
-    document.getElementById('loc-panel-radar').style.display = 'none';
+
+    switchSoftDisplays(
+        [
+            { key: 'single', el: document.getElementById('loc-panel-single'), display: 'block' },
+            { key: 'radar', el: document.getElementById('loc-panel-radar'), display: 'block' }
+        ],
+        mode
+    );
 
     document.getElementById(`tab-btn-loc-${mode}`).classList.add('active');
-    document.getElementById(`loc-panel-${mode}`).style.display = 'block';
 }
 
 window.openLocationShareModal = function() {
@@ -3494,12 +3661,12 @@ window.openLocationShareModal = function() {
     isLocMeNew = false;
     isLocAiNew = false;
     isLocSingleNew = false;
-    document.getElementById('loc-single-new').style.display = 'none';
-    document.getElementById('loc-me-new').style.display = 'none';
-    document.getElementById('loc-ai-new').style.display = 'none';
-    document.getElementById('loc-single-select').style.display = 'block';
-    document.getElementById('loc-me-select').style.display = 'block';
-    document.getElementById('loc-ai-select').style.display = 'block';
+    setSoftDisplay(document.getElementById('loc-single-new'), false);
+    setSoftDisplay(document.getElementById('loc-me-new'), false);
+    setSoftDisplay(document.getElementById('loc-ai-new'), false);
+    setSoftDisplay(document.getElementById('loc-single-select'), true, 'block');
+    setSoftDisplay(document.getElementById('loc-me-select'), true, 'block');
+    setSoftDisplay(document.getElementById('loc-ai-select'), true, 'block');
     
     // 清空文本框
     document.getElementById('loc-single-addr').value = '';
@@ -3538,20 +3705,20 @@ window.closeLocationShareModal = function() {
 window.promptNewLocation = function(type) {
     if (type === 'single') {
         isLocSingleNew = true;
-        document.getElementById('loc-single-select').style.display = 'none';
-        document.getElementById('loc-single-new').style.display = 'block';
+        setSoftDisplay(document.getElementById('loc-single-select'), false);
+        setSoftDisplay(document.getElementById('loc-single-new'), true, 'block');
         document.getElementById('loc-single-new').value = '';
         document.getElementById('loc-single-new').focus();
     } else if (type === 'me') {
         isLocMeNew = true;
-        document.getElementById('loc-me-select').style.display = 'none';
-        document.getElementById('loc-me-new').style.display = 'block';
+        setSoftDisplay(document.getElementById('loc-me-select'), false);
+        setSoftDisplay(document.getElementById('loc-me-new'), true, 'block');
         document.getElementById('loc-me-new').value = '';
         document.getElementById('loc-me-new').focus();
     } else {
         isLocAiNew = true;
-        document.getElementById('loc-ai-select').style.display = 'none';
-        document.getElementById('loc-ai-new').style.display = 'block';
+        setSoftDisplay(document.getElementById('loc-ai-select'), false);
+        setSoftDisplay(document.getElementById('loc-ai-new'), true, 'block');
         document.getElementById('loc-ai-new').value = '';
         document.getElementById('loc-ai-new').focus();
     }
@@ -3652,27 +3819,33 @@ window.confirmSendLocation = function() {
 
 
 
-// --- 功能 C: 拍一拍 ---
+// --- 功能 C: 拍一拍 (防闪屏优化版) ---
 window.triggerNudge = function() {
-    // 拍一拍是系统提示消息，不带头像
-    const chatMessages = document.getElementById('chatMessages');
-    const note = document.createElement('div');
-    note.className = 'msg-nudge-system';
-    note.innerText = `You nudged "${friendsData[currentChatId]?.realName || 'Hannah'}"`;
-    chatMessages.appendChild(note);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    // 震动效果
-    chatMessages.style.animation = 'none';
-    setTimeout(() => chatMessages.style.animation = 'float-slow 0.2s ease', 10);
-
-    // AI 回应
-    setTimeout(() => {
-        sendMessageToAI(`[System: User just "nudged" (double-tapped) you. React playfully or ask what's up.]`);
-    }, 1000);
-    
+    // 1. 先关闭面板
     document.getElementById('chat-extra-panels').classList.remove('open');
+    
+    // 2. 延迟 150ms 渲染系统提示
+    setTimeout(() => {
+        const chatMessages = document.getElementById('chatMessages');
+        const note = document.createElement('div');
+        note.className = 'msg-nudge-system';
+        note.innerText = `You nudged "${friendsData[currentChatId]?.realName || 'Hannah'}"`;
+        chatMessages.appendChild(note);
+        
+        // 3. 在下一帧滚动并触发小震动
+        requestAnimationFrame(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            chatMessages.style.animation = 'none';
+            setTimeout(() => chatMessages.style.animation = 'float-slow 0.2s ease', 10);
+        });
+
+        // 4. 延迟触发 AI 回应
+        setTimeout(() => {
+            sendMessageToAI(`[System: User just "nudged" (double-tapped) you. React playfully or ask what's up.]`);
+        }, 500);
+    }, 150);
 }
+
 
 // --- 功能 D: 转账 ---
 window.sendRedPacket = function() {
@@ -4386,6 +4559,23 @@ window.openContactProfile = function(id) {
     document.getElementById('cp-name').innerText = displayName;
     document.getElementById('cp-realname').innerText = f.realName ? `真实姓名：${f.realName}` : '';
 
+    // 检查 Meta 设置与好感度，决定是否显示预演删除按钮
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    let isMetaEnabled = false;
+    if (settingsJSON) {
+        isMetaEnabled = JSON.parse(settingsJSON).enableMetaDelete === true;
+    }
+    const currentAffection = Number(f.affection) || 0;
+    const preloadBtn = document.getElementById('btn-preload-meta');
+    if (preloadBtn) {
+        // 条件满足时显示为 flex (保证原有居中样式)，不满足时直接隐藏
+        if (isMetaEnabled && currentAffection >= 100) {
+            preloadBtn.style.display = 'flex';
+        } else {
+            preloadBtn.style.display = 'none';
+        }
+    }
+
     // 人设：写进资料页的 textarea
     const personaInput = document.getElementById('cp-persona-input');
     if (personaInput) {
@@ -4568,9 +4758,19 @@ window.preloadMetaDeleteData = async function() {
     const friend = friendsData[currentProfileId];
     if (!friend) return;
 
-    if(typeof showToast === 'function') showToast('<i class="fas fa-spinner fa-spin"></i> 正在连接对方的深层意识...');
-    
-    // 构建一个单一、巨大的Prompt，一次性获取所有数据
+    // 检查 Meta 开关和好感度
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    let isMetaEnabled = false;
+    if (settingsJSON) {
+        isMetaEnabled = JSON.parse(settingsJSON).enableMetaDelete === true;
+    }
+    const currentAffection = Number(friend.affection) || 0;
+
+    if (!isMetaEnabled || currentAffection < 100) {
+        if(typeof showToast === 'function') showToast('条件未满足：需在设置中开启 Meta 且好感度达到 100。');
+        else alert('条件未满足：需在设置中开启 Meta 且好感度达到 100。');
+        return;
+    }
     const megaPrompt = `
     [System Command: PRELOAD FULL DELETION SEQUENCE]
     You are roleplaying a character being deleted from a user's phone.
@@ -4819,9 +5019,26 @@ async function finalizeDelete() {
 window.deleteFriendFromProfile = function() {
     if (!currentProfileId) return;
     const id = currentProfileId;
+    const friend = friendsData[id];
+    if (!friend) return;
+
+    // 检查 Meta 开关和好感度
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    let isMetaEnabled = false;
+    if (settingsJSON) {
+        isMetaEnabled = JSON.parse(settingsJSON).enableMetaDelete === true;
+    }
+    const currentAffection = Number(friend.affection) || 0;
+
+    if (!isMetaEnabled || currentAffection < 100) {
+        // 如果未达到 Meta 阈值或开关未开，只触发正常删除（调用原有系统的清理并询问确认）
+        closeContactProfile();
+        deleteFriendInternal(id);
+        return;
+    }
     
     // 检查是否预加载过数据
-    if (!friendsData[id] || !friendsData[id]._metaCache) {
+    if (!friend._metaCache) {
         if(confirm("尚未与对方意识同步，直接删除将使用本地预案，体验可能不完整。\n\n是否先进行意识同步（预演删除）？")) {
             preloadMetaDeleteData();
             return;
@@ -4831,7 +5048,6 @@ window.deleteFriendFromProfile = function() {
     closeContactProfile();
     startMetaDeleteSequence(id);
 };
-
 // 拉黑：标记 blocked = true，并让 TA 以“好友申请”的方式出现
 window.blockFriendFromProfile = function() {
     if (!currentProfileId) return;
@@ -5338,21 +5554,16 @@ async function triggerAiReactionForMoment(moment) {
                 
                 const result = JSON.parse(content);
 
-                // 执行操作
-                if (result.action === 'like' || result.action === 'both') {
-                    // 模拟点赞逻辑 (为了简化，这里直接加在文本列表里，或者修改 moment 结构)
-                    // 现在的 moment 结构主要支持评论，点赞只是数字。
-                    // 我们可以加一条 "Like" 类型的评论或者直接改数字。这里简单处理：增加点赞数。
-                    // 但为了让用户看到是谁点的，我们在评论区发一个 "[Like]" (或者你有更好的 UI 支持)。
-                    // 既然原 UI 只有数字，那就只加数字吧，或者发一个 ❤️ 表情评论。
-                    // 这里选择：增加计数 + 发送评论
+                                if (result.action === 'like' || result.action === 'both') {
                     const m = momentsFeed.find(x => x.id === moment.id);
                     if(m) {
                          m.likeCount = (m.likeCount || 0) + 1;
                          saveMomentsFeed();
                          renderMomentsFeed(); // 刷新 UI
+                         addMomentsUnreadCount(1); // 【新增】AI点赞后，未读数+1
                     }
                 }
+
 
                 if ((result.action === 'comment' || result.action === 'both') && result.comment) {
                     addAiCommentToMoment(moment.id, friendId, result.comment);
@@ -5385,13 +5596,9 @@ function addAiCommentToMoment(momentId, aiId, text) {
 
     saveMomentsFeed();
     renderMomentsFeed();
-    const dot = document.getElementById('moments-dot');
-    if (dot) dot.style.display = 'block';
+    addMomentsUnreadCount(1); // 【新增】AI评论后，未读数+1
 }
-// 如果当前不在朋友圈Tab，显示朋友圈红点
-if (document.getElementById('tab-moments').style.display === 'none') {
-    document.getElementById('moments-dot').style.display = 'block';
-}
+
 
 // 4. 处理评论回复 (引用回复)
 // 修改原有的 addMomentComment 函数，增加检查
@@ -7558,15 +7765,19 @@ window.closeVoiceActionModal = function() {
 window.switchVoiceTab = function(tab) {
     document.getElementById('tab-btn-fake-voice').classList.remove('active');
     document.getElementById('tab-btn-real-voice').classList.remove('active');
-    document.getElementById('voice-panel-fake').style.display = 'none';
-    document.getElementById('voice-panel-real').style.display = 'none';
+
+    switchSoftDisplays(
+        [
+            { key: 'fake', el: document.getElementById('voice-panel-fake'), display: 'block' },
+            { key: 'real', el: document.getElementById('voice-panel-real'), display: 'flex' }
+        ],
+        tab
+    );
 
     if (tab === 'fake') {
         document.getElementById('tab-btn-fake-voice').classList.add('active');
-        document.getElementById('voice-panel-fake').style.display = 'block';
     } else {
         document.getElementById('tab-btn-real-voice').classList.add('active');
-        document.getElementById('voice-panel-real').style.display = 'flex';
     }
 }
 
@@ -7874,12 +8085,15 @@ if(greeting){
    [全面升级版] 剧情总结与关系进度 核心逻辑 (全屏页面版)
    ========================================= */
 
-// 1. 打开/关闭 全屏页面
 window.openSummaryPage = async function() {
     if (!currentChatId) {
         alert("请先进入一个聊天。");
         return;
     }
+    
+    // 👇 新加的两行：打开总结页时，自动收起聊天框下面的加号面板
+    const panel = document.getElementById('chat-extra-panels');
+    if (panel) panel.classList.remove('open');
     
     const page = document.getElementById('summaryPageView');
     if (page) {
@@ -7889,6 +8103,7 @@ window.openSummaryPage = async function() {
         await renderSummaryUI(); 
     }
 }
+
 
 window.closeSummaryPage = function() {
     const page = document.getElementById('summaryPageView');
@@ -8257,10 +8472,15 @@ const CURRENT_PERSONA_KEY = 'myCoolPhone_currentPersonaId';
 let personasMeta = {};
 let currentPersonaId = 'p_default';
 
-// 1. 初始化系统 (改为异步加载，从 IDB 读取)
+// 1. 初始化系统 (改为异步加载，从 IDB 读取，增加容错)
 async function initPersonaSystem() {
-    // 尝试从大仓库 IDB 获取
-    let data = await IDB.get(PERSONA_META_KEY);
+    let data = null;
+    try {
+        // 尝试从大仓库 IDB 获取
+        data = await IDB.get(PERSONA_META_KEY);
+    } catch (e) {
+        console.warn("IndexedDB 读取失败 (可能受限于微信或无痕模式)，将使用默认或缓存数据:", e);
+    }
 
     // 如果 IDB 里没数据，试试看是不是还在 LocalStorage 里 (迁移旧数据)
     if (!data) {
@@ -8268,8 +8488,7 @@ async function initPersonaSystem() {
         if (oldData) {
             try {
                 data = JSON.parse(oldData);
-                await IDB.set(PERSONA_META_KEY, data); // 搬家到大仓库
-                // localStorage.removeItem(PERSONA_META_KEY); // 可选：删掉旧的腾空间
+                try { await IDB.set(PERSONA_META_KEY, data); } catch (e) {} // 搬家到大仓库
             } catch (e) { console.error(e); }
         }
     }
@@ -8283,18 +8502,21 @@ async function initPersonaSystem() {
                 persona: '默认身份'
             }
         };
-        await IDB.set(PERSONA_META_KEY, data);
+        try { await IDB.set(PERSONA_META_KEY, data); } catch (e) {}
     }
     
     personasMeta = data;
 
     // 读取当前是谁 (ID 很短，存 LocalStorage 没问题)
     currentPersonaId = localStorage.getItem(CURRENT_PERSONA_KEY) || 'p_default';
-    if (!personasMeta[currentPersonaId]) currentPersonaId = 'p_default';
+    if (!personasMeta[currentPersonaId]) {
+        currentPersonaId = Object.keys(personasMeta)[0] || 'p_default';
+    }
     
     // 加载完数据后，立刻刷新一下 UI
     applyPersonaToUI();
 }
+
 
 // 2. 获取带身份后缀的 Key
 function scopedLSKey(baseKey) {
@@ -8346,197 +8568,79 @@ function applyPersonaToUI() {
     const gp = document.getElementById('my-global-persona');
     if (gp) gp.value = me.persona || '';
 }
-
-/* ===== 弹窗操作函数 ===== */
+/* ===== [重构] 纯净版身份切换逻辑 ===== */
 
 window.openIdentityModal = function(e) {
     if(e) e.stopPropagation();
     const modal = document.getElementById('identity-modal');
     if (!modal) return;
     
-    renderIdentitySelect();
-    fillIdentityForm(currentPersonaId);
+    const sel = document.getElementById('identity-select');
+    sel.innerHTML = '';
+    Object.values(personasMeta).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name || '未命名';
+        if (p.id === currentPersonaId) opt.selected = true;
+        sel.appendChild(opt);
+    });
+
+    updateIdPreviewOnly(currentPersonaId);
     modal.classList.add('active');
+};
+
+window.updateIdPreviewOnly = function(id) {
+    const p = personasMeta[id];
+    if (p) document.getElementById('id-preview-img').src = p.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`;
 };
 
 window.closeIdentityModal = function() {
     document.getElementById('identity-modal').classList.remove('active');
 };
 
-function renderIdentitySelect() {
-    const sel = document.getElementById('identity-select');
-    if(!sel) return;
-    sel.innerHTML = '';
-    Object.values(personasMeta).forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = `${p.name} (${p.gender || '未知'})`;
-        if (p.id === currentPersonaId) opt.selected = true;
-        sel.appendChild(opt);
-    });
-}
-
-window.onIdentitySelectChange = function(id) {
-    fillIdentityForm(id);
-};
-
-function fillIdentityForm(id) {
-    const p = personasMeta[id];
-    if (!p) return;
-    document.getElementById('id-name').value = p.name || '';
-    document.getElementById('id-avatar-url').value = p.avatar || '';
-    document.getElementById('id-moments-bg').value = p.momentsBg || '';
-    document.getElementById('id-persona').value = p.persona || '';
-    
-    updateIdPreview(p.avatar);
-
-    const genderSel = document.getElementById('id-gender-select');
-    const genderInp = document.getElementById('id-gender-input');
-    if (['男','女'].includes(p.gender)) {
-        genderSel.value = p.gender;
-        genderInp.style.display = 'none';
-    } else {
-        genderSel.value = 'custom';
-        genderInp.style.display = 'block';
-        genderInp.value = p.gender || '';
-    }
-}
-
-// 图片压缩 (依然保留，虽然空间大了，但压缩能让界面跑得更快)
-function compressAvatarImage(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (e) => {
-            const img = new Image();
-            img.src = e.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                // 稍微放宽一点限制，允许 300px
-                const maxWidth = 300; 
-                let w = img.width;
-                let h = img.height;
-                if (w > maxWidth) {
-                    h = Math.round(h * (maxWidth / w));
-                    w = maxWidth;
-                }
-                canvas.width = w;
-                canvas.height = h;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                resolve(dataUrl);
-            };
-        };
-    });
-}
-
-window.handleIdAvatarFile = async function(input) {
-    if (input.files && input.files[0]) {
-        try {
-            const previewImg = document.getElementById('id-preview-img');
-            previewImg.style.opacity = '0.5';
-            const compressedBase64 = await compressAvatarImage(input.files[0]);
-            previewImg.src = compressedBase64;
-            previewImg.style.opacity = '1';
-            previewImg.setAttribute('data-base64', compressedBase64);
-            document.getElementById('id-avatar-url').value = '';
-        } catch (e) {
-            alert("图片处理失败");
-        }
-    }
-};
-
-window.toggleIdGenderInput = function(val) {
-    document.getElementById('id-gender-input').style.display = (val === 'custom') ? 'block' : 'none';
-};
-window.updateIdPreview = function(url) {
-    document.getElementById('id-preview-img').src = url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Date.now()}`;
-};
-
-// 新建身份 (写入 IDB)
-window.createNewIdentity = async function() {
+window.quickCreateIdentity = async function() {
     const id = 'p_' + Date.now();
     personasMeta[id] = {
         id: id, name: '新身份', gender: '未知',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + id,
-        persona: ''
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
+        persona: '', // 这是最终喂给AI的合并版文字
+        pbData: {}   // 这里用来存生成器填写的碎片化数据
     };
-    // === 关键：保存到 IDB ===
     await IDB.set(PERSONA_META_KEY, personasMeta);
     
-    renderIdentitySelect();
-    document.getElementById('identity-select').value = id;
-    fillIdentityForm(id);
+    // 直接切换并打开生成器让他填
+    currentPersonaId = id;
+    localStorage.setItem(CURRENT_PERSONA_KEY, id);
+    closeIdentityModal();
+    applyPersonaToUI();
+    
+    // 延迟一点打开生成器，等DOM渲染完
+    setTimeout(() => {
+        if(typeof openPersonaBuilder === 'function') openPersonaBuilder();
+    }, 100);
 };
 
-// 删除身份 (写入 IDB)
-window.deleteCurrentIdentity = async function() {
-    const id = document.getElementById('identity-select').value;
-    if (Object.keys(personasMeta).length <= 1) return alert('至少保留一个身份！');
-    if (!confirm('确认删除？数据无法恢复。')) return;
-    
-    delete personasMeta[id];
-    if (currentPersonaId === id) currentPersonaId = Object.keys(personasMeta)[0];
-    
-    // === 关键：保存到 IDB ===
-    await IDB.set(PERSONA_META_KEY, personasMeta);
+window.quickSwitchIdentity = async function() {
+    const sel = document.getElementById('identity-select');
+    if (!sel || !personasMeta[sel.value]) return;
+
+    currentPersonaId = sel.value;
     localStorage.setItem(CURRENT_PERSONA_KEY, currentPersonaId);
+    closeIdentityModal();
+
+    // 刷新界面和聊天数据
+    const chatLayer = document.getElementById('chatLayer');
+    if (chatLayer) chatLayer.classList.remove('show');
+    document.getElementById('chatMessages').innerHTML = '';
     
-    renderIdentitySelect();
-    fillIdentityForm(currentPersonaId);
+    friendsData = {}; 
+    momentsFeed = [];
+    await loadFriendsData();
+    loadMomentsFeed();
+    applyPersonaToUI();
+    showToast("身份已切换为: " + personasMeta[currentPersonaId].name);
 };
 
-// 保存并切换 (写入 IDB)
-window.saveAndSwitchIdentity = async function() {
-    const id = document.getElementById('identity-select').value;
-    const p = personasMeta[id];
-    if (!p) return;
-
-    // 更新数据
-    p.name = document.getElementById('id-name').value.trim() || '未命名';
-    p.momentsBg = document.getElementById('id-moments-bg').value.trim();
-    p.persona = document.getElementById('id-persona').value.trim();
-    
-    const gSel = document.getElementById('id-gender-select').value;
-    p.gender = (gSel === 'custom') ? document.getElementById('id-gender-input').value.trim() : gSel;
-
-    const previewImg = document.getElementById('id-preview-img');
-    const newBase64 = previewImg.getAttribute('data-base64');
-    const newUrl = document.getElementById('id-avatar-url').value.trim();
-    
-    if (newBase64) p.avatar = newBase64;
-    else if (newUrl) p.avatar = newUrl;
-
-    try {
-        // === 关键修改：存入大仓库 IDB ===
-        await IDB.set(PERSONA_META_KEY, personasMeta);
-        
-        // ID 存入 LocalStorage (因为它很短，没关系)
-        localStorage.setItem(CURRENT_PERSONA_KEY, id);
-        
-        currentPersonaId = id;
-        closeIdentityModal();
-
-        // 刷新界面
-        const chatLayer = document.getElementById('chatLayer');
-        if (chatLayer) chatLayer.classList.remove('show');
-        document.getElementById('chatMessages').innerHTML = '';
-        
-        friendsData = {}; 
-        momentsFeed = [];
-        await loadFriendsData();
-        loadMomentsFeed();
-        applyPersonaToUI();
-        
-        previewImg.removeAttribute('data-base64');
-        alert("保存并切换成功！");
-
-    } catch (e) {
-        alert("保存出错：" + e.message);
-        console.error(e);
-    }
-};
 /* =========================================
    [超级版] 亲密付 AI 自主决策与完美路由
    ========================================= */
@@ -8743,19 +8847,20 @@ window.closeStickerManager = function() {
 window.switchStickerTab = function(tab) {
     document.getElementById('tab-btn-sm-import').classList.remove('active');
     document.getElementById('tab-btn-sm-category').classList.remove('active');
-    document.getElementById('sm-tab-import').style.display = 'none';
-    document.getElementById('sm-tab-category').style.display = 'none';
+
+    switchSoftDisplays(
+        [
+            { key: 'import', el: document.getElementById('sm-tab-import'), display: 'flex' },
+            { key: 'category', el: document.getElementById('sm-tab-category'), display: 'block' }
+        ],
+        tab
+    );
     
     document.getElementById(`tab-btn-sm-${tab}`).classList.add('active');
     
-           if (tab === 'import') {
-            document.getElementById('sm-tab-import').style.display = 'flex';
-        } else {
-            // 这里原来是 flex，导致排版被压扁，改为 block 就全显示出来了
-            document.getElementById('sm-tab-category').style.display = 'block'; 
-            renderStickerManagerGrid();
-        }
-
+    if (tab === 'category') {
+        renderStickerManagerGrid();
+    }
 }
 
 

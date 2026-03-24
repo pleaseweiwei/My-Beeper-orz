@@ -14,6 +14,26 @@ let payData = {
     intimatePay: {},       // 我给别人的
     intimatePayFrom: {}    // 别人给我的
 };
+
+function payQueueUiWrite(fn) {
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(fn));
+    } else {
+        setTimeout(fn, 16);
+    }
+}
+
+function paySetSoftDisplay(el, visible, displayMode = 'block') {
+    if (!el) return;
+    if (visible) {
+        el.hidden = false;
+        el.style.display = displayMode;
+    } else {
+        el.hidden = true;
+        el.style.display = 'none';
+    }
+}
+
 window.resetPayData = async function() {
     if (!confirm("确定要重置【当前人设】的钱包吗？\n将清空余额/银行卡/余额宝/账单/亲密付记录。")) return;
 
@@ -223,10 +243,10 @@ function openKDialog({
 
     titleEl.innerText = title;
     descEl.innerHTML = desc;
-    input.style.display = showInput ? 'block' : 'none';
+    paySetSoftDisplay(input, showInput, 'block');
     input.value = '';
     input.placeholder = placeholder;
-    cancelBtn.style.display = showCancel ? 'block' : 'none';
+    paySetSoftDisplay(cancelBtn, showCancel, 'block');
 
     const newConfirm = resetKDialogButton(confirmBtn);
     const newCancel = resetKDialogButton(cancelBtn);
@@ -836,13 +856,19 @@ let gameRunning = false;
 // 启动工作入口
 window.startJob = function(jobId) {
     currentJobId = jobId;
-    document.getElementById('pt-job-board').style.display = 'none';
-    document.getElementById('pt-game-stage').style.display = 'flex';
-    
-    // 隐藏所有游戏视图
-    document.querySelectorAll('.game-view-box').forEach(el => el.style.display = 'none');
-    document.getElementById(`game-view-${jobId}`).style.display = 'flex'; // 显示对应游戏
-    if(jobId === 1) document.getElementById(`game-view-${jobId}`).style.display = 'block'; 
+
+    payQueueUiWrite(() => {
+        paySetSoftDisplay(document.getElementById('pt-job-board'), false);
+        paySetSoftDisplay(document.getElementById('pt-game-stage'), true, 'flex');
+
+        // 隐藏所有游戏视图
+        document.querySelectorAll('.game-view-box').forEach(el => paySetSoftDisplay(el, false));
+        paySetSoftDisplay(
+            document.getElementById(`game-view-${jobId}`),
+            true,
+            jobId === 1 ? 'block' : 'flex'
+        );
+    });
     
     gameRunning = true;
     jobScore = 0;
@@ -861,8 +887,10 @@ window.quitJob = function() {
     
     if(g3AnimFrame) cancelAnimationFrame(g3AnimFrame);
 
-    document.getElementById('pt-game-stage').style.display = 'none';
-    document.getElementById('pt-job-board').style.display = 'block';
+    payQueueUiWrite(() => {
+        paySetSoftDisplay(document.getElementById('pt-game-stage'), false);
+        paySetSoftDisplay(document.getElementById('pt-job-board'), true, 'block');
+    });
     
     // 清理残留
     document.getElementById('g1-belt').innerHTML = '';
@@ -1448,8 +1476,10 @@ window.prepareIdolProject = function() {
     document.getElementById('idol-available-balance').innerText = payData.balance.toFixed(2);
 
     // 界面变化：隐藏按钮，显示三个档案袋
-    document.getElementById('idol-start-btn').style.display = 'none';
-    input.style.display = 'none';
+    payQueueUiWrite(() => {
+        paySetSoftDisplay(document.getElementById('idol-start-btn'), false);
+        paySetSoftDisplay(input, false);
+    });
     
     // 每次打开重置档案袋样式
     const files = document.querySelectorAll('.idol-file');
@@ -1460,7 +1490,9 @@ window.prepareIdolProject = function() {
         f.style.pointerEvents = 'auto'; // 允许点击
     });
     
-    document.getElementById('idol-files-area').style.display = 'block';
+    payQueueUiWrite(() => {
+        paySetSoftDisplay(document.getElementById('idol-files-area'), true, 'block');
+    });
 }
 
 // 2. 点击档案袋，揭晓命运
@@ -1544,10 +1576,12 @@ window.openIdolFile = function(clickedElement) {
         savePayData();
         document.getElementById('idol-available-balance').innerText = payData.balance.toFixed(2);
         
-        document.getElementById('idol-files-area').style.display = 'none';
-        document.getElementById('idol-start-btn').style.display = 'block';
-        document.getElementById('idol-amount-input').style.display = 'block';
-        document.getElementById('idol-amount-input').value = '';
+        payQueueUiWrite(() => {
+            paySetSoftDisplay(document.getElementById('idol-files-area'), false);
+            paySetSoftDisplay(document.getElementById('idol-start-btn'), true, 'block');
+            paySetSoftDisplay(document.getElementById('idol-amount-input'), true, 'block');
+            document.getElementById('idol-amount-input').value = '';
+        });
         currentIdolInvestment = 0;
 
     }, 1500); 

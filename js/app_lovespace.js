@@ -115,14 +115,19 @@ async function saveLs2Store() {
 
 // ====== View Switch ======
 function ls2ShowView(viewId) {
-  const lobby = document.getElementById('ls2-lobby-view');
-  const setup = document.getElementById('ls2-setup-view');
-  const main = document.getElementById('ls2-main-view');
-  if (lobby) lobby.style.display = 'none';
-  if (setup) setup.style.display = 'none';
-  if (main) main.style.display = 'none';
-  const target = document.getElementById(viewId);
-  if (target) target.style.display = 'flex';
+  const views = [
+    document.getElementById('ls2-lobby-view'),
+    document.getElementById('ls2-setup-view'),
+    document.getElementById('ls2-main-view')
+  ];
+
+  views.forEach(view => {
+    if (!view) return;
+    const isActive = view.id === viewId;
+    view.classList.toggle('active', isActive);
+    view.hidden = !isActive;
+    view.style.display = '';
+  });
 }
 
 // ====== Public: Open/Close App ======
@@ -148,6 +153,15 @@ window.openLoveSpaceApp = async function () {
 window.closeLoveSpaceApp = function () {
   const app = document.getElementById('loveSpaceApp');
   if (app) app.classList.remove('open');
+
+  const door = document.getElementById('ls2-fridge-door');
+  const inside = document.getElementById('ls2-fridge-inner');
+  if (door) door.classList.remove('open');
+  if (inside) {
+    inside.classList.remove('open');
+    inside.style.display = '';
+  }
+
   if (fridgeTimerInterval) clearInterval(fridgeTimerInterval);
   fridgeTimerInterval = null;
 };
@@ -197,6 +211,15 @@ function renderLs2LobbyList() {
 window.ls2BackToLobby = function () {
   ls2Data = null;
   ls2PendingAiId = null;
+
+  const door = document.getElementById('ls2-fridge-door');
+  const inside = document.getElementById('ls2-fridge-inner');
+  if (door) door.classList.remove('open');
+  if (inside) {
+    inside.classList.remove('open');
+    inside.style.display = '';
+  }
+
   if (fridgeTimerInterval) clearInterval(fridgeTimerInterval);
   fridgeTimerInterval = null;
   renderLs2LobbyList();
@@ -597,14 +620,23 @@ window.switchJournalTab = function (tab) {
     tabs[1].classList.remove('active');
   }
 
-  if (tab === 'me') {
+  const showMe = tab === 'me';
+
+  if (showMe) {
     if (tabs[0]) tabs[0].classList.add('active');
-    if (mePage) mePage.style.display = 'flex';
-    if (aiPage) aiPage.style.display = 'none';
   } else {
     if (tabs[1]) tabs[1].classList.add('active');
-    if (mePage) mePage.style.display = 'none';
-    if (aiPage) aiPage.style.display = 'flex';
+  }
+
+  if (mePage) {
+    mePage.classList.toggle('active', showMe);
+    mePage.hidden = !showMe;
+    mePage.style.display = '';
+  }
+  if (aiPage) {
+    aiPage.classList.toggle('active', !showMe);
+    aiPage.hidden = showMe;
+    aiPage.style.display = '';
   }
 
   renderLs2Journal(); // 切页后重绘贴纸（贴纸分 me/ai）
@@ -815,8 +847,15 @@ window.ls2SwitchStickerTab = function (type) {
 
   if (btnText) btnText.className = type === 'text' ? 'tab-btn active' : 'tab-btn';
   if (btnImg) btnImg.className = type === 'img' ? 'tab-btn active' : 'tab-btn';
-  if (pText) pText.style.display = type === 'text' ? 'block' : 'none';
-  if (pImg) pImg.style.display = type === 'img' ? 'block' : 'none';
+
+  if (pText) {
+    pText.hidden = type !== 'text';
+    pText.style.display = '';
+  }
+  if (pImg) {
+    pImg.hidden = type !== 'img';
+    pImg.style.display = '';
+  }
 };
 
 window.ls2SetStickerColor = function (color) {
@@ -1091,16 +1130,18 @@ window.ls2ToggleFridgeDoor = function () {
   const inside = document.getElementById('ls2-fridge-inner');
   if (!door || !inside) return;
 
+  inside.style.display = '';
+
   if (door.classList.contains('open')) {
     door.classList.remove('open');
-    inside.style.display = 'none';
+    inside.classList.remove('open');
   } else {
     door.classList.add('open');
-    setTimeout(() => {
-      inside.style.display = 'flex';
+    requestAnimationFrame(() => {
+      inside.classList.add('open');
       renderFridgeInside();
       startFridgeTimer();
-    }, 400);
+    });
   }
 };
 
@@ -1284,7 +1325,7 @@ function startFridgeTimer() {
   fridgeTimerInterval = setInterval(async () => {
     // 只有打开门才刷新，省资源
     const inside = document.getElementById('ls2-fridge-inner');
-    if (!inside || inside.style.display === 'none') return;
+    if (!inside || !inside.classList.contains('open')) return;
 
     let changed = false;
     (ls2Data.fridgeIn || []).forEach(item => {

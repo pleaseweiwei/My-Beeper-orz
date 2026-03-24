@@ -42,8 +42,7 @@ body {
     z-index: 1;
     font-family: var(--global-font);
     isolation: isolate;
-    transform: translateZ(0);
-    backface-visibility: hidden;
+
 }
 
 
@@ -56,9 +55,7 @@ body {
     z-index: -1;
     pointer-events: none;
     transition: opacity 0.5s; 
-    will-change: transform, opacity;
-    transform: translateZ(0);
-    backface-visibility: hidden;
+
 }
 
 .status-bar {

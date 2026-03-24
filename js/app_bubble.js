@@ -18,17 +18,24 @@ let fakeFanInterval;
 // 评论池
 let bubbleCommentsPool = [];
 
+function setBubbleActiveView(viewId) {
+    ['bb-landing-view', 'bb-idol-view', 'bb-fan-view'].forEach(id => {
+        const view = document.getElementById(id);
+        if (!view) return;
+
+        const isActive = id === viewId;
+        view.classList.toggle('active', isActive);
+        view.style.display = isActive ? 'flex' : 'none';
+    });
+}
+
 // 2. 打开/关闭 App
 window.openBubbleApp = function() {
     const app = document.getElementById('bubbleApp');
     if (app) {
         app.classList.add('open');
         loadBubbleData();
-        
-        // 默认进 Landing 页，隐藏其他页
-        document.getElementById('bb-landing-view').style.display = 'flex';
-        document.getElementById('bb-idol-view').style.display = 'none';
-        document.getElementById('bb-fan-view').style.display = 'none';
+        setBubbleActiveView('bb-landing-view');
 
         // 尝试自动选择第一个好友作为粉丝模式的爱豆
         const ids = Object.keys(friendsData);
@@ -38,21 +45,27 @@ window.openBubbleApp = function() {
 
 window.closeBubbleApp = function() {
     document.getElementById('bubbleApp').classList.remove('open');
-    if (fakeFanInterval) clearInterval(fakeFanInterval); // 关闭时停止假粉丝
+    if (fakeFanInterval) {
+        clearInterval(fakeFanInterval);
+        fakeFanInterval = null;
+    }
 }
 
 // 3. 模式切换入口
 window.enterBubbleMode = function(mode) {
-    document.getElementById('bb-landing-view').style.display = 'none';
-    
+    if (fakeFanInterval) {
+        clearInterval(fakeFanInterval);
+        fakeFanInterval = null;
+    }
+
     if (mode === 'idol') {
         // === 进入爱豆模式 ===
-        document.getElementById('bb-idol-view').style.display = 'flex';
+        setBubbleActiveView('bb-idol-view');
         renderIdolHistory();     // 渲染历史记录
         startFakeFanReplies();   // 开始滚动假评论
     } else {
         // === 进入粉丝模式 ===
-        document.getElementById('bb-fan-view').style.display = 'flex';
+        setBubbleActiveView('bb-fan-view');
         renderFanView();         // 渲染聊天界面
         
         // 如果是空的，自动触发一条爱豆欢迎语
@@ -64,10 +77,11 @@ window.enterBubbleMode = function(mode) {
 }
 
 window.exitBubbleMode = function() {
-    document.getElementById('bb-idol-view').style.display = 'none';
-    document.getElementById('bb-fan-view').style.display = 'none';
-    document.getElementById('bb-landing-view').style.display = 'flex';
-    if (fakeFanInterval) clearInterval(fakeFanInterval);
+    setBubbleActiveView('bb-landing-view');
+    if (fakeFanInterval) {
+        clearInterval(fakeFanInterval);
+        fakeFanInterval = null;
+    }
 }
 
 /* =========================================
@@ -175,7 +189,9 @@ function startFakeFanReplies() {
     
     fakeFanInterval = setInterval(() => {
         // 如果不在爱豆界面，就不生成
-        if (document.getElementById('bb-idol-view').style.display === 'none') return;
+        const idolView = document.getElementById('bb-idol-view');
+        if (!idolView || !idolView.classList.contains('active')) return;
+
         const text = fakeReplies[Math.floor(Math.random() * fakeReplies.length)];
         addBubbleComment(text, false); // false = 非VIP
     }, 2500); 

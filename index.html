@@ -302,16 +302,19 @@
 
   
 
-        <!-- Dock Bar -->
+           <!-- Dock Bar -->
         <div class="dock-bar">
-    <i class="fas fa-phone-alt" style="font-size:20px; color:#555;"></i>
-    <div class="dock-icon-special" onclick="toggleChat()">
-        <i class="fas fa-comment"></i>
-        <div id="dock-dot" class="unread-dot"></div> <!-- ✅ 放入图标容器内部 -->
-    </div>
-    <i class="fas fa-comment-dots" style="font-size:20px; color:#555;"></i>
-    <i class="fab fa-chrome" style="font-size:22px; color:#555;"></i>
-</div>
+            <i class="fas fa-phone-alt" style="font-size:20px; color:#555;"></i>
+            <div class="dock-icon-special" onclick="toggleChat()">
+                <i class="fas fa-comment"></i>
+                <div id="dock-dot" class="unread-dot"></div>
+            </div>
+            <i class="fas fa-comment-dots" style="font-size:20px; color:#555;"></i>
+            
+            <!-- 人设研究所：去掉了外层包裹，字号和颜色与电话、短信完全一致 -->
+            <i class="fas fa-user-edit" style="font-size:20px; color:#555; cursor:pointer;" onclick="openPersonaBuilder()"></i>
+        </div>
+
 
 <!-- === 微信完整应用 (升级韩系胶囊版) === -->
 <div class="app-fullscreen-view" id="wechatApp">
@@ -409,15 +412,6 @@
                 </div>
             </div>
 
-            <!-- === 新增：我的主人设 === -->
-            <div class="wc-menu-group" style="padding: 15px 20px;">
-                <div style="font-size: 13px; font-weight: 700; color: #333; margin-bottom: 10px;">
-                    <i class="fas fa-user-edit"></i> 我的主人设 (User Persona)
-                </div>
-                <textarea id="my-global-persona" rows="3" placeholder="例如：我是一个苦逼的互联网打工人，或者是一个每月有花不完零花钱的财阀大小姐..." style="width: 100%; border: none; background: #f9f9f9; border-radius: 12px; padding: 12px; font-size: 12px; font-family: inherit; resize: none; outline: none;" onblur="saveGlobalPersona()"></textarea>
-                <div style="font-size: 10px; color: #999; margin-top: 5px;">* AI 将读取此人设为你生成每月的工资或生活费。</div>
-            </div>
-
             <div class="wc-menu-group">
                 <div class="wc-menu-item"><i class="fas fa-th-large menu-icon"></i> <span>Services</span> <i class="fas fa-chevron-right arrow" style="font-size:10px; color:#ccc"></i></div>
                 <div class="wc-menu-item"><i class="fas fa-bookmark menu-icon"></i> <span>Collections</span> <i class="fas fa-chevron-right arrow" style="font-size:10px; color:#ccc"></i></div>
@@ -446,7 +440,7 @@
         </div>
         <div class="wc-tab-item" onclick="switchWcTab('moments', this)">
             <i class="fas fa-compass"></i>
-         <div id="moments-dot" class="unread-dot"></div>
+            <div id="moments-badge" class="wc-badge" style="display:none; position:absolute; top:-2px; right:4px;"></div>
             <span>Feed</span>
         </div>
         <div class="wc-tab-item" onclick="switchWcTab('me', this)">
@@ -464,10 +458,14 @@
             <!-- 头部：加了在线状态和布局优化 -->
         
 <div class="chat-header">
-    <!-- 左侧返回按钮 (保持不变) -->
-    <i class="fas fa-chevron-left" onclick="toggleChat()" style="cursor:pointer; padding:10px; font-size:18px;"></i>
+    <!-- 左侧返回按钮 (带红点) -->
+    <div style="position:relative; display:inline-flex; align-items:center;">
+        <i class="fas fa-chevron-left" onclick="toggleChat()" style="cursor:pointer; padding:10px; font-size:18px;"></i>
+        <div id="chat-back-dot" class="unread-dot" style="display:none; top:6px; right:2px; width:8px; height:8px;"></div>
+    </div>
     
     <!-- 【新增】弹幕开关图标 (放在返回键右边) -->
+
     <i class="fas fa-comment-alt" id="danmaku-toggle" onclick="toggleDanmaku()" title="开启/关闭实时弹幕" style="cursor:pointer; padding:10px; font-size:16px; color:#bbb; transition:0.3s;"></i>
 
     <!-- 中间标题 (保持不变) -->
@@ -751,6 +749,15 @@
                             <i class="fas fa-sync-alt"></i> 无损检测并更新应用 (不丢数据)
                         </button>
                         <div class="form-text">当网页在手机上和电脑预览不一致时点击</div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 5px;">
+                            <label style="margin:0; font-weight:500; color: #333;">开启预演删除 Meta</label>
+                            <label class="switch" style="margin: 0; transform: scale(0.9);">
+                                <input type="checkbox" id="enable-meta-delete-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="form-text">开启后，且好感度达到 100 时，预演删除和删除才会触发meta</div>
                     </div>
 
 
@@ -1136,15 +1143,15 @@
         <div style="margin-top:30px; padding: 0 24px; display:flex; flex-direction:column; gap:12px;">
             <button class="btn-save profile-main-btn" onclick="contactProfileSendMsg()">发消息</button>
             
-            <div style="display: flex; gap: 10px;">
+          <div style="display: flex; gap: 10px;">
                 <button class="btn-cancel profile-main-btn" 
                         style="background:#f5f5f5; color:#555; flex: 1;" 
                         onclick="blockFriendFromProfile()">拉黑</button>
-                         <button class="btn-cancel profile-main-btn"
-                style="background:#fff; color:#4a90e2; border:1px solid #4a90e2; flex:1;"
-                onclick="preloadMetaDeleteData()">
-            <i class="fas fa-eye"></i> 预演删除
-        </button>
+                <button class="btn-cancel profile-main-btn" id="btn-preload-meta"
+                        style="background:#fff; color:#4a90e2; border:1px solid #4a90e2; flex:1;"
+                        onclick="preloadMetaDeleteData()">
+                    <i class="fas fa-eye"></i> 预演删除
+                </button>
                 <button class="btn-cancel profile-main-btn" 
                         style="background:#ffecec; color:#e53935; flex: 1;" 
                         onclick="deleteFriendFromProfile()">删除好友</button>
@@ -2418,6 +2425,7 @@
     <script src="js/app_arcade.js"></script>
     <script src="js/app_map.js"></script>
     <script src="js/app_live.js"></script>
+<script src="js/app_persona.js"></script>
 
 
 <div id="add-friend-modal" class="modal-overlay">
@@ -2938,8 +2946,6 @@
         </div>
     </div>
 </div>
-
-
 <!-- === [新增] 聊天：描述图片弹窗 === -->
 <div id="image-desc-modal" class="modal-overlay">
     <div class="modal-box image-desc-modal-box">
@@ -2967,7 +2973,7 @@
             <div class="image-desc-preview-wrap">
                 <div class="image-desc-preview-title">气泡预览 (Preview)</div>
 
-                               <!-- 这个就是预览用的纯净卡片 -->
+                <!-- 这个就是预览用的纯净卡片 -->
                 <div id="image-desc-preview-card" class="chat-fake-image-card preview expanded">
                     <div class="fake-image-content">
                         <i class="far fa-image"></i>
@@ -2975,6 +2981,8 @@
                     </div>
                     <div class="fake-image-desc" id="image-desc-preview-text">这里会显示你输入的描述内容</div>
                 </div>
+            </div>
+        </div>
 
         <div class="modal-footer">
             <button class="btn-cancel" onclick="closeImageDescModal()">取消</button>
@@ -4295,75 +4303,26 @@
         </div>
     </div>
 </div>
-
-<!-- === [更新版] 身份管理弹窗 === -->
-<div id="identity-modal" class="modal-overlay">
-  <div class="modal-box" style="width:340px;">
+<!-- === [纯净版] 身份切换弹窗 === -->
+<div id="identity-modal" class="modal-overlay" onclick="if(event.target===this) closeIdentityModal()">
+  <div class="modal-box" style="width:280px;">
     <div class="modal-header">
-      <span>身份切换</span>
+      <span>切换身份</span>
       <i class="fas fa-times" onclick="closeIdentityModal()"></i>
     </div>
-    
-    <div class="modal-body" style="padding:20px; max-height:450px; overflow-y:auto;">
-      
-      <!-- 1. 顶部头像预览 (自动变) -->
-      <div class="id-avatar-preview-box">
-          <img id="id-preview-img" src="https://api.dicebear.com/7.x/avataaars/svg?seed=new">
+    <div class="modal-body" style="padding:20px; text-align:center;">
+      <div class="id-avatar-preview-box" style="width:60px; height:60px; margin: 0 auto 15px;">
+          <img id="id-preview-img" src="">
       </div>
-
-      <div class="form-group">
-        <label>选择身份</label>
-        <select id="identity-select" onchange="onIdentitySelectChange(this.value)" style="width:100%; height:40px; border:1px solid #ddd; border-radius:8px; padding:0 10px;"></select>
-      </div>
-
-      <hr class="settings-divider" style="margin:15px 0;">
-
-      <div class="form-group">
-        <label>姓名</label>
-        <input id="id-name" type="text" placeholder="例如：Hannah">
-      </div>
-
-      <!-- 性别：选自定义时显示输入框 -->
-      <div class="form-group">
-        <label>性别</label>
-        <div style="display:flex; gap:10px;">
-            <select id="id-gender-select" onchange="toggleIdGenderInput(this.value)" style="flex:1; height:40px; border:1px solid #ddd; border-radius:8px; padding:0 10px;">
-              <option value="女">女</option>
-              <option value="男">男</option>
-              <option value="custom">自定义</option>
-            </select>
-            <!-- 自定义性别输入框 (默认隐藏) -->
-            <input id="id-gender-input" type="text" placeholder="输入性别" style="flex:1; display:none;">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>头像设置</label>
-        <div style="display:flex; gap:10px;">
-            <input id="id-avatar-url" type="text" placeholder="图片 URL..." oninput="updateIdPreview(this.value)">
-            <button class="btn-secondary" onclick="document.getElementById('id-avatar-file').click()" style="width:50px; padding:0;"><i class="fas fa-upload"></i></button>
-            <input id="id-avatar-file" type="file" accept="image/*" style="display:none" onchange="handleIdAvatarFile(this)">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>朋友圈背景图 (Moments Cover)</label>
-        <input id="id-moments-bg" type="text" placeholder="留空则使用默认背景">
-      </div>
-
-      <div class="form-group">
-        <label>我的人设</label>
-        <textarea id="id-persona" rows="2" placeholder="这个身份的设定..."></textarea>
-      </div>
-
+      <select id="identity-select" onchange="updateIdPreviewOnly(this.value)" style="width:100%; height:40px; border:1px solid #ddd; border-radius:8px; padding:0 10px; font-weight:bold; text-align:center;"></select>
     </div>
-    <div class="modal-footer" style="padding:15px 20px;">
-      <button class="btn-cancel" onclick="createNewIdentity()" style="font-size:12px;">新建</button>
-      <button class="btn-cancel" onclick="deleteCurrentIdentity()" style="font-size:12px; color:red;">删除</button>
-      <button class="btn-confirm" onclick="saveAndSwitchIdentity()">保存并切换</button>
+    <div class="modal-footer" style="padding:15px 20px; display:flex; gap:10px;">
+      <button class="btn-cancel" onclick="quickCreateIdentity()" style="font-size:12px; flex:1;">新建</button>
+      <button class="btn-confirm" onclick="quickSwitchIdentity()" style="flex:2;">确认切换</button>
     </div>
   </div>
 </div>
+
 <!-- === [新增] 钱包-开通亲密付弹窗 === -->
 <div id="modal-bind-intimate" class="modal-overlay">
     <div class="modal-box" style="width:320px;">
@@ -4605,6 +4564,265 @@
            <button class="btn-confirm" onclick="slpConfirmBatch()" style="flex:2; border-radius:14px; background:#111; height:44px;">确定导入</button>
        </div>
    </div>
+</div>
+<!-- ============================================== -->
+<!-- [NEW] 角色人设生成器 APP (严格大纲版) -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="personaBuilderApp" style="background: #f7f8fa;">
+    <div class="k-header" style="background: #fff; height: 60px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100; border-bottom: 1px solid #f0f0f0;">
+        <i class="fas fa-chevron-down" onclick="closePersonaBuilder()" style="font-size: 18px; color: #555; cursor: pointer;"></i>
+        <span style="font-weight: 800; font-size: 16px; color: #111;">人设研究所</span>
+        <i class="fas fa-save" onclick="savePersonaBuilder()" style="font-size: 18px; color: #07c160; cursor: pointer;"></i>
+    </div>
+
+    <!-- 顶部模块切换 Tabs -->
+    <div style="display: flex; background: #fff; border-bottom: 1px solid #f0f0f0; padding: 0 10px; overflow-x: auto;" class="pb-tabs">
+        <div class="pb-tab active" onclick="switchPbTab('core')">根源标识</div>
+        <div class="pb-tab" onclick="switchPbTab('physique')">外在形态</div>
+        <div class="pb-tab" onclick="switchPbTab('internal')">内在宇宙</div>
+        <div class="pb-tab" onclick="switchPbTab('dynamic')">动态交互</div>
+        <div class="pb-tab" onclick="switchPbTab('generate')" style="color:#ff7e67; font-weight:800;">联动生成</div>
+    </div>
+
+    <div class="k-body-container" style="padding: 20px; overflow-y: auto;">
+        
+        <!-- 模块一：【根源标识】 -->
+        <div id="pb-tab-core" class="pb-content active">
+            <div class="pb-card">
+                <div class="pb-input-group">
+                    <label>姓名/代号 (Name/Codename)</label>
+                    <input type="text" id="pb-name" placeholder="请输入角色名">
+                </div>
+                <div class="pb-input-group">
+                    <label>性别认知 (Gender Identity)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="pb-gender" onchange="toggleCustomInput('pb-gender', 'pb-gender-custom')">
+                            <option value="男">男</option>
+                            <option value="女">女</option>
+                            <option value="无性别">无性别</option>
+                            <option value="流动性别">流动性别</option>
+                            <option value="custom">自定义...</option>
+                        </select>
+                        <input type="text" id="pb-gender-custom" style="display: none;" placeholder="输入自定义性别">
+                    </div>
+                </div>
+                <div class="pb-input-group">
+                    <label>生理性别 (Biological Sex)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="pb-bio-sex" onchange="toggleCustomInput('pb-bio-sex', 'pb-bio-sex-custom')">
+                            <option value="男">男</option>
+                            <option value="女">女</option>
+                            <option value="双性">双性/间性</option>
+                            <option value="custom">自定义...</option>
+                        </select>
+                        <input type="text" id="pb-bio-sex-custom" style="display: none;" placeholder="输入生理性别">
+                    </div>
+                </div>
+                <div class="pb-input-group">
+                    <label>年龄 (Age)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="pb-age-num" placeholder="具体年龄" style="width: 80px;">
+                        <select id="pb-age-stage" style="flex: 1;">
+                            <option value="幼年">幼年</option>
+                            <option value="少年">少年</option>
+                            <option value="青年" selected>青年</option>
+                            <option value="中年">中年</option>
+                            <option value="老年">老年</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="pb-input-group">
+                    <label>种族/族裔 (Race/Ethnicity) <span style="color:#07c160; font-weight:normal;" id="wb-sync-hint"></span></label>
+                    <input type="text" id="pb-race" placeholder="例如：精灵、人类、赛博格">
+                </div>
+                <div class="pb-input-group">
+                    <label>归属/阵营 (Affiliation/Faction)</label>
+                    <input type="text" id="pb-faction" placeholder="例如：XX公司、反抗军">
+                </div>
+                <div class="pb-input-group">
+                    <label>核心印象关键词 (Core Keywords)</label>
+                    <input type="text" id="pb-keywords" placeholder="用3-5个词定义，空格或逗号分隔 (如：破碎美人 天真残忍)">
+                </div>
+            </div>
+        </div>
+
+        <!-- 模块二：【外在形态】 -->
+        <div id="pb-tab-physique" class="pb-content" style="display:none;">
+            <div class="pb-card">
+                <div class="pb-section-title">整体氛围 & 体态骨相</div>
+                <div class="pb-input-group">
+                    <label>气质类型 (Aura)</label>
+                    <input type="text" id="pb-aura" placeholder="如：疏离感、神性、脆弱感、精英感">
+                </div>
+                <div class="pb-input-group">
+                    <label>身高 / 体重</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="pb-height" placeholder="身高 (cm)">
+                        <input type="text" id="pb-weight" placeholder="体重 (kg)">
+                    </div>
+                </div>
+                <div class="pb-input-group">
+                    <label>体型描述 & 身体比例</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                        <select id="pb-body-type" onchange="toggleCustomInput('pb-body-type', 'pb-body-type-custom')">
+                            <option value="匀称">匀称</option>
+                            <option value="纤细">纤细</option>
+                            <option value="壮硕">壮硕</option>
+                            <option value="骨感">骨感</option>
+                            <option value="肌肉线条分明">肌肉线条分明</option>
+                            <option value="柔软无力">柔软无力</option>
+                            <option value="custom">自定义...</option>
+                        </select>
+                        <input type="text" id="pb-body-type-custom" style="display: none; flex: 1;" placeholder="自定义体型">
+                    </div>
+                    <input type="text" id="pb-body-ratio" placeholder="身体比例 (如：肩宽腰细、四肢修长)">
+                </div>
+                <div class="pb-input-group">
+                    <label>姿态习惯 & 特殊骨相点</label>
+                    <input type="text" id="pb-posture" placeholder="姿态 (如：站姿笔挺、习惯单手插袋)" style="margin-bottom: 8px;">
+                    <input type="text" id="pb-bone-spec" placeholder="特殊骨相 (如：蝴蝶骨、驼峰鼻、精灵耳)">
+                </div>
+                <hr class="pb-divider">
+                
+                <div class="pb-section-title">面容、发肤与感官</div>
+                <div class="pb-input-group">
+                    <label>脸型 (Face Shape)</label>
+                    <select id="pb-face-shape">
+                        <option value="鹅蛋脸">鹅蛋脸</option>
+                        <option value="圆脸">圆脸</option>
+                        <option value="方脸">方脸</option>
+                        <option value="心形脸">心形脸</option>
+                        <option value="钻石脸">钻石脸</option>
+                    </select>
+                </div>
+                <div class="pb-input-group">
+                    <label>眼部 (瞳色/眼型/细节)</label>
+                    <input type="text" id="pb-eyes" placeholder="如：琥珀色桃花眼，有卧蚕">
+                </div>
+                <div class="pb-input-group">
+                    <label>肤质肤色 & 发质发型</label>
+                    <input type="text" id="pb-skin-hair" placeholder="如：冷白皮，乌木黑长直发，发质柔软">
+                </div>
+                <div class="pb-input-group">
+                    <label>身体皮肤细节 & 关键辨识点</label>
+                    <input type="text" id="pb-skin-spec" placeholder="如：后腰胎记，左眉有疤，虎牙，酒窝">
+                </div>
+                <div class="pb-input-group">
+                    <label>感官 (声音/语调/气味/口头禅)</label>
+                    <textarea id="pb-sensory" rows="3" placeholder="如：低沉沙哑，语速偏快；自带冷杉木味；口头禅是“无所谓”"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模块三：【内在宇宙】 -->
+        <div id="pb-tab-internal" class="pb-content" style="display:none;">
+            <div class="pb-card">
+                <div class="pb-input-group">
+                    <label>外显性格 (Apparent Personality) - 社交面具</label>
+                    <textarea id="pb-persona-out" rows="2" placeholder="给人的第一印象，如：开朗健谈，实则保持距离"></textarea>
+                </div>
+                <div class="pb-input-group">
+                    <label>内隐性格 (Implicit Personality) - 真实自我</label>
+                    <textarea id="pb-persona-in" rows="2" placeholder="独处或面对信任之人展现的，如：极度缺乏安全感"></textarea>
+                </div>
+                <div class="pb-input-group">
+                    <label>性格量表 (Optional Scales)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="pb-mbti" placeholder="MBTI (如: INTJ)">
+                        <input type="text" id="pb-enneagram" placeholder="九型人格 (如: 5w4)">
+                    </div>
+                </div>
+                <hr class="pb-divider">
+                <div class="pb-input-group">
+                    <label>最高追求 / 执念 (Ultimate Goal)</label>
+                    <input type="text" id="pb-goal" placeholder="如：复仇、找到失散的家人">
+                </div>
+                <div class="pb-input-group">
+                    <label>最深的恐惧 (Deepest Fear)</label>
+                    <input type="text" id="pb-fear" placeholder="如：被遗忘、失去控制">
+                </div>
+                <div class="pb-input-group">
+                    <label>内在矛盾 / 心结 (Internal Conflict)</label>
+                    <input type="text" id="pb-conflict" placeholder="如：渴望自由又害怕孤独">
+                </div>
+                <div class="pb-input-group">
+                    <label>软肋 / 死穴 (Achilles' Heel)</label>
+                    <input type="text" id="pb-weakness" placeholder="什么人或事能轻易让他失控或妥协？">
+                </div>
+                <hr class="pb-divider">
+                <div class="pb-input-group">
+                    <label>背景故事脉络 (Backstory Outline)</label>
+                    <textarea id="pb-backstory" rows="3" placeholder="成长环境与彻底改变人生的关键转折事件..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模块四：【动态交互】 -->
+        <div id="pb-tab-dynamic" class="pb-content" style="display:none;">
+            <div class="pb-card">
+                <div class="pb-section-title">情绪表达模式</div>
+                <div class="pb-input-group">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="text" id="pb-emo-joy" placeholder="喜：如(极少表露、会哼歌)">
+                        <input type="text" id="pb-emo-anger" placeholder="怒：如(冷暴力、具攻击性)">
+                        <input type="text" id="pb-emo-sorrow" placeholder="哀：如(独自流泪、暴饮暴食)">
+                        <input type="text" id="pb-emo-pleasure" placeholder="乐：如(捉弄别人)">
+                    </div>
+                </div>
+                <hr class="pb-divider">
+                <div class="pb-input-group">
+                    <label>生理健康 & 对刺激的反应</label>
+                    <input type="text" id="pb-health" placeholder="健康状况(如: 畏寒, 胃病)" style="margin-bottom: 8px;">
+                    <input type="text" id="pb-stimulus" placeholder="刺激反应(如: 酒后坦率, 怕痒)">
+                </div>
+                <div class="pb-input-group">
+                    <label>习惯与偏好 (Habits & Quirks)</label>
+                    <input type="text" id="pb-habit-action" placeholder="小动作(如: 思考转笔, 撒谎闪躲)" style="margin-bottom: 8px;">
+                    <input type="text" id="pb-habit-life" placeholder="生活偏好(如: 下雨天待室内, 收集旧物)" style="margin-bottom: 8px;">
+                    <input type="text" id="pb-habit-diet" placeholder="饮食偏好(如: 只喝黑咖啡, 不吃香菜)">
+                </div>
+            </div>
+        </div>
+
+        <!-- 联动与生成机制 -->
+        <div id="pb-tab-generate" class="pb-content" style="display:none;">
+            
+            <!-- 工具：智能导入与世界书 -->
+            <div class="pb-card" style="background:#fffcfb; border-color:#ffdecb;">
+                <div class="pb-section-title" style="color:#ff7e67; border-color:#ff7e67;">① 数据导入 & 预设</div>
+                
+                <div class="pb-input-group">
+                    <label>世界书联动 (World Book Sync)</label>
+                    <select id="pb-worldbook-select" onchange="syncPbWorldbook()">
+                        <option value="">-- 选择世界书注入世界观 --</option>
+                    </select>
+                </div>
+
+                <div class="pb-input-group" style="margin-top: 20px;">
+                    <label>角色卡智能解析 (粘贴文案，AI自动填表)</label>
+                    <textarea id="pb-smart-parse-text" rows="3" placeholder="在此粘贴已有的人设文案或背景故事..."></textarea>
+                    <button class="btn-secondary" style="width:100%; margin-top:10px; background:#fff; border-color:#ff7e67; color:#ff7e67;" onclick="executeSmartParse()"><i class="fas fa-magic"></i> 智能解析并填充表单</button>
+                </div>
+            </div>
+
+            <!-- 最终生成 -->
+            <div class="pb-card">
+                <div class="pb-section-title">② 情景生成 (Final Generation)</div>
+                <div class="pb-input-group">
+                    <label>情景指令输入框</label>
+                    <textarea id="pb-scenario-prompt" rows="4" placeholder="例如：请基于以上人设，写一段他/她在得知被挚友背叛后的详细心理活动，以及后续找到挚友当面对质的场景..."></textarea>
+                </div>
+                <button class="pb-btn-generate" onclick="generateFinalStory()"><i class="fas fa-feather-alt"></i> 基于人设生成专属小说片段</button>
+            </div>
+            
+            <!-- 生成结果展示 -->
+            <div id="pb-story-output" class="pb-card" style="display:none; background:#fafafa; font-family:'Songti SC', serif; line-height:1.8; color:#333;">
+                <!-- 故事内容将显示在这里 -->
+            </div>
+
+        </div>
+
+    </div>
 </div>
 
 

@@ -1,4 +1,3 @@
-
 /* =========================================
    [全新] 地图 APP (韩系黑白灰艺术风格) - 修复版
    ========================================= */
@@ -14,14 +13,14 @@ window.openMapApp = function() {
     const app = document.getElementById('mapApp');
     if (app) {
         app.classList.add('open');
-        loadMapsData(); 
+        loadMapsData();
         const mapIds = Object.keys(mapsData);
         if (mapIds.length > 0) {
             switchMapView(mapIds[0]);
         } else {
             openMapSetup(true); // 传入 true 表示是新建
         }
-        renderMapList(); 
+        renderMapList();
     }
 };
 
@@ -41,10 +40,19 @@ function saveMapsData() {
     localStorage.setItem(MAPS_DATA_KEY, JSON.stringify(mapsData));
 }
 
+function setMapActiveView(viewId) {
+    ['map-main-view', 'map-setup-view'].forEach(id => {
+        const view = document.getElementById(id);
+        if (!view) return;
+        view.classList.toggle('active', id === viewId);
+    });
+}
+
 function switchMapView(mapId) {
     currentMapId = mapId;
+    setMapActiveView('map-main-view');
     renderMapView();
-    toggleMapSidebar(false); 
+    toggleMapSidebar(false);
 }
 
 // --- 3. 侧边栏与地图列表 ---
@@ -111,10 +119,7 @@ function populateChecklist(containerId, items, selectedIds = []) {
 }
 
 window.openMapSetup = function(isNew = false) {
-    const setupView = document.getElementById('map-setup-view');
-    const mainView = document.getElementById('map-main-view');
-    mainView.style.display = 'none';
-    setupView.style.display = 'flex';
+    setMapActiveView('map-setup-view');
 
     document.getElementById('map-setup-name').value = isNew ? '' : (mapsData[currentMapId]?.name || '');
     document.getElementById('map-setup-loc-count').value = '5';
@@ -125,20 +130,14 @@ window.openMapSetup = function(isNew = false) {
 };
 
 window.closeMapSetup = function() {
-    const setupView = document.getElementById('map-setup-view');
-    const mainView = document.getElementById('map-main-view');
-    
     // 【核心修复】如果当前没有任何地图数据，用户又取消了生成地图，则直接退出地图App
     if (Object.keys(mapsData).length === 0) {
+        setMapActiveView('map-main-view');
         closeMapApp();
-        // 恢复默认视图显示状态，以便下次打开不出错
-        setupView.style.display = 'none';
-        mainView.style.display = 'flex';
         return;
     }
 
-    setupView.style.display = 'none';
-    mainView.style.display = 'flex';
+    setMapActiveView('map-main-view');
 };
 
 
@@ -206,14 +205,14 @@ window.confirmGenerateMap = async function() {
         if (!settings.apiKey || !settings.model) {
             throw new Error("请先在“API设置”中配置好 Key 和模型。");
         }
-        
+
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
         const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
         const payload = {
             model: settings.model,
             messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-            temperature: 0.7 
+            temperature: 0.7
         };
 
         const response = await fetch(apiUrl, {
@@ -240,7 +239,7 @@ window.confirmGenerateMap = async function() {
         if (!Array.isArray(locations)) {
             throw new Error("AI 返回的格式不是一个有效的数组。");
         }
-        
+
         // --- 4. 成功后创建地图 ---
         const newMapId = 'map_' + Date.now();
         mapsData[newMapId] = {
@@ -269,7 +268,7 @@ window.confirmGenerateMap = async function() {
 
     } catch (error) {
         console.error("地图生成失败:", error);
-        
+
         // 【核心修改】只弹窗提示，不创建空白地图，也不关闭设置页
         const errorMessage = `地图生成失败<br><br><b>错误:</b> ${error.message}<br><br>请检查您的 API 设置或网络连接后重试。`;
         if (typeof showKAlert === 'function') {
@@ -277,20 +276,21 @@ window.confirmGenerateMap = async function() {
         } else {
             alert(errorMessage.replace(/<br\s*\/?>/g, '\n'));
         }
-        
+
     } finally {
         // 无论成功失败，都恢复按钮状态
         headerAction.innerHTML = '生成';
         headerAction.style.pointerEvents = 'auto';
     }
 };
+
 function renderMapView() {
     const map = mapsData[currentMapId];
     if (!map) return;
 
     document.getElementById('map-header-title').innerText = map.name;
     const canvas = document.getElementById('map-canvas');
-    canvas.innerHTML = ''; 
+    canvas.innerHTML = '';
 
     // --- 原有的地点渲染逻辑 (保持不变) ---
     map.locations.forEach(loc => {
@@ -447,6 +447,7 @@ function openCharSelector(location) {
 window.closeCharSelector = function() {
     document.getElementById('map-char-selector-modal').classList.remove('active');
 }
+
 // --- 8. 【新功能】场景探索 (Situation Exploration) ---
 
 let currentSceneLocation = null; // 记录当前探索的地点
@@ -458,7 +459,7 @@ function openSceneModal(location) {
     const title = document.getElementById('scene-modal-title');
     const desc = document.getElementById('scene-desc-text');
     const choicesArea = document.getElementById('scene-choices-area');
-    
+
     title.innerText = location.name;
     desc.innerText = location.desc || "这里似乎没什么特别的...";
     choicesArea.innerHTML = ''; // 清空旧选项
@@ -487,4 +488,4 @@ window.openLocationEditorForCurrent = function() {
         // 使用刚才保存的局部变量 locationToEdit，而不是已经被清空的全局变量
         openLocationEditor(locationToEdit.id);
     }, 100);
-}
+};

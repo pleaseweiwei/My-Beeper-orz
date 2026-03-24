@@ -212,8 +212,12 @@ textarea#custom-css-input:focus {
 }
 .wc-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .wc-badge { 
-    position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; 
-    background: #ff5e5e; border-radius: 50%; border: 2px solid #fff; 
+    position: absolute; top: -4px; right: -4px; 
+    min-width: 18px; height: 18px; 
+    background: #ff5e5e; border-radius: 9px; border: 2px solid #fff; 
+    color: #fff; font-size: 10px; font-weight: bold;
+    display: flex; justify-content: center; align-items: center;
+    padding: 0 4px; box-sizing: border-box;
 }
 
 /* 文字排版 */
@@ -586,15 +590,15 @@ textarea#custom-css-input:focus {
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.4); /* 半透明黑背景 */
-    backdrop-filter: blur(5px); /* 背景模糊 */
-    z-index: 2000; /* 保证在最上层 */
+    background: rgba(0, 0, 0, 0.4); 
+    backdrop-filter: blur(5px); 
+    z-index: 2000; 
     display: flex;
     justify-content: center;
     align-items: center;
     opacity: 0;
-    pointer-events: none; /* 看不见时不能点 */
-    transition: opacity 0.3s ease;
+    pointer-events: none; 
+    transition: opacity 0.2s ease-out; /* 加快淡入淡出速度 */
 }
 
 /* 激活状态 */
@@ -609,12 +613,13 @@ textarea#custom-css-input:focus {
     background: #fff;
     border-radius: 24px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    transform: scale(0.9); /* 初始稍微缩小 */
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 弹性动画 */
+    transform: scale(0.9); 
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
+
 
 .modal-overlay.active .modal-box {
     transform: scale(1); /* 激活时放大回正常 */
@@ -1381,7 +1386,6 @@ textarea#custom-css-input:focus {
     left: 100%; 
     opacity: 0.95;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    will-change: transform, left;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.544);
 }
 
@@ -2128,6 +2132,8 @@ textarea#custom-css-input:focus {
 
 /* 1. 启动页 (Landing) */
 #bubbleApp {
+    position: relative;
+    overflow: hidden;
     background-color: #fff;
     font-family: 'Montserrat', sans-serif;
     color: #111;
@@ -2193,10 +2199,34 @@ textarea#custom-css-input:focus {
 
 /* 2. 通用头部 */
 .bb-view {
+    position: absolute;
+    inset: 0;
     height: 100%;
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     background: #fcfcfc; /* 极淡的灰白背景 */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate3d(10px, 0, 0);
+    transition:
+        opacity 0.18s ease,
+        transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+        visibility 0s linear 0.24s;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: opacity, transform;
+}
+
+.bb-view.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate3d(0, 0, 0);
+    transition:
+        opacity 0.18s ease,
+        transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 1;
 }
 
 .bb-header {
@@ -3602,9 +3632,6 @@ textarea#custom-css-input:focus {
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;
     flex-direction: column;
--webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    will-change: transform;
 }
 
 .pay-sub-page.show {
@@ -3626,6 +3653,15 @@ textarea#custom-css-input:focus {
   height: auto !important;   /* 覆盖直播页的 calc 高度 */
   overflow-y: auto;
   padding: 10px 24px 24px;
+}
+
+#payApp .k-body-container::-webkit-scrollbar {
+  display: none;
+}
+
+#payApp .k-body-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* 避免数字/按钮被裁切 */
@@ -4107,6 +4143,19 @@ textarea#custom-css-input:focus {
    [O U R S .] 5.0 高定韩系黑白灰 - 艺术书重构版
    ========================================================= */
 
+.ls2-view {
+    display: none;
+}
+
+.ls2-view.active {
+    display: flex;
+}
+
+#sticker-panel-text[hidden],
+#sticker-panel-img[hidden] {
+    display: none !important;
+}
+
 /* 1. 全局背景：带噪点的纸张质感 */
 #ls2-main-view {
     background-color: #fcfcfc;
@@ -4331,6 +4380,16 @@ textarea#custom-css-input:focus {
     position: absolute; inset: 0; background: #f0f4f8; z-index: 5;
     padding: 40px 15px 15px 15px; display: flex; flex-direction: column; gap: 10px;
     border-left: 10px solid #e0e0e0; /* 内壁厚度 */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.18s ease, visibility 0s linear 0.18s;
+}
+.fridge-inner-art.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.18s ease;
 }
 .inner-close-btn { position: absolute; top: 15px; right: 15px; font-size: 10px; color: #999; cursor: pointer; }
 .inner-shelf { flex: 1; background: rgba(255,255,255,0.5); border-bottom: 4px solid #dce3e8; border-radius: 4px; display: flex; align-items: flex-end; padding: 5px; }
@@ -6093,6 +6152,8 @@ textarea#custom-css-input:focus {
    ========================================= */
 
 #mapApp {
+    position: relative;
+    overflow: hidden;
     background-color: #f7f7f7; /* 极浅的灰色背景 */
     font-family: 'Montserrat', 'PingFang SC', sans-serif;
     color: #111;
@@ -6101,13 +6162,31 @@ textarea#custom-css-input:focus {
 .map-view {
     position: absolute;
     inset: 0;
-    display: none;
+    display: flex !important;
     flex-direction: column;
-    animation: fadeIn 0.4s ease;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate3d(10px, 0, 0);
+    transition:
+        opacity 0.18s ease,
+        transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+        visibility 0s linear 0.24s;
+    animation: none;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: opacity, transform;
 }
 
 .map-view.active {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate3d(0, 0, 0);
+    transition:
+        opacity 0.18s ease,
+        transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 1;
 }
 
 /* 顶部导航 */
@@ -6909,4 +6988,358 @@ img.msg-sticker-img {
     background: #fff; 
     color: #2b2b2b; 
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); 
+}
+/* =========================================
+   [NEW] 人设研究所 (Persona Builder) 极致高级感重构版
+   ========================================= */
+
+/* 1. 主背景与头部重构 */
+#personaBuilderApp {
+    background-color: #f4f5f7 !important; /* 极淡雾灰白，凸显高级感 */
+}
+
+#personaBuilderApp .k-header {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(15px);
+    border-bottom: none !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+
+/* 2. 高定版药丸 Tab 切换栏 */
+.pb-tabs {
+    display: flex; 
+    gap: 8px !important; 
+    padding: 15px 20px 10px !important;
+    background: transparent !important;
+    border-bottom: none !important;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.pb-tabs::-webkit-scrollbar { display: none; }
+
+.pb-tab {
+    padding: 10px 18px !important; 
+    font-size: 13px !important; 
+    font-weight: 700 !important; 
+    color: #888 !important;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    cursor: pointer; 
+    white-space: nowrap; 
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important; 
+}
+/* 去除丑陋的下划线 */
+.pb-tab::after { display: none !important; } 
+
+.pb-tab.active { 
+    color: #fff !important; 
+    background: #111 !important; 
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+/* 联动生成按钮特殊高亮 */
+.pb-tab:last-child {
+    color: #ff7e67 !important;
+}
+.pb-tab.active:last-child {
+    background: linear-gradient(135deg, #ff7e67, #ff5e5e) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 20px rgba(255,126,103,0.3);
+}
+
+/* 3. 档案卡片 (高级留白与悬浮感) */
+.pb-card {
+    background: #ffffff !important; 
+    border-radius: 24px !important; 
+    padding: 24px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.03) !important;
+    border: 1px solid rgba(0,0,0,0.02) !important; 
+    margin-bottom: 20px !important;
+    transition: transform 0.3s ease;
+}
+.pb-card:hover { transform: translateY(-2px); }
+
+/* 4. 模块标题 (杂志风/档案风) */
+.pb-section-title {
+    font-size: 11px !important; 
+    font-weight: 800 !important; 
+    color: #999 !important; 
+    margin-bottom: 20px !important;
+    padding-left: 0 !important; 
+    border-left: none !important; 
+    line-height: 1.1 !important;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pb-section-title::before {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    background: #111;
+    border-radius: 50%;
+}
+
+/* 5. 高级细线分割 */
+.pb-divider {
+    border: none !important; 
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.05) 50%, transparent 50%);
+    background-size: 10px 1px;
+    margin: 25px 0 !important;
+}
+
+/* 6. 拟态表单区 */
+.pb-input-group { margin-bottom: 20px !important; }
+.pb-input-group label {
+    display: block; 
+    font-size: 12px !important; 
+    font-weight: 700 !important; 
+    color: #444 !important; 
+    margin-bottom: 10px !important;
+}
+.pb-input-group input, 
+.pb-input-group select, 
+.pb-input-group textarea {
+    width: 100%; 
+    background: #f7f8fa !important; 
+    border: 2px solid transparent !important; 
+    border-radius: 14px !important;
+    padding: 14px 16px !important; 
+    font-size: 14px !important; 
+    color: #111 !important; 
+    outline: none; 
+    font-family: inherit;
+    box-sizing: border-box; 
+    transition: all 0.3s ease !important;
+}
+.pb-input-group input::placeholder, 
+.pb-input-group textarea::placeholder {
+    color: #bbb;
+    font-weight: 400;
+}
+.pb-input-group textarea { 
+    resize: vertical; 
+    min-height: 80px !important; 
+    line-height: 1.6;
+}
+.pb-input-group input:focus, 
+.pb-input-group select:focus, 
+.pb-input-group textarea:focus {
+    background: #fff !important; 
+    border-color: #111 !important; 
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06) !important;
+}
+
+/* 7. 主操作按钮 */
+.pb-btn-generate {
+    width: 100%; 
+    background: #111 !important; 
+    color: #fff !important; 
+    font-weight: 800 !important; 
+    font-size: 14px !important;
+    letter-spacing: 1px;
+    padding: 16px !important; 
+    border-radius: 16px !important; 
+    border: none; 
+    cursor: pointer; 
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; 
+    margin-top: 10px !important;
+}
+.pb-btn-generate:active { 
+    transform: scale(0.96) !important; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+/* 8. 生成结果杂志风展示 */
+#pb-story-output {
+    background: #fff !important;
+    padding: 30px 24px !important;
+    font-family: 'Songti SC', 'Playfair Display', serif !important;
+    font-size: 15px !important;
+    line-height: 1.8 !important;
+    color: #222 !important;
+    border-left: 4px solid #111 !important;
+    border-radius: 0 24px 24px 0 !important;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.06) !important;
+}
+
+/* =========================================
+   [性能修复] 多页面闪屏 / 闪白 / 抖动优化补丁
+   ========================================= */
+
+/* 1. 全屏页/侧滑页/弹层统一开启更稳定的合成层 */
+.chat-view,
+.settings-view,
+.app-fullscreen-view,
+.chat-settings-page-view,
+.music-player-view,
+.offline-mode-view,
+.pay-sub-page,
+.bb-comment-modal,
+.bb-mob-modal,
+.modify-modal-view,
+.preset-editor-overlay,
+.offline-settings-modal,
+.map-view,
+.pet-moments-view {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    isolation: isolate;
+    contain: layout paint style;
+    will-change: transform, opacity;
+}
+
+/* 2. 把最容易闪的 transition: all 收窄为 transform / opacity */
+.chat-view,
+.settings-view {
+    transform: translate3d(0, 100%, 0) scale(0.985);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 0.2s ease,
+        visibility 0s linear 0.32s;
+}
+.chat-view.show,
+.settings-view.show {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+        transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 0.2s ease;
+}
+
+.app-fullscreen-view {
+    transform: translate3d(0, 100%, 0);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+        visibility 0s linear 0.32s;
+}
+.app-fullscreen-view.open {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.chat-settings-page-view {
+    transform: translate3d(100%, 0, 0);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+        visibility 0s linear 0.3s;
+}
+.chat-settings-page-view.show {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.music-player-view {
+    transform: translate3d(0, 100%, 0);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+        visibility 0s linear 0.3s;
+}
+.music-player-view.show {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.offline-mode-view {
+    transform: translate3d(0, 100%, 0);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+        visibility 0s linear 0.32s;
+}
+.offline-mode-view.show {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pay-sub-page {
+    transform: translate3d(100%, 0, 0);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+        visibility 0s linear 0.28s;
+}
+.pay-sub-page.show {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 3. 关闭高频内容淡入动画，减少切 tab / 切页时闪白 */
+.wc-tab-content,
+.map-view,
+.live-tab-content,
+.pet-setup-step,
+.pet-moments-view,
+.gc-view,
+.ls2-tab-content,
+.bb-comment-row,
+.offline-entry {
+    animation: none !important;
+}
+
+/* 4. 弹层和顶部区域去掉易导致重绘闪烁的毛玻璃 */
+.chat-header,
+.settings-header,
+.chat-settings-page-header,
+.offline-header,
+.map-header,
+.live-top-bar,
+.wc-tab-bar,
+.modal-overlay,
+.mind-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* 5. 遮罩层也只过渡必要属性，避免 all 带来的闪屏 */
+.modal-overlay,
+.mind-overlay {
+    transition: opacity 0.2s ease !important;
+}
+
+.modal-box,
+.mind-card-box {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform, opacity;
+}
+
+/* 6. 避免横向/纵向滑入页在边界处出现白边闪一下 */
+.chat-view,
+.settings-view,
+.app-fullscreen-view,
+.chat-settings-page-view,
+.music-player-view,
+.offline-mode-view,
+.pay-sub-page {
+    overflow: hidden;
 }
