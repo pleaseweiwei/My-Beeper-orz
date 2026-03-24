@@ -132,7 +132,7 @@ body {
 
 .time-block {
     font-family: 'Playfair Display', serif;
-    font-size: calc(86px * var(--font-scale));
+    font-size: calc(82px * var(--font-scale)); /* [修复] 缩小字号，防止0点时撑开布局 */
     line-height: 1;
     color: var(--theme-text-color); /* 应用变量 */
     letter-spacing: -3px;

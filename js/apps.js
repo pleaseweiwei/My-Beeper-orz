@@ -2757,40 +2757,51 @@ function typeWriterEffect(text, elementId, speed = 50) {
 //  【新增】数据持久化函数 (核心基础)
 // =========================================
 
-// [修改版] 异步加载好友数据 (支持迁移)
+// [修正版] 异步加载好友数据 (修复了身份隔离Bug)
 async function loadFriendsData() {
     try {
-        // 1. 尝试从 IndexedDB 获取
+        // 1. 优先从 IndexedDB 获取当前身份的专属数据
         let savedData = await IDB.get(scopedLSKey(FRIENDS_DATA_KEY));
 
-
-        // 2. 如果没找到，尝试从 LocalStorage 迁移
+        // 2. 如果没找到，再尝试从 LocalStorage 迁移 (同样先尝试专属Key)
         if (!savedData) {
-            const oldRaw = localStorage.getItem(FRIENDS_DATA_KEY);
+            // 优先尝试读取带作用域的旧localStorage数据
+            let oldRaw = localStorage.getItem(scopedLSKey(FRIENDS_DATA_KEY));
+            
+            // 如果连带作用域的都找不到，最后才尝试读取不带作用域的全局旧数据（用于兼容最老版本）
+            if (!oldRaw) {
+                oldRaw = localStorage.getItem(FRIENDS_DATA_KEY);
+            }
+
             if (oldRaw) {
-                console.log("正在将好友数据迁移至 IndexedDB...");
+                console.log("检测到旧的好友数据，正在迁移至当前身份的独立存储中...");
                 try {
                     savedData = JSON.parse(oldRaw);
-                    await IDB.set(FRIENDS_DATA_KEY, savedData);
-                } catch (e) { console.error(e); }
+                    // 【核心修复】将迁移的数据存入当前身份专属的Key下！
+                    await IDB.set(scopedLSKey(FRIENDS_DATA_KEY), savedData);
+                    
+                    // 【安全措施】迁移成功后，删除不带作用域的全局旧数据，防止再次污染
+                    localStorage.removeItem(FRIENDS_DATA_KEY); 
+                    console.log("迁移成功！");
+                } catch (e) { 
+                    console.error("好友数据迁移解析失败:", e);
+                }
             }
         }
 
-        // 3. 应用数据
-    if (savedData) {
-    friendsData = savedData;
-    normalizeAllFriendsMindFields();
-    normalizeAllFriendsSummaryFields();
-    saveFriendsData();
-    console.log("好友数据加载成功 (IndexedDB)");
-}
-
- else {
-            console.log("无好友数据，初始化默认...");
+        // 3. 应用数据 (这部分逻辑不变)
+        if (savedData && Object.keys(savedData).length > 0) {
+            friendsData = savedData;
+            normalizeAllFriendsMindFields();
+            normalizeAllFriendsSummaryFields();
+            // 注意：这里不再需要保存，因为加载和迁移时已经存好了
+            console.log("好友数据加载成功 (来源: IndexedDB)");
+        } else {
+            console.log("当前身份无好友数据，初始化默认...");
             resetDefaultFriendData();
         }
 
-        // 4. 刷新界面
+        // 4. 刷新界面 (这部分逻辑不变)
         restoreFriendListUI(); 
         rebuildContactsList();
 
@@ -2800,8 +2811,6 @@ async function loadFriendsData() {
     }
 }
 
-
-// 初始化默认好友 (当没有存档时用)
 // 初始化默认好友 (当没有存档时用) - [已更新适配V2结构]
 function resetDefaultFriendData() {
     friendsData = {
@@ -2822,11 +2831,7 @@ async function saveFriendsData() {
         console.error("保存好友数据失败:", e);
     }
 }
-// =========================================
-//  【修改后】聊天详细设置独立页面逻辑
-// =========================================
 
-// 1. 打开设置页面并填充数据
 // =========================================
 //  【重写后】打开聊天详细设置页面 (适配 V2 新界面)
 // =========================================
