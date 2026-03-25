@@ -364,8 +364,9 @@ async function migrateAllChatHistory() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     await migrateAllChatHistory();
-initPersonaSystem();
-applyPersonaToUI();
+    // 【修复】加上 await 防止异步竞态导致 currentPersonaId 没来得及赋值而读取出空角色列表
+    await initPersonaSystem();
+    applyPersonaToUI();
 
     // === 自测代码 (Self Test) ===
     setTimeout(async () => {
@@ -407,9 +408,9 @@ applyPersonaToUI();
     
 
 
- // 【新增】页面加载时，从本地存储读取好友数据
-    loadFriendsData();
-       // 新增：加载朋友圈数据
+    // 【修复】加上 await 确保后续红点更新等逻辑能读到最新鲜的数据
+    await loadFriendsData();
+    // 新增：加载朋友圈数据
     loadMomentsFeed();
 
     // 【新增】初始化全局红点 UI
