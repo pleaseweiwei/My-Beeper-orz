@@ -687,11 +687,17 @@
                             <option value="gemini">Google Gemini</option>
                             <option value="claude">Anthropic Claude</option>
                             <option value="deepseek">DeepSeek</option>
+                            <option value="minimax">Minimax (国内)</option>
+                            <option value="minimax_global">Minimax (海外)</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>API Key</label>
                         <input type="password" id="apiKeyInput" placeholder="请输入你的 API Key">
+                    </div>
+                    <div class="form-group" id="api-groupid-group" style="display:none;">
+                        <label>Group ID (Minimax 需要)</label>
+                        <input type="text" id="apiGroupIdInput" placeholder="请输入 Group ID">
                     </div>
                     <div class="form-group" id="api-endpoint-group">
                         <label>API Base URL</label>
@@ -709,6 +715,32 @@
                         <label>Temperature: <span id="temperature-value">0.7</span></label>
                         <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7">
                     </div>
+
+                    <hr class="settings-divider">
+
+                                        <div class="settings-section-title" style="margin-bottom: 10px;">语音合成 API (TTS)</div>
+                    <!-- 新增：专属于MiniMax语音的 API 鉴权配置 -->
+                    <div class="form-group" style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom: 15px;">
+                        <div style="font-size:11px; color:#888; margin-bottom:10px;">
+                            <i class="fas fa-info-circle"></i> 语音接口需使用 MiniMax 开放平台专属凭证。
+                        </div>
+                        <label>语音 API Key</label>
+                        <input type="password" id="voiceApiKeyInput" placeholder="输入 MiniMax 语音 API Key" style="margin-bottom: 10px;">
+                        
+                        <label>语音 Group ID</label>
+                        <input type="text" id="voiceGroupIdInput" placeholder="输入 MiniMax 团队 Group ID">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Voice Model</label>
+                        <div class="input-with-button">
+                            <select id="voice-model-select">
+                                <option value="speech-01-turbo">speech-01-turbo</option>
+                            </select>
+                            <button id="fetch-voice-models-btn" onclick="fetchAndPopulateVoiceModels()" type="button" title="拉取语音模型"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+
 
                     <hr class="settings-divider">
 
@@ -1078,6 +1110,32 @@
             </div>
         </div>
 
+
+        <hr class="settings-divider">
+
+        <!-- 4. 个性化语音设置 (Voice) -->
+        <div class="settings-section-title">个性化语音 (Voice TTS)</div>
+        <div class="form-group">
+            <label>音色绑定 (Voice ID)</label>
+            <input type="text" id="cs-voice-id" placeholder="例如: male-qs01, female-shaonv">
+            <span class="form-text" style="display:block;">为该角色指定 Minimax 音色 ID。</span>
+        </div>
+        <div class="form-group">
+            <label>语速调节 (Speed): <span id="cs-voice-speed-val">1.0</span>x</label>
+            <input type="range" id="cs-voice-speed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('cs-voice-speed-val').innerText=this.value">
+        </div>
+        <div class="form-group">
+            <label>语言/方言增强 (Language Boost)</label>
+            <select id="cs-voice-lang">
+                <option value="">自动判断 (Auto)</option>
+                <option value="zh">中文</option>
+                <option value="en">英文</option>
+                <option value="jp">日语</option>
+                <option value="ko">韩语</option>
+                <option value="yue">粤语</option>
+            
+            </select>
+        </div>
 
         <!-- 保存按钮，放在最底部 -->
         <button class="btn-save" onclick="saveChatSettings()" style="margin-top: 30px; margin-bottom: 30px;">保存配置</button>
@@ -2529,11 +2587,14 @@
     </div>
 </div>
 
-            <!-- 第一排右边：天气 -->
+                       <!-- 第一排右边：天气 -->
             <div class="status-tag">
                 <i class="fas fa-cloud-sun"></i>
-                <b id="mind-weather-val">晴</b>
+                <div class="mind-inline-marquee">
+                    <b id="mind-weather-val">晴</b>
+                </div>
             </div>
+
 
             <!-- 第二排：动作 (加了 full-row 样式，让它独占一行) -->
             <div class="status-tag full-row">
@@ -2560,10 +2621,30 @@
                 <div class="bubble-label">💭 碎碎念</div>
                 <div class="bubble-content" id="mind-murmur-text">...</div>
             </div>
-            <div class="thought-bubble hidden-thought">
-                <div class="bubble-label">🔒 小心思 (Secret)</div>
-                <div class="bubble-content" id="mind-hidden-text">...</div>
+            <!-- 小心思与坏心思 翻转卡片 -->
+            <div class="mind-flip-container" onclick="this.classList.toggle('flipped')" style="perspective: 1000px; cursor: pointer;">
+                <div class="mind-flipper" style="display: grid; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d;">
+                    <!-- 正面：小心思 -->
+                    <div class="mind-front thought-bubble hidden-thought" style="grid-area: 1 / 1; backface-visibility: hidden; margin: 0;">
+                        <div class="bubble-label">🔒 小心思 (Secret)</div>
+                        <div class="bubble-content" id="mind-hidden-text">...</div>
+                    </div>
+                    <!-- 反面：坏心思 -->
+                    <div class="mind-back thought-bubble" style="grid-area: 1 / 1; backface-visibility: hidden; transform: rotateX(180deg); margin: 0; background: #fff5f8; border: 1px dashed #ffb3c6;">
+                        <div class="bubble-label" style="color: #d63384;">😈 坏心思 (NSFW Secret)</div>
+                        <div class="bubble-content" id="mind-dark-hidden-text" style="color: #d63384; font-weight: 500;">...</div>
+                    </div>
+                </div>
             </div>
+            <style>
+                .mind-flip-container.flipped .mind-flipper {
+                    transform: rotateX(180deg);
+                }
+                /* 防止点击事件向上传递导致外层心声卡关闭 */
+                .mind-flip-container {
+                    /* 我们需要阻止点击时传播到 mind-card-overlay */
+                }
+            </style>
         </div>
         
 

@@ -15,28 +15,96 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 音频播放结束自动下一首
     if(audioEl) {
-        audioEl.onended = () => playNextSong();
+        audioEl.onended = () => {
+            const currentTrack = musicPlaylist[currentSongIndex];
+            if (currentTrack && currentTrack.isKeepAlive) {
+                audioEl.currentTime = 0;
+                audioEl.play();
+            } else {
+                playNextSong();
+            }
+        };
+        
+        // 防系统杀进程的“重置 Hack”
+        audioEl.addEventListener("timeupdate", () => {
+            const currentTrack = musicPlaylist[currentSongIndex];
+            if (currentTrack && currentTrack.isKeepAlive && audioEl.currentTime > 600) {
+                audioEl.currentTime = 0; // 强制拉回0秒
+                if (audioEl.paused) audioEl.play();
+            }
+        });
     }
+
+    initKeepAliveUnlocker();
 });
+
+// 交互式静默激活 (Bypass Autoplay)
+function initKeepAliveUnlocker() {
+    let strongPlayer = document.getElementById('strong-keep-alive-player');
+    if (!strongPlayer) {
+        strongPlayer = document.createElement('audio');
+        strongPlayer.id = 'strong-keep-alive-player';
+        strongPlayer.src = 'https://files.catbox.moe/7jn7bp.mp3';
+        strongPlayer.loop = true;
+        strongPlayer.style.display = 'none';
+        document.body.appendChild(strongPlayer);
+    }
+
+    const unlocker = () => {
+        if (strongPlayer) {
+            strongPlayer.volume = 0;
+            strongPlayer.play().catch(e => console.log('Keep-alive unlock failed', e));
+        }
+        document.removeEventListener('click', unlocker);
+        document.removeEventListener('touchstart', unlocker);
+    };
+    document.addEventListener('click', unlocker);
+    document.addEventListener('touchstart', unlocker);
+}
 
 // 加载数据
 async function loadMusicData() {
     // 尝试从 IDB (大容量) 获取
     const data = await IDB.get(MUSIC_DATA_KEY);
     if (data && Array.isArray(data)) {
-        musicPlaylist = data;
+        musicPlaylist = data.filter(t => !t.isKeepAlive);
     } else {
         // 默认歌曲
         musicPlaylist = [
             { name: "Lover", artist: "Taylor Swift", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", type: "link" }
         ];
     }
+    
+    // 幽灵音轨”深度植入
+    musicPlaylist.unshift({
+        name: "【后台保活模式】(静音)",
+        artist: "系统",
+        src: "https://files.catbox.moe/7jn7bp.mp3",
+        type: "link",
+        isKeepAlive: true,
+        lyrics: "[00:00.00]⚠️ 后台保活运行中...\n[00:02.00]此音频无声\n[00:05.00]用于防止API请求中断。"
+    });
+    
     renderPlaylist();
 }
 
 async function saveMusicData() {
-    await IDB.set(MUSIC_DATA_KEY, musicPlaylist);
+    const toSave = musicPlaylist.filter(t => !t.isKeepAlive);
+    await IDB.set(MUSIC_DATA_KEY, toSave);
 }
+
+// 提供给 AI 的上下文接口（智能屏蔽）
+window.getMusicContextForAI = function() {
+    const currentTrack = musicPlaylist[currentSongIndex];
+    if (currentTrack && currentTrack.isKeepAlive) {
+        return "";
+    }
+    return currentTrack ? `正在播放：${currentTrack.name} - ${currentTrack.artist}` : "";
+};
+
+window.getPlaylistForAI = function() {
+    return musicPlaylist.filter(t => !t.isKeepAlive);
+};
 
 // 2. 界面控制
 window.openMusicPlayer = function() {
@@ -135,14 +203,34 @@ window.toggleMusicPlay = function() {
 }
 
 window.playNextSong = function() {
+    if (musicPlaylist.length === 0) return;
     let next = currentSongIndex + 1;
     if(next >= musicPlaylist.length) next = 0;
+    
+    // 跳过逻辑 (Skip Logic)：跳过保活音频
+    let originalNext = next;
+    while(musicPlaylist[next] && musicPlaylist[next].isKeepAlive) {
+        next++;
+        if(next >= musicPlaylist.length) next = 0;
+        if(next === originalNext) break;
+    }
+    
     playMusic(next);
 }
 
 window.playPrevSong = function() {
+    if (musicPlaylist.length === 0) return;
     let prev = currentSongIndex - 1;
     if(prev < 0) prev = musicPlaylist.length - 1;
+    
+    // 跳过逻辑 (Skip Logic)：跳过保活音频
+    let originalPrev = prev;
+    while(musicPlaylist[prev] && musicPlaylist[prev].isKeepAlive) {
+        prev--;
+        if(prev < 0) prev = musicPlaylist.length - 1;
+        if(prev === originalPrev) break;
+    }
+    
     playMusic(prev);
 }
 

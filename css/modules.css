@@ -1329,12 +1329,13 @@ textarea#custom-css-input:focus {
 #triggerAiReply:active {
     transform: scale(0.9);
 }
-/* 处理中(等待AI回复)的旋转发光状态 */
+
 #triggerAiReply.processing {
     color: #ffd700 !important;
     text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-    animation: fa-spin 2s infinite linear;
-    pointer-events: none; /* 防止重复点击 */
+    /* 取消默认的自转，使用闪烁提示可以点击停止 */
+    animation: pulse-opacity 1.5s infinite ease-in-out;
+    /* 去掉了 pointer-events: none; 允许点击中断 */
 }
 
 
@@ -3304,11 +3305,12 @@ textarea#custom-css-input:focus {
 
 /* 当 API 运行时，给发送按钮添加这个类 */
 .offline-send-btn.sending {
-    pointer-events: none; /* 防止重复点击 */
     background: #333;
     color: #fff;
     animation: pulse-rotate 1.2s infinite ease-in-out;
+    /* 去掉了 pointer-events: none; 允许点击中断 */
 }
+
 .offline-send-btn.sending i {
     /* 图标变成加载圈圈，或者保持箭头旋转 */
     animation: none; 
@@ -3437,6 +3439,58 @@ textarea#custom-css-input:focus {
     border-color: #333;
     box-shadow: 0 0 0 3px rgba(0,0,0,.06);
     background: #fff;
+}
+
+/* AI 语音播放条本体（融合气泡版） */
+.ai-voice-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 100px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-voice-bar:active {
+    opacity: 0.7;
+}
+
+
+.ai-voice-bar:active {
+    transform: scale(0.97);
+    background: #fafafa;
+}
+
+/* 播放按钮图标 */
+.ai-voice-bar .play-icon {
+    font-size: 20px;
+    color: #ff7e67; /* 使用主题高亮色 */
+    transition: transform 0.2s;
+}
+
+.ai-voice-bar:hover .play-icon {
+    transform: scale(1.1);
+}
+
+/* 时长文字 */
+.ai-voice-bar .msg-voice-duration {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: #333;
+    font-size: 13px;
+    margin-left: auto; /* 推到最右边 */
+}
+
+/* 正在播放时的动态波形颜色适配 */
+.ai-voice-bar .waveform-container .wave-bar {
+    background: #ff7e67 !important; 
+    border-radius: 2px;
+}
+
+/* 加载中的转圈图标颜色 */
+.ai-voice-bar .loading-spinner {
+    color: #ff7e67;
+    font-size: 16px;
 }
 
 
@@ -6154,8 +6208,6 @@ textarea#custom-css-input:focus {
    ========================================= */
 
 #mapApp {
-    position: relative;
-    overflow: hidden;
     background-color: #f7f7f7; /* 极浅的灰色背景 */
     font-family: 'Montserrat', 'PingFang SC', sans-serif;
     color: #111;

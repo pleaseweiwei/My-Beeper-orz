@@ -10,17 +10,33 @@ let currentEditingLocationId = null; // 正在编辑的地点 ID
 
 // --- 2. App 入口与主流程控制 ---
 window.openMapApp = function() {
-    const app = document.getElementById('mapApp');
-    if (app) {
+    try {
+        console.log("正在打开地图...");
+        const app = document.getElementById('mapApp');
+        if (!app) {
+            alert("找不到地图界面容器 #mapApp");
+            return;
+        }
+        
         app.classList.add('open');
+        console.log("界面已展开");
+        
         loadMapsData();
+        console.log("地图数据加载完成: ", mapsData);
+        
         const mapIds = Object.keys(mapsData);
         if (mapIds.length > 0) {
+            console.log("切换到现有地图: ", mapIds[0]);
             switchMapView(mapIds[0]);
         } else {
+            console.log("没有地图，打开设置界面");
             openMapSetup(true); // 传入 true 表示是新建
         }
+        
         renderMapList();
+    } catch (e) {
+        console.error("打开地图失败: ", e);
+        alert("打开地图失败，错误信息:\n" + e.message + "\n\n如果您看到此提示，请截图反馈。");
     }
 };
 
@@ -124,8 +140,9 @@ window.openMapSetup = function(isNew = false) {
     document.getElementById('map-setup-name').value = isNew ? '' : (mapsData[currentMapId]?.name || '');
     document.getElementById('map-setup-loc-count').value = '5';
 
-    // 现在 populateChecklist 函数存在了，可以正常调用
-    populateChecklist('map-setup-worldbooks', worldBooks.map(wb => ({ id: wb.id, name: wb.title })));
+    // 【修复点 1】：安全获取 worldBooks 变量，防止用户未创建世界书时报错卡死白屏
+    const wbList = (typeof worldBooks !== 'undefined' && Array.isArray(worldBooks)) ? worldBooks : [];
+    populateChecklist('map-setup-worldbooks', wbList.map(wb => ({ id: wb.id, name: wb.title })));
     populateChecklist('map-setup-characters', Object.values(friendsData).map(f => ({ id: f.realName, name: f.remark || f.realName, avatar: f.avatar })));
 };
 
@@ -154,8 +171,10 @@ window.confirmGenerateMap = async function() {
         const selectedWbCheckboxes = document.querySelectorAll('#map-setup-worldbooks input:checked');
         const selectedCharCheckboxes = document.querySelectorAll('#map-setup-characters input:checked');
 
+        // 【修复点 2】：同样的防止遍历世界书时因未定义而崩溃
+        const wbList = (typeof worldBooks !== 'undefined' && Array.isArray(worldBooks)) ? worldBooks : [];
         const worldbookContents = Array.from(selectedWbCheckboxes).map(cb => {
-            const wb = worldBooks.find(w => w.id === cb.value);
+            const wb = wbList.find(w => w.id === cb.value);
             if (!wb) return '';
             const entriesText = (wb.entries || [])
                 .filter(entry => entry.enabled !== false)
@@ -173,6 +192,7 @@ window.confirmGenerateMap = async function() {
         }).filter(Boolean).join('\n\n---\n\n');
 
         // --- 2. 构建 Prompt ---
+        // (省略中间 Prompt 内容，保持与你的一致...)
         const systemPrompt = `You are an expert world-building assistant. You MUST respond in a valid JSON array format, and nothing else.`;
         const userPrompt = `
         Please generate ${locCount} significant locations for a map named "${mapName}".
@@ -199,6 +219,7 @@ window.confirmGenerateMap = async function() {
           }
         ]
         `.trim();
+
 
         // --- 3. 独立 API 调用 ---
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');

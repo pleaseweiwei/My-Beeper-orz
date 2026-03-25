@@ -41,6 +41,7 @@
 ├─ service-worker.js         # PWA / 缓存逻辑
 ├─ icon.png                  # 应用图标
 ├─ AI_CODEMAP.md             # 当前这份 AI 代码地图
+├─ node_modules/             # Node依赖目录（内含如 Puppeteer 等本地工具），由于是原生前端项目，页面运行时无需打包或加载此目录
 ├─ css/
 │  ├─ style.css              # 主样式
 │  ├─ animations.css         # 动画样式
@@ -58,7 +59,8 @@
    ├─ app_lovespace.js       # 情侣空间模块
    ├─ app_arcade.js          # 双人游戏模块
    ├─ app_map.js             # 地图模块
-   └─ app_live.js            # LIVE 社交模块
+   ├─ app_live.js            # LIVE 社交模块
+   └─ app_persona.js         # User 人设生成系统模块
 ```
 
 ---
@@ -81,6 +83,7 @@
 <script src="js/app_arcade.js"></script>
 <script src="js/app_map.js"></script>
 <script src="js/app_live.js"></script>
+<script src="js/app_persona.js"></script>
 ```
 
 ### 结论
@@ -405,6 +408,24 @@
 
 ---
 
+### `js/app_persona.js`
+**作用：User 人设生成系统 (无 Tab 滚动填表 + 灵动魔法动画版)。**
+
+已确认功能：
+- 人设档案填表 (55个细分维度)
+- AI 一键扩写生成设定
+- 头像上传与预览
+- 人设档案导入导出 (TXT)
+- 全局身份切换和加载同步
+
+**什么时候看：**
+- 改人设档案表单字段 (`PB_KEYS`)
+- 改 AI 自动生成的 prompt 格式
+- 改头像预览或人设弹窗逻辑
+- 改人设导出功能
+
+---
+
 ## 5. 改功能时先看哪个文件
 
 ---
@@ -633,17 +654,19 @@
 
 ---
 
-### P. 身份系统 / Persona
+### P. 身份系统与人设生成器 / Persona
 先看：
 - `index.html`
-- `js/apps.js`
+- `js/apps.js` (身份系统核心逻辑)
+- `js/app_persona.js` (人设填表与 AI 生成)
 
 关键词建议搜索：
 - `identity-modal`
+- `personaBuilderApp`
 - `initPersonaSystem`
-- `renderIdentitySelect`
-- `fillIdentityForm`
 - `applyPersonaToUI`
+- `generatePersonaByAI`
+- `PB_KEYS`
 
 ---
 
@@ -669,6 +692,8 @@
 | Summary / 记忆中枢 | `summaryPageView` |
 | Arcade | `gameApp` |
 | Pay | `payApp` |
+| User 人设生成器 | `personaBuilderApp` |
+| 表情包管理中枢 | `stickerManagerPage` |
 
 ---
 
@@ -729,6 +754,7 @@
 - 属于宠物 → `js/app_pet.js`
 - 属于钱包 → `js/app_pay.js`
 - 属于小游戏 → `js/app_arcade.js`
+- 属于用户人设填表/生成 → `js/app_persona.js`
 
 如果需要新页面：
 - 容器写到 `index.html`
@@ -772,6 +798,7 @@
    - js/app_arcade.js
    - js/app_map.js
    - js/app_live.js
+   - js/app_persona.js
 6. 修改前先判断功能归属到哪个文件。
 7. 涉及界面时同时检查 index.html 和对应 JS 文件。
 8. 不要随便调整 script 加载顺序。

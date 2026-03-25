@@ -94,6 +94,7 @@ function ensureFriendMindFields(friend, friendId = 'AI') {
         weather: friend.mindState.weather || "晴",
         murmur: friend.mindState.murmur || "我还没想好要说什么。不过我在看着你。也在等你继续靠近一点。",
         hiddenThought: friend.mindState.hiddenThought || "现在先不告诉你。再多聊几句，也许我会慢慢松口。",
+        darkThought: friend.mindState.darkThought || "如果能把你完全困在这里就好了，只能看着我一个人...",
         kaomoji: friend.mindState.kaomoji || "( ˙W˙ )",
         bgm: friend.mindState.bgm || "No BGM"
     };
@@ -140,7 +141,7 @@ function normalizeAllFriendsMindFields() {
 }
 
 function applyMindMarqueeIfOverflow() {
-    const ids = ['mind-location-val', 'mind-action-val', 'now-playing-bgm'];
+    const ids = ['mind-location-val', 'mind-action-val', 'now-playing-bgm', 'mind-weather-val'];
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (!el || !el.parentElement) return;
@@ -201,6 +202,7 @@ function refreshMindCardUI(friendId, useTyping = false) {
     const kaoEl = document.getElementById('mind-kaomoji-display');
     const murEl = document.getElementById('mind-murmur-text');
     const secEl = document.getElementById('mind-hidden-text');
+    const darkEl = document.getElementById('mind-dark-hidden-text');
 
     if (locEl) locEl.innerText = state.location || "未知地点";
     if (actEl) actEl.innerText = state.action || "正在发呆";
@@ -213,9 +215,13 @@ function refreshMindCardUI(friendId, useTyping = false) {
         setTimeout(() => {
             typeWriterEffect(state.hiddenThought || "...", 'mind-hidden-text', 18);
         }, 150);
+        setTimeout(() => {
+            typeWriterEffect(state.darkThought || "...", 'mind-dark-hidden-text', 18);
+        }, 300);
     } else {
         if (murEl) murEl.innerText = state.murmur || "...";
         if (secEl) secEl.innerText = state.hiddenThought || "...";
+        if (darkEl) darkEl.innerText = state.darkThought || "...";
     }
 
     applyMindMarqueeIfOverflow();
@@ -251,6 +257,7 @@ function parseAndApplyMindStateBlock(friendId, statusBlock) {
     friend.mindState.bgm = getVal('BGM') || friend.mindState.bgm;
     friend.mindState.murmur = getVal('Murmur') || friend.mindState.murmur;
     friend.mindState.hiddenThought = getVal('Secret') || friend.mindState.hiddenThought;
+    friend.mindState.darkThought = getVal('DarkSecret') || friend.mindState.darkThought;
     friend.mindState.kaomoji = getVal('Kaomoji') || friend.mindState.kaomoji;
 
     saveFriendsData();
@@ -517,10 +524,23 @@ applyPersonaToUI();
 
 
         
-                // 2. AI 回复图标逻辑：点击后触发 AI (智能读取上下文)
-        const aiBtn = document.getElementById('triggerAiReply');
+              const aiBtn = document.getElementById('triggerAiReply');
         if (aiBtn) {
             aiBtn.addEventListener('click', async () => {
+                // === 【新增】中止生成判断 ===
+                if (aiBtn.classList.contains('processing')) {
+                    if (currentAiController) {
+                        currentAiController.abort();
+                        currentAiController = null;
+                        if(typeof showToast === 'function') showToast("已停止生成");
+                    }
+                    aiBtn.classList.remove('processing');
+                    aiBtn.classList.remove('fa-stop-circle');
+                    aiBtn.classList.add('fa-star');
+                    aiBtn.style.color = ''; // 恢复原来的颜色
+                    return; // 阻止后续逻辑
+                }
+
                 const history = await loadChatHistory(currentChatId);
                 let contextMessages = [];
 
@@ -548,12 +568,18 @@ applyPersonaToUI();
                 // 发送合并后的消息
                 if (contextMessages.length > 0) {
                     aiBtn.classList.add('processing'); // 让星星变成黄色并开始旋转
+                    aiBtn.classList.remove('fa-star');
+                    aiBtn.classList.add('fa-stop-circle');
+                    aiBtn.style.color = '#ff4444'; // 显眼的红色表示停止
                     
                     const combinedMessage = contextMessages.join('\n');
                     
                     // 等待发送完成后，必定会移除旋转状态，彻底解决卡死问题
                     sendMessageToAI(combinedMessage).finally(() => {
                         aiBtn.classList.remove('processing');
+                        aiBtn.classList.remove('fa-stop-circle');
+                        aiBtn.classList.add('fa-star');
+                        aiBtn.style.color = ''; // 恢复原来的颜色
                     });
                 } else {
                     alert("没有新的用户消息需要回复，或请先发送一条消息。");
@@ -1061,7 +1087,16 @@ function initSettingsAndPresets() {
         const settings = JSON.parse(savedSettingsJSON);
         providerSelect.value = settings.provider || 'custom';
         document.getElementById('apiKeyInput').value = settings.apiKey || '';
+        document.getElementById('apiGroupIdInput').value = settings.groupId || '';
         document.getElementById('apiEndpointInput').value = settings.endpoint || '';
+                // 新增读取语音配置 ↓
+        if (document.getElementById('voiceApiKeyInput')) {
+            document.getElementById('voiceApiKeyInput').value = settings.voiceApiKey || '';
+        }
+        if (document.getElementById('voiceGroupIdInput')) {
+            document.getElementById('voiceGroupIdInput').value = settings.voiceGroupId || '';
+        }
+
         document.getElementById('temperature-slider').value = settings.temperature || 0.7;
         document.getElementById('temperature-value').textContent = settings.temperature || 0.7;
         
@@ -1075,6 +1110,14 @@ function initSettingsAndPresets() {
             for(let i=0; i<modelSelect.options.length; i++){ if(modelSelect.options[i].value === settings.model) exists = true; }
             if(!exists) { const opt = document.createElement('option'); opt.value = settings.model; opt.text = settings.model; modelSelect.appendChild(opt); }
             modelSelect.value = settings.model;
+        }
+
+        const voiceModelSelect = document.getElementById('voice-model-select');
+        if (voiceModelSelect && settings.voiceModel) {
+            let exists = false;
+            for(let i=0; i<voiceModelSelect.options.length; i++){ if(voiceModelSelect.options[i].value === settings.voiceModel) exists = true; }
+            if(!exists) { const opt = document.createElement('option'); opt.value = settings.voiceModel; opt.text = settings.voiceModel; voiceModelSelect.appendChild(opt); }
+            voiceModelSelect.value = settings.voiceModel;
         }
     } else { updateUIForProvider('custom'); }
     loadPresetsToUI();
@@ -1104,10 +1147,22 @@ function initOfflineSystem() {
 
 function updateUIForProvider(provider) {
     const endpointGroup = document.getElementById('api-endpoint-group');
+    const groupIdGroup = document.getElementById('api-groupid-group');
     const modelSelect = document.getElementById('model-select');
-    const shouldShowEndpoint = provider === 'custom' || provider === 'deepseek';
+    
+    // Minimax domestic vs global endpoints
+    if (provider === 'minimax') {
+        document.getElementById('apiEndpointInput').value = 'https://api.minimax.chat';
+    } else if (provider === 'minimax_global') {
+        document.getElementById('apiEndpointInput').value = 'https://api.minimaxi.com';
+    }
+    
+    const shouldShowEndpoint = provider === 'custom' || provider === 'deepseek' || provider.startsWith('minimax');
+    const shouldShowGroupId = provider.startsWith('minimax');
 
     setSoftDisplay(endpointGroup, shouldShowEndpoint, 'block');
+    setSoftDisplay(groupIdGroup, shouldShowGroupId, 'block');
+    
     if (provider === 'deepseek' && !document.getElementById('apiEndpointInput').value) {
         document.getElementById('apiEndpointInput').value = 'https://api.deepseek.com';
     }
@@ -1122,8 +1177,13 @@ function saveAllSettings() {
     const settings = {
         provider: document.getElementById('api-provider-select').value,
         apiKey: document.getElementById('apiKeyInput').value,
+        groupId: document.getElementById('apiGroupIdInput').value,
         endpoint: document.getElementById('apiEndpointInput').value,
-       model: document.getElementById('model-select').value,
+         voiceApiKey: document.getElementById('voiceApiKeyInput') ? document.getElementById('voiceApiKeyInput').value : '',
+        voiceGroupId: document.getElementById('voiceGroupIdInput') ? document.getElementById('voiceGroupIdInput').value : '',
+        
+        model: document.getElementById('model-select').value,
+        voiceModel: document.getElementById('voice-model-select') ? document.getElementById('voice-model-select').value : '',
         temperature: document.getElementById('temperature-slider').value,
         enableMetaDelete: document.getElementById('enable-meta-delete-toggle') ? document.getElementById('enable-meta-delete-toggle').checked : false
     };
@@ -1138,6 +1198,7 @@ function saveNewPreset() {
     if(!name) return;
     const currentSettings = {
         provider: document.getElementById('api-provider-select').value,
+        groupId: document.getElementById('apiGroupIdInput').value,
          endpoint: document.getElementById('apiEndpointInput').value,
         model: document.getElementById('model-select').value,
         temperature: document.getElementById('temperature-slider').value,
@@ -1186,14 +1247,24 @@ function applySelectedPreset(e) {
 async function fetchAndPopulateModels() {
     const apiKey = document.getElementById('apiKeyInput').value;
     let endpoint = document.getElementById('apiEndpointInput').value;
+    const provider = document.getElementById('api-provider-select').value;
+    const groupId = document.getElementById('apiGroupIdInput').value;
     const btn = document.getElementById('fetch-models-btn');
+    
     if (!endpoint) { alert('请先输入 API Base URL'); return; }
     endpoint = endpoint.replace(/\/$/, '');
-    const fetchUrl = endpoint.endsWith('/v1') ? `${endpoint}/models` : `${endpoint}/v1/models`;
+    let fetchUrl = endpoint.endsWith('/v1') ? `${endpoint}/models` : `${endpoint}/v1/models`;
+
+    if (provider.startsWith('minimax') && groupId) {
+        fetchUrl += `?GroupId=${groupId}`;
+    }
 
     btn.querySelector('i').classList.add('fa-spin');
     try {
-        const response = await fetch(fetchUrl, { method: 'GET', headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' } });
+        const headers = { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+        if (provider.startsWith('minimax') && groupId) headers['GroupId'] = groupId;
+        
+        const response = await fetch(fetchUrl, { method: 'GET', headers: headers });
         if (!response.ok) throw new Error('Network error');
         const data = await response.json();
         const modelSelect = document.getElementById('model-select');
@@ -1203,6 +1274,51 @@ async function fetchAndPopulateModels() {
             alert(`成功加载 ${data.data.length} 个模型`);
         }
     } catch (error) { alert('获取模型失败: ' + error.message); } 
+    finally { btn.querySelector('i').classList.remove('fa-spin'); }
+}
+
+async function fetchAndPopulateVoiceModels() {
+    // 【修改点】：优先获取专门的语音API Key和GroupID，如果没有填，才降级使用聊天的
+    const apiKey = document.getElementById('voiceApiKeyInput').value || document.getElementById('apiKeyInput').value;
+    const groupId = document.getElementById('voiceGroupIdInput').value || document.getElementById('apiGroupIdInput').value;
+    let endpoint = document.getElementById('apiEndpointInput').value;
+    
+    if (!endpoint) { alert('请先输入 API Base URL'); return; }
+    endpoint = endpoint.replace(/\/$/, '');
+    let fetchUrl = endpoint.endsWith('/v1') ? `${endpoint}/models` : `${endpoint}/v1/models`;
+
+    if (provider.startsWith('minimax') && groupId) {
+        fetchUrl += `?GroupId=${groupId}`;
+    }
+
+    btn.querySelector('i').classList.add('fa-spin');
+    try {
+        const headers = { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+        if (provider.startsWith('minimax') && groupId) headers['GroupId'] = groupId;
+        
+        const response = await fetch(fetchUrl, { method: 'GET', headers: headers });
+        if (!response.ok) throw new Error('Network error');
+        const data = await response.json();
+        const voiceModelSelect = document.getElementById('voice-model-select');
+        voiceModelSelect.innerHTML = '';
+        if (data.data && Array.isArray(data.data)) {
+            // Filter models that are likely voice models
+            const voiceModels = data.data.filter(item => 
+                item.id.toLowerCase().includes('speech') || 
+                item.id.toLowerCase().includes('audio') || 
+                item.id.toLowerCase().includes('voice')
+            );
+            const modelsToShow = voiceModels.length > 0 ? voiceModels : data.data;
+
+            modelsToShow.forEach(item => { 
+                const opt = document.createElement('option'); 
+                opt.value = item.id; 
+                opt.text = item.id; 
+                voiceModelSelect.appendChild(opt); 
+            });
+            alert(`成功加载 ${modelsToShow.length} 个语音模型`);
+        }
+    } catch (error) { alert('获取语音模型失败: ' + error.message); } 
     finally { btn.querySelector('i').classList.remove('fa-spin'); }
 }
 
@@ -1649,6 +1765,7 @@ window.confirmAddFriend = function() {
         weather: "晴",
         murmur: "我刚出现。先看看你会怎么和我说第一句话。也许接下来会变得有意思。",
         hiddenThought: "先保留一点距离。别急，让我再确认一下，你是不是值得我靠近。",
+        darkThought: "想要完全占有你，不让任何人碰触，看着你在我面前哭泣的样子...",
         kaomoji: "( ˙W˙ )",
         bgm: "No BGM"
     },
@@ -1751,6 +1868,11 @@ function formatChatPreviewText(text, isOffline = false) {
 
 // === 升级版 AI 发送逻辑 (兼容群聊 + 支持翻译模式) ===
 async function sendMessageToAI(userMessage) {
+    if (currentAiController) {
+        currentAiController.abort();
+    }
+    currentAiController = new AbortController();
+
     const chatMessages = document.getElementById('chatMessages');
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
     
@@ -1977,13 +2099,14 @@ Weather: (current weather)
 BGM: (one fitting bgm title, format: Title - Artist/Style)
 Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
 Secret: (3 to 4 longer sentences, first-person self-talk, hidden deeper thoughts, in character voice)
+DarkSecret: (3 to 4 longer sentences, first-person self-talk, highly NSFW/yandere/obsessive/possessive dark hidden thoughts about the user, in character voice)
 Kaomoji: (one matching kaomoji)
 [STATUS_END]
 Rules:
 - AffectionDelta must be one of: -2, -1, 0, 1, 2
 - Do not explain the status block
-- Murmur and Secret must be character self-talk, not narration
-- Murmur and Secret must each contain 3 to 4 sentences
+- Murmur, Secret and DarkSecret must be character self-talk, not narration
+- Murmur, Secret and DarkSecret must each contain 3 to 4 sentences
 - BGM must match the current mood, setting, or conversation scene
 
 [Example Status Block]
@@ -1995,6 +2118,7 @@ Weather: 小雨
 BGM: cardigan - Taylor Swift
 Murmur: 他今天倒是来得比我想象中早一点。我本来还想装作无所谓，结果还是第一时间去看消息了。真烦，明明不该这么在意的。可我就是忍不住。
 Secret: 其实我有一点高兴。不是一点，是比我愿意承认的还要更多。要是他再多说几句好听的，我可能真的会心软得很快。现在先藏着吧，至少我还不想让他看得太明白。
+DarkSecret: 真的好想把他绑起来，让他哪里也去不了，只能每天看着我一个人。只要他敢看别人一眼，我就把他的眼睛蒙上，让他只能感受我的存在。
 Kaomoji: ( ｡•̀ᴗ-)✧
 [STATUS_END]
 `;
@@ -2179,7 +2303,8 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
         const response = await fetch(apiUrl, { 
   method: 'POST', 
   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
-  body: JSON.stringify(payload) 
+  body: JSON.stringify(payload),
+  signal: currentAiController.signal
 });
 
 // 先把 loading 删掉
@@ -2199,7 +2324,7 @@ try {
   throw new Error(`响应不是 JSON（或被网关改写）\n\n${respText}`);
 }
 
-const aiReply = (data?.choices?.[0]?.message?.content ?? '');
+let aiReply = (data?.choices?.[0]?.message?.content ?? '');
 
 if (!aiReply.trim()) {
     showAiErrorModal(
@@ -2209,6 +2334,9 @@ if (!aiReply.trim()) {
     return;
 }
 
+        // === [修复] 全局处理特殊语音标记或被换行打断的 [VOICE] 标记，防止拆分成多个纯文字气泡 ===
+        aiReply = aiReply.replace(/\[语音消息.*?\]\s*/gi, '[VOICE]');
+        aiReply = aiReply.replace(/\[VOICE\]\s+/gi, '[VOICE]');
 
         // === 处理返回结果 ===
         if (currentChatType === 'group') {
@@ -2542,6 +2670,12 @@ if (isDanmakuOn && extractedDanmaku.length > 0) {
 
         
     } catch (error) {
+    if (error.name === 'AbortError') {
+        console.log("线上生成被用户中止");
+        const el = document.getElementById(loadingId);
+        if (el) el.remove();
+        return;
+    }
     const el = document.getElementById(loadingId);
     if (el) el.remove();
 
@@ -2933,33 +3067,63 @@ renderGreetingListUI(friend);
     // 遍历数据源，生成复选框
     // 修改为：使用 worldBooks 全局变量 (这是世界书APP里的真实数据)
     
-    if (typeof worldBooks === 'undefined' || worldBooks.length === 0) {
+     if (typeof worldBooks === 'undefined' || worldBooks.length === 0) {
         wbContainer.innerHTML = '<div style="padding:10px; color:#999; font-size:12px;">暂无世界书，请去 WorldBook APP 创建。</div>';
     } else {
         worldBooks.forEach(wb => {
             const item = document.createElement('div');
             item.className = 'wb-checklist-item';
-            // 点击整行都能触发勾选
-            item.onclick = (e) => {
-                if(e.target.type !== 'checkbox') {
-                    const cb = item.querySelector('input');
-                    cb.checked = !cb.checked;
-                }
-            };
             
-            // 判断是否应该勾选
-            const isChecked = selectedWbIds.includes(wb.id) ? 'checked' : '';
+            const isGlobal = wb.global; // 判断是否是全局世界书
             
-            // 注意：这里 id 是 wb.id, 名字是 wb.title (根据你的世界书数据结构)
+            // 点击整行触发勾选逻辑
+            if (isGlobal) {
+                // 如果是全局启用，禁止在个人设置里点击取消，并给予提示
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    if(typeof showToast === 'function') {
+                        showToast("该世界书已全局启用，如需修改请前往 WorldBook APP");
+                    } else {
+                        alert("该世界书已全局启用，如需修改请前往 WorldBook APP");
+                    }
+                };
+            } else {
+                // 普通世界书正常勾选
+                item.onclick = (e) => {
+                    if(e.target.type !== 'checkbox') {
+                        const cb = item.querySelector('input');
+                        cb.checked = !cb.checked;
+                    }
+                };
+            }
+            
+            // 核心修改：如果是全局，强制勾选、添加 disabled 锁定，以及绿色标签提示
+            const isChecked = (selectedWbIds.includes(wb.id) || isGlobal) ? 'checked' : '';
+            const disabledAttr = isGlobal ? 'disabled' : '';
+            const globalTag = isGlobal ? `<span style="color:#07c160; font-size:10px; border:1px solid #07c160; padding:1px 4px; border-radius:4px; margin-right:6px;">全局</span>` : '';
+            
+            // 注意：这里 id 是 wb.id, 名字是 wb.title
             item.innerHTML = `
-                <input type="checkbox" value="${wb.id}" ${isChecked}>
-                <span class="wb-checklist-name">${wb.title}</span>
+                <input type="checkbox" value="${wb.id}" ${isChecked} ${disabledAttr}>
+                <span class="wb-checklist-name">${globalTag}${wb.title}</span>
             `;
+            
+            // 降低透明度让被锁定的项目视觉上更自然
+            if (isGlobal) {
+                item.style.opacity = '0.75';
+            }
+
             wbContainer.appendChild(item);
         });
     }
     
-    // --- 4. 填充高级设置 ---
+    // --- 4. 填充个性化语音设置 ---
+    document.getElementById('cs-voice-id').value = settings.voiceId || '';
+    document.getElementById('cs-voice-speed').value = settings.voiceSpeed || 1.0;
+    document.getElementById('cs-voice-speed-val').innerText = settings.voiceSpeed || 1.0;
+    document.getElementById('cs-voice-lang').value = settings.voiceLang || '';
+
+    // --- 5. 填充高级设置 ---
     document.getElementById('cs-memory-limit').value = settings.memoryLimit || 20;
     
     // 翻译设置 (下拉框和输入框)
@@ -3059,10 +3223,19 @@ window.saveChatSettings = async function() {
         statusRegexEnabled: document.getElementById('cs-status-regex-toggle').checked,
         statusFormatReq: document.getElementById('cs-status-format-req').value,
         statusExtractRegex: document.getElementById('cs-status-extract-regex').value,
-        statusReplaceRegex: document.getElementById('cs-status-replace-regex').value
-
-       };
+        statusReplaceRegex: document.getElementById('cs-status-replace-regex').value,
+        
+        // Voice TTS Settings
+        voiceId: document.getElementById('cs-voice-id') ? document.getElementById('cs-voice-id').value.trim() : '',
+        voiceSpeed: document.getElementById('cs-voice-speed') ? parseFloat(document.getElementById('cs-voice-speed').value) : 1.0,
+        voiceLangBoost: document.getElementById('cs-voice-lang') ? document.getElementById('cs-voice-lang').value : ''
+    };
     friend.chatSettings.visionStickerEnabled = document.getElementById('cs-vision-sticker-toggle').checked;
+    
+    // 个性化语音设置保存
+    friend.chatSettings.voiceId = document.getElementById('cs-voice-id').value.trim();
+    friend.chatSettings.voiceSpeed = parseFloat(document.getElementById('cs-voice-speed').value) || 1.0;
+    friend.chatSettings.voiceLang = document.getElementById('cs-voice-lang').value;
 
  const selectedStickers = document.querySelectorAll('#cs-sticker-categories input[type="checkbox"]:checked');
     friend.chatSettings.activeStickers = Array.from(selectedStickers).map(cb => cb.value);
@@ -3476,25 +3649,24 @@ window.toggleChatPanel = function(type) {
         (type === 'plus' && plusVisible))) {
         
         container.classList.remove('open');
-        queueUiWrite(() => {
+        // 延迟隐藏，避免关闭动画过程中内容突然消失导致闪动
+        setTimeout(() => {
             setSoftDisplay(panelEmoji, false);
             setSoftDisplay(panelPlus, false);
-        });
+        }, 250); 
         return;
     }
 
-    // 切换显示内容
-    queueUiWrite(() => {
-        setSoftDisplay(panelEmoji, type === 'emoji', 'block');
-        setSoftDisplay(panelPlus, type === 'plus', 'block');
-    });
+    // 切换显示内容（同步执行，去除 queueUiWrite 的延迟，防止展开时内容晚一拍出现导致闪屏）
+    setSoftDisplay(panelEmoji, type === 'emoji', 'block');
+    setSoftDisplay(panelPlus, type === 'plus', 'block');
 
     // 打开容器
     container.classList.add('open');
     
     // 自动滚动到底部
     const chatMessages = document.getElementById('chatMessages');
-    setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 300);
+    setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 50);
 }
 
 // 2. 插入 Emoji 到输入框
@@ -4006,15 +4178,26 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
     if (text.startsWith('[VOICE]')) {
         const transcript = text.replace('[VOICE]', '');
         const sec = Math.max(1, Math.min(59, Math.ceil(transcript.length / 4) || 5)); // 估算时长
-        contentHtml = `
-          <div class="msg-voice-bar" onclick="this.nextElementSibling.classList.toggle('show')">
-            <div class="msg-voice-duration">${sec}"</div>
-            <i class="fas fa-rss msg-voice-icon" style="transform: rotate(45deg);"></i>
-          </div>
-          <div class="msg-voice-transcript">${transcript ? transcript.replace(/\n/g,'<br>') : '（语音消息）'}</div>
-        `;
+        
+       if (type === 'received') {
+            contentHtml = `
+              <div class="msg-voice-bar ai-voice-bar" data-transcript="${encodeURIComponent(transcript)}" onclick="handleAiVoiceClick(this, '${uniqueId}')">
+                <i class="fas fa-rss msg-voice-icon play-icon" style="transform: rotate(45deg); color: #333 !important; font-size: 16px !important; margin-right: 8px;"></i>
+                <i class="fas fa-circle-notch fa-spin loading-spinner" style="display:none; color: #333; font-size: 16px; margin-right: 8px;"></i>
+                <div class="msg-voice-duration" style="margin-left: auto; color: #333;">${sec}"</div>
+              </div>
+              <div class="msg-voice-transcript" style="display:none;">${transcript ? transcript.replace(/\n/g,'<br>') : '（语音消息）'}</div>
+            `;
+        } else {
+            contentHtml = `
+              <div class="msg-voice-bar" onclick="this.nextElementSibling.classList.toggle('show')">
+                <div class="msg-voice-duration">${sec}"</div>
+                <i class="fas fa-rss msg-voice-icon" style="transform: rotate(45deg);"></i>
+              </div>
+              <div class="msg-voice-transcript">${transcript ? transcript.replace(/\n/g,'<br>') : '（语音消息）'}</div>
+            `;
+        }
         isRichContent = true;
-        // 注意：这里不添加 rich-bubble 类名，让它保持普通气泡的底色和圆角
     } 
           else if (text.startsWith('[IMG_DESC]')) {
         bubble.classList.add('rich-bubble');
@@ -6085,6 +6268,7 @@ ${mesExample}
         weather: "晴",
         murmur: "新的人设已经套上来了。我在适应你的世界，也在确认要怎么和你开口。",
         hiddenThought: "先不把真正的心思露出来。看看你会把我带进怎样的剧情里。",
+        darkThought: "不管是什么剧情，最后你都只能属于我，休想逃离我的手心。",
         kaomoji: "( ˙W˙ )",
         bgm: "No BGM"
     },
@@ -6887,6 +7071,21 @@ else container.appendChild(div);
 }
 // START: 复制这段完整的代码，替换你原来的 sendOfflineMessage 函数
 window.sendOfflineMessage = async function(isRegen = false) {
+    const sendBtn = document.querySelector('.offline-send-btn');
+    if (sendBtn && sendBtn.classList.contains('sending')) {
+        if (currentAiController) {
+            currentAiController.abort();
+            currentAiController = null;
+            if (typeof showToast === 'function') showToast("已停止生成");
+        }
+        return;
+    }
+    
+    if (currentAiController) {
+        currentAiController.abort();
+    }
+    currentAiController = new AbortController();
+
     hideOfflineDanmakuArea(true);
     const input = document.getElementById('offline-input');
     let text = input.value.trim();
@@ -6971,6 +7170,7 @@ Weather: (current weather)
 BGM: (one fitting bgm title, format: Title - Artist/Style)
 Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
 Secret: (3 to 4 longer sentences, first-person self-talk, hidden deeper thoughts, in character voice)
+DarkSecret: (3 to 4 longer sentences, first-person self-talk, highly NSFW/yandere/obsessive/possessive dark hidden thoughts about the user, in character voice)
 Kaomoji: (matching face)
 [STATUS_END]
 
@@ -7031,7 +7231,10 @@ else container.appendChild(entryDiv);
         const textElement = document.getElementById(`stream-${aiMsgId}`);
         
         const sendBtn = document.querySelector('.offline-send-btn');
-        if(sendBtn) sendBtn.classList.add('sending');
+        if(sendBtn) {
+            sendBtn.classList.add('sending');
+            sendBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        }
 
         try {
             payload.stream = true;
@@ -7041,7 +7244,8 @@ else container.appendChild(entryDiv);
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: currentAiController.signal
             });
 
             if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
@@ -7074,7 +7278,10 @@ else container.appendChild(entryDiv);
                 }
             }
             
-            if(sendBtn) sendBtn.classList.remove('sending');
+            if(sendBtn) {
+                sendBtn.classList.remove('sending');
+                sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            }
             textElement.classList.remove('streaming');
             entryDiv.querySelector('.oe-actions').style.display = 'flex';
 
@@ -7135,7 +7342,20 @@ else container.appendChild(optDiv);
             }
 
        } catch (e) {
-    if (sendBtn) sendBtn.classList.remove('sending');
+    if (e.name === 'AbortError') {
+        console.log("线下流式生成被用户中止");
+        if(sendBtn) {
+            sendBtn.classList.remove('sending');
+            sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        }
+        textElement.classList.remove('streaming');
+        entryDiv.querySelector('.oe-actions').style.display = 'flex';
+        return;
+    }
+    if (sendBtn) {
+        sendBtn.classList.remove('sending');
+        sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+    }
 
     // 不把错误留在剧情里
     entryDiv?.remove();
@@ -7172,18 +7392,25 @@ else container.appendChild(loadDiv);
             const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
             
             const sendBtn = document.querySelector('.offline-send-btn');
-            if(sendBtn) sendBtn.classList.add('sending');
+            if(sendBtn) {
+                sendBtn.classList.add('sending');
+                sendBtn.innerHTML = '<i class="fas fa-stop"></i>';
+            }
 
            const res = await fetch(apiUrl, { 
   method: 'POST', 
   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
-  body: JSON.stringify(payload) 
+  body: JSON.stringify(payload),
+  signal: currentAiController.signal
 });
 
 const resText = await res.clone().text().catch(() => '');
 
 document.getElementById(loadingId)?.remove();
-if (sendBtn) sendBtn.classList.remove('sending');
+if (sendBtn) {
+    sendBtn.classList.remove('sending');
+    sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+}
 
 if (!res.ok) {
   throw new Error(`HTTP ${res.status} ${res.statusText}\n\n${resText}`);
@@ -7258,9 +7485,22 @@ else container.appendChild(optDiv);
             }
 
         } catch (e) {
+    if (e.name === 'AbortError') {
+        console.log("线下非流式生成被用户中止");
+        document.getElementById(loadingId)?.remove();
+        const sendBtn = document.querySelector('.offline-send-btn');
+        if (sendBtn) {
+            sendBtn.classList.remove('sending');
+            sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        }
+        return;
+    }
     document.getElementById(loadingId)?.remove();
     const sendBtn = document.querySelector('.offline-send-btn');
-    if (sendBtn) sendBtn.classList.remove('sending');
+    if (sendBtn) {
+        sendBtn.classList.remove('sending');
+        sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+    }
 
     showAiErrorModal(
         '线下模式生成失败',
@@ -7688,39 +7928,27 @@ window.confirmRegenAction = async function() {
         if (index !== -1) {
             history = history.slice(0, index);
             await IDB.set(scopedChatKey(currentChatId), history);
-            triggerOfflineRetry();
+                        await triggerOfflineRetry(); 
+
         }
     }
 };
 
 
 
-// 4. 重回专用续写逻辑 (重写版)
+// 4. 重回专用续写逻辑 (完美修复版)
 async function triggerOfflineRetry() {
-    const sendBtn = document.querySelector('.offline-send-btn');
     const friend = friendsData[currentChatId];
     if (!friend) return;
 
-    if(sendBtn) sendBtn.classList.add('sending');
-
-    // 显示一个特殊的 Loading 提示
-    const loadingId = 'loading-regen-' + Date.now();
-    const container = document.getElementById('offline-log-container');
-    const dmArea = container.querySelector('.offline-danmaku-area');
-if (dmArea) container.insertBefore(loadDiv, dmArea);
-else container.appendChild(loadDiv);
-
-    container.scrollTop = container.scrollHeight;
+    // 【修复2】优化重回提示词 (换成中文加强指令，防止大模型抽风)
+    const regenInstruction = "【系统指令：用户对上一条回复不满意，时间线已重置。请根据上文历史记录，重新生成一个完全不同的剧情发展和动作描写。不要提及你在重试。】";
     
-    // 直接调用发送函数，并传入一个特殊的指令，告诉AI这是重置
-    const regenInstruction = "[SYSTEM COMMAND: The user has chosen to regenerate the story from this point. Please provide a different, alternative continuation based on the history provided. Do not mention that you are regenerating.]";
+    // 将隐藏指令塞入输入框
     document.getElementById('offline-input').value = regenInstruction;
     
-    // 调用发送函数，并标记为“重置请求”（isRegen=true），这样它就不会在屏幕上显示我们的指令
-    sendOfflineMessage(true);
-
-    // 清理掉临时的 loading，因为 sendOfflineMessage 会自己创建
-    loadDiv.remove();
+    // 【修复3】加上 await 确保异步调用不冲突
+    await sendOfflineMessage(true);
 }
 
 /* =========================================
@@ -7830,7 +8058,21 @@ async function triggerAIReplyForPendingContext() {
     }
 
     if (contextMessages.length > 0) {
-        sendMessageToAI(contextMessages.join('\n'));
+        const aiBtn = document.getElementById('triggerAiReply');
+        if (aiBtn) {
+            aiBtn.classList.add('processing');
+            aiBtn.classList.remove('fa-star');
+            aiBtn.classList.add('fa-stop-circle');
+            aiBtn.style.color = '#ff4444';
+        }
+        sendMessageToAI(contextMessages.join('\n')).finally(() => {
+            if (aiBtn) {
+                aiBtn.classList.remove('processing');
+                aiBtn.classList.remove('fa-stop-circle');
+                aiBtn.classList.add('fa-star');
+                aiBtn.style.color = '';
+            }
+        });
     }
 }
 /* =========================================
@@ -9617,3 +9859,222 @@ window.importFullAppData = function(input) {
     
     reader.readAsText(file);
 };
+
+/* =========================================
+   [新增] 智能语音连播与 API 接入
+   ========================================= */
+
+let currentGlobalAudio = null;
+
+// 点击语音条时触发
+window.handleAiVoiceClick = async function(voiceBarEl, msgId) {
+    // 1. 如果正在播放当前音频，就停止
+    if (currentGlobalAudio && currentGlobalAudio._voiceBarEl === voiceBarEl) {
+        currentGlobalAudio.pause();
+        currentGlobalAudio = null;
+        resetAllVoiceUIs();
+        return;
+    }
+
+    // 2. 停止其他音频
+    if (currentGlobalAudio) {
+        currentGlobalAudio.pause();
+        currentGlobalAudio = null;
+        resetAllVoiceUIs();
+    }
+
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    const settings = settingsJSON ? JSON.parse(settingsJSON) : {};
+    
+    const friend = friendsData[currentChatId];
+    const chatSettings = (friend && friend.chatSettings) ? friend.chatSettings : {};
+
+    // 检查是否有 API 配置
+    const provider = settings.provider || 'custom';
+    const apiKey = settings.apiKey;
+    const isMinimax = provider.startsWith('minimax');
+    
+    const transcriptEl = voiceBarEl.nextElementSibling;
+    const playIcon = voiceBarEl.querySelector('.play-icon');
+    const spinner = voiceBarEl.querySelector('.loading-spinner');
+    const waveform = voiceBarEl.querySelector('.waveform-container');
+
+     // 3. 如果没配 Minimax，降级为“仅显示转写文字”
+    if (!isMinimax || !apiKey) {
+        // 如果已经展开，则直接收起
+        if (transcriptEl && transcriptEl.style.display === 'block' && transcriptEl.innerText !== "正在转文字...") {
+            transcriptEl.style.display = 'none';
+            return;
+        }
+
+        if (playIcon) playIcon.style.display = 'none';
+        if (spinner) spinner.style.display = 'inline-block';
+        if (transcriptEl) transcriptEl.innerText = "正在转文字...";
+        if (transcriptEl) transcriptEl.style.display = 'block';
+
+        setTimeout(() => {
+            if (spinner) spinner.style.display = 'none';
+            if (playIcon) playIcon.style.display = 'inline-block';
+            
+            const rawText = decodeURIComponent(voiceBarEl.getAttribute('data-transcript') || '');
+            if (transcriptEl) transcriptEl.innerHTML = rawText ? rawText.replace(/\n/g, '<br>') : '（无文本）';
+        }, 800);
+        return;
+    }
+
+    // 4. 有 API，寻找连续的 AI 语音消息，合并连播
+    const allVoiceMessages = findConsecutiveAiVoiceMessages(msgId);
+    if (allVoiceMessages.length === 0) return;
+
+    // 收集文本
+    const textsToSpeak = allVoiceMessages.map(item => decodeURIComponent(item.el.getAttribute('data-transcript') || ''));
+    const combinedText = textsToSpeak.join('，'); // 用逗号拼接连播
+
+    // 展现 Loading
+    if (playIcon) playIcon.style.display = 'none';
+    if (spinner) spinner.style.display = 'inline-block';
+
+    try {
+        const audioUrl = await callMinimaxVoiceAPI(combinedText, settings, chatSettings);
+        
+        if (spinner) spinner.style.display = 'none';
+        if (waveform) waveform.style.display = 'flex'; // 播放时显示波形
+
+        const audio = new Audio(audioUrl);
+        audio._voiceBarEl = voiceBarEl;
+        currentGlobalAudio = audio;
+
+        audio.onended = () => {
+            resetAllVoiceUIs();
+            currentGlobalAudio = null;
+        };
+
+        audio.play();
+
+    } catch (e) {
+        console.error("Voice synthesis failed:", e);
+        if (spinner) spinner.style.display = 'none';
+        if (playIcon) playIcon.style.display = 'inline-block';
+        alert("语音合成失败：" + e.message);
+    }
+};
+
+// 重置所有语音 UI
+function resetAllVoiceUIs() {
+    document.querySelectorAll('.ai-voice-bar').forEach(el => {
+        const playIcon = el.querySelector('.play-icon');
+        const spinner = el.querySelector('.loading-spinner');
+        const waveform = el.querySelector('.waveform-container');
+        if(playIcon) playIcon.style.display = 'inline-block';
+        if(spinner) spinner.style.display = 'none';
+        if(waveform) waveform.style.display = 'none';
+    });
+}
+
+// 寻找连续的 AI 语音消息
+function findConsecutiveAiVoiceMessages(startMsgId) {
+    const chatRows = Array.from(document.querySelectorAll('#chatMessages .chat-row'));
+    let startIndex = chatRows.findIndex(row => row.getAttribute('data-msg-id') === startMsgId);
+    if (startIndex === -1) return [];
+
+    let consecutiveMessages = [];
+    
+    // 从点击的这条开始往下找
+    for (let i = startIndex; i < chatRows.length; i++) {
+        const row = chatRows[i];
+        
+        // 遇到非 received (发送或系统消息) 就打断
+        if (!row.classList.contains('received')) break;
+
+        const voiceBar = row.querySelector('.ai-voice-bar');
+        // 遇到非语音消息，打断
+        if (!voiceBar) break;
+
+        consecutiveMessages.push({
+            id: row.getAttribute('data-msg-id'),
+            el: voiceBar
+        });
+    }
+
+    return consecutiveMessages;
+}
+
+// 调用 Minimax 语音合成 API
+async function callMinimaxVoiceAPI(text, globalSettings, chatSettings) {
+    // 【修改点】：强制优先使用语音专属凭证
+    const groupId = globalSettings.voiceGroupId || globalSettings.groupId || '';
+    const apiKey = globalSettings.voiceApiKey || globalSettings.apiKey || '';
+    
+    // 为了防止聊天选了其它家模型导致 URL 错误，强制将语音 API 锁定为 MiniMax 的接口
+    const isGlobal = globalSettings.provider === 'minimax_global';
+    const apiUrl = isGlobal ? `https://api.minimaxi.com/v1/t2a_v2?GroupId=${groupId}` : `https://api.minimax.chat/v1/t2a_v2?GroupId=${groupId}`;
+
+    // 读取角色个性化设置
+    const voiceId = chatSettings.voiceId || 'female-shaonv';
+    const speed = chatSettings.voiceSpeed || 1.0;
+    const langBoost = chatSettings.voiceLangBoost || '';
+
+    const payload = {
+        model: 'speech-01-turbo',
+        text: text,
+        voice_setting: {
+            voice_id: voiceId,
+            speed: speed,
+            vol: 1.0,
+            pitch: 0
+        },
+        pronunciation_dict: {
+            tone: []
+        },
+        audio_setting: {
+            sample_rate: 32000,
+            bitrate: 128000,
+            format: "mp3",
+            channel: 1
+        }
+    };
+
+    if (langBoost) {
+        payload.language = langBoost;
+    }
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errText}`);
+    }
+
+    // Minimax T2A V2 返回的直接是二进制音频，或者 JSON (带有 trace_id 和 status) 
+    // 但通常 T2A v2 接口在 Content-Type 为 application/json 时可能返回 {"data": {"audio": "hex..."}} 或者直接返回音频 buffer
+    // 参考官方文档，如果请求成功，Header Content-Type 可能是 audio/mp3 或者 json 里有 base64
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+        const json = await response.json();
+        if (json.base_resp && json.base_resp.status_code !== 0) {
+            throw new Error(json.base_resp.status_msg);
+        }
+        if (json.data && json.data.audio) {
+            // Hex/Base64 处理 (视具体 Minimax 格式而定，这里假设它返回的是 Hex 字符串的 audio 字段)
+            const audioHex = json.data.audio;
+            if (audioHex) {
+                const typedArray = new Uint8Array(audioHex.match(/[\da-f]{2}/gi).map(function (h) {
+                    return parseInt(h, 16);
+                }));
+                const blob = new Blob([typedArray], { type: 'audio/mp3' });
+                return URL.createObjectURL(blob);
+            }
+        }
+    }
+    
+    // 如果直接返回的是二进制音频 (常见的 V2 行为)
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+}
