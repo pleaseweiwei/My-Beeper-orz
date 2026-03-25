@@ -1,4 +1,5 @@
 // js/apps.js (完整功能版：AI + 高级主题 + CSS美化 + 预设)
+let currentAiController = null;
 
 // --- LocalStorage Keys ---
 const SETTINGS_KEY = 'myCoolPhone_aiSettings';
@@ -1753,10 +1754,11 @@ async function sendMessageToAI(userMessage) {
     const chatMessages = document.getElementById('chatMessages');
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
     
-    if (!settingsJSON) { 
-        appendMessage('请先在设置中配置 API Key。', 'received'); 
-        return; 
-    }
+   if (!settingsJSON) {
+    showAiErrorModal('未配置 API', '请先到 Settings → AI Chat 配置 API Key / Base URL / Model');
+    return;
+}
+
     const settings = JSON.parse(settingsJSON);
     
     // 显示 loading 动画 (原有逻辑保留)
@@ -1942,35 +1944,32 @@ AI 原始输出示例 2：[表情:嫌弃]
         Example: [SEND_MAP:星巴克|中央公园|2.5]
         If you invent a completely new location name in the tag, the system will automatically build it on the user's Map App. Use this to creatively drive the roleplay forward!
         `;
+// === 【升级版】强制 AI 生成：弹幕(可选) + 实时心声状态(必选) ===
+systemPrompt += `
+\n[SYSTEM INSTRUCTION]
+After your reply, you MUST provide structured blocks at the VERY END.
+`;
 
-        // === 【升级版】强制 AI 生成：中文弹幕 + 实时心声状态 ===
-        systemPrompt += `
-        \n[SYSTEM INSTRUCTION]
-        After your reply, you MUST provide two structured blocks at the VERY END.
-    
-        1. [DANMAKU]
-        Generate EXACTLY 6 to 8 comments from Chinese netizens watching this chat.
-        - The comments MUST be relevant to the current conversation content.
-        - Language: SIMPLIFIED CHINESE (简体中文).
-        - Style: Funny, roasting(吐槽), internet slang, vivid.
-        - STRICTLY PROHIBITED: Do not generate any misogynistic or derogatory words towards women (绝对禁止生成任何辱女类词汇或脏话).
-        - Format:
-        [DANMAKU_START]
-        (弹幕1内容)
-        (弹幕2内容)
-        (弹幕3内容)
-        (弹幕4内容)
-        (弹幕5内容)
-        (弹幕6内容)
-        [DANMAKU_END]
+// 只有弹幕开关 ON 才要求 AI 输出弹幕块
+if (isDanmakuOn) {
+    systemPrompt += `
+[DANMAKU_START]
+Generate EXACTLY 6 to 8 comments from Chinese netizens watching this chat.
+- The comments MUST be relevant to the current conversation content.
+- Language: SIMPLIFIED CHINESE (简体中文).
+- Style: Funny, roasting(吐槽), internet slang, vivid.
+- STRICTLY PROHIBITED: Do not generate any misogynistic or derogatory words towards women (绝对禁止生成任何辱女类词汇或脏话).
+- Output: ONE comment per line.
+[DANMAKU_END]
+`;
+} else {
+    // 弹幕 OFF：明确禁止 AI 输出弹幕块（防止它自己乱加）
+    systemPrompt += `\n[IMPORTANT] Danmaku is OFF. Do NOT output any [DANMAKU_START]...[DANMAKU_END] block.\n`;
+}
 
-
-
-        2. [STATUS]
-        Update your character's current state based on the conversation.
-        - IMPORTANT: Use Simplified Chinese (简体中文) for Action, Location, and Weather.
-        - Format:
-        [STATUS_START]
+// 状态块（永远要）
+systemPrompt += `
+[STATUS_START]
 AffectionDelta: (integer only, from -2 to 2)
 Action: (current action, short)
 Location: (current location)
@@ -1998,8 +1997,8 @@ Murmur: 他今天倒是来得比我想象中早一点。我本来还想装作无
 Secret: 其实我有一点高兴。不是一点，是比我愿意承认的还要更多。要是他再多说几句好听的，我可能真的会心软得很快。现在先藏着吧，至少我还不想让他看得太明白。
 Kaomoji: ( ｡•̀ᴗ-)✧
 [STATUS_END]
+`;
 
-        `;
         // === 新增：朋友圈发帖协议 ===
         systemPrompt += `
         
@@ -2040,24 +2039,32 @@ Kaomoji: ( ｡•̀ᴗ-)✧
 
 
 
-        // --- [新增点] 翻译模式指令注入 ---
-             if (isTranslationEnabled) {
-         // 强制规定顺序：回复 -> 分隔符 -> 翻译 -> 状态块
-         systemPrompt += `
-         \n[SYSTEM INSTRUCTION: TRANSLATION MODE ON]
-         You MUST output in this strict order:
-         1. Response in character's language.
-         2. Separator: "${TRANS_SEPARATOR}"
-         3. Chinese translation.
-         4. [DANMAKU] block.
-         5. [STATUS] block.
-         
-         IMPORTANT: Do NOT put translation at the very end. Put it BEFORE the status blocks.
-         `;
-         } else {
-          // 如果没开启翻译，保持原有的简单指令
-          systemPrompt += `\nInstruction: Respond extremely shortly and naturally. Your main chat text MUST be under 50 characters!`;
-     }
+        if (isTranslationEnabled) {
+    if (isDanmakuOn) {
+        systemPrompt += `
+\n[SYSTEM INSTRUCTION: TRANSLATION MODE ON]
+You MUST output in this strict order:
+1. Response in character's language.
+2. Separator: "${TRANS_SEPARATOR}"
+3. Chinese translation.
+4. [DANMAKU] block.
+5. [STATUS] block.
+IMPORTANT: Do NOT put translation at the very end. Put it BEFORE the status blocks.
+`;
+    } else {
+        systemPrompt += `
+\n[SYSTEM INSTRUCTION: TRANSLATION MODE ON]
+You MUST output in this strict order:
+1. Response in character's language.
+2. Separator: "${TRANS_SEPARATOR}"
+3. Chinese translation.
+4. [STATUS] block.
+IMPORTANT: Danmaku is OFF. Do NOT output any [DANMAKU_START]...[DANMAKU_END] block.
+`;
+    }
+} else {
+    systemPrompt += `\nInstruction: Respond extremely shortly and naturally. Your main chat text MUST be under 50 characters!`;
+}
 
 
     }
@@ -2170,18 +2177,38 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
 
     try {
         const response = await fetch(apiUrl, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
-            body: JSON.stringify(payload) 
-        });
-        
-        // 删掉 loading
-        const el = document.getElementById(loadingId);
-        if(el) el.remove();
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        const aiReply = data.choices?.[0]?.message?.content || "...";
+  method: 'POST', 
+  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
+  body: JSON.stringify(payload) 
+});
+
+// 先把 loading 删掉
+document.getElementById(loadingId)?.remove();
+
+// 读一份文本用于报错展示（不影响正常 json 解析）
+const respText = await response.clone().text().catch(() => '');
+
+if (!response.ok) {
+  throw new Error(`HTTP ${response.status} ${response.statusText}\n\n${respText}`);
+}
+
+let data = null;
+try {
+  data = await response.json();
+} catch (e) {
+  throw new Error(`响应不是 JSON（或被网关改写）\n\n${respText}`);
+}
+
+const aiReply = (data?.choices?.[0]?.message?.content ?? '');
+
+if (!aiReply.trim()) {
+    showAiErrorModal(
+        '线上生成空回',
+        'HTTP 返回成功，但 choices[0].message.content 为空。\n常见原因：模型/网关不兼容、鉴权失败但被网关吞了、额度限制、上游拦截。'
+    );
+    return;
+}
+
 
         // === 处理返回结果 ===
         if (currentChatType === 'group') {
@@ -2514,11 +2541,16 @@ if (isDanmakuOn && extractedDanmaku.length > 0) {
 
 
         
-       } catch (error) { 
-        const el = document.getElementById(loadingId);
-        if(el) el.remove();
-        showToast(`<i class="fas fa-wifi" style="color:#ff4d4f;"></i> 生成失败: ${error.message}`); 
-    }
+    } catch (error) {
+    const el = document.getElementById(loadingId);
+    if (el) el.remove();
+
+    showAiErrorModal(
+        '线上生成失败',
+        (error && error.message) ? error.message : String(error)
+    );
+}
+
 
 }
 
@@ -2758,36 +2790,36 @@ function typeWriterEffect(text, elementId, speed = 50) {
 // =========================================
 
 // [修正版] 异步加载好友数据 (修复了身份隔离Bug)
+// 修改后的代码
 async function loadFriendsData() {
     try {
         // 1. 优先从 IndexedDB 获取当前身份的专属数据
         let savedData = await IDB.get(scopedLSKey(FRIENDS_DATA_KEY));
 
-        // 2. 如果没找到，再尝试从 LocalStorage 迁移 (同样先尝试专属Key)
+        // 2. 如果没找到，再尝试从 LocalStorage 迁移 (只尝试专属Key)
         if (!savedData) {
-            // 优先尝试读取带作用域的旧localStorage数据
+            // 只尝试读取带身份ID的专属旧数据
             let oldRaw = localStorage.getItem(scopedLSKey(FRIENDS_DATA_KEY));
-            
-            // 如果连带作用域的都找不到，最后才尝试读取不带作用域的全局旧数据（用于兼容最老版本）
-            if (!oldRaw) {
-                oldRaw = localStorage.getItem(FRIENDS_DATA_KEY);
-            }
+
+            // 【修改】删除了对全局旧数据的回退查找逻辑
+            // if (!oldRaw) {
+            //     oldRaw = localStorage.getItem(FRIENDS_DATA_KEY); // <-- 删除这一块
+            // }
 
             if (oldRaw) {
                 console.log("检测到旧的好友数据，正在迁移至当前身份的独立存储中...");
                 try {
                     savedData = JSON.parse(oldRaw);
-                    // 【核心修复】将迁移的数据存入当前身份专属的Key下！
                     await IDB.set(scopedLSKey(FRIENDS_DATA_KEY), savedData);
-                    
-                    // 【安全措施】迁移成功后，删除不带作用域的全局旧数据，防止再次污染
-                    localStorage.removeItem(FRIENDS_DATA_KEY); 
+                    // 迁移后删除旧的专属 localStorage 数据
+                    localStorage.removeItem(scopedLSKey(FRIENDS_DATA_KEY));
                     console.log("迁移成功！");
                 } catch (e) { 
                     console.error("好友数据迁移解析失败:", e);
                 }
             }
         }
+
 
         // 3. 应用数据 (这部分逻辑不变)
         if (savedData && Object.keys(savedData).length > 0) {
@@ -4218,7 +4250,25 @@ let isDanmakuOn = false;
 let danmakuLoopTimer = null;   // 循环定时器
 let danmakuDelayTimer = null;
 let danmakuPool = [];          // 当前的弹幕文案池
+
 let danmakuRemainingCount = 0; // 【新增】剩余发射次数，用于控制循环停止
+let danmakuQueue = [];
+function shuffleArray(arr){
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function isOfflineModeActive() {
+  const offlineView = document.getElementById('offlineModeView');
+  return !!(offlineView && offlineView.classList.contains('show'));
+}
+
+function clearOfflineDanmakuLog() {
+  const log = document.getElementById('offline-danmaku-log');
+  if (log) log.innerHTML = '';
+}
 
 // 1. 切换弹幕开关 (修复版：同时控制线上和线下两个按钮)
 window.toggleDanmaku = function() {
@@ -4238,15 +4288,11 @@ window.toggleDanmaku = function() {
         }
         shootDanmaku("✨ 弹幕已开启 ✨", "highlight-gold");
     } else {
-        // 关闭状态
-        if(chatBtn) chatBtn.classList.remove('active');
-        if(offlineBtn) {
-            offlineBtn.classList.remove('active');
-            offlineBtn.innerText = "弹幕: OFF";
-        }
-        stopDanmakuLoop();
-        if(layer) layer.innerHTML = ''; // 清空屏幕
-    }
+  stopDanmakuLoop();
+  if(layer) layer.innerHTML = '';
+  clearOfflineDanmakuLog(); // 新增：线下日志也清空
+}
+
 }
 
 
@@ -4255,110 +4301,143 @@ window.toggleDanmaku = function() {
 let danmakuTracks = [0, 0, 0, 0]; 
 const TRACK_HEIGHT = 40; // 每行高度增加，防止文字挤在一起
 
-// 2. 发射单条弹幕
+// [新版] 弹幕发射器 (兼容线上飞行模式与线下日志模式)
 function shootDanmaku(text, styleClass = '') {
-    if (!isDanmakuOn) return;
-    
-    
-     // 【核心修复】强制过滤括号、中英文单双引号，并去掉开头可能存在的序号（如 1. 2. 或者 -）
+    if (!isDanmakuOn) return; // 如果开关没开，直接退出
+
+    // 预处理文本：过滤特殊字符和序号
     text = text.replace(/[()（）"“”'‘’]/g, '')
                .replace(/^[-*•\d\.\s]+/, '')
-               .trim();  
+               .trim();
     if (!text || text.trim().length < 1) return;
 
-    const layer = document.getElementById('danmaku-layer');
-    if (!layer) return;
+    // 检查当前是否处于线下模式
+    const offlineView = document.getElementById('offlineModeView');
+    const isOfflineActive = offlineView && offlineView.classList.contains('show');
 
-    const now = Date.now();
-    let availableTracks = [];
-    
-    // 冷却时间保持 3000ms，配合增大的 TRACK_HEIGHT，防止重叠
-    danmakuTracks.forEach((lastTime, index) => {
-        if (now - lastTime > 4500) {
-            availableTracks.push(index);
-        }
-    });
+    if (isOfflineActive) {
+         showOfflineDanmakuArea();
+        // --- 场景A：当前在线下模式，写入日志区 ---
+        const logContainer = document.getElementById('offline-danmaku-log');
+        if (!logContainer) return;
 
-    if (availableTracks.length === 0) return;
+        const item = document.createElement('div');
+        item.className = 'log-danmaku-item'; // 使用我们新定义的日志样式
+        item.innerText = text;
 
-    const selectedTrackIndex = availableTracks[Math.floor(Math.random() * availableTracks.length)];
-    danmakuTracks[selectedTrackIndex] = now;
+        logContainer.appendChild(item);
 
-    const item = document.createElement('div');
-    item.className = `danmaku-item ${styleClass}`;
-    item.innerHTML = `<span>${text}</span>`;
-    
-    // Top 计算：增加基础偏移量 20px
-    const topPos = selectedTrackIndex * TRACK_HEIGHT + 20; 
-    
-    const duration = 8; 
-
-    item.style.top = `${topPos}px`;
-    item.style.animation = `fly-left ${duration}s linear forwards`;
-    
-    item.addEventListener('animationend', () => {
-        item.remove();
-    });
-
-    layer.appendChild(item);
+// 最多保留 50 条：追加时删最旧（第一条）
+if (logContainer.children.length > 50) {
+  logContainer.firstElementChild?.remove();
 }
 
 
-// 3. 【修改】有限循环播放 (带有 3 秒阅读缓冲) -> 【升级版】支持自定义延迟
-function startDanmakuBatch(initialDelay = 15000) { // 【修改】将默认值从 3000 改为 15000
-    // 先停止之前的定时器
-    stopDanmakuLoop();
-    
-    if (danmakuPool.length === 0) return;
+    } else {
+        // --- 场景B：当前不在线下模式（即在线模式），执行原有的飞行逻辑 ---
+        const layer = document.getElementById('danmaku-layer');
+        if (!layer) return;
 
-    // 计算总共要发射多少发
-    const REPEAT_TIMES = 2; 
-    danmakuRemainingCount = danmakuPool.length * REPEAT_TIMES;
-
-    // 【核心修改】：使用传入的延迟参数
-    danmakuDelayTimer = setTimeout(() => {
-        // 如果在这段时间内用户关掉了弹幕，就不执行
-        if (!isDanmakuOn) return;
-
-        // 立即发第一条
-        fireOneFromPool();
-
-        // 启动间隔定时器
-        danmakuLoopTimer = setInterval(() => {
-            if(!isDanmakuOn) {
-                stopDanmakuLoop();
-                return;
+        const now = Date.now();
+        let availableTracks = [];
+        danmakuTracks.forEach((lastTime, index) => {
+            if (now - lastTime > 4500) {
+                availableTracks.push(index);
             }
+        });
 
-            if (danmakuRemainingCount <= 0) {
-                console.log("弹幕播放完毕，停止。");
-                stopDanmakuLoop();
-                return;
-            }
+        if (availableTracks.length === 0) return;
 
-            fireOneFromPool();
-            
-        }, 1800); 
-    }, initialDelay); // 这里会使用新的默认值 15000
+        const selectedTrackIndex = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+        danmakuTracks[selectedTrackIndex] = now;
+
+        const item = document.createElement('div');
+        item.className = `danmaku-item ${styleClass}`; // 使用旧的飞行弹幕样式
+        item.innerHTML = `<span>${text}</span>`;
+        
+        const topPos = selectedTrackIndex * TRACK_HEIGHT + 20;
+        const duration = 8;
+
+        item.style.top = `${topPos}px`;
+        item.style.animation = `fly-left ${duration}s linear forwards`;
+        
+        item.addEventListener('animationend', () => {
+            item.remove();
+        });
+
+        layer.appendChild(item);
+    }
 }
+
+
+
+function startDanmakuBatch(initialDelay = 15000) {
+  stopDanmakuLoop();
+  if (!danmakuPool || danmakuPool.length === 0) return;
+
+  const offlineActive = isOfflineModeActive();
+
+  // === 线下模式：每次新回复的弹幕，先清空上一批 ===
+  if (offlineActive) {
+    hideOfflineDanmakuArea(true); 
+    clearOfflineDanmakuLog();
+    initialDelay = 0; // === 线下模式：不需要延迟，立刻开始 ===
+  }
+
+  // 去重 + 洗牌 + 只播一轮
+  danmakuQueue = shuffleArray([...new Set(danmakuPool.map(s => (s || '').trim()).filter(Boolean))]);
+  danmakuRemainingCount = danmakuQueue.length;
+
+  const startLoop = () => {
+    if (!isDanmakuOn) return stopDanmakuLoop();
+
+    fireOneFromPool();
+
+    danmakuLoopTimer = setInterval(() => {
+      if (!isDanmakuOn) return stopDanmakuLoop();
+      if (danmakuRemainingCount <= 0) return stopDanmakuLoop();
+      fireOneFromPool();
+    }, offlineActive ? 600 : 1800); // 线下可以快一点（想慢就改成1800）
+  };
+
+  if (initialDelay > 0) {
+    danmakuDelayTimer = setTimeout(startLoop, initialDelay);
+  } else {
+    startLoop(); // 立刻开始
+  }
+}
+
 
 function fireOneFromPool() {
-    if (danmakuPool.length === 0) return;
-    
-    // 随机取一条
-    const text = danmakuPool[Math.floor(Math.random() * danmakuPool.length)];
-    
-    // 随机样式
-    let style = '';
-    const rand = Math.random();
-    if (rand > 0.9) style = 'highlight-gold';
-    else if (rand > 0.8) style = 'highlight-blue';
-    
-    shootDanmaku(text, style);
-    
-    // 计数器减一
-    danmakuRemainingCount--;
+  const text = danmakuQueue.shift();
+  if (!text) { danmakuRemainingCount = 0; return; }
+
+  let style = '';
+  const rand = Math.random();
+  if (rand > 0.9) style = 'highlight-gold';
+  else if (rand > 0.8) style = 'highlight-blue';
+
+  shootDanmaku(text, style);
+  danmakuRemainingCount--;
 }
+function getOfflineDanmakuArea() {
+  return document.querySelector('#offlineModeView .offline-danmaku-area');
+}
+
+function showOfflineDanmakuArea() {
+  const area = getOfflineDanmakuArea();
+  if (area) area.classList.add('show');
+}
+
+function hideOfflineDanmakuArea(clear = true) {
+  const area = getOfflineDanmakuArea();
+  if (area) area.classList.remove('show');
+  if (clear) {
+    const log = document.getElementById('offline-danmaku-log');
+    if (log) log.innerHTML = '';
+  }
+}
+
 function stopDanmakuLoop() {
     // 【新增】清空等待的 3 秒延迟
     if (danmakuDelayTimer) {
@@ -4370,6 +4449,8 @@ function stopDanmakuLoop() {
         clearInterval(danmakuLoopTimer);
         danmakuLoopTimer = null;
     }
+     danmakuQueue = [];
+  danmakuRemainingCount = 0;
 }
 
 // === 图片快速更换功能 ===
@@ -6699,6 +6780,13 @@ window.openOfflineMode = function() {
     renderOfflineHistory(currentChatId);
     
     modal.classList.add('show');
+    // 同步线下工具栏按钮显示状态（避免“显示OFF但实际ON”）
+const dmBtn = document.getElementById('offline-danmaku-btn');
+if (dmBtn) dmBtn.innerText = `弹幕: ${isDanmakuOn ? 'ON' : 'OFF'}`;
+
+const optBtn = document.getElementById('offline-options-btn');
+if (optBtn) optBtn.innerText = `选项分支: ${isOfflineOptionsOn ? 'ON' : 'OFF'}`;
+
 }
 
 
@@ -6713,33 +6801,45 @@ window.insertOfflineAction = function(char) {
     input.focus();
 }
 
-// 3. 渲染历史记录 (只渲染 offline 标记的消息，或者全部渲染但样式不同)
-// 修改策略：为了完全隔离显示，我们只渲染 isOffline=true 的消息
 async function renderOfflineHistory(chatId) {
     const container = document.getElementById('offline-log-container');
-    container.innerHTML = ''; // 清空
-    
-    const history = await loadChatHistory(chatId); 
-    
-    // 如果没有历史，显示开场白
+    if (!container) return;
+
+    // 1) 确保底部弹幕区存在（防止被误删后找不到）
+    if (!container.querySelector('.offline-danmaku-area')) {
+        container.insertAdjacentHTML('beforeend', `
+            <div class="offline-danmaku-area">
+                <div class="danmaku-area-header">REAL-TIME COMMENTS</div>
+                <div id="offline-danmaku-log"></div>
+            </div>
+        `);
+    }
+
+    // 2) 只清“剧情条目”和“旧选项”，不要动弹幕区
+    container.querySelectorAll('.offline-entry').forEach(el => el.remove());
+    document.getElementById('vn-options-box')?.remove();
+
+    // 3) （可选）每次进线下，清空弹幕日志
+    const dmLog = document.getElementById('offline-danmaku-log');
+    if (dmLog) dmLog.innerHTML = '';
+
+    const history = await loadChatHistory(chatId);
+
     if (history.length === 0 && friendsData[chatId]?.greeting) {
         appendOfflineEntry('ai', friendsData[chatId].greeting, friendsData[chatId].realName);
     }
 
     history.forEach(msg => {
-        // 关键逻辑：只显示带有 isOffline 标记的消息，或者是用户发的消息(为了连贯性)
-        // 但用户要求 "线下模式不需要显示线上内容"。
-        // 所以我们只渲染 isOffline === true 的。
         if (msg.isOffline) {
             const role = msg.type === 'sent' ? 'user' : 'ai';
             const name = role === 'user' ? 'You' : (msg.senderName || friendsData[chatId].realName);
             appendOfflineEntry(role, msg.text, name, msg.id);
         }
     });
-    
-    // 滚到底部
+
     setTimeout(() => container.scrollTop = container.scrollHeight, 100);
 }
+
 
 // [重写版] 添加线下条目 (带修改/删除/收藏按钮)
 function appendOfflineEntry(role, text, name, msgId) {
@@ -6778,13 +6878,16 @@ function appendOfflineEntry(role, text, name, msgId) {
         <div class="oe-text ${role==='ai'?'serif':''}">${formattedText}</div>
         ${actionsHtml}
     `;
-    
-    container.appendChild(div);
+        
+const dmArea = container.querySelector('.offline-danmaku-area');
+if (dmArea) container.insertBefore(div, dmArea);
+else container.appendChild(div);
+
     container.scrollTop = container.scrollHeight;
 }
-
 // START: 复制这段完整的代码，替换你原来的 sendOfflineMessage 函数
 window.sendOfflineMessage = async function(isRegen = false) {
+    hideOfflineDanmakuArea(true);
     const input = document.getElementById('offline-input');
     let text = input.value.trim();
     
@@ -6808,12 +6911,16 @@ window.sendOfflineMessage = async function(isRegen = false) {
     input.value = '';
     
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
-    if (!settingsJSON) { appendOfflineEntry('ai', '[System] 请配置 API Key', 'System'); return; }
+    if (!settingsJSON) {
+    showAiErrorModal('线下模式无法生成', '请先在 Settings → AI Chat 配置 API Key / Base URL / Model');
+    return;
+}
     const settings = JSON.parse(settingsJSON);
 
     const presetId = offlineConfig.activePresetId;
     const preset = tavernPresets.find(p => p.id === presetId) || tavernPresets[0];
 
+    // 【修复】先移除旧的选项框，防止重复
     const oldOpts = document.getElementById('vn-options-box');
     if (oldOpts) oldOpts.remove();
 
@@ -6855,22 +6962,30 @@ window.sendOfflineMessage = async function(isRegen = false) {
     This turn can only change affection by an integer from -2 to 2.
     - Let the affection score organically drive your body language, eye contact, and physical boundaries, entirely based on how your specific Persona handles this level of intimacy.
     [📦 REQUIRED OUTPUT FORMAT]
-    At the very end, append:
-    [DANMAKU_START]
-    (Generate 5-8 funny netizen comments in Simplified Chinese. No misogynistic or derogatory slurs.)
-    [DANMAKU_END]
-    [STATUS_START]
-    AffectionDelta: (integer only, from -2 to 2)
-    Action: (current action)
-    Location: (current location)
-    Weather: (current weather)
-    BGM: (one fitting bgm title, format: Title - Artist/Style)
-    Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
-    Secret: (3 to 4 longer sentences, first-person self-talk, hidden deeper thoughts, in character voice)
-    Kaomoji: (matching face)
-    [STATUS_END]
-    `;
+At the very end, append:
+[STATUS_START]
+AffectionDelta: (integer only, from -2 to 2)
+Action: (current action)
+Location: (current location)
+Weather: (current weather)
+BGM: (one fitting bgm title, format: Title - Artist/Style)
+Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
+Secret: (3 to 4 longer sentences, first-person self-talk, hidden deeper thoughts, in character voice)
+Kaomoji: (matching face)
+[STATUS_END]
 
+    `;
+    // 弹幕 OFF 时：不要求生成弹幕块；弹幕 ON 时：才要求生成
+if (isDanmakuOn) {
+    systemPrompt += `
+[DANMAKU_START]
+(Generate 5-8 funny netizen comments in Simplified Chinese. No misogynistic or derogatory slurs.)
+[DANMAKU_END]
+`;
+}
+
+    
+    // 【修复】根据开关状态决定是否添加选项指令
     if (isOfflineOptionsOn) {
         systemPrompt += `
         [OPTIONS_INSTRUCTION]
@@ -6895,13 +7010,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
         max_tokens: Math.max(limit * 3 + 600, 1500) 
     };
 
-    // =======================================================
-    // 核心判断：根据开关状态决定走哪个逻辑
-    // =======================================================
     if (offlineConfig.streamingEnabled) {
-        /************************/
-        /*   新：流式传输逻辑   */
-        /************************/
         const aiMsgId = 'off_ai_' + Date.now();
         const container = document.getElementById('offline-log-container');
         const entryDiv = document.createElement('div');
@@ -6916,15 +7025,16 @@ window.sendOfflineMessage = async function(isRegen = false) {
                 <div class="oe-btn delete" onclick="deleteOfflineMsgUI('${aiMsgId}')" title="删除"><i class="fas fa-trash"></i></div>
             </div>
         `;
-        container.appendChild(entryDiv);
-        container.scrollTop = container.scrollHeight;
+        const dmArea = container.querySelector('.offline-danmaku-area');
+if (dmArea) container.insertBefore(entryDiv, dmArea);
+else container.appendChild(entryDiv);
         const textElement = document.getElementById(`stream-${aiMsgId}`);
         
         const sendBtn = document.querySelector('.offline-send-btn');
         if(sendBtn) sendBtn.classList.add('sending');
 
         try {
-            payload.stream = true; // 开启流式
+            payload.stream = true;
             let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
             const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
             
@@ -6956,8 +7066,9 @@ window.sendOfflineMessage = async function(isRegen = false) {
                         const content = data.choices[0]?.delta?.content || '';
                         if (content) {
                             fullReply += content;
-                            textElement.innerHTML = fullReply.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
-                            container.scrollTop = container.scrollHeight;
+                            let partialClean = fullReply.split('[OPTIONS_START]')[0];
+                            textElement.innerHTML = partialClean.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
+                            // 【修复】移除滚动，保持位置
                         }
                     } catch (e) { /* ignore parse errors */ }
                 }
@@ -6969,16 +7080,14 @@ window.sendOfflineMessage = async function(isRegen = false) {
 
             let cleanReply = fullReply;
 
-            // 后处理：提取选项
             let extractedOptions = [];
-            const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[\/OPTIONS_END\]/i;
+            const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
             const optMatch = cleanReply.match(optRegex);
             if (optMatch) {
                 extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
                 cleanReply = cleanReply.replace(optRegex, '').trim();
             }
 
-            // 后处理：提取状态
             const statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
             const statusRegex = new RegExp(statusRegStr, 'i');
             const statusMatch = cleanReply.match(statusRegex);
@@ -6987,8 +7096,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
                 cleanReply = cleanReply.replace(statusRegex, '').trim();
             }
 
-            // 后处理：提取弹幕
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[\/DANMAKU_END\]/i;
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
             const danmakuMatch = cleanReply.match(danmakuRegex);
             if (danmakuMatch) {
                 const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
@@ -7006,6 +7114,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
                 customAvatar: friend.avatar, isOffline: true, id: aiMsgId
             });
 
+            // 【修复】渲染选项分支
             if (isOfflineOptionsOn && extractedOptions.length > 0) {
                 const optDiv = document.createElement('div');
                 optDiv.id = 'vn-options-box';
@@ -7017,29 +7126,47 @@ window.sendOfflineMessage = async function(isRegen = false) {
                     btn.onclick = () => selectOfflineOption(opt);
                     optDiv.appendChild(btn);
                 });
-                container.appendChild(optDiv);
+               const dmArea = container.querySelector('.offline-danmaku-area');
+if (dmArea) container.insertBefore(optDiv, dmArea);
+else container.appendChild(optDiv);
+
+                // 【修复】选项出现后自动滚动到底部，确保能看到
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
 
-        } catch (e) {
-            if(sendBtn) sendBtn.classList.remove('sending');
-            textElement.classList.remove('streaming');
-            textElement.innerHTML = `<span style="color:red;">Error: ${e.message}</span>`;
-        }
+       } catch (e) {
+    if (sendBtn) sendBtn.classList.remove('sending');
+
+    // 不把错误留在剧情里
+    entryDiv?.remove();
+
+    showAiErrorModal(
+        '线下模式生成失败（Streaming）',
+        (e && e.message) ? e.message : String(e)
+    );
+}
+
 
     } else {
-        /************************/
-        /*   旧：非流式传输逻辑   */
-        /************************/
-        const loadingId = 'loading-' + Date.now();
-        const container = document.getElementById('offline-log-container');
-        const loadDiv = document.createElement('div');
-        loadDiv.id = loadingId;
-        loadDiv.className = 'offline-entry ai';
-        loadDiv.innerHTML = `<div class="oe-name">Writing...</div><div class="oe-text" style="color:#ccc;">...</div>`;
-        container.appendChild(loadDiv);
-        container.scrollTop = container.scrollHeight;
+       const loadingId = 'loading-' + Date.now();
+const container = document.getElementById('offline-log-container');
 
+// 线下 loading 条目（不会写进聊天记录，只是临时 UI）
+const loadDiv = document.createElement('div');
+loadDiv.id = loadingId;
+loadDiv.className = 'offline-entry ai';
+loadDiv.innerHTML = `
+  <div class="oe-name">SYSTEM</div>
+  <div class="oe-text"><i class="fas fa-circle-notch fa-spin"></i> 生成中...</div>
+`;
+
+const dmArea = container.querySelector('.offline-danmaku-area');
+if (dmArea) container.insertBefore(loadDiv, dmArea);
+else container.appendChild(loadDiv);
+
+
+        // 【修复】移除滚动，保持位置
+        
         try {
             let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
             const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
@@ -7047,33 +7174,36 @@ window.sendOfflineMessage = async function(isRegen = false) {
             const sendBtn = document.querySelector('.offline-send-btn');
             if(sendBtn) sendBtn.classList.add('sending');
 
-            const res = await fetch(apiUrl, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
-                body: JSON.stringify(payload) 
-            });
-            
-            document.getElementById(loadingId).remove();
-            if(sendBtn) sendBtn.classList.remove('sending');
+           const res = await fetch(apiUrl, { 
+  method: 'POST', 
+  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
+  body: JSON.stringify(payload) 
+});
 
-            if (!res.ok) throw new Error('API Error');
-            const data = await res.json();
-            let rawReply = data.choices[0].message.content;
-            
-            let intimateDecision = null;
-            if (rawReply.includes('[INTIMATE_ACCEPT]')) {
-                intimateDecision = 'accepted';
-                rawReply = rawReply.replace('[INTIMATE_ACCEPT]', '').trim();
-            } else if (rawReply.includes('[INTIMATE_REJECT]')) {
-                intimateDecision = 'rejected';
-                rawReply = rawReply.replace('[INTIMATE_REJECT]', '').trim();
-            }
-            if (intimateDecision) {
-                // ... (省略处理亲密付的逻辑，与您原文件一致)
-            }
+const resText = await res.clone().text().catch(() => '');
+
+document.getElementById(loadingId)?.remove();
+if (sendBtn) sendBtn.classList.remove('sending');
+
+if (!res.ok) {
+  throw new Error(`HTTP ${res.status} ${res.statusText}\n\n${resText}`);
+}
+
+let data = null;
+try {
+  data = await res.json();
+} catch (e) {
+  throw new Error(`响应不是 JSON（或被网关改写）\n\n${resText}`);
+}
+
+let rawReply = (data?.choices?.[0]?.message?.content ?? '');
+if (!rawReply.trim()) {
+  showAiErrorModal('线下生成空回', 'choices[0].message.content 为空');
+  return;
+}
 
             let extractedOptions = [];
-            const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[\/OPTIONS_END\]/i;
+            const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
             const optMatch = rawReply.match(optRegex);
             if (optMatch) {
                 extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
@@ -7088,10 +7218,11 @@ window.sendOfflineMessage = async function(isRegen = false) {
                 rawReply = rawReply.replace(statusRegex, '').trim();
             }
 
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[\/DANMAKU_END\]/i;
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
             const danmakuMatch = rawReply.match(danmakuRegex);
             if (danmakuMatch) {
                 const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
+                // 【修复】仅在弹幕开关开启时才处理
                 if (isDanmakuOn && dList.length > 0) {
                     danmakuPool = dList;
                     startDanmakuBatch();
@@ -7107,6 +7238,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
                 customAvatar: friend.avatar, isOffline: true, id: aiMsgId
             });
             
+            // 【修复】渲染选项分支
             if (isOfflineOptionsOn && extractedOptions.length > 0) {
                 const optDiv = document.createElement('div');
                 optDiv.id = 'vn-options-box';
@@ -7118,19 +7250,27 @@ window.sendOfflineMessage = async function(isRegen = false) {
                     btn.onclick = () => selectOfflineOption(opt);
                     optDiv.appendChild(btn);
                 });
-                container.appendChild(optDiv);
-                setTimeout(() => container.scrollTop = container.scrollHeight, 150);
+              const dmArea = container.querySelector('.offline-danmaku-area');
+if (dmArea) container.insertBefore(optDiv, dmArea);
+else container.appendChild(optDiv);
+
+                
             }
 
         } catch (e) {
-            document.getElementById(loadingId)?.remove();
-            const sendBtn = document.querySelector('.offline-send-btn');
-            if(sendBtn) sendBtn.classList.remove('sending');
-            appendOfflineEntry('ai', `Error: ${e.message}`, 'System');
-        }
-    }
+    document.getElementById(loadingId)?.remove();
+    const sendBtn = document.querySelector('.offline-send-btn');
+    if (sendBtn) sendBtn.classList.remove('sending');
+
+    showAiErrorModal(
+        '线下模式生成失败',
+        (e && e.message) ? e.message : String(e)
+    );
 }
 
+    }
+}
+// END: 替换结束
 
 
 // [辅助函数] 从文本更新状态
@@ -7566,11 +7706,10 @@ async function triggerOfflineRetry() {
     // 显示一个特殊的 Loading 提示
     const loadingId = 'loading-regen-' + Date.now();
     const container = document.getElementById('offline-log-container');
-    const loadDiv = document.createElement('div');
-    loadDiv.id = loadingId;
-    loadDiv.className = 'offline-entry ai';
-    loadDiv.innerHTML = `<div class="oe-name">Recalculating Timeline...</div><div class="oe-text" style="color:#ccc;">...</div>`;
-    container.appendChild(loadDiv);
+    const dmArea = container.querySelector('.offline-danmaku-area');
+if (dmArea) container.insertBefore(loadDiv, dmArea);
+else container.appendChild(loadDiv);
+
     container.scrollTop = container.scrollHeight;
     
     // 直接调用发送函数，并传入一个特殊的指令，告诉AI这是重置
@@ -8766,6 +8905,45 @@ window.showToast = function(msg) {
         toast.classList.remove('show');
     }, 3000);
 }
+// === [新增] AI 失败弹窗（不写进聊天气泡） ===
+window.showAiErrorModal = function(reason, detail = '') {
+  const modal = document.getElementById('ai-error-modal');
+  const reasonEl = document.getElementById('ai-error-reason');
+  const detailEl = document.getElementById('ai-error-detail');
+  const titleEl = document.getElementById('ai-error-title');
+
+  // 如果你还没加 HTML，兜底用 toast/alert
+  if (!modal || !reasonEl || !detailEl) {
+    if (typeof showToast === 'function') showToast(`生成失败：${reason}`);
+    else alert(`生成失败：${reason}\n${detail || ''}`);
+    return;
+  }
+
+  if (titleEl) titleEl.innerText = '生成失败';
+  reasonEl.innerText = reason || '未知错误';
+  detailEl.innerText = (detail || '').toString();
+
+  modal.classList.add('active');
+};
+
+window.closeAiErrorModal = function() {
+  const modal = document.getElementById('ai-error-modal');
+  if (modal) modal.classList.remove('active');
+};
+
+window.copyAiError = async function() {
+  const reason = document.getElementById('ai-error-reason')?.innerText || '';
+  const detail = document.getElementById('ai-error-detail')?.innerText || '';
+  const text = `[原因]\n${reason}\n\n[详情]\n${detail}`.trim();
+
+  try {
+    await navigator.clipboard.writeText(text);
+    if (typeof showToast === 'function') showToast('已复制错误信息');
+  } catch (e) {
+    alert(text);
+  }
+};
+
 /* ====================================================
    [更新] 主页/P3/P4 自定义内容保存与恢复逻辑
    ==================================================== */

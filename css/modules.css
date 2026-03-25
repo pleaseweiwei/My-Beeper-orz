@@ -7382,3 +7382,50 @@ img.msg-sticker-img {
 @keyframes blink {
     50% { opacity: 0; }
 }
+/* =========================================
+   [最终版] 线下模式 - 滚动到底部可见的弹幕区
+   ========================================= */
+.offline-danmaku-area {
+    display: none; /* 默认不显示，也不占底部空间 */
+    height: auto;
+    padding: 20px 15px;
+    margin-top: 30px;
+    background: #fdfdfd;
+    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.03);
+    flex-shrink: 1;
+}
+
+.offline-danmaku-area.show {
+    display: block; /* 需要时才出现 */
+    animation: fadeIn 0.25s;
+}
+
+
+.danmaku-area-header {
+    font-size: 10px;
+    color: #b0b0b0;
+    font-weight: 600;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+    letter-spacing: 1px;
+}
+
+#offline-danmaku-log {
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* 每一条弹幕的样式 */
+.log-danmaku-item {
+    background: #f0f2f5;
+    color: #5f6c7b;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-bottom: 6px; /* 弹幕之间的间距 */
+    animation: fadeIn 0.4s;
+    word-break: break-all;
+}
