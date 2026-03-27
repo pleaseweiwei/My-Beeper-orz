@@ -7481,3 +7481,68 @@ img.msg-sticker-img {
     animation: fadeIn 0.4s;
     word-break: break-all;
 }
+/* =========================================
+   [新增] Persona Builder：手写人设 + 清空/删除按钮
+   ========================================= */
+
+.pb-manual-card{
+  background:#fff;
+  border-radius:28px;
+  padding:24px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.03);
+}
+
+.pb-manual-badge{
+  display:inline-block;
+  background:#111;
+  color:#fff;
+  padding:4px 12px;
+  border-radius:20px;
+  font-size:10px;
+  font-weight:800;
+  margin-bottom:12px;
+  letter-spacing:1px;
+}
+
+.pb-manual-textarea{
+  width:100%;
+  min-height:180px;
+  border-radius:18px;
+  border:1px solid #eee;
+  background:#fafafa;
+  padding:14px 16px;
+  font-size:13px;
+  line-height:1.7;
+  outline:none;
+  box-sizing:border-box;
+  resize: vertical;      /* 允许自己拉高 */
+}
+
+.pb-manual-textarea:focus{
+  background:#fff;
+  border-color:#111;
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+}
+
+.pb-manual-hint{
+  margin-top:10px;
+  font-size:11px;
+  color:#999;
+  line-height:1.5;
+}
+
+/* 头部按钮：清空/删除 */
+.pb-save-btn.pb-clear-btn{
+  background:#fff;
+  color:#111;
+  border:1px solid #eee;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.pb-save-btn.pb-delete-btn{
+  background:#ffecec;
+  color:#ff4d4f;
+  border:1px solid #ffd3d3;
+  box-shadow: 0 4px 15px rgba(255,77,79,0.12);
+}

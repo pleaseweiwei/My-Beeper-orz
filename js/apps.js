@@ -1692,7 +1692,8 @@ const AVAILABLE_WORLDBOOKS = [
 
 let friendsData = {}; 
 let currentChatId = null; // 记录当前正在和谁聊天
-let pendingRegenMsgId = null; 
+window.getCurrentChatId = () => currentChatId; // 暴露给 app_memory.js 等外部脚本读取
+let pendingRegenMsgId = null;
 let momentsFeed = [];
 // 初始化默认的一个 AI 好友
 friendsData['Hannah AI'] = {
@@ -1995,6 +1996,8 @@ AI 原始输出示例 2：[表情:嫌弃]
         [User Input]
         User sent: "${userMessage}"
         
+        ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[USER IDENTITY - The person chatting in this group]:\n        ${me.persona}` : ''; })()}
+
                 [Speaking Style Rules - CRITICAL]
         1. Refuse Robot Speak: Absolutely NO lists (1. 2. 3.), NO formal connectors (However, Therefore). No long paragraphs.
         2. Visual Rhythm & Length: 
@@ -2035,6 +2038,8 @@ AI 原始输出示例 2：[表情:嫌弃]
 
         ${f.worldbook ? `[World Setting]: ${f.worldbook}` : ''}
 
+        ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[USER IDENTITY - The person you are chatting with]:\n        ${me.persona}` : ''; })()}
+
                 [CORE RULES - CRITICAL]
         1. 场景限制：你们的互动【仅限于线上聊天软件】，严禁发展为线下见面。
         2. 非通话警告：这【不是电话通话】。你们是通过类似微信/QQ的软件进行交流，因此【绝对禁止】使用“挂断”、“挂电话”、“挂了”等与语音通话相关的词语。
@@ -2067,6 +2072,17 @@ AI 原始输出示例 2：[表情:嫌弃]
         Example: [SEND_MAP:星巴克|中央公园|2.5]
         If you invent a completely new location name in the tag, the system will automatically build it on the user's Map App. Use this to creatively drive the roleplay forward!
         `;
+        // === [一起听] 切歌指令 ===
+        if (typeof getMusicContext === 'function' && getMusicContext()) {
+            systemPrompt += `
+        \n[LISTEN TOGETHER SYSTEM]
+        You and the user are currently listening to music together. You can see the current song, playlist, and real-time lyrics.
+        If you want to change the song (e.g., the mood shifts, user mentions a song, or you feel like switching), include this exact tag anywhere in your reply:
+        [CHANGE_MUSIC:SongTitle|ArtistName]
+        Example: [CHANGE_MUSIC:晴天|周杰伦]
+        Only use this when it feels emotionally natural and appropriate. Do not change music every message.
+        `;
+        }
 // === 【升级版】强制 AI 生成：弹幕(可选) + 实时心声状态(必选) ===
 systemPrompt += `
 \n[SYSTEM INSTRUCTION]
@@ -2268,6 +2284,32 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
     baseUrl = baseUrl.replace(/\/$/, '');
     const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
     
+    // === [一起听] 注入音乐情景上下文 ===
+    if (typeof getMusicContext === 'function') {
+        const musicCtx = getMusicContext();
+        if (musicCtx) systemPrompt += musicCtx;
+    }
+
+    // === 五维记忆引擎：§4 情景记忆 & §3 跨聊天记忆注入 ===
+    if (currentChatType === 'single') {
+        // § 4 动态情景记忆：注入当前真实时间 + 距上次聊天时长
+        if (typeof buildSituationalAwareness === 'function') {
+            systemPrompt += `\n\n[SITUATIONAL AWARENESS]:\n${buildSituationalAwareness(chatSettings)}`;
+        }
+        // § 3 跨聊天记忆互通：注入关联角色近期对话片段
+        if (typeof buildLinkedMemoryContext === 'function') {
+            const _linkedCtx = await buildLinkedMemoryContext(chatSettings);
+            if (_linkedCtx) systemPrompt += _linkedCtx;
+        }
+        // 更新最后聊天时间戳（供下次 buildSituationalAwareness 计算间隔）
+        const _realFriend = friendsData[currentChatId];
+        if (_realFriend) {
+            if (!_realFriend.chatSettings) _realFriend.chatSettings = {};
+            _realFriend.chatSettings.lastChatTime = Date.now();
+            saveFriendsData(); // 异步保存，不 await 以免阻塞响应流
+        }
+    }
+
         // 构建最终的消息列表
     let finalMessages = [
         { role: "system", content: systemPrompt },
@@ -2338,6 +2380,11 @@ if (!aiReply.trim()) {
         // === [修复] 全局处理特殊语音标记或被换行打断的 [VOICE] 标记，防止拆分成多个纯文字气泡 ===
         aiReply = aiReply.replace(/\[语音消息.*?\]\s*/gi, '[VOICE]');
         aiReply = aiReply.replace(/\[VOICE\]\s+/gi, '[VOICE]');
+
+        // 检查是否含有视频来电指令
+        if (typeof checkForVideoCallRequest === 'function') {
+            aiReply = checkForVideoCallRequest(aiReply, currentChatId);
+        }
 
         // === 处理返回结果 ===
         if (currentChatType === 'group') {
@@ -2568,6 +2615,20 @@ if (statusMatch) {
                 }, 800);
             }
 
+            // === [一起听] 解析 AI 切歌指令 [CHANGE_MUSIC:歌名|歌手] ===
+            const changeMusicRegex = /\[CHANGE_MUSIC:([^\]|]+)\|?([^\]]*)\]/i;
+            const changeMusicMatch = rawReply.match(changeMusicRegex);
+            if (changeMusicMatch) {
+                rawReply = rawReply.replace(changeMusicRegex, '').trim();
+                const targetTitle = changeMusicMatch[1].trim();
+                const targetArtist = changeMusicMatch[2].trim();
+                setTimeout(() => {
+                    if (typeof changeMusicByAI === 'function') {
+                        changeMusicByAI(targetTitle, targetArtist);
+                    }
+                }, 300);
+            }
+
             // 3. 朋友圈 [MOMENT] & [MOMENT_IMG]，从 rawReply 中完全移除
             const momentBlockRegex = /\[MOMENT\]([\s\S]*?)\[\/MOMENT\]/i;
             const mMatch = rawReply.match(momentBlockRegex);
@@ -2607,6 +2668,10 @@ if (!avatarUrl) {
 }
 
             if (finalContent && finalContent.trim() !== '') {
+                // 转账标签解析（[TRANSFER:金额:备注]）
+                if (typeof TransferApp !== 'undefined' && TransferApp.parseAndHandleAITransfer) {
+                    finalContent = TransferApp.parseAndHandleAITransfer(finalContent);
+                }
                 // 1. 按换行符拆分正文 (过滤空行)
                 const textSegments = finalContent.split('\n').map(s => s.trim()).filter(s => s);
                 
@@ -3156,6 +3221,11 @@ renderGreetingListUI(friend);
     renderChatSettingsStickerCheckboxes();
 
 
+    // 记忆互通 UI 渲染
+    if (typeof renderLinkMemoryUI === 'function') {
+        renderLinkMemoryUI();
+    }
+
     // 最后显示页面 (滑入动画)
     page.classList.add('show');
 }
@@ -3214,6 +3284,10 @@ window.saveChatSettings = async function() {
     const selectedWbCheckboxes = document.querySelectorAll('#cs-worldbook-container input[type="checkbox"]:checked');
     friend.worldbook = Array.from(selectedWbCheckboxes).map(cb => cb.value);
 
+    // 保存前捕获记忆引擎持久字段（避免被 chatSettings 全量覆盖而丢失）
+    const _prevLastChatTime = (friend.chatSettings && friend.chatSettings.lastChatTime) || null;
+    const _prevLinkMemory   = (friend.chatSettings && friend.chatSettings.linkMemory)   || null;
+
     // 高级设置 (翻译、记忆等全都在)
     friend.chatSettings = {
         memoryLimit: parseInt(document.getElementById('cs-memory-limit').value) || 20,
@@ -3240,6 +3314,14 @@ window.saveChatSettings = async function() {
 
  const selectedStickers = document.querySelectorAll('#cs-sticker-categories input[type="checkbox"]:checked');
     friend.chatSettings.activeStickers = Array.from(selectedStickers).map(cb => cb.value);
+    // 恢复记忆引擎持久字段（lastChatTime 不受保存操作影响）
+    if (_prevLastChatTime) friend.chatSettings.lastChatTime = _prevLastChatTime;
+    // 保存记忆互通配置（从 app_memory.js 的 UI 读取）
+    if (typeof getLinkMemoryConfig === 'function') {
+        friend.chatSettings.linkMemory = getLinkMemoryConfig();
+    } else if (_prevLinkMemory) {
+        friend.chatSettings.linkMemory = _prevLinkMemory;
+    }
     // [关键] 3. 在所有数据更新后，获取新的有效开场白
     const newGreeting = getEffectiveGreeting(friend);
     
@@ -4364,6 +4446,32 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
         contentHtml = `<div class="msg-image-content"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=300&auto=format&fit=crop"></div>`;
         isRichContent = true;
     }
+    // === [新增] 转账卡片从历史加载时渲染 ===
+    else if (text.startsWith('[WC_TRANSFER:')) {
+        bubble.classList.add('rich-bubble');
+        isRichContent = true;
+        const _inner = text.replace('[WC_TRANSFER:', '').replace(/\]$/, '');
+        const _parts = _inner.split('|');
+        const tId = _parts[0] || '';
+        const tDir = _parts[1] || 'user-to-ai';
+        const tAmt = parseFloat(_parts[2]) || 0;
+        const tMemo = (_parts[3] || '').replace(/\\\|/g, '|');
+        const tStatus = _parts[4] || 'pending';
+        const isUserSide = tDir === 'user-to-ai';
+        let actionHtml = '';
+        if (tStatus === 'accepted') {
+            actionHtml = '<span class="transfer-status accepted">✅ 已收款</span>';
+        } else if (tStatus === 'rejected') {
+            actionHtml = '<span class="transfer-status rejected">↩ 已退回</span>';
+        } else if (tDir === 'ai-to-user') {
+            actionHtml = '<div class="transfer-btn-row"><button class="transfer-btn reject-btn" onclick="TransferApp.userRejectAITransfer(\'' + tId + '\')">拒收</button><button class="transfer-btn accept-btn" onclick="TransferApp.userAcceptAITransfer(\'' + tId + '\')">收款</button></div>';
+        } else {
+            actionHtml = '<span class="transfer-status pending">⏳ 等待对方确认</span>';
+        }
+        const tMemoEsc = tMemo.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const memoHtml = tMemo ? '<div class="transfer-memo">' + tMemoEsc + '</div>' : '';
+        contentHtml = '<div class="wc-transfer-card" id="card-' + tId + '" data-transfer-dir="' + tDir + '"><div class="transfer-top"><div class="transfer-icon-wrap">💸</div><div class="transfer-info"><div class="transfer-title">' + (isUserSide ? '转账给对方' : '对方向你转账') + '</div><div class="transfer-amount">¥' + tAmt.toFixed(2) + '</div>' + memoHtml + '</div></div><div class="transfer-divider"></div><div class="transfer-action-area" id="action-' + tId + '">' + actionHtml + '</div><div class="transfer-footer">微信转账 · 虚拟资产</div></div>';
+    }
     // === 【修复6】检测纯表情包，强制加上透明底色样式 ===
     else if (/^\[表情:.*?\]$/.test(text.trim())) {
         bubble.classList.add('rich-bubble');
@@ -4472,11 +4580,17 @@ window.toggleDanmaku = function() {
         }
         shootDanmaku("✨ 弹幕已开启 ✨", "highlight-gold");
     } else {
-  stopDanmakuLoop();
-  if(layer) layer.innerHTML = '';
-  clearOfflineDanmakuLog(); // 新增：线下日志也清空
-}
-
+        // 关闭状态
+        if(chatBtn) chatBtn.classList.remove('active');
+        if(offlineBtn) {
+            offlineBtn.classList.remove('active');
+            offlineBtn.innerText = "弹幕: OFF";
+        }
+        stopDanmakuLoop();
+        if(layer) layer.innerHTML = '';
+        clearOfflineDanmakuLog(); // 新增：线下日志也清空
+        hideOfflineDanmakuArea(true); // 隐藏线下弹幕区
+    }
 }
 
 
@@ -6527,11 +6641,45 @@ window.handleMenuAction = function(action) {
         case 'regen':
             performOnlineRegen(currentMenuTarget.element);
             break;
+        case 'edit':
+            performEdit(id, text, element);
+            break;
     }
 
     // 【修复4：手动关闭菜单】执行完操作后关闭
     const menuEl = document.getElementById('wc-bubble-menu');
     if (menuEl) menuEl.classList.remove('show');
+}
+
+// --- 编辑消息核心逻辑 ---
+async function performEdit(msgId, originalText, rowElement) {
+    const newText = prompt('编辑消息：', originalText.replace(/<br>/g, '\n'));
+    if (newText === null) return;
+    const trimNew = newText.trim();
+    if (!trimNew) return;
+
+    // 更新气泡 DOM
+    const mainContent = rowElement && rowElement.querySelector('.bubble-content-main');
+    if (mainContent) {
+        let html = trimNew.replace(/\n/g, '<br>');
+        html = html.replace(/\[表情:(.*?)\]/g, (match, p1) => {
+            const sticker = (window.allStickers || []).find(s => s.name === p1.trim());
+            if (sticker) return `<div class="msg-sticker-container"><img src="${sticker.url}" class="msg-sticker-img" alt="${p1.trim()}" title="${p1.trim()}"></div>`;
+            return match;
+        });
+        mainContent.innerHTML = html;
+    }
+    if (rowElement) rowElement.setAttribute('data-msg-text', trimNew);
+
+    // 更新 IDB 历史记录
+    if (currentChatId) {
+        const history = await loadChatHistory(currentChatId);
+        const idx = history ? history.findIndex(m => m.id === msgId) : -1;
+        if (idx !== -1) {
+            history[idx].text = trimNew;
+            await IDB.set(scopedChatKey(currentChatId), history);
+        }
+    }
 }
 
 // --- 撤回核心逻辑 ---
@@ -6818,14 +6966,43 @@ function showBubbleMenu(e, id, text, type, rowElement) {
     if (e.touches && e.touches.length > 0) {
         clientX = e.touches[0].clientX;
         clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
     }
 
-    // 定位菜单 (气泡上方)
-    menu.style.left = clientX + 'px';
-    menu.style.top = (clientY - 20) + 'px'; 
-    
-    // 显示
+    // 先显示菜单才能测量尺寸
     menu.classList.add('show');
+
+    // 移到 body 下，脱离 .phone 的 overflow:hidden / isolation:isolate 堆叠上下文
+    if (menu.parentElement !== document.body) {
+        document.body.appendChild(menu);
+    }
+
+    // 双重 rAF：确保浏览器完成布局再测量
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const mw = menu.offsetWidth || 140;
+            const mh = menu.offsetHeight || 240;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+
+            // 优先在触点上方弹出；如果上方空间不足就向下弹
+            let top = clientY - mh - 8;
+            if (top < 4) top = clientY + 12;
+            // 防止底部溢出（留80px余量，兼容输入栏 + iOS安全区）
+            if (top + mh > vh - 80) top = vh - mh - 80;
+            if (top < 4) top = 4;
+
+            // 水平居中于触点，防溢出
+            let left = clientX - mw / 2;
+            if (left < 4) left = 4;
+            if (left + mw > vw - 4) left = vw - mw - 4;
+
+            menu.style.left = left + 'px';
+            menu.style.top = top + 'px';
+        });
+    });
     
         // 点击其他地方关闭菜单
     const closeMenu = (ev) => {
@@ -7335,8 +7512,12 @@ else container.appendChild(entryDiv);
                     optDiv.appendChild(btn);
                 });
                const dmArea = container.querySelector('.offline-danmaku-area');
-if (dmArea) container.insertBefore(optDiv, dmArea);
-else container.appendChild(optDiv);
+if (dmArea) {
+    if (dmArea.nextSibling) container.insertBefore(optDiv, dmArea.nextSibling);
+    else container.appendChild(optDiv);
+} else {
+    container.appendChild(optDiv);
+}
 
                 // 【修复】选项出现后自动滚动到底部，确保能看到
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
@@ -7479,8 +7660,12 @@ if (!rawReply.trim()) {
                     optDiv.appendChild(btn);
                 });
               const dmArea = container.querySelector('.offline-danmaku-area');
-if (dmArea) container.insertBefore(optDiv, dmArea);
-else container.appendChild(optDiv);
+if (dmArea) {
+    if (dmArea.nextSibling) container.insertBefore(optDiv, dmArea.nextSibling);
+    else container.appendChild(optDiv);
+} else {
+    container.appendChild(optDiv);
+}
 
                 
             }
@@ -10079,3 +10264,59 @@ async function callMinimaxVoiceAPI(text, globalSettings, chatSettings) {
     const blob = await response.blob();
     return URL.createObjectURL(blob);
 }
+
+/* =========================================
+   [转账系统] 隐藏消息发送接口
+   供 app_transfer.js 调用，静默触发 AI 回复
+   ========================================= */
+window.sendHiddenAIMessage = async function(prompt) {
+    if (!currentChatId) return '';
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    if (!settingsJSON) return '';
+    const settings = JSON.parse(settingsJSON);
+
+    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+    const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+    const f = friendsData[currentChatId] || {};
+    const systemPrompt = `You are ${f.realName || 'AI'}. ${f.persona || ''}`;
+
+    try {
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: parseFloat(settings.temperature || 0.7),
+                max_tokens: 120
+            })
+        });
+        if (!res.ok) return '';
+        const data = await res.json();
+        const reply = (data?.choices?.[0]?.message?.content || '').trim();
+
+        if (reply) {
+            // 过滤掉STATUS块，只取正文
+            const clean = reply.replace(/\[STATUS_START\][\s\S]*?\[STATUS_END\]/i, '').trim();
+            if (clean) {
+                const avatarUrl = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.realName || 'AI'}`;
+                const aiMsgId = 'msg_hid_' + Date.now();
+                setTimeout(() => {
+                    appendMessage(clean, 'received', avatarUrl, null, null, aiMsgId);
+                    saveMessageToHistory(currentChatId, {
+                        id: aiMsgId, text: clean, type: 'received',
+                        customAvatar: avatarUrl, senderName: currentChatId
+                    });
+                }, 600);
+            }
+        }
+        return reply;
+    } catch (e) {
+        console.warn('[sendHiddenAIMessage] error:', e);
+        return '';
+    }
+};

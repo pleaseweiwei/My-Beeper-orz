@@ -45,10 +45,203 @@ html, body {
     -webkit-backdrop-filter: none !important;
   }
 
+  /* 编辑弹窗：手机端关闭模糊 */
+  .msg-edit-box {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
   /* 手机端关闭发票边缘的遮罩裁剪（极耗性能） */
   .ticker-wrapper, 
   .receipt-widget.short-version {
     mask-image: none !important;
     -webkit-mask-image: none !important;
   }
+}
+
+/* =========================================
+   [Fix] 气泡长按菜单遮挡修复
+   - 提升 z-index 至最高层，确保覆盖所有元素
+   ========================================= */
+.wc-bubble-menu {
+  z-index: 999999 !important;
+}
+
+/* =========================================
+   双向虚拟转账消息卡片样式
+   ========================================= */
+.wc-transfer-card {
+  width: 220px;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.06);
+  cursor: default;
+  user-select: none;
+  font-family: 'PingFang SC', 'Montserrat', sans-serif;
+}
+
+.wc-transfer-card .transfer-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 12px;
+}
+
+.wc-transfer-card .transfer-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fa9d3b, #f76b1c);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(247,107,28,0.3);
+}
+
+.wc-transfer-card .transfer-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wc-transfer-card .transfer-title {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 2px;
+  letter-spacing: 0.5px;
+}
+
+.wc-transfer-card .transfer-amount {
+  font-size: 22px;
+  font-weight: 700;
+  color: #222;
+  line-height: 1.2;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.wc-transfer-card .transfer-memo {
+  font-size: 11px;
+  color: #888;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wc-transfer-card .transfer-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 0 12px;
+}
+
+.wc-transfer-card .transfer-action-area {
+  padding: 10px 14px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* 待处理状态下的按钮行 */
+.wc-transfer-card .transfer-btn-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.transfer-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  outline: none;
+}
+
+.transfer-btn.reject-btn {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #e0e0e0;
+}
+
+.transfer-btn.reject-btn:active {
+  background: #eee;
+}
+
+.transfer-btn.accept-btn {
+  background: linear-gradient(135deg, #fa9d3b, #f76b1c);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(247,107,28,0.3);
+}
+
+.transfer-btn.accept-btn:active {
+  opacity: 0.85;
+}
+
+/* 状态标签 */
+.transfer-status {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.transfer-status.pending {
+  color: #f59e0b;
+}
+
+.transfer-status.accepted {
+  color: #07c160;
+}
+
+.transfer-status.rejected {
+  color: #999;
+}
+
+/* 底部品牌标注 */
+.wc-transfer-card .transfer-footer {
+  padding: 6px 14px 10px;
+  font-size: 10px;
+  color: #ccc;
+  letter-spacing: 0.5px;
+}
+
+/* 转账弹窗 keypad 数字字体 */
+#transfer-amount-input {
+  font-size: 32px;
+  font-weight: 300;
+  text-align: center;
+  border: none;
+  border-bottom: 2px solid #eee;
+  width: 100%;
+  outline: none;
+  padding: 10px 0;
+  color: #222;
+  transition: border-color 0.2s;
+  font-family: 'Montserrat', sans-serif;
+  background: transparent;
+}
+
+#transfer-amount-input:focus {
+  border-bottom-color: #fa9d3b;
+}
+
+.transfer-modal-balance {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.transfer-modal-balance span {
+  color: #333;
+  font-weight: 600;
 }

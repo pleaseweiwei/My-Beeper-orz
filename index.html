@@ -25,6 +25,8 @@
     <!-- 本地样式表 -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/video_call.css">
+    <link rel="stylesheet" href="css/music.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
@@ -573,7 +575,7 @@
                     <div class="plus-icon"><i class="fas fa-hand-point-right"></i></div>
                     <span>拍一拍</span>
                 </div>
-                <div class="plus-item" onclick="sendRedPacket()">
+                <div class="plus-item" onclick="openTransferModal()">
                     <div class="plus-icon"><i class="fas fa-yen-sign" style="color:#fa9d3b;"></i></div>
                     <span>转账</span>
                 </div>
@@ -581,9 +583,13 @@
     <div class="plus-icon"><i class="fas fa-microphone"></i></div>
     <span>语音</span>
 </div>
+                <div class="plus-item" onclick="openVideoCallFromChat()">
+    <div class="plus-icon"><i class="fas fa-video"></i></div>
+    <span>视频通话</span>
+</div>
 
-                <div class="plus-item" onclick="sendMusicShare()">
-                    <div class="plus-icon"><i class="fas fa-music"></i></div>
+                <div class="plus-item" id="listen-together-btn" onclick="toggleListenTogether()">
+                    <div class="plus-icon"><i class="fas fa-headphones"></i></div>
                     <span>一起听</span>
                 </div>
                 <div class="plus-item" onclick="openOfflineMode()">
@@ -1075,6 +1081,22 @@
                 <label style="margin-bottom:5px;">触发时间间隔 (秒)</label>
                 <input type="number" id="cs-inactivity-time" placeholder="300" value="300" min="60" style="background:#fff;">
                 <span class="form-text" style="display:block; margin-top:4px;">如果超过此时间无对话，AI 将尝试主动发起话题。</span>
+            </div>
+        </div>
+
+        <hr class="settings-divider">
+
+        <!-- 记忆互通 (Cross-Chat Memory) -->
+        <div class="settings-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>记忆互通 (Cross-Chat Memory)</span>
+        </div>
+        <div style="font-size:11px; color:#888; margin-bottom:10px; line-height:1.6;">
+            <i class="fas fa-link" style="color:#ff7e67;"></i>
+            勾选后，TA 将能看到你与其他角色/群聊的最近对话。
+        </div>
+        <div id="cs-link-memory-container" class="worldbook-checklist-container" style="max-height:200px; background:#fafafa; border-color:#eee;">
+            <div style="color:#ccc; font-size:12px; text-align:center; padding:15px;">
+                <i class="fas fa-spinner fa-spin"></i> 加载中...
             </div>
         </div>
 
@@ -2472,6 +2494,25 @@
 </div>
 
 
+    <!-- ===== 来电界面 ===== -->
+    <div id="incoming-call-overlay">
+        <div class="ic-avatar-ring"><img id="ic-avatar" src=""></div>
+        <div class="ic-name" id="ic-name">来电</div>
+        <div class="ic-subtitle">VIDEO CALL</div>
+        <div class="ic-actions">
+            <div class="ic-btn reject" onclick="rejectIncomingCall()"><i class="fas fa-phone-slash"></i></div>
+            <div class="ic-btn accept" onclick="acceptIncomingCall()"><i class="fas fa-phone"></i></div>
+        </div>
+    </div>
+
+    <!-- ===== 通话主界面 ===== -->
+    <div id="video-call-view"></div>
+
+    <!-- ===== 悬浮球 ===== -->
+    <div id="vc-floating-bubble" onclick="restoreVideoCall()">
+        <i class="fas fa-video"></i>
+    </div>
+
     <script src="js/core.js"></script>
     <script src="js/apps.js"></script>
     <script src="js/app_worldbook.js"></script>
@@ -2484,6 +2525,9 @@
     <script src="js/app_map.js"></script>
     <script src="js/app_live.js"></script>
 <script src="js/app_persona.js"></script>
+<script src="js/app_voice_call.js"></script>
+<script src="js/app_memory.js"></script>
+<script src="js/app_transfer.js"></script>
 
 
 <div id="add-friend-modal" class="modal-overlay">
@@ -2715,6 +2759,9 @@
     <div class="wc-menu-item" onclick="handleMenuAction('copy')">
         <i class="far fa-copy"></i> 复制
     </div>
+    <div id="menu-btn-edit" class="wc-menu-item" onclick="handleMenuAction('edit')">
+        <i class="fas fa-pen"></i> 编辑
+    </div>
     <div class="wc-menu-item" onclick="handleMenuAction('quote')">
         <i class="fas fa-quote-right"></i> 引用
     </div>
@@ -2782,9 +2829,6 @@
         <!-- JS 会在这里填充具体消息 -->
     </div>
 </div>
-<!-- 全局音频标签 -->
-<audio id="global-audio-player"></audio>
-
 <!-- 音乐播放器界面 -->
 <div class="app-fullscreen-view music-player-view" id="musicPlayerView">
     <div class="wc-header">
@@ -2808,8 +2852,8 @@
         </div>
     </div>
 
-    <div class="mp-playlist" id="mp-playlist-container">
-        <!-- 列表由 JS 生成 -->
+    <div class="mp-playlist" id="mp-playlist-legacy">
+        <!-- 旧播放器列表 (已迁移至 lt-player) -->
     </div>
     
     <!-- 隐藏的文件输入框 -->
@@ -3177,7 +3221,29 @@
                 <!-- JS 动态填充 -->
             </div>
         </div>
-        
+
+        <!-- 5. 记忆精简 -->
+        <div>
+            <div class="sk-section-header">
+                <span><i class="fas fa-compress-alt"></i> 长期记忆精简</span>
+            </div>
+            <button class="sk-btn-outline" onclick="condenseSummaries()" style="margin-top:0;">
+                <i class="fas fa-magic"></i> 一键精简全部总结 (≤200字纲要)
+            </button>
+        </div>
+
+        <!-- 6. 存档系统 S/L -->
+        <div>
+            <div class="sk-section-header">
+                <span><i class="fas fa-save" style="color:#4a90e2;"></i> 记忆存档 (S/L)</span>
+                <button class="sk-icon-btn" onclick="saveCheckpoint()" title="创建新存档" style="background:#e8f4fd;color:#4a90e2;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="font-size:10px;color:#999;margin-bottom:10px;line-height:1.5;">最多保存20个存档。读档将强制覆盖当前所有聊天记录。</div>
+            <div id="checkpoint-list-container" class="sk-list-container">
+                <div style="color:#999;font-size:12px;text-align:center;padding:20px;">点击右上角 + 创建存档</div>
+            </div>
+        </div>
+
         <div style="height: 60px;"></div>
     </div>
 </div>
@@ -4673,10 +4739,31 @@
             <span class="pb-title-main" id="pb-current-persona-name">MY UNIVERSE <i class="fas fa-caret-down" style="font-size:12px;"></i></span>
             <span class="pb-title-sub">点击切换多个人设</span>
         </div>
-        <div style="display:flex; gap: 10px;">
-            <div class="pb-save-btn" onclick="exportPersonaTxt()" title="导出TXT"><i class="fas fa-file-export"></i></div>
-            <div class="pb-save-btn" onclick="savePersonaBuilder()" title="保存"><i class="fas fa-check"></i></div>
+      <div style="display:flex; gap: 10px; position: relative;">
+            <!-- 更多操作菜单按钮 (白底) -->
+            <div class="pb-save-btn pb-clear-btn" onclick="togglePbMenu(event)" title="更多选项">
+                <i class="fas fa-ellipsis-h"></i>
+            </div>
+            
+            <!-- 下拉菜单 -->
+            <div id="pb-more-menu" class="wc-plus-dropdown" style="right: 46px; top: 46px; width: 140px; text-align: left;">
+                <div class="wc-menu-option" onclick="clearPersonaBuilderInputs(); togglePbMenu(event)">
+                    <i class="fas fa-broom"></i> 一键清空
+                </div>
+                <div class="wc-menu-option" onclick="exportPersonaTxt(); togglePbMenu(event)">
+                    <i class="fas fa-file-export"></i> 导出 TXT
+                </div>
+                <div class="wc-menu-option" onclick="deleteCurrentPersonaIdentity(); togglePbMenu(event)" style="color:#ff4d4f;">
+                    <i class="fas fa-trash" style="color:#ff4d4f;"></i> 删除此身份
+                </div>
+            </div>
+
+            <!-- 最核心的保存按钮 (黑底) -->
+            <div class="pb-save-btn" onclick="savePersonaBuilder()" title="保存设定">
+                <i class="fas fa-check"></i>
+            </div>
         </div>
+
     </div>
 
     <div class="pb-scroll-container">
@@ -4695,6 +4782,15 @@
                 <i class="fas fa-wand-magic-sparkles"></i> 注入灵魂 (一键生成档案)
             </button>
         </div>
+<!-- ✍️ 手写人设（不走AI，直接写最终人设） -->
+<div class="pb-manual-card">
+    <div class="pb-manual-badge">✍️ 手写人设</div>
+    <textarea id="pb_manual_persona" class="pb-manual-textarea"
+              placeholder="在这里直接写你的【最终人设】。&#10;例如：&#10;[User Profile]&#10;姓名：...&#10;性格：...&#10;雷点：..."></textarea>
+    <div class="pb-manual-hint">
+        保存优先级：手写人设 > 表单拼接。想继续用表单，就把这里清空。
+    </div>
+</div>
 
         <!-- 模块0：人设头像 -->
         <div class="pb-section-label">00 / AVATAR.</div>
@@ -4796,6 +4892,22 @@
 </div>
 
 
+<!-- === [新增] 消息编辑弹窗 === -->
+<div id="msg-edit-modal" class="modal-overlay" style="z-index:999999; display:none;"
+     onclick="if(event.target===this)closeMsgEditModal()">
+  <div class="msg-edit-box">
+    <div class="msg-edit-header">
+      <span class="msg-edit-title"><i class="fas fa-pen" style="margin-right:6px;font-size:13px;"></i>编辑消息</span>
+      <span class="msg-edit-close" onclick="closeMsgEditModal()">✕</span>
+    </div>
+    <textarea id="msg-edit-textarea" class="msg-edit-textarea" placeholder="输入新内容…" rows="4"></textarea>
+    <div class="msg-edit-actions">
+      <button class="msg-edit-btn cancel" onclick="closeMsgEditModal()">取消</button>
+      <button class="msg-edit-btn confirm" onclick="confirmMsgEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- === [新增] AI 生成失败原因弹窗（不写入气泡） === -->
 <div id="ai-error-modal" class="modal-overlay" style="z-index: 999999;"
      onclick="if(event.target===this) closeAiErrorModal()">
@@ -4824,6 +4936,149 @@
   </div>
 </div>
 
+<!-- ===== 一起听播放器面板 ===== -->
+<div id="listen-together-player" class="lt-player-panel">
+    <div class="lt-header">
+        <i class="fas fa-chevron-down" onclick="closeListenTogetherPlayer()" style="padding:12px;cursor:pointer;"></i>
+        <span id="lt-total-time" class="lt-time-display">已经一起听了 0.0 小时</span>
+        <div style="display:flex;gap:8px;padding:8px;">
+            <i class="fas fa-search" onclick="openMusicSearch()" style="cursor:pointer;padding:4px;font-size:18px;"></i>
+            <i class="fas fa-plus" onclick="openMusicImportModal()" style="cursor:pointer;padding:4px;font-size:18px;"></i>
+            <i class="fas fa-trash-alt" onclick="deleteExpiredSearchedSongs()" style="cursor:pointer;padding:4px;font-size:16px;color:#888;"></i>
+        </div>
+    </div>
+
+    <!-- 双人头像连线 -->
+    <div class="lt-avatars">
+        <div class="lt-avatar-wrap">
+            <img id="lt-avatar-me" class="lt-avatar" src="" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 40 40\'><circle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23555\'/></svg>'">
+        </div>
+        <div class="lt-heart-line">
+            <div class="lt-heart-beat"></div>
+        </div>
+        <div class="lt-avatar-wrap">
+            <img id="lt-avatar-ai" class="lt-avatar" src="" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 40 40\'><circle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ff7e67\'/></svg>'">
+        </div>
+    </div>
+
+    <!-- 黑胶唱片 / 歌词翻转卡片 -->
+    <div class="lt-card" onclick="flipPlayerCard()">
+        <div id="lt-card-inner" class="lt-card-inner">
+            <!-- 正面: 唱片 -->
+            <div class="lt-card-front">
+                <div id="lt-disc-wrapper" class="lt-disc-wrapper">
+                    <div class="lt-disc-ring"></div>
+                    <div id="lt-disc-cover" class="lt-disc-cover"></div>
+                </div>
+            </div>
+            <!-- 背面: 歌词 -->
+            <div class="lt-card-back">
+                <div id="lt-lyrics-container" class="lt-lyrics-container">
+                    <div class="lt-no-lyrics">暂无歌词</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 歌曲信息 -->
+    <div class="lt-song-info">
+        <div id="lt-song-title" class="lt-title">还没有歌曲</div>
+        <div id="lt-song-artist" class="lt-artist">去搜索或导入一首吧</div>
+    </div>
+
+    <!-- 进度条 -->
+    <div id="lt-progress-track" class="lt-progress-track" onclick="seekMusic(event)">
+        <div id="lt-progress-bar" class="lt-progress-bar"></div>
+    </div>
+
+    <!-- 控制按钮 -->
+    <div class="lt-controls">
+        <i class="lt-flb-toggle-btn" style="visibility:hidden;pointer-events:none;"></i>
+        <i class="fas fa-step-backward lt-ctrl-btn" onclick="playPrevSong()"></i>
+        <i class="fas fa-play-circle lt-play-btn" id="lt-play-btn" onclick="toggleMusicPlay()"></i>
+        <i class="fas fa-step-forward lt-ctrl-btn" onclick="playNextSong()"></i>
+        <i class="fas fa-align-left lt-flb-toggle-btn" id="lt-flb-toggle" onclick="toggleFloatingLyrics()" title="悬浮歌词"></i>
+    </div>
+
+    <!-- 播放列表 -->
+    <div class="lt-playlist-title">播放列表</div>
+    <div id="mp-playlist-container" class="lt-playlist"></div>
+</div>
+
+<!-- ===== 音乐搜索弹窗 ===== -->
+<div id="music-search-modal" class="music-modal-overlay">
+    <div class="music-modal-box">
+        <div class="music-modal-header">
+            <span>🔍 搜索音乐</span>
+            <i class="fas fa-times" onclick="closeMusicSearch()" style="cursor:pointer;opacity:0.7;padding:4px;"></i>
+        </div>
+        <div id="search-source-btns" class="search-source-row"></div>
+        <div class="search-input-row">
+            <input type="text" id="music-search-input" class="search-text-input" placeholder="输入歌名 / 歌手..."
+                onkeydown="if(event.key==='Enter')performMusicSearch()">
+            <button class="search-go-btn" onclick="performMusicSearch()"><i class="fas fa-search"></i></button>
+        </div>
+        <div id="music-search-results" class="music-search-results"></div>
+    </div>
+</div>
+
+<!-- ===== 音乐导入弹窗 ===== -->
+<div id="music-import-modal" class="music-modal-overlay">
+    <div class="music-modal-box">
+        <div class="music-modal-header">
+            <span>📥 导入音乐</span>
+            <i class="fas fa-times" onclick="closeMusicImportModal()" style="cursor:pointer;opacity:0.7;padding:4px;"></i>
+        </div>
+        <div class="import-section">
+            <div class="import-label">本地上传</div>
+            <label class="import-file-btn"><i class="fas fa-folder-open"></i> 选择音频文件
+                <input type="file" accept="audio/*" style="display:none;" onchange="handleMusicFile(this)">
+            </label>
+            <label class="import-file-btn" style="margin-top:8px;"><i class="fas fa-file-alt"></i> 上传 LRC 歌词
+                <input type="file" accept=".lrc,.txt" style="display:none;" onchange="handleLrcFile(this)">
+            </label>
+        </div>
+        <div class="import-divider">或者</div>
+        <div class="import-section">
+            <div class="import-label">直连 URL</div>
+            <input type="text" id="music-url-input" class="import-url-input" placeholder="音频直链 (MP3/M4A...)">
+            <input type="text" id="lrc-url-input" class="import-url-input" style="margin-top:8px;" placeholder="LRC 歌词链接 (可选)">
+            <input type="text" id="music-name-input" class="import-url-input" style="margin-top:8px;" placeholder="歌曲名称 (可选)">
+            <button class="import-confirm-btn" onclick="confirmAddUrlSong()">添加到列表</button>
+        </div>
+    </div>
+</div>
+
+<!-- 全局音频元素（若不存在则创建） -->
+<audio id="global-audio-player" style="display:none;"></audio>
+
+<!-- ===== 桌面悬浮歌词条 ===== -->
+<div id="floating-lyrics-bar" class="flb-bar" style="display:none;" ontouchstart="flbDragStart(event)" onmousedown="flbDragStart(event)">
+  <div class="flb-lyric-text" id="flb-lyric-text">♪ 暂无歌词</div>
+  <div class="flb-actions">
+    <i class="fas fa-cog flb-btn" onclick="toggleFlbSettings(event)"></i>
+    <i class="fas fa-times flb-btn" onclick="hideFloatingLyrics()"></i>
+  </div>
+</div>
+<!-- 悬浮歌词设置面板 -->
+<div id="flb-settings-panel" class="flb-settings-panel" style="display:none;">
+  <div class="flb-settings-title">歌词样式设置</div>
+  <div class="flb-setting-row">
+    <label>字体大小</label>
+    <input type="range" min="10" max="28" value="14" id="flb-font-size" oninput="applyFlbStyle()">
+    <span id="flb-font-size-val">14px</span>
+  </div>
+  <div class="flb-setting-row">
+    <label>字体颜色</label>
+    <input type="color" value="#ffffff" id="flb-font-color" oninput="applyFlbStyle()">
+  </div>
+  <div class="flb-setting-row">
+    <label>背景透明度</label>
+    <input type="range" min="0" max="100" value="60" id="flb-bg-opacity" oninput="applyFlbStyle()">
+    <span id="flb-bg-opacity-val">60%</span>
+  </div>
+  <button class="flb-close-settings-btn" onclick="toggleFlbSettings(event)">关闭</button>
+</div>
 
 </body>
 </html>
