@@ -245,3 +245,277 @@ html, body {
   color: #333;
   font-weight: 600;
 }
+
+/* =========================================
+   群聊功能样式
+   ========================================= */
+
+/* 群聊设置：成员行 */
+.gs-member-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+.gs-member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+.gs-member-info {
+    flex: 1;
+    min-width: 0;
+}
+.gs-member-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gs-member-role {
+    font-size: 11px;
+    color: #07c160;
+    font-weight: 600;
+    margin-top: 2px;
+}
+.gs-member-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.gs-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #eee;
+    background: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 12px;
+    color: #555;
+    transition: all 0.2s;
+}
+.gs-action-btn:active {
+    background: #f0f0f0;
+    transform: scale(0.95);
+}
+.gs-member-add-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px dashed #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: #aaa;
+    font-size: 16px;
+    margin-top: 8px;
+    transition: all 0.2s;
+}
+.gs-member-add-btn:active {
+    border-color: #333;
+    color: #333;
+}
+
+/* 红包卡片 */
+.group-red-packet-card {
+    min-width: 200px;
+    background: linear-gradient(135deg, #ff5722, #ff3b30);
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(255,60,48,0.35);
+    transition: transform 0.15s;
+    user-select: none;
+}
+.group-red-packet-card:active {
+    transform: scale(0.97);
+}
+.group-red-packet-card .rp-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.group-red-packet-card .rp-info .rp-note {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 2px;
+}
+.group-red-packet-card .rp-info .rp-type {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+}
+.group-red-packet-card .rp-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255,255,255,0.25);
+    padding-top: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+}
+
+/* 投票卡片 */
+.group-vote-card {
+    min-width: 240px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.group-vote-card .gv-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 12px;
+    line-height: 1.3;
+}
+.gv-option-row {
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.gv-option-row:active {
+    opacity: 0.7;
+}
+.gv-option-label {
+    font-size: 12px;
+    color: #444;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+.gv-bar-track {
+    height: 6px;
+    background: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 3px;
+}
+.gv-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007aff, #5ac8fa);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+.gv-bar-label {
+    font-size: 10px;
+    color: #999;
+    text-align: right;
+}
+.group-vote-card .gv-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #f5f5f5;
+    padding-top: 8px;
+    margin-top: 6px;
+}
+.group-vote-card .gv-total {
+    font-size: 11px;
+    color: #888;
+    font-weight: 600;
+}
+
+/* 群视频通话参与者格子 */
+.gvc-participant {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s;
+}
+.gvc-participant.connected {
+    background: rgba(52,199,89,0.15);
+    border-color: rgba(52,199,89,0.3);
+}
+.gvc-participant img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.2);
+}
+.gvc-name {
+    font-size: 11px;
+    color: #fff;
+    font-weight: 600;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80px;
+}
+.gvc-status {
+    font-size: 10px;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.gvc-status.connected {
+    color: #34c759;
+}
+.gvc-status.waiting {
+    color: #ffd700;
+}
+.gvc-status.declined {
+    color: #ff4d4f;
+}
+
+/* 群成员选项投票输入 */
+.gv-option-input {
+    width: 100%;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.gv-option-input:focus {
+    border-color: #007aff;
+}
+
+/* 群聊记录时间戳系统消息样式强化 */
+.chat-messages [style*="rgba(255,215,0"] {
+    /* 金色系 - 红包获得提示 */
+}
+/* =========================================
+   [修复] 底部面板隐藏时，上边缘阴影泄漏到屏幕内的问题
+   通过在隐藏状态下将面板额外下沉 60px，将阴影彻底藏在屏幕外
+   ========================================= */
+
+/* 1. 一起听音乐面板 (music.css) */
+.lt-player-panel:not(.lt-active) {
+    transform: translateY(calc(100% + 60px)) !important;
+}
+
+/* 2. 线下模式设置面板 (modules.css) */
+.offline-settings-modal:not(.active) {
+    transform: translateY(calc(100% + 60px)) !important;
+}
+
+/* 3. 聊天多选操作底部栏 (modules.css) */
+.wc-multi-select-bar:not(.show) {
+    transform: translateY(calc(100% + 60px)) !important;
+}

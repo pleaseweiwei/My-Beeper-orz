@@ -190,7 +190,7 @@ window.TransferApp = (() => {
         <div class="transfer-top">
           <div class="transfer-icon-wrap">💸</div>
           <div class="transfer-info">
-            <div class="transfer-title">${isUserSide ? '转账给对方' : '对方向你转账'}</div>
+            <div class="transfer-title">${isUserSide ? '转账给 ' + _getPersonaName() : _getPersonaName() + ' 向你转账'}</div>
             <div class="transfer-amount">¥${Number(amount).toFixed(2)}</div>
             ${memo ? `<div class="transfer-memo">${escHtml(memo)}</div>` : ''}
           </div>

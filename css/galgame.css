@@ -1,0 +1,1141 @@
+/* =========================================
+   Galgame 模式专用样式 v8.1
+   韩系白灰 · 纯灰色调 · 清新波点条纹
+   ========================================= */
+
+/* ---- 基础容器 ---- */
+.galgame-container {
+    width: 100%; height: 100%;
+    position: absolute; top: 0; left: 0;
+    z-index: 3000;
+    background: #f5f5f7;
+    color: #1a1a1f;
+    overflow: hidden;
+    font-family: 'Montserrat', 'PingFang SC', sans-serif;
+    display: flex; flex-direction: column;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.galgame-container.active {
+    opacity: 1; pointer-events: auto;
+}
+
+/* ---- 顶部状态栏 ---- */
+.gal-header {
+    height: 52px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+    background: rgba(255,255,255,0.96);
+    z-index: 500; flex-shrink: 0;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    position: relative;
+}
+.gal-back-btn { font-size: 18px; color: #555; cursor: pointer; }
+.gal-title {
+    font-size: 10px; font-weight: 800;
+    letter-spacing: 3px; color: #888;
+    text-transform: uppercase;
+    font-family: 'Montserrat', sans-serif;
+}
+.gal-actions { display: flex; gap: 15px; }
+.gal-action-btn {
+    font-size: 18px; color: #aaa;
+    cursor: pointer; background: none; border: none;
+}
+
+/* ---- S/L 菜单 ---- */
+.gal-sl-menu {
+    position: absolute; top: 52px; right: 16px;
+    background: rgba(255,255,255,0.98);
+    border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 18px; padding: 8px;
+    z-index: 9999;
+    display: none; flex-direction: column; gap: 5px;
+    min-width: 155px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+}
+.gal-sl-btn {
+    background: transparent; border: none;
+    color: #444; padding: 11px 14px;
+    border-radius: 10px; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    text-align: left; transition: background 0.15s;
+}
+.gal-sl-btn:hover { background: #f5f5f7; }
+.gal-sl-btn:active { background: #ebebed; }
+
+/* =====================================================
+   大厅 (Lobby)
+   ===================================================== */
+.gal-lobby {
+    flex: 1; display: flex; flex-direction: column;
+    overflow: hidden;
+    background-color: #f5f5f7;
+    background-image: radial-gradient(circle, rgba(0,0,0,0.055) 1.2px, transparent 1.2px);
+    background-size: 20px 20px;
+}
+
+/* 顶部封面横幅 */
+.gal-lobby-banner {
+    padding: 22px 24px 18px;
+    position: relative; overflow: hidden;
+    flex-shrink: 0;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.gal-lobby-banner::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        transparent 0, transparent 8px,
+        rgba(140,140,150,0.05) 8px, rgba(140,140,150,0.05) 9px
+    );
+    pointer-events: none;
+}
+.gal-lobby-banner::after {
+    content: 'VISUAL NOVEL';
+    position: absolute; right: -8px; bottom: -16px;
+    font-size: 52px; font-weight: 900; color: rgba(0,0,0,0.03);
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: -2px; pointer-events: none;
+    line-height: 1;
+}
+.gal-lobby-banner-title {
+    font-size: 20px; font-weight: 900; color: #1a1a1f;
+    letter-spacing: 3px;
+    font-family: 'Montserrat', sans-serif;
+    margin-bottom: 4px;
+    position: relative; z-index: 1;
+}
+.gal-lobby-banner-sub {
+    font-size: 10px; color: #b0b0bb;
+    letter-spacing: 2px; font-weight: 600;
+    text-transform: uppercase;
+    position: relative; z-index: 1;
+}
+
+/* ---- 页面指示器 ---- */
+.gal-page-indicators {
+    display: flex; justify-content: center; align-items: center;
+    gap: 8px; padding: 10px 0 8px;
+    flex-shrink: 0;
+    background: transparent;
+}
+.gal-page-dot {
+    width: 6px; height: 6px; border-radius: 3px;
+    background: rgba(0,0,0,0.12);
+    transition: all 0.3s ease; cursor: pointer;
+}
+.gal-page-dot.active {
+    width: 22px; background: #777;
+}
+
+/* ---- 换页包装器 ----
+   关键修复：不设 overflow: hidden，由父级 .gal-lobby 的 overflow:hidden 裁剪
+*/
+.gal-pages-wrapper {
+    flex: 1;
+    display: flex;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+    min-height: 0;
+}
+
+/* ---- 单页 ---- */
+.gal-page {
+    min-width: 100%;
+    width: 100%;
+    flex-shrink: 0;
+    overflow-y: auto;
+    padding: 18px 18px 12px;
+    display: flex; flex-direction: column;
+    gap: 14px; box-sizing: border-box;
+    scrollbar-width: none; -ms-overflow-style: none;
+    align-self: stretch;
+}
+.gal-page::-webkit-scrollbar { display: none; }
+
+/* ---- 页面导航按钮 ---- */
+.gal-page-nav {
+    display: flex; gap: 10px;
+    margin-top: auto; padding-top: 14px;
+    flex-shrink: 0; padding-bottom: 6px;
+}
+.gal-page-nav-btn {
+    flex: 1; padding: 13px;
+    border-radius: 16px; font-size: 12px;
+    font-weight: 700; cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 1px; border: none;
+    transition: all 0.2s;
+}
+.gal-page-nav-btn.prev {
+    background: #fff;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    color: #888;
+    flex: 0 0 80px;
+}
+.gal-page-nav-btn.next {
+    background: #555;
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(80,80,80,0.2);
+}
+.gal-page-nav-btn.next:active { transform: scale(0.98); }
+.gal-page-nav-btn.prev:active { transform: scale(0.98); }
+
+/* ---- 分区标签 ---- */
+.gal-section-label {
+    font-size: 10px; font-weight: 800; color: #b0b0bb;
+    letter-spacing: 3px; text-transform: uppercase;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 10px;
+}
+.gal-section-label::after {
+    content: '';
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(150,150,160,0.2), transparent);
+}
+
+/* ---- 角色选择 ---- */
+.gal-character-select { display: flex; flex-wrap: wrap; gap: 10px; }
+.gal-char-item {
+    background: #fff;
+    border: 1.5px solid rgba(0,0,0,0.06);
+    border-radius: 20px; padding: 14px 8px 10px;
+    text-align: center; cursor: pointer;
+    flex: 1 1 calc(33% - 8px);
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 0;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+}
+.gal-char-item:active { transform: scale(0.97); }
+.gal-char-item.selected {
+    border-color: #777;
+    background: linear-gradient(160deg, #f5f5f7 0%, #ebebed 100%);
+    box-shadow: 0 8px 20px rgba(80,80,80,0.1);
+}
+.gal-char-item.selected .gal-char-name { color: #444; }
+.gal-char-item.selected .gal-char-sprite-btn { display: flex; }
+.gal-char-avatar {
+    width: 50px; height: 50px; border-radius: 50%;
+    object-fit: cover; margin-bottom: 8px;
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+.gal-char-name { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 4px; }
+
+/* 角色人设简介 */
+.gal-char-persona-preview {
+    font-size: 9px;
+    color: #b0b0bb;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-align: left;
+    padding: 0 4px;
+    margin-top: 4px;
+}
+.gal-char-item.selected .gal-char-persona-preview {
+    color: #888;
+}
+
+/* 角色立绘上传按钮 */
+.gal-char-sprite-btn {
+    display: none;
+    margin-top: 7px; font-size: 9px;
+    color: rgba(100,100,110,0.9);
+    background: none;
+    border: 1px solid rgba(150,150,160,0.3);
+    padding: 3px 8px; border-radius: 8px; cursor: pointer;
+    align-items: center; justify-content: center; gap: 3px;
+    width: 100%; text-align: center;
+    transition: all 0.15s;
+    font-family: 'Montserrat', sans-serif; letter-spacing: 0.5px;
+}
+.gal-char-sprite-btn:hover { background: rgba(150,150,160,0.1); }
+
+/* API 提示卡 */
+.gal-api-hint-card {
+    background: #fff;
+    border: 1.5px solid rgba(150,150,160,0.25);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+.gal-api-hint-card i {
+    color: #888;
+    font-size: 16px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+.gal-api-hint-card-text {
+    font-size: 11px;
+    color: #6a6a75;
+    line-height: 1.6;
+}
+.gal-api-hint-card-text strong {
+    color: #1a1a1f;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 3px;
+}
+.gal-api-hint-goto {
+    display: inline-block;
+    margin-top: 8px;
+    background: #666;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    letter-spacing: 1px;
+}
+
+/* ---- 世界观抽卡 ---- */
+.gal-world-section { display: flex; flex-direction: column; gap: 12px; }
+.gal-world-cards { min-height: 80px; }
+.gal-world-hint {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; padding: 20px 16px;
+    color: #c8c8d0; font-size: 12px; font-weight: 500;
+    border: 1.5px dashed rgba(0,0,0,0.1); border-radius: 18px;
+    background: rgba(255,255,255,0.7);
+}
+
+/* 拟物抽卡容器 */
+.gal-tarot-container {
+    display: flex; gap: 12px;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+/* 卡片飞入动画 */
+@keyframes galCardFlyIn {
+    from { opacity: 0; transform: translateY(50px) scale(0.88); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.gal-tarot-card {
+    flex: 1; max-width: 108px;
+    aspect-ratio: 2/3; cursor: pointer;
+    perspective: 900px;
+    animation: galCardFlyIn 0.52s cubic-bezier(0.22, 0.84, 0.34, 1) both;
+    position: relative;
+}
+.gal-tarot-card:nth-child(1) { animation-delay: 0ms; }
+.gal-tarot-card:nth-child(2) { animation-delay: 110ms; }
+.gal-tarot-card:nth-child(3) { animation-delay: 220ms; }
+
+.gal-tarot-inner {
+    width: 100%; height: 100%;
+    position: relative;
+    transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
+    transform-style: preserve-3d;
+}
+.gal-tarot-card.flipped .gal-tarot-inner { transform: rotateY(180deg); }
+
+.gal-tarot-front, .gal-tarot-back {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 16px;
+}
+
+/* 正面：韩系灰色条纹 */
+.gal-tarot-front {
+    background: linear-gradient(145deg, #dcdcdf 0%, #c8c8ce 100%);
+    background-image:
+        repeating-linear-gradient(
+            -45deg,
+            transparent 0, transparent 6px,
+            rgba(255,255,255,0.35) 6px, rgba(255,255,255,0.35) 7px
+        );
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.5);
+    transition: box-shadow 0.2s;
+}
+.gal-tarot-front::after {
+    content: '✿';
+    font-size: 24px; color: rgba(255,255,255,0.6);
+}
+.gal-tarot-card.flipped .gal-tarot-front {
+    box-shadow: 0 0 0 2.5px rgba(160,160,170,0.8), 0 8px 24px rgba(0,0,0,0.1);
+}
+
+/* 背面：白色内容 */
+.gal-tarot-back {
+    background: linear-gradient(165deg, #fefefd 0%, #f8f8fc 100%);
+    transform: rotateY(180deg);
+    border: 1.5px solid rgba(0,0,0,0.07);
+    padding: 14px 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    display: flex; flex-direction: column;
+    overflow: hidden; justify-content: center;
+    align-items: center; text-align: center; gap: 8px;
+}
+.gal-tarot-card.flipped .gal-tarot-back { border-color: rgba(150,150,160,0.4); }
+.gal-tarot-name {
+    font-size: 12px; font-weight: 800; color: #1a1a1f; line-height: 1.3;
+}
+.gal-tarot-desc {
+    font-size: 9px; color: #999; line-height: 1.6;
+    display: -webkit-box; -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* 世界类型标签 */
+.gal-tarot-tag {
+    font-size: 8px; font-weight: 800;
+    background: rgba(140,140,150,0.1);
+    color: #777;
+    padding: 2px 7px; border-radius: 8px;
+    border: 1px solid rgba(140,140,150,0.2);
+}
+
+.gal-or-line {
+    display: flex; align-items: center; gap: 12px;
+    color: #d0d0d8; font-size: 11px; font-weight: 700;
+    letter-spacing: 1px;
+}
+.gal-or-line::before, .gal-or-line::after {
+    content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.08);
+}
+
+.gal-gen-world-btn {
+    background: #fff; border: 1.5px solid rgba(140,140,150,0.3);
+    color: #666; border-radius: 16px;
+    padding: 14px; font-size: 13px; font-weight: 700;
+    cursor: pointer; display: flex;
+    justify-content: center; align-items: center; gap: 8px;
+    transition: all 0.18s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+}
+.gal-gen-world-btn:not(:disabled):hover,
+.gal-gen-world-btn:not(:disabled):active {
+    background: #f5f5f7;
+    border-color: rgba(100,100,110,0.5);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+}
+.gal-gen-world-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* 输入框 */
+.gal-setting-input {
+    width: 100%; padding: 14px 16px;
+    background: #fff; border: 1.5px solid rgba(0,0,0,0.07);
+    border-radius: 16px; font-size: 13px; outline: none;
+    resize: none; transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: 'PingFang SC', 'Noto Sans SC', sans-serif;
+    box-sizing: border-box; color: #333;
+    line-height: 1.6;
+}
+.gal-setting-input:focus {
+    border-color: rgba(100,100,110,0.4);
+    box-shadow: 0 0 0 3px rgba(100,100,110,0.06);
+}
+
+/* 我的立绘区域 */
+.gal-my-sprite-area {
+    display: flex; gap: 12px; align-items: stretch;
+}
+.gal-sprite-upload-box {
+    width: 72px; flex-shrink: 0;
+    background: #f5f5f7;
+    border: 1.5px dashed rgba(0,0,0,0.12);
+    border-radius: 16px; overflow: hidden; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 5px;
+    transition: border-color 0.2s, background 0.2s;
+    min-height: 100px; position: relative;
+}
+.gal-sprite-upload-box:hover { border-color: rgba(100,100,110,0.4); background: #efefef; }
+.gal-sprite-upload-box img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+}
+.gal-sprite-upload-box .upload-icon { color: rgba(0,0,0,0.25); font-size: 18px; }
+.gal-sprite-upload-box .upload-label {
+    font-size: 9px; color: rgba(0,0,0,0.3); font-weight: 800;
+    letter-spacing: 2px; text-transform: uppercase;
+}
+
+/* ---- 背景设置区域 ---- */
+.gal-bg-presets {
+    display: flex; gap: 8px; flex-wrap: wrap;
+}
+.gal-bg-preset-btn {
+    width: 44px; height: 44px; border-radius: 12px;
+    border: 2px solid transparent; cursor: pointer;
+    transition: all 0.2s; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.gal-bg-preset-btn.selected {
+    border-color: #777;
+    box-shadow: 0 0 0 3px rgba(100,100,110,0.18), 0 4px 12px rgba(0,0,0,0.1);
+}
+.gal-bg-preset-btn:active { transform: scale(0.93); }
+.gal-bg-upload-box {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: #fff; border: 1.5px dashed rgba(0,0,0,0.15);
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; color: rgba(0,0,0,0.25);
+    transition: all 0.2s; flex-shrink: 0; overflow: hidden;
+}
+.gal-bg-upload-box:hover { border-color: #888; color: #888; background: #f5f5f7; }
+.gal-bg-upload-box img {
+    width: 100%; height: 100%; object-fit: cover;
+}
+
+/* 开始按钮 */
+.gal-start-btn {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1f 100%);
+    color: #fff; border: none;
+    padding: 18px; border-radius: 18px;
+    font-size: 13px; font-weight: 800;
+    letter-spacing: 3px; cursor: pointer;
+    width: 100%;
+    font-family: 'Montserrat', sans-serif;
+    transition: all 0.2s; position: relative; overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.18);
+}
+.gal-start-btn:not(:disabled)::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+}
+.gal-start-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.gal-start-btn:not(:disabled):active { transform: scale(0.98); }
+
+/* =====================================================
+   游戏主体区域
+   ===================================================== */
+.gal-game-area {
+    flex: 1; position: relative;
+    display: flex; flex-direction: column;
+    justify-content: flex-end; overflow: hidden;
+    background: linear-gradient(180deg, #e8eaf0 0%, #d8dae6 50%, #cacce0 100%);
+    z-index: 1; /* 创建层叠上下文，确保 #gal-sl-menu(z-index:9999) 始终在游戏区域之上 */
+}
+
+/* 背景层 */
+.gal-bg {
+    position: absolute; inset: 0; z-index: 0;
+    transition: all 1.5s ease;
+    background-size: cover !important;
+    background-position: center !important;
+}
+.gal-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.04) 0%,
+        rgba(0,0,0,0.08) 60%,
+        rgba(0,0,0,0.22) 100%
+    );
+}
+
+/* 双人立绘容器 */
+.gal-sprites-container {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 5;
+}
+
+.gal-sprite-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center top;
+    transition: filter 0.4s ease, opacity 0.4s ease, transform 0.4s ease;
+    filter: brightness(0%);
+    opacity: 0;
+}
+
+/* 单角色默认：铺满全屏 */
+#gal-sprite-left {
+    left: 0;
+    transform: scaleX(-1) translateY(10px);
+    transform-origin: center center;
+}
+#gal-sprite-left.active {
+    filter: brightness(100%); opacity: 1;
+    transform: scaleX(-1) translateY(0);
+}
+#gal-sprite-left.dimmed {
+    filter: brightness(50%) grayscale(20%); opacity: 0.85;
+    transform: scaleX(-1) translateY(0);
+}
+
+#gal-sprite-right {
+    left: 0;
+    transform: translateY(10px);
+}
+#gal-sprite-right.active {
+    filter: brightness(100%); opacity: 1;
+    transform: translateY(0);
+}
+#gal-sprite-right.dimmed {
+    filter: brightness(50%) grayscale(20%); opacity: 0.85;
+    transform: translateY(0);
+}
+
+/* 双角色模式：各占一半屏幕 */
+.gal-sprites-container.dual #gal-sprite-left {
+    left: 0; width: 50%; height: 100%;
+}
+.gal-sprites-container.dual #gal-sprite-right {
+    left: 50%; width: 50%; height: 100%;
+}
+
+/* 好感度状态栏 */
+.gal-status-bar {
+    position: absolute; top: 14px; left: 14px; right: 14px;
+    z-index: 8; display: flex; flex-wrap: wrap; gap: 8px;
+    pointer-events: none;
+}
+.gal-status-item {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 22px; padding: 5px 10px 5px 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+.gal-status-avatar {
+    width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.8);
+}
+.gal-status-info { display: flex; flex-direction: column; gap: 2px; min-width: 48px; }
+.gal-status-name { font-size: 9px; color: #888; font-weight: 700; letter-spacing: 0.5px; }
+.gal-status-bar-wrap { width: 100%; height: 2px; background: rgba(0,0,0,0.1); border-radius: 2px; }
+.gal-status-bar-fill { height: 100%; background: linear-gradient(90deg, #bbb, #888); transition: width 0.5s; border-radius: 2px; }
+.gal-status-num { font-size: 9px; font-weight: 800; color: #777; }
+
+/* ---- 角色弧度发展提示 ---- */
+.gal-arc-toast {
+    position: absolute; top: 55px; left: 14px; right: 14px;
+    z-index: 9;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(150,150,160,0.25);
+    border-radius: 12px; padding: 8px 14px;
+    font-size: 11px; color: #777; font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    animation: galArcToastIn 0.4s ease both, galArcToastOut 0.4s ease 3s both;
+    pointer-events: none;
+}
+@keyframes galArcToastIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes galArcToastOut {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+/* ================================================================
+   对话框 — 韩系白灰
+   ================================================================ */
+
+/* 角色名字标签 */
+/* 对话框整体包装：统一左边距，确保名字标签与内容框左边对齐 */
+.gal-dialog-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0 10px 14px;
+    position: relative;
+    z-index: 15;
+}
+
+.gal-speaker-name {
+    display: inline-flex; align-items: center; gap: 6px;
+    /* margin 由父级 .gal-dialog-wrapper 控制，无需单独 margin */
+    margin: 0;
+    background: #ffffff;
+    color: #555;
+    padding: 6px 16px 7px 12px;
+    border-radius: 14px 14px 0 0;
+    font-size: 12px; font-weight: 800;
+    letter-spacing: 0.8px;
+    font-family: 'PingFang SC', 'Noto Sans SC', sans-serif;
+    min-width: 60px;
+    border: 1.5px solid rgba(0,0,0,0.07);
+    border-bottom: none;
+    box-shadow: 0 -3px 12px rgba(0,0,0,0.04);
+    transition: background 0.25s, color 0.25s;
+}
+/* JS 已通过 innerHTML 注入装饰符，CSS ::before 设为 none 避免重复 */
+.gal-speaker-name::before {
+    content: none;
+}
+
+/* 旁白样式 */
+.gal-speaker-name[data-narrator="true"] {
+    background: rgba(252,251,255,0.85);
+    color: rgba(140,130,160,0.65);
+    font-size: 10px; letter-spacing: 3px;
+    border-color: rgba(0,0,0,0.05);
+}
+.gal-speaker-name[data-narrator="true"]::before {
+    content: none;
+}
+
+/* 对话内容框：跟随父级宽度，左边与名字标签左边对齐 */
+.gal-dialog-box {
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    background: rgba(255,255,255,0.96);
+    border: 1.5px solid rgba(0,0,0,0.07);
+    border-radius: 0 20px 20px 20px;
+    box-shadow:
+        0 -2px 15px rgba(0,0,0,0.04),
+        0 12px 40px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.95);
+    padding: 16px 20px 22px;
+    pointer-events: none;
+}
+
+/* 顶部灰色装饰线 */
+.gal-dialog-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(150,150,160,0.3) 15%,
+        rgba(180,180,190,0.5) 50%,
+        rgba(150,150,160,0.3) 85%,
+        transparent 100%);
+    border-radius: 0 2px 0 0;
+    pointer-events: none;
+}
+
+/* 右下角装饰 */
+.gal-dialog-box::after {
+    content: '✿';
+    position: absolute; bottom: 7px; left: 14px;
+    font-size: 10px; color: rgba(150,150,160,0.2);
+    pointer-events: none;
+}
+
+/* 对话文字 */
+.gal-dialog-text {
+    font-size: 14px; line-height: 1.9;
+    color: #1a1a1f;
+    min-height: 50px;
+    font-family: 'PingFang SC', 'Noto Sans SC', sans-serif;
+    letter-spacing: 0.3px;
+}
+
+.gal-continue-icon {
+    position: absolute; bottom: 10px; right: 16px;
+    font-size: 11px; color: rgba(150,150,160,0.6);
+    animation: galBounceDown 1s infinite; display: none;
+}
+@keyframes galBounceDown {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(4px); }
+}
+
+/* ================================================================
+   选项区域 — 韩系白灰磨砂
+   ================================================================ */
+.gal-options-area {
+    position: absolute; inset: 0; z-index: 200;
+    background: linear-gradient(180deg,
+        rgba(245,245,247,0.55) 0%,
+        rgba(238,238,244,0.82) 100%);
+    backdrop-filter: blur(18px);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 40px 20px 36px; gap: 10px;
+}
+
+/* 选项存档快捷按钮 */
+.gal-save-quick-btn {
+    position: absolute; top: 18px; right: 18px;
+    background: rgba(255,255,255,0.8);
+    border: 1px solid rgba(0,0,0,0.08);
+    color: rgba(100,100,115,0.9);
+    border-radius: 20px; padding: 6px 14px;
+    font-size: 10px; font-weight: 800;
+    cursor: pointer; letter-spacing: 1px;
+    transition: all 0.15s;
+    font-family: 'Montserrat', sans-serif;
+    text-transform: uppercase;
+    z-index: 201;
+}
+.gal-save-quick-btn:hover {
+    background: rgba(255,255,255,0.96); color: #333;
+}
+
+.gal-options-heading {
+    font-size: 9px; font-weight: 800;
+    color: rgba(100,100,115,0.6); letter-spacing: 4px;
+    text-transform: uppercase; margin-bottom: 6px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.gal-option-btn {
+    width: 100%; max-width: 320px;
+    background: rgba(255,255,255,0.92);
+    border: 1.5px solid rgba(0,0,0,0.07);
+    border-radius: 18px; color: #1a1a1f;
+    padding: 14px 18px; font-size: 13px; font-weight: 600;
+    cursor: pointer; text-align: left;
+    backdrop-filter: blur(12px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'PingFang SC', sans-serif;
+    position: relative; overflow: hidden;
+    animation: galOptIn 0.3s ease both;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.03);
+}
+.gal-option-btn:nth-child(2) { animation-delay: 0.07s; }
+.gal-option-btn:nth-child(3) { animation-delay: 0.14s; }
+.gal-option-btn:nth-child(4) { animation-delay: 0.21s; }
+
+@keyframes galOptIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.gal-option-btn::before {
+    content: '✦';
+    margin-right: 10px;
+    color: rgba(140,140,150,0.5);
+    font-size: 10px;
+}
+.gal-option-btn:hover, .gal-option-btn:active {
+    background: #f5f5f7;
+    border-color: rgba(100,100,110,0.4);
+    color: #444;
+    transform: translateX(5px);
+    box-shadow: 0 6px 22px rgba(0,0,0,0.07);
+}
+
+/* 好感度浮动提示 */
+.gal-affection-float {
+    position: absolute; top: 45%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(150,150,160,0.3);
+    color: #777; padding: 7px 18px;
+    border-radius: 22px; font-size: 12px; font-weight: 700;
+    pointer-events: none; z-index: 300;
+    animation: galAffFloat 2.2s ease forwards;
+    white-space: nowrap;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+@keyframes galAffFloat {
+    0%   { opacity: 0; transform: translate(-50%, -30%); }
+    15%  { opacity: 1; transform: translate(-50%, -50%); }
+    75%  { opacity: 1; transform: translate(-50%, -65%); }
+    100% { opacity: 0; transform: translate(-50%, -80%); }
+}
+
+/* ---- 加载动画 ---- */
+.gal-loading-overlay {
+    position: absolute; inset: 0; z-index: 350;
+    background: rgba(245,245,247,0.88);
+    backdrop-filter: blur(20px);
+    display: flex; align-items: center; justify-content: center;
+}
+.gal-loading-inner {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 14px;
+    color: rgba(100,100,115,0.7);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    font-family: 'Montserrat', sans-serif;
+}
+.gal-loading-inner i { font-size: 28px; color: rgba(140,140,150,0.6); }
+
+/* ================================================================
+   多槽存档系统 UI  (橙光风格)
+   ================================================================ */
+
+/* ---- 大厅存档条 ---- */
+.gal-lobby-saves {
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.97);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 12px 16px 14px;
+    display: none; /* JS 控制显示 */
+}
+.gal-lobby-saves-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+}
+.gal-lobby-saves-title {
+    font-size: 9px; font-weight: 800; color: #b0b0bb;
+    letter-spacing: 3px; text-transform: uppercase;
+    font-family: 'Montserrat', sans-serif;
+}
+.gal-lobby-saves-load-btn {
+    font-size: 10px; font-weight: 700;
+    background: #2a2a2a; color: #fff;
+    border: none; border-radius: 20px;
+    padding: 5px 12px; cursor: pointer;
+    letter-spacing: 1px;
+    font-family: 'Montserrat', sans-serif;
+    transition: background 0.15s;
+}
+.gal-lobby-saves-load-btn:hover { background: #444; }
+
+/* 大厅存档横向滚动条 */
+.gal-lobby-saves-strip {
+    display: flex; gap: 10px;
+    overflow-x: auto; padding-bottom: 4px;
+    scrollbar-width: none; -ms-overflow-style: none;
+}
+.gal-lobby-saves-strip::-webkit-scrollbar { display: none; }
+
+/* 大厅存档小卡片 */
+.gal-lobby-save-card {
+    flex-shrink: 0; width: 130px;
+    background: linear-gradient(145deg, #f8f8fa, #f0f0f3);
+    border: 1.5px solid rgba(0,0,0,0.07);
+    border-radius: 14px; padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+}
+.gal-lobby-save-card:hover {
+    border-color: #888;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+.gal-lobby-save-card:active { transform: scale(0.97); }
+.glsc-slot {
+    font-size: 8px; font-weight: 900; color: #999;
+    letter-spacing: 2px; font-family: 'Montserrat', sans-serif;
+    margin-bottom: 5px;
+}
+.glsc-world {
+    font-size: 12px; font-weight: 800; color: #1a1a1f;
+    margin-bottom: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: 'PingFang SC', sans-serif;
+}
+.glsc-chars {
+    font-size: 10px; color: #888;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+.glsc-time {
+    font-size: 9px; color: #b0b0bb;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* ================================================================
+   存档/读档模态框  (全屏遮罩 + 槽位网格)
+   ================================================================ */
+.gal-save-modal-overlay {
+    position: absolute; inset: 0;
+    z-index: 10000;
+    background: rgba(245,245,247,0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex; align-items: flex-end;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+.gal-save-modal-overlay.active {
+    opacity: 1; pointer-events: auto;
+}
+
+.gal-save-modal-box {
+    width: 100%;
+    background: #fff;
+    border-radius: 28px 28px 0 0;
+    padding: 0 0 32px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+    transform: translateY(40px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 82vh;
+    display: flex; flex-direction: column;
+}
+.gal-save-modal-overlay.active .gal-save-modal-box {
+    transform: translateY(0);
+}
+
+/* 模态框顶部把手 + 标题区 */
+.gal-save-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    flex-shrink: 0;
+}
+.gal-save-modal-title {
+    font-size: 15px; font-weight: 800; color: #1a1a1f;
+    letter-spacing: 0.5px;
+    font-family: 'PingFang SC', 'Montserrat', sans-serif;
+}
+.gal-save-modal-close {
+    width: 28px; height: 28px;
+    background: #f0f0f3; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px; color: #888;
+    border: none; transition: background 0.15s;
+}
+.gal-save-modal-close:hover { background: #e0e0e3; color: #333; }
+
+/* 6槽网格 */
+.gal-save-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px 16px 4px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.gal-save-slots-grid::-webkit-scrollbar { display: none; }
+
+/* 单个槽位卡片 */
+.gal-save-slot-card {
+    border-radius: 18px;
+    padding: 14px 14px 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative; overflow: hidden;
+    min-height: 110px;
+    display: flex; flex-direction: column;
+    box-sizing: border-box;
+}
+.gal-save-slot-card.has-save {
+    background: linear-gradient(145deg, #fefefd 0%, #f5f5f8 100%);
+    border: 1.5px solid rgba(0,0,0,0.08);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+}
+.gal-save-slot-card.has-save:hover {
+    border-color: #777;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+.gal-save-slot-card.empty {
+    background: rgba(245,245,247,0.7);
+    border: 1.5px dashed rgba(0,0,0,0.12);
+    justify-content: center; align-items: center;
+}
+.gal-save-slot-card.empty:hover {
+    background: rgba(235,235,240,0.9);
+    border-color: rgba(0,0,0,0.25);
+    transform: translateY(-1px);
+}
+.gal-save-slot-card:active { transform: scale(0.97); }
+
+/* 槽位卡片内元素 */
+.gss-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+}
+.gss-num {
+    font-size: 8px; font-weight: 900; color: #bbb;
+    letter-spacing: 2px; font-family: 'Montserrat', sans-serif;
+}
+.gss-del-btn {
+    width: 20px; height: 20px;
+    background: rgba(255,80,80,0.1); border: none;
+    border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: rgba(200,60,60,0.7);
+    transition: all 0.15s; padding: 0;
+}
+.gss-del-btn:hover { background: rgba(255,80,80,0.25); color: #e53; }
+.gss-world {
+    font-size: 13px; font-weight: 800; color: #1a1a1f;
+    margin-bottom: 4px; line-height: 1.3;
+    font-family: 'PingFang SC', sans-serif;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+}
+.gss-chars {
+    font-size: 10px; color: #888; margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gss-aff {
+    font-size: 9px; color: #a0a0aa;
+    margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: 'Montserrat', sans-serif;
+}
+.gss-time {
+    font-size: 9px; color: #c0c0cc;
+    font-family: 'Montserrat', sans-serif;
+    margin-top: auto;
+}
+.gss-action-label {
+    margin-top: 8px;
+    font-size: 9px; font-weight: 800;
+    color: rgba(100,100,120,0.5);
+    letter-spacing: 1px; text-transform: uppercase;
+    font-family: 'Montserrat', sans-serif;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding-top: 6px;
+}
+.gss-empty-icon {
+    font-size: 24px; color: rgba(0,0,0,0.15);
+    margin-bottom: 6px;
+}
+.gss-empty-text {
+    font-size: 10px; font-weight: 700; color: #ccc;
+    letter-spacing: 1px; text-transform: uppercase;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* ---- Bad End 遮罩 ---- */
+/* ---- Bad End 遮罩 ---- */
+.gal-bad-end-overlay {
+    position: absolute; inset: 0; z-index: 400;
+    background: linear-gradient(180deg, #101014 0%, #1a1a1f 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 40px;
+}
+.gal-bad-end-overlay.gal-be-animate {
+    animation: galBeIn 0.8s ease both;
+}
+@keyframes galBeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.gal-be-title {
+    font-size: 30px; font-weight: 900; color: #fff;
+    letter-spacing: 8px; margin-bottom: 10px;
+    font-family: 'Montserrat', sans-serif;
+}
+.gal-be-name {
+    font-size: 13px; color: rgba(200,200,220,0.45);
+    margin-bottom: 60px;
+    font-family: 'PingFang SC', serif; letter-spacing: 2px;
+    font-style: italic;
+}
+.gal-be-buttons {
+    display: flex; flex-direction: column;
+    gap: 12px; width: 100%; max-width: 240px;
+}
+.gal-be-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(220,220,235,0.75); padding: 15px;
+    border-radius: 14px; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    transition: all 0.18s;
+    letter-spacing: 1px;
+    font-family: 'Montserrat', 'PingFang SC', sans-serif;
+}
+.gal-be-btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.35); color: #fff;
+}

@@ -467,31 +467,39 @@ async function performMusicSearch() {
   const res = document.getElementById('music-search-results');
   if (res) res.innerHTML = '<div class="search-loading"><i class="fas fa-spinner fa-spin"></i> 搜索中...</div>';
 
-  const src = MUSIC_SOURCES.find(s => s.id === currentSource) || MUSIC_SOURCES[0];
-  try {
-    const resp = await fetch(src.api + encodeURIComponent(q));
-    const data = await resp.json();
-    const list = data.data || data.result || data.songs || [];
-    if (!list.length) {
-      res.innerHTML = '<div class="search-empty">未找到相关歌曲</div>';
-      return;
-    }
-    res.innerHTML = list.slice(0, 20).map((item, i) => {
-      const title = item.name || item.title || item.songname || '未知';
-      const artist = Array.isArray(item.artists) ? item.artists.map(a => a.name || a).join('/') :
-                     (item.artist || item.singer || '未知');
-      const musicId = item.id || item.songid || item.mid || '';
-      return `<div class="search-result-item" onclick="addSearchedSong(${JSON.stringify({title,artist,musicId,source:currentSource}).replace(/"/g,'&quot;')})">
-        <div class="sri-info">
-          <div class="sri-title">${title}</div>
-          <div class="sri-artist">${artist}</div>
-        </div>
-        <i class="fas fa-plus-circle sri-add"></i>
-      </div>`;
-    }).join('');
-  } catch (e) {
-    if (res) res.innerHTML = `<div class="search-empty">搜索失败: ${e.message}</div>`;
+  // 按优先级尝试所有数据源，任一源有结果即停止
+  const preferred = MUSIC_SOURCES.find(s => s.id === currentSource) || MUSIC_SOURCES[0];
+  const orderedSources = [preferred, ...MUSIC_SOURCES.filter(s => s.id !== preferred.id)];
+  let list = [], usedSource = preferred.id;
+  for (const src of orderedSources) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 8000);
+      const resp = await fetch(src.api + encodeURIComponent(q), { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const cand = data.data || data.result || data.songs || data.list || [];
+      if (cand.length) { list = cand; usedSource = src.id; break; }
+    } catch (_) { /* 尝试下一个源 */ }
   }
+  if (!list.length) {
+    if (res) res.innerHTML = '<div class="search-empty">暂无结果，请稍后重试或换个关键词</div>';
+    return;
+  }
+  res.innerHTML = list.slice(0, 20).map((item) => {
+    const title = item.name || item.title || item.songname || '未知';
+    const artist = Array.isArray(item.artists) ? item.artists.map(a => a.name || a).join('/') :
+                   (item.artist || item.singer || '未知');
+    const musicId = item.id || item.songid || item.mid || '';
+    return `<div class="search-result-item" onclick="addSearchedSong(${JSON.stringify({title,artist,musicId,source:usedSource}).replace(/"/g,'&quot;')})">
+      <div class="sri-info">
+        <div class="sri-title">${title}</div>
+        <div class="sri-artist">${artist}</div>
+      </div>
+      <i class="fas fa-plus-circle sri-add"></i>
+    </div>`;
+  }).join('');
 }
 
 async function addSearchedSong(info) {

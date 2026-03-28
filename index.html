@@ -27,6 +27,9 @@
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/video_call.css">
     <link rel="stylesheet" href="css/music.css">
+    <link rel="stylesheet" href="css/bubble.css">
+    <link rel="stylesheet" href="css/modules.css">
+    <link rel="stylesheet" href="css/galgame.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
@@ -198,7 +201,7 @@
 
         <!-- 这里的APP全都在！Galgame, Pet, Fate... -->
         <div class="grid-apps">
-            <div class="app-cell" data-app-id="galgame" onclick="alert('Galgame 功能开发中...')"><div class="icon-box"><i class="fas fa-gamepad"></i></div><span class="app-label">Galgame</span></div>
+            <div class="app-cell" data-app-id="galgame" onclick="openGalgameApp()"><div class="icon-box"><i class="fas fa-gamepad"></i></div><span class="app-label">Galgame</span></div>
             <div class="app-cell" data-app-id="pet" onclick="openPetApp()">
     <div class="icon-box"><i class="fas fa-paw"></i></div>
     <span class="app-label">Pet</span>
@@ -208,7 +211,11 @@
             <div class="app-cell" data-app-id="divination" onclick="alert('今日运势：大吉')"><div class="icon-box"><i class="fas fa-star-half-alt"></i></div><span class="app-label">Fate</span></div>
             <div class="app-cell" data-app-id="myhome" onclick="alert('进入家园...')"><div class="icon-box"><i class="fas fa-home"></i></div><span class="app-label">Home</span></div>
             <div class="app-cell" data-app-id="calendar" onclick="alert('日历')"><div class="icon-box"><i class="fas fa-calendar"></i></div><span class="app-label">Calendar</span></div>
-            <div class="app-cell" data-app-id="bubble" onclick="openBubbleApp()"><div class="icon-box"><i class="far fa-comments"></i></div><span class="app-label">Bubble</span></div>
+            <div class="app-cell" data-app-id="bubble" onclick="openBubbleApp()">
+    <div class="icon-box"><i class="far fa-comments"></i></div>
+    <span class="app-label">Bubble</span>
+</div>
+
         </div>
     </div> 
                 <!-- === 第四页 (P4): 生活记录 & 电子小票 (优化版) === -->
@@ -294,7 +301,7 @@
         <div class="grid-apps p4-apps">
             <div class="app-cell" data-app-id="notes" onclick="alert('便签')"><div class="icon-box"><i class="far fa-sticky-note"></i></div><span class="app-label">Notes</span></div>
             <div class="app-cell" data-app-id="files" onclick="alert('文件管理')"><div class="icon-box"><i class="far fa-folder"></i></div><span class="app-label">Files</span></div>
-            <div class="app-cell" data-app-id="clock" onclick="alert('闹钟')"><div class="icon-box"><i class="far fa-clock"></i></div><span class="app-label">Clock</span></div>
+            <div class="app-cell" data-app-id="backpack" onclick="openBackpackApp()"><div class="icon-box"><i class="fas fa-shopping-bag" style="color:#f59e0b;"></i></div><span class="app-label">背包</span></div>
             <!-- 空位占位符 -->
             <div class="app-cell" style="opacity:0.3;"><div class="icon-box" style="border:1px dashed #ccc; box-shadow:none;"><i class="fas fa-plus"></i></div></div>
         </div>
@@ -2357,142 +2364,152 @@
     </div>
 </div>
 
-
-
-        <!-- ============================================== -->
-    <!-- [新增] Bubble App (韩系黑白双模式版) -->
+     <!-- ============================================== -->
+    <!-- [极致改版] Bubble App (全中文 韩系软妹 悬浮岛屿风) -->
     <!-- ============================================== -->
     <div class="app-fullscreen-view" id="bubbleApp">
+
         
-        <!-- 1. 模式选择页 (启动画面) -->
-        <div id="bb-landing-view" class="bb-landing">
-            <div class="bb-logo">bubble</div>
-            <div class="bb-subtitle">CONNECT WITH YOUR ARTIST</div>
-            
-            <div class="bb-mode-select">
-                <div class="bb-mode-card" onclick="enterBubbleMode('idol')">
-                    <div class="bb-mode-icon"><i class="fas fa-microphone-alt"></i></div>
-                    <div class="bb-mode-title">我是爱豆 (ARTIST)</div>
-                    <div class="bb-mode-desc">发布动态 • 查看回复</div>
-                </div>
-                <div class="bb-mode-card" onclick="enterBubbleMode('fan')">
-                    <div class="bb-mode-icon"><i class="fas fa-heart"></i></div>
-                    <div class="bb-mode-title">我是粉丝 (FAN)</div>
-                    <div class="bb-mode-desc">接收消息 • 纪念日 365天</div>
-                </div>
+        <!-- 1. 着陆页 / 模式选择 -->
+        <div id="bb-landing-view" style="display:none; flex-direction:column; height:100%; position:relative;">
+            <div class="bb-top-bar">
+                <i class="fas fa-chevron-left" onclick="closeBubbleApp()" style="font-size:18px; color:#666; cursor:pointer;"></i>
             </div>
-            <div class="bb-close-btn" onclick="closeBubbleApp()">CLOSE APP</div>
-        </div>
-
-                <!-- 2. === 模式 A: 爱豆广播端 === -->
-        <div id="bb-idol-view" class="bb-view" style="display:none; position:relative;">
-            <div class="bb-header">
-                <i class="fas fa-chevron-left" onclick="exitBubbleMode()"></i>
-                <span>ARTIST DASHBOARD</span>
-                <!-- 点击右侧图标也可以打开评论列表 -->
-                <i class="fas fa-list-ul" onclick="openBubbleComments()" style="cursor:pointer;"></i>
-            </div>
-            
-            <div class="bb-idol-content">
-                <!-- 粉丝回复实时流 (点击可打开详情) -->
-                <div class="bb-reply-stream-box" onclick="openBubbleComments()" title="点击查看所有回复">
-                    <div class="bb-section-title" style="display:flex; justify-content:space-between;">
-                        <span>LIVE REPLIES</span>
-                        <span style="font-size:9px; background:#333; color:#fff; padding:2px 6px; border-radius:4px;">CLICK TO VIEW</span>
-                    </div>
-                    <!-- 滚动字幕 -->
-                    <div class="bb-reply-ticker" id="bb-reply-ticker">
-                        <!-- JS 填充 -->
-                    </div>
+            <div class="bb-landing-wrap">
+                <div class="bb-landing-title">
+                    <span class="bb-landing-title-en">Bubble</span>
+                    <span class="bb-landing-title-main">SPACE</span>
                 </div>
+                <div class="bb-landing-subtitle">CONNECT WITH YOUR UNIVERSE</div>
+                
+                <div id="bb-history-entries" style="width:100%; margin-bottom:20px;"></div>
 
-                <!-- 发布区域 -->
-                <div class="bb-compose-area">
-                    <div class="bb-input-wrapper">
-                        <textarea id="bb-idol-input" placeholder="To Fans: 分享这一刻的心情... "></textarea>
-                    </div>
-                    <div class="bb-tools-row">
-                        <div class="bb-tool-icon"><i class="far fa-image"></i></div>
-                        <div class="bb-tool-icon"><i class="fas fa-microphone"></i></div>
-                        <div class="bb-char-count" id="bb-idol-char-count">0/1000</div>
-                    </div>
-                    <button class="bb-send-btn" onclick="idolSendBroadcast()">SEND TO ALL</button>
+                <div class="bb-huge-btn" onclick="bbEnterFanModeFlow()">
+                    <i class="fas fa-heart" style="color:#ff7e67;"></i> 
+                    <span>作为粉丝追星</span>
                 </div>
-
-                <!-- 历史发送记录 -->
-                <div class="bb-history-list">
-                    <div class="bb-section-title">SENT HISTORY</div>
-                    <div id="bb-sent-history"></div>
-                </div>
-            </div>
-
-            <!-- [新增] 评论列表全屏弹窗 -->
-            <div id="bb-comment-modal" class="bb-comment-modal">
-                <div class="bb-comment-header">
-                    <span>Replies (<span id="bb-total-replies">0</span>)</span>
-                    <i class="fas fa-times" onclick="closeBubbleComments()" style="cursor:pointer; font-size:18px;"></i>
-                </div>
-                <div class="bb-comment-list" id="bb-comment-list-container">
-                    <!-- JS 动态填入评论 -->
+                
+                <div class="bb-huge-btn dark" onclick="bbEnterIdolModeFlow()">
+                    <i class="fas fa-microphone-alt"></i> 
+                    <span>作为爱豆营业</span>
                 </div>
             </div>
         </div>
 
-
-                <!-- 3. === 模式 B: 粉丝聊天端 (我是粉丝，看爱豆发消息) === -->
-        <div id="bb-fan-view" class="bb-view" style="display:none; position:relative;">
-            <!-- 头部 -->
-            <div class="bb-header fan-mode">
-                <i class="fas fa-chevron-left" onclick="exitBubbleMode()"></i>
-                <div class="bb-header-info">
-                    <!-- 这里名字会动态变 -->
-                    <span class="bb-artist-name" id="bb-active-idol-name">Artist</span> 
-                    <span class="bb-days-counter">with you 365 days</span>
-                </div>
-                <!-- 模拟触发按钮：点击这里可以让爱豆发新消息 (测试用) -->
-                <i class="fas fa-bell" onclick="triggerIdolBroadcast()" title="[测试] 让爱豆发一条消息" style="color:#ff7e67;"></i>
+        <!-- 2. 粉丝模式 -->
+        <div id="bb-fan-mode-view" style="display:none; flex-direction:column; height:100%;">
+            <div class="bb-top-bar">
+                <i class="fas fa-chevron-left" onclick="bbExitMode()" style="font-size:18px; color:#666; cursor:pointer;"></i>
+                <span class="bb-nav-title">FAN MODE</span>
+                <i class="fas fa-cog" onclick="bbOpenFanModeSettings()" style="font-size:18px; color:#666; cursor:pointer;"></i>
             </div>
 
-            <!-- 顶部滚动条 (显示路人回复) -->
-            <div class="bb-fan-ticker-box" onclick="openMobReplies()">
-                <div class="bb-ticker-icon"><i class="far fa-comment-dots"></i></div>
-                <div class="bb-ticker-content">
-                    <span id="bb-ticker-text" class="bb-ticker-text-anim">Waiting for new post...</span>
+            <!-- 云朵式头部卡片 -->
+            <div class="bb-cloud-header">
+                <img id="bb-fan-idol-avatar" class="bb-cloud-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=idol" onpointerdown="bbStartLongPress()" onpointerup="bbEndLongPress()" onpointerleave="bbEndLongPress()">
+                <div class="bb-cloud-info">
+                    <div class="bb-cloud-name" id="bb-fan-idol-name">加载中</div>
+                    <div class="bb-cloud-tag" id="bb-fan-days">陪伴 0 天</div>
                 </div>
-                <i class="fas fa-chevron-right" style="font-size:10px; color:#ccc; margin-left:10px;"></i>
+                <div class="bb-icon-btn" onclick="bbFanTriggerPost()"><i class="far fa-bell"></i></div>
             </div>
 
-            <!-- 聊天主区域 -->
-            <div class="bb-chat-container" id="bb-chat-container">
-                <!-- 这里的消息由 JS 生成 -->
+            <!-- 胶囊 Tab -->
+            <div class="bb-pill-tabs">
+                <div class="bb-pill-tab active" id="bb-fan-tab-public" onclick="bbSwitchFanTab('public')">Feed 动态</div>
+                <div class="bb-pill-tab" id="bb-fan-tab-secret" onclick="bbSwitchFanTab('secret')">Secret 私信</div>
+                <div class="bb-pill-tab" id="bb-fan-tab-shop" onclick="bbSwitchFanTab('shop')">Shop 周边</div>
             </div>
 
-            <!-- 底部：我的回复框 -->
-            <div class="bb-input-area">
-                <div class="bb-reply-limit">Reply to Artist (3/3)</div>
-                <div class="bb-input-box">
-                    <input type="text" id="bb-fan-input" placeholder="回复爱豆..." maxlength="30">
-                    <button onclick="fanSendReply()"><i class="fas fa-arrow-up"></i></button>
+            <!-- 公开动态区 -->
+            <div id="bb-fan-content-public" style="flex:1; overflow-y:auto; padding-bottom:20px;">
+                <div id="bb-public-messages" style="display:flex; flex-direction:column;"></div>
+            </div>
+
+            <!-- 私信区 -->
+            <div id="bb-fan-content-secret" style="display:none; flex-direction:column; flex:1;">
+                <div id="bb-secret-messages" style="flex:1; overflow-y:auto; padding:20px 0;"></div>
+                <div class="bb-secret-input-wrap">
+                    <input type="text" id="bb-secret-input" placeholder="发消息给 TA...">
+                    <button onclick="bbFanSendSecret()"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
 
-            <!-- 路人评论列表全屏弹窗 -->
-            <div id="bb-mob-modal" class="bb-mob-modal">
-                <div class="bb-mob-header">
-                    <span>Replies (<span id="bb-mob-count">0</span>)</span>
-                    <i class="fas fa-times" onclick="closeMobReplies()" style="cursor:pointer;"></i>
-                </div>
-                <div class="bb-mob-list" id="bb-mob-list">
-                    <!-- JS 填充 -->
-                </div>
+            <!-- 周边区 -->
+            <div id="bb-fan-content-shop" style="display:none; flex-direction:column; flex:1; overflow-y:auto; padding-bottom:20px;">
+                <div id="bb-fan-shop-list" style="display:flex; flex-direction:column;"></div>
             </div>
         </div>
 
+               <!-- 3. 爱豆模式 -->
+        <div id="bb-idol-mode-view" style="display:none; flex-direction:column; height:100%;">
+            <div class="bb-top-bar">
+                <i class="fas fa-chevron-left" onclick="bbExitMode()" style="font-size:18px; color:#666; cursor:pointer;"></i>
+                <span class="bb-nav-title">CREATOR STUDIO</span>
+                <i class="fas fa-cog" onclick="bbOpenIdolModeSettings()" style="font-size:18px; color:#666; cursor:pointer;"></i>
+            </div>
 
+            <div class="bb-cloud-header">
+                <div style="text-align:center; flex:1;">
+                    <div style="font-size:24px; font-weight:800; color:#333; font-family:'Montserrat';" id="bb-idol-fan-count">0</div>
+                    <div style="font-size:10px; color:#999; margin-top:4px; font-weight:600; letter-spacing:1px;">FANS</div>
+                </div>
+                <div style="width:1px; height:30px; background:#eee;"></div>
+                <div style="text-align:center; flex:1;">
+                    <div style="font-size:24px; font-weight:800; color:#333; font-family:'Montserrat';" id="bb-idol-revenue">0</div>
+                    <div style="font-size:10px; color:#999; margin-top:4px; font-weight:600; letter-spacing:1px;">REVENUE</div>
+                </div>
+            </div>
+
+            <div class="bb-pill-tabs">
+                <div class="bb-pill-tab active" id="bb-idol-tab-creator" onclick="bbSwitchIdolTab('creator')">Post 营业</div>
+                <div class="bb-pill-tab" id="bb-idol-tab-fans" onclick="bbSwitchIdolTab('fans')">Fans 粉丝</div>
+                <div class="bb-pill-tab" id="bb-idol-tab-merch" onclick="bbSwitchIdolTab('merch')">Merch 卖货</div>
+                <div class="bb-pill-tab" id="bb-idol-tab-pr" onclick="bbSwitchIdolTab('pr')">PR 危机</div>
+            </div>
+
+            <!-- 发动态 -->
+            <div id="bb-idol-content-creator" style="flex:1; overflow-y:auto; padding-bottom:20px; display: flex; flex-direction: column;">
+                <div class="bb-compose-card" style="flex-shrink: 0;">
+                    <textarea id="bb-idol-post-input" rows="4" placeholder="说点什么营业一下吧..."></textarea>
+                    <button onclick="bbIdolPost()">发布动态 ✦</button>
+                </div>
+                <div style="font-size:11px; font-weight:700; color:#888; margin:0 24px 10px; letter-spacing:1px; flex-shrink: 0;">HISTORY</div>
+                <div id="bb-creator-history" style="display:flex; flex-direction:column; flex: 1; overflow-y: auto;"></div>
+            </div>
+
+
+            <!-- 看粉丝 -->
+            <div id="bb-idol-content-fans" style="display:none; flex-direction:column; flex:1; overflow-y:auto;">
+                <div id="bb-fans-waterfall" style="display:flex; flex-direction:column;"></div>
+            </div>
+
+            <!-- 卖周边 -->
+            <div id="bb-idol-content-merch" style="display:none; flex-direction:column; flex:1; overflow-y:auto;">
+                <div style="background:#fff; border-radius:28px; padding:20px; margin:0 20px 20px; border:1px solid #f5f5f5; box-shadow:0 8px 24px rgba(0,0,0,0.02);">
+                    <div style="font-size:15px; font-weight:800; color:#111; margin-bottom:15px;">上架新物品</div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="bb-merch-name-input" style="flex:2; min-width:0; box-sizing:border-box; border:1px solid #eee; background:#fafafa; border-radius:16px; padding:12px 15px; outline:none; font-size:13px;" placeholder="周边名称">
+                        <input type="number" id="bb-merch-price-input" style="flex:1; min-width:0; box-sizing:border-box; border:1px solid #eee; background:#fafafa; border-radius:16px; padding:12px 15px; outline:none; font-size:13px;" placeholder="定价">
+                    </div>
+                    <button onclick="bbAddMerch()" style="width:100%; padding:14px; background:#111; color:#fff; border:none; border-radius:16px; font-weight:700; margin-top:15px;">确认上架</button>
+                </div>
+                <div style="padding:0 24px 10px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:13px; font-weight:700; color:#333;">累计收益: <span id="bb-merch-revenue" style="color:#111;">0</span></span>
+                    <button id="bb-withdraw-btn" onclick="bbWithdraw()" style="display:none; background:#f5f5f5; color:#111; border-radius:14px; padding:6px 14px; font-weight:700; border:none; font-size:12px;">提现</button>
+                </div>
+                <div id="bb-merch-list" style="display:flex; flex-direction:column;"></div>
+            </div>
+
+            <!-- 搞公关 -->
+            <div id="bb-idol-content-pr" style="display:none; flex-direction:column; flex:1; overflow-y:auto;">
+                <div id="bb-pr-content"></div>
+            </div>
+        </div>
+
+        <!-- 提示框 -->
+        <div id="bb-toast" class="bb-toast"></div>
     </div>
-
-</div>
-
 
     <!-- ===== 来电界面 ===== -->
     <div id="incoming-call-overlay">
@@ -2513,10 +2530,234 @@
         <i class="fas fa-video"></i>
     </div>
 
+<!-- =============================================
+     群聊设置页面
+     ============================================= -->
+<div class="chat-settings-page-view" id="groupSettingsPage">
+    <div class="chat-settings-page-header">
+        <i class="fas fa-chevron-left" onclick="closeGroupSettingsPage()"></i>
+        <span>群聊设置</span>
+        <div style="width:24px;"></div>
+    </div>
+    <div class="chat-settings-page-content">
+        <!-- 基础信息 -->
+        <div class="settings-section-title" style="margin-top:0;">群基本信息</div>
+        <div class="form-group">
+            <label>群名称</label>
+            <input type="text" id="gs-group-name" placeholder="输入群名称">
+        </div>
+        <div class="form-group">
+            <label>群公告 (最高优先级，AI 成员必须遵守)</label>
+            <textarea id="gs-announcement" rows="3" placeholder="例如：本群禁止讨论政治话题，请保持友好。也可用于跑团规则设定。"></textarea>
+        </div>
+
+        <hr class="settings-divider">
+
+        <!-- 后台活跃 -->
+        <div class="settings-section-title">群聊后台实时活动</div>
+        <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <label style="margin:0; display:block;">开启后台活跃</label>
+                <span class="form-text" style="margin:0;">关闭应用后，群成员仍会自动聊天</span>
+            </div>
+            <label class="switch" style="margin:0;">
+                <input type="checkbox" id="gs-bg-activity-toggle" onchange="document.getElementById('gs-bg-interval-box').style.display=this.checked?'block':'none'">
+                <span class="slider round"></span>
+            </label>
+        </div>
+        <div id="gs-bg-interval-box" style="display:none; background:#f9f9f9; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:8px;">
+            <label style="font-size:12px; color:#555;">触发间隔 (秒)</label>
+            <input type="number" id="gs-bg-interval" value="120" min="30" style="margin-top:6px;">
+            <span class="form-text" style="display:block; margin-top:4px;">每隔此秒数，群成员会自动生成聊天内容。</span>
+        </div>
+
+        <hr class="settings-divider">
+
+        <!-- 成员管理 -->
+        <div class="settings-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>群成员管理</span>
+        </div>
+        <div id="gs-members-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;">
+            <!-- JS 动态填充 -->
+        </div>
+
+        <hr class="settings-divider">
+
+        <!-- 危险区 -->
+        <div class="settings-section-title">高级操作</div>
+        <div style="display:flex; flex-direction:column; gap:10px; padding-bottom:40px;">
+            <button class="btn-save" onclick="saveGroupSettings()">保存群聊设置</button>
+            <button class="btn-secondary" onclick="transferGroupOwner()" style="color:#ff7e67; border-color:#ff7e67;">
+                <i class="fas fa-crown"></i> 转让群主
+            </button>
+            <button class="btn-secondary" onclick="exitOrDeleteGroup()" style="color:#ff4d4f; border-color:#ff4d4f;">
+                <i class="fas fa-door-open"></i> 退出 / 解散群聊
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================
+     发红包弹窗
+     ============================================= -->
+<div id="group-redpacket-modal" class="modal-overlay">
+    <div class="modal-box" style="width:320px; border-radius:24px;">
+        <div class="modal-header" style="background:#ff3b30; color:#fff; border-radius:20px 20px 0 0;">
+            <span style="font-weight:800; font-size:16px;">发红包 🧧</span>
+            <i class="fas fa-times" onclick="closeRedPacketModal()" style="color:#fff;"></i>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+            <!-- 红包类型 -->
+            <div class="form-group">
+                <label>红包类型</label>
+                <div style="display:flex; gap:10px;">
+                    <label style="flex:1; display:flex; align-items:center; gap:8px; padding:10px; border:1px solid #eee; border-radius:12px; cursor:pointer;">
+                        <input type="radio" name="rp-type" value="lucky" id="rp-type-lucky" checked>
+                        <div>
+                            <div style="font-weight:700; font-size:13px;">拼手气</div>
+                            <div style="font-size:11px; color:#999;">随机金额</div>
+                        </div>
+                    </label>
+                    <label style="flex:1; display:flex; align-items:center; gap:8px; padding:10px; border:1px solid #eee; border-radius:12px; cursor:pointer;">
+                        <input type="radio" name="rp-type" value="normal" id="rp-type-normal">
+                        <div>
+                            <div style="font-weight:700; font-size:13px;">普通红包</div>
+                            <div style="font-size:11px; color:#999;">平均分配</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>总金额 (¥)</label>
+                <input type="number" id="rp-total-amount" placeholder="例如：10.00" min="0.01" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>红包数量</label>
+                <input type="number" id="rp-count" placeholder="例如：5" min="1">
+            </div>
+            <div class="form-group">
+                <label>祝福语</label>
+                <input type="text" id="rp-note" placeholder="恭喜发财，大吉大利">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeRedPacketModal()">取消</button>
+            <button class="btn-confirm" onclick="confirmSendRedPacket()" style="background:#ff3b30;">塞入红包</button>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================
+     群投票弹窗
+     ============================================= -->
+<div id="group-vote-modal" class="modal-overlay">
+    <div class="modal-box" style="width:320px; border-radius:24px;">
+        <div class="modal-header">
+            <span>发起投票 📊</span>
+            <i class="fas fa-times" onclick="closeGroupVoteModal()"></i>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+            <div class="form-group">
+                <label>投票问题</label>
+                <input type="text" id="gv-question" placeholder="例如：今晚吃什么？">
+            </div>
+            <div class="form-group">
+                <label>投票选项</label>
+                <div id="gv-options-container" style="display:flex; flex-direction:column; gap:8px;">
+                    <input type="text" class="gv-option-input" placeholder="选项 A" style="width:100%; border:1px solid #eee; border-radius:10px; padding:10px; font-size:13px; outline:none;">
+                    <input type="text" class="gv-option-input" placeholder="选项 B" style="width:100%; border:1px solid #eee; border-radius:10px; padding:10px; font-size:13px; outline:none;">
+                </div>
+                <button class="btn-secondary" onclick="addVoteOption()" style="margin-top:10px; font-size:12px; height:36px;">
+                    <i class="fas fa-plus"></i> 添加选项
+                </button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeGroupVoteModal()">取消</button>
+            <button class="btn-confirm" onclick="confirmCreateVote()">发起投票</button>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================
+     群视频通话弹窗
+     ============================================= -->
+<div id="group-video-call-modal" class="modal-overlay" style="z-index:5000;">
+    <div class="modal-box" style="width:340px; border-radius:24px; background:#1a1a1a; color:#fff;">
+        <div class="modal-header" style="background:#1a1a1a; color:#fff; border-bottom:1px solid #333; border-radius:20px 20px 0 0;">
+            <span style="font-weight:800;">群视频通话</span>
+            <i class="fas fa-phone-slash" onclick="closeGroupVideoCall()" style="color:#ff4d4f; font-size:18px; cursor:pointer;"></i>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+            <div id="gvc-participants-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:20px;">
+                <!-- JS 动态填充参与者格子 -->
+            </div>
+            <div style="text-align:center; font-size:12px; color:#888;">
+                <i class="fas fa-info-circle"></i> 成员正在陆续接听中...
+            </div>
+        </div>
+        <div class="modal-footer" style="background:#1a1a1a; border-top:1px solid #333; padding:20px; border-radius:0 0 20px 20px;">
+            <button onclick="closeGroupVideoCall()" style="width:100%; padding:12px; border-radius:24px; background:#ff4d4f; color:#fff; border:none; font-weight:700; font-size:14px; cursor:pointer;">
+                <i class="fas fa-phone-slash"></i> 结束通话
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================
+     群聊添加成员弹窗
+     ============================================= -->
+<div id="group-add-member-modal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>添加群成员</span>
+            <i class="fas fa-times" onclick="closeAddMemberModal()"></i>
+        </div>
+        <div class="modal-body">
+            <div id="gam-friend-list" class="friend-checklist">
+                <!-- JS 动态填充 -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeAddMemberModal()">取消</button>
+            <button class="btn-confirm" onclick="confirmAddMember()">添加</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================== -->
+<!-- [背包 APP] Bubble 购物收藏 -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="backpackApp" style="display:none; flex-direction:column; background:#fafafa;">
+    <div class="bb-top-bar" style="background:#fff; border-bottom:1px solid #f0f0f0;">
+        <i class="fas fa-chevron-left" onclick="closeBackpackApp()" style="cursor:pointer; color:#111; font-size:18px;"></i>
+        <span style="font-size:15px; font-weight:800; color:#111; letter-spacing:2px;">MY BACKPACK</span>
+        <span style="font-size:11px; color:#aaa; font-weight:600;">我的背包</span>
+    </div>
+    <div style="flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border-radius:20px; padding:16px 20px; box-shadow:0 4px 15px rgba(0,0,0,0.03); border:1px solid #f0f0f0;">
+            <div>
+                <div style="font-size:11px; color:#aaa; font-weight:600; letter-spacing:1px;">TOTAL ITEMS</div>
+                <div style="font-size:28px; font-weight:800; color:#111; font-family:'Montserrat',sans-serif;" id="bp-total-count">0</div>
+            </div>
+            <i class="fas fa-shopping-bag" style="font-size:28px; color:#f59e0b; opacity:0.5;"></i>
+        </div>
+        <div id="bp-items-list" style="display:flex; flex-direction:column; gap:12px;">
+            <div class="bb-empty-hint">
+                <div style="font-size:32px; margin-bottom:8px;">🛍️</div>
+                <div>背包空空的</div>
+                <div style="font-size:11px; color:#ddd; margin-top:4px;">去 Bubble 周边商城购买商品吧</div>
+            </div>
+        </div>
+    </div>
+</div>
+
     <script src="js/core.js"></script>
     <script src="js/apps.js"></script>
     <script src="js/app_worldbook.js"></script>
-    <script src="js/app_bubble.js"></script>
+    <script src="js/app_bubble.js?v=4"></script>
+
+
     <script src="js/app_music.js"></script>
     <script src="js/app_pay.js"></script>
     <script src="js/app_pet.js"></script>
@@ -2528,6 +2769,8 @@
 <script src="js/app_voice_call.js"></script>
 <script src="js/app_memory.js"></script>
 <script src="js/app_transfer.js"></script>
+<script src="js/app_groupchat.js"></script>
+<script src="js/app_galgame.js"></script>
 
 
 <div id="add-friend-modal" class="modal-overlay">
@@ -3247,6 +3490,217 @@
         <div style="height: 60px;"></div>
     </div>
 </div>
+
+<!-- ============================================== -->
+<!-- [全新重制 v4.0] Galgame 异世界冒险 APP -->
+<!-- 韩系黑白灰 · 橙光立绘风 · 拟物抽卡 -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view galgame-container" id="galgameApp">
+
+    <!-- 顶部状态栏 -->
+    <div class="gal-header">
+        <i class="fas fa-chevron-left gal-back-btn" onclick="closeGalgameApp()"></i>
+        <div class="gal-title">VISUAL NOVEL</div>
+        <div class="gal-actions">
+            <i class="fas fa-save gal-action-btn" onclick="toggleGalSlMenu(event)" title="存档/读档"></i>
+        </div>
+    </div>
+    <!-- S/L 菜单 (移出 header，直接挂在 galgame-container，z-index 9999 不受 header 层叠上下文限制) -->
+    <div id="gal-sl-menu" class="gal-sl-menu">
+        <button class="gal-sl-btn" onclick="saveGalgame()">💾 存档 Save</button>
+        <button class="gal-sl-btn" onclick="loadGalgame()">📂 读档 Load</button>
+        <button class="gal-sl-btn" onclick="restartGalgame()" style="color:#ff5555;">↺ 重新开始</button>
+    </div>
+
+    <!-- ══════════════════════════════
+         大厅 Lobby — 换页模式
+         ══════════════════════════════ -->
+    <div id="gal-lobby" class="gal-lobby">
+
+        <!-- 封面横幅 -->
+        <div class="gal-lobby-banner">
+            <div class="gal-lobby-banner-title">GALGAME</div>
+            <div class="gal-lobby-banner-sub">VISUAL NOVEL · 异世界冒险</div>
+        </div>
+
+        <!-- 大厅存档快速读取条（有存档时由JS渲染） -->
+        <div id="gal-lobby-saves" class="gal-lobby-saves"></div>
+
+        <!-- 页面指示器 -->
+        <div class="gal-page-indicators">
+            <div class="gal-page-dot active" onclick="galGoToPage(0)"></div>
+            <div class="gal-page-dot" onclick="galGoToPage(1)"></div>
+            <div class="gal-page-dot" onclick="galGoToPage(2)"></div>
+        </div>
+
+        <!-- 换页容器 -->
+        <div class="gal-pages-wrapper" id="gal-pages-wrapper">
+
+            <!-- ── 第1页：选择同行角色 ── -->
+            <div class="gal-page" id="gal-page-0">
+                <div class="gal-section-label">同行者 PLAYER 2</div>
+                <div id="gal-char-select" class="gal-character-select"></div>
+                <div class="gal-page-nav">
+                    <button class="gal-page-nav-btn next" onclick="galGoToPage(1)">
+                        下一步 &nbsp;→
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── 第2页：世界观抽卡 ── -->
+            <div class="gal-page" id="gal-page-1">
+                <div class="gal-section-label">命运世界线 WORLD</div>
+                <div class="gal-world-section">
+                    <div id="gal-world-cards" class="gal-world-cards">
+                        <div class="gal-world-hint">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                            点击下方按钮，让 AI 抽取三条命运世界线
+                        </div>
+                    </div>
+                    <button id="gal-gen-world-btn" class="gal-gen-world-btn" onclick="generateGalWorlds()">
+                        <i class="fas fa-dice"></i> 占卜世界线
+                    </button>
+                    <div class="gal-or-line"><span>OR</span></div>
+                    <!-- API 提示卡 -->
+                    <div class="gal-api-hint-card">
+                        <i class="fas fa-circle-info"></i>
+                        <div class="gal-api-hint-card-text">
+                            <strong>💡 占卜需要 API</strong>
+                            若无法自动生成世界线，请直接在下方手动输入世界观关键词即可开始游戏。API 可在「设置」中配置。
+                        </div>
+                    </div>
+                    <input type="text" id="gal-world-input" class="gal-setting-input"
+                           placeholder="手动输入世界观（末日 / 修仙 / 血族古堡...）"
+                           oninput="onManualWorldInput()">
+                </div>
+                <div class="gal-page-nav">
+                    <button class="gal-page-nav-btn prev" onclick="galGoToPage(0)">←</button>
+                    <button class="gal-page-nav-btn next" onclick="galGoToPage(2)">下一步 &nbsp;→</button>
+                </div>
+            </div>
+
+            <!-- ── 第3页：我的立绘 + 背景 + 开始 ── -->
+            <div class="gal-page" id="gal-page-2">
+                <div class="gal-section-label">我的立绘与人设 MY PERSONA</div>
+                <div class="gal-my-sprite-area">
+                    <div class="gal-sprite-upload-box"
+                         onclick="document.getElementById('gal-my-sprite-input').click()"
+                         title="上传我的立绘">
+                        <img id="gal-lobby-my-sprite" src="">
+                        <i class="fas fa-camera upload-icon" id="gal-lobby-my-sprite-icon"></i>
+                        <span class="upload-label">ME</span>
+                    </div>
+                    <input type="file" id="gal-my-sprite-input" accept="image/*"
+                           style="display:none;" onchange="handleGalMySprite(this)">
+                    <textarea id="gal-my-persona" class="gal-setting-input" rows="4"
+                              placeholder="你的背景和性格..."></textarea>
+                </div>
+
+                <!-- 背景预设（静态HTML，JS 只负责渲染色块） -->
+                <div>
+                <div class="gal-section-label">游戏背景 BACKGROUND</div>
+                    <div class="gal-bg-presets" id="gal-bg-preset-row"></div>
+                </div>
+
+                <!-- 立绘缩放设置 -->
+                <div>
+                    <div class="gal-section-label">立绘大小 SPRITE SIZE</div>
+                    <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:16px; padding:12px 16px; border:1.5px solid rgba(0,0,0,0.07);">
+                        <i class="fas fa-user" style="color:#aaa; font-size:13px;"></i>
+                        <input type="range" id="gal-sprite-scale-slider" min="40" max="90" step="5" value="55"
+                               style="flex:1; accent-color:#555;"
+                               oninput="applyGalSpriteScale(this.value)">
+                        <span id="gal-sprite-scale-val" style="font-size:12px; font-weight:700; color:#666; min-width:32px;">55%</span>
+                    </div>
+                </div>
+
+                <button id="gal-start-btn" class="gal-start-btn" onclick="startGalgame()" disabled>
+                    ✦ &nbsp; START ADVENTURE
+                </button>
+
+                <div class="gal-page-nav" style="padding-bottom:10px;">
+                    <button class="gal-page-nav-btn prev" onclick="galGoToPage(1)">←</button>
+                </div>
+            </div>
+
+        </div><!-- /gal-pages-wrapper -->
+    </div><!-- /gal-lobby -->
+
+    <!-- ══════════════════════════════
+         游戏主体区域
+         ══════════════════════════════ -->
+    <div id="gal-game-area" class="gal-game-area" style="display:none;">
+
+        <!-- 背景层 -->
+        <div id="gal-bg" class="gal-bg"></div>
+
+        <!-- 双人立绘层 -->
+        <div class="gal-sprites-container">
+            <img id="gal-sprite-left"  class="gal-sprite-img" src="" alt="">
+            <img id="gal-sprite-right" class="gal-sprite-img" src="" alt="">
+        </div>
+
+        <!-- 全屏点击遮罩（推进对话） -->
+        <div id="gal-click-mask"
+             style="position:absolute; inset:0; z-index:10;"
+             onclick="playNextGalDialogue()"></div>
+
+        <!-- 好感度状态栏 -->
+        <div id="gal-status-bar" class="gal-status-bar"></div>
+
+        <!-- 对话框区域 (橙光风：名字标签 + 内容框) -->
+        <div class="gal-dialog-wrapper">
+            <div id="gal-speaker-name" class="gal-speaker-name">旁白</div>
+            <div class="gal-dialog-box">
+                <div id="gal-dialog-text" class="gal-dialog-text">...</div>
+                <i class="fas fa-chevron-down gal-continue-icon" id="gal-continue-icon"></i>
+            </div><!-- /gal-dialog-box -->
+        </div><!-- /gal-dialog-wrapper -->
+
+        <!-- 选项区域 -->
+        <div id="gal-options-area" class="gal-options-area" style="display:none;">
+            <!-- JS 动态填充，含顶部存档按钮 -->
+        </div>
+
+    </div><!-- /gal-game-area -->
+
+    <!-- 加载动画 -->
+    <div id="gal-loading" class="gal-loading-overlay" style="display:none;">
+        <div class="gal-loading-inner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <div>推演世界线中...</div>
+        </div>
+    </div>
+
+    <!-- Bad End 遮罩 -->
+    <div id="gal-bad-end" class="gal-bad-end-overlay" style="display:none;">
+        <div class="gal-be-title" id="gal-be-title">GAME OVER</div>
+        <div class="gal-be-name"  id="gal-be-desc">结局名称</div>
+        <div class="gal-be-buttons">
+            <button class="gal-be-btn" onclick="loadGalgame()">📂 回档重来</button>
+            <button class="gal-be-btn" onclick="restartGalgame()">↺ 开启新周目</button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════
+         多槽存档/读档模态框 (橙光风格)
+         ══════════════════════════════ -->
+    <div id="gal-save-modal" class="gal-save-modal-overlay">
+        <div class="gal-save-modal-box">
+            <div class="gal-save-modal-header">
+                <div class="gal-save-modal-title" id="gal-save-modal-title">💾 选择存档位</div>
+                <button class="gal-save-modal-close" onclick="closeGalSaveModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="gal-save-slots-grid" id="gal-save-slots-grid">
+                <!-- JS 动态渲染6个槽位卡片 -->
+            </div>
+        </div>
+    </div>
+
+</div><!-- /galgameApp -->
+
 
 <!-- ============================================== -->
 <!-- [NEW] ARCADE 双人游乐场 APP (韩系柔和轻杂志风) -->

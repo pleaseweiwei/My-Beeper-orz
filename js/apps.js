@@ -1501,8 +1501,9 @@ window.openChatDetail = async function(name) {
     if(dmLayer) dmLayer.innerHTML = '';
     danmakuPool = [];
     
-    currentChatId = name; 
-    currentChatType = 'single'; 
+    currentChatId = name;
+    currentChatType = 'single';
+    if (typeof window.removeGroupPlusPanel === 'function') window.removeGroupPlusPanel();
 
     const chatView = document.getElementById('chatLayer');
     if(chatView) {
@@ -1511,6 +1512,13 @@ window.openChatDetail = async function(name) {
         if(titleEl) {
              titleEl.innerHTML = `${displayName}<small style="font-size:9px; color:#aaa; font-weight:400; letter-spacing:1px; text-transform:uppercase;">Online</small>`;
         }
+        // 恢复单聊专属按钮的显示（心声图标）
+        const heartBtn = chatView.querySelector('.fa-heart-pulse');
+        if (heartBtn) heartBtn.style.display = '';
+        // 恢复设置图标点击为单聊设置
+        const settingsBtn = chatView.querySelector('.fa-cog');
+        if (settingsBtn) settingsBtn.onclick = () => openChatSettingsPage();
+
         chatView.classList.add('show');
     }
 
@@ -1690,8 +1698,13 @@ const AVAILABLE_WORLDBOOKS = [
     { id: 'wb_post_apo', name: '废土生存指南' }
 ];
 
-let friendsData = {}; 
+let friendsData = {};
 let currentChatId = null; // 记录当前正在和谁聊天
+
+// 供其他模块（如 galgame）读取好友列表
+window.getAllFriends = function() {
+    return Object.keys(friendsData).map(id => Object.assign({ id }, friendsData[id]));
+};
 window.getCurrentChatId = () => currentChatId; // 暴露给 app_memory.js 等外部脚本读取
 let pendingRegenMsgId = null;
 let momentsFeed = [];
@@ -2495,6 +2508,7 @@ if (statusMatch) {
     friendsData[currentChatId].mindState.bgm = readStatusValue('BGM') || friendsData[currentChatId].mindState.bgm || 'No BGM';
     friendsData[currentChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[currentChatId].mindState.murmur || '...';
     friendsData[currentChatId].mindState.hiddenThought = readStatusValue('Secret') || friendsData[currentChatId].mindState.hiddenThought || '...';
+    friendsData[currentChatId].mindState.darkThought = readStatusValue('DarkSecret') || friendsData[currentChatId].mindState.darkThought || '...';
     friendsData[currentChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[currentChatId].mindState.kaomoji || '( ˙W˙ )';
 
     saveFriendsData();
@@ -2505,6 +2519,7 @@ if (statusMatch) {
     const kaoEl = document.getElementById('mind-kaomoji-display');
     const murEl = document.getElementById('mind-murmur-text');
     const secEl = document.getElementById('mind-hidden-text');
+    const darkEl = document.getElementById('mind-dark-hidden-text');
     const bgmEl = document.getElementById('now-playing-bgm');
     const affTextEl = document.getElementById('affection-percent-text');
     const affFillEl = document.getElementById('affection-fill');
@@ -2515,6 +2530,7 @@ if (statusMatch) {
     if (kaoEl) kaoEl.innerText = friendsData[currentChatId].mindState.kaomoji;
     if (murEl) murEl.innerText = friendsData[currentChatId].mindState.murmur;
     if (secEl) secEl.innerText = friendsData[currentChatId].mindState.hiddenThought;
+    if (darkEl) darkEl.innerText = friendsData[currentChatId].mindState.darkThought;
     if (bgmEl) bgmEl.innerText = friendsData[currentChatId].mindState.bgm;
     if (affTextEl) affTextEl.innerText = `${friendsData[currentChatId].affection}%`;
     if (affFillEl) affFillEl.style.width = `${friendsData[currentChatId].affection}%`;
@@ -3068,9 +3084,15 @@ async function saveFriendsData() {
 //  【重写后】打开聊天详细设置页面 (适配 V2 新界面)
 // =========================================
 window.openChatSettingsPage = function() {
+    // 群聊走群聊设置
+    if (currentChatType === 'group') {
+        if (typeof openGroupSettingsPage === 'function') {
+            openGroupSettingsPage(currentChatId);
+        }
+        return;
+    }
     // 仅支持单人聊天设置
     if (!currentChatId || currentChatType !== 'single') {
-        alert("目前仅支持对单人角色进行设置。");
         return;
     }
 
@@ -4162,6 +4184,28 @@ window.sendSticker = function(src) {
     sendRichMessage(html, '', `[System: User sent a funny sticker/GIF. React with an emoji or a short laugh.]`);
 }
 
+// === Galgame 入口 ===
+window.openGalgameApp = function() {
+    const app = document.getElementById('galgameApp');
+    if (app) {
+        app.classList.add('active');
+        app.classList.add('open'); // 解除 modules.css 的 visibility:hidden / transform:translateY(100%)
+    }
+    
+    // 初始化选人
+    if(typeof gal_initLobby === 'function') {
+        gal_initLobby();
+    }
+}
+
+window.closeGalgameApp = function() {
+    const app = document.getElementById('galgameApp');
+    if (app) {
+        app.classList.remove('active');
+        app.classList.remove('open');
+    }
+}
+
 /* =========================================
    [修改] AI 回复渲染逻辑 (支持 AI 发语音/图片/转账)
    ========================================= */
@@ -4903,6 +4947,7 @@ window.openContactProfile = function(id) {
     currentProfileId = id; // 记录当前查看的人
     currentChatId    = id;        // 顺便把当前聊天 ID 也切过来
     currentChatType  = 'single';  // 标记为单人聊天
+    if (typeof window.removeGroupPlusPanel === 'function') window.removeGroupPlusPanel();
 
     const displayName = f.remark || f.realName || id;
     const avatar = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.realName || id}`;
@@ -5054,7 +5099,8 @@ window.openChatSettingsFromProfile = function() {
     // 确保把当前的 profile ID 传给聊天设置系统，实现数据联通
     currentChatId = currentProfileId;
     currentChatType = 'single';
-    
+    if (typeof window.removeGroupPlusPanel === 'function') window.removeGroupPlusPanel();
+
     // 打开设置页面
     openChatSettingsPage();
     
@@ -6706,7 +6752,14 @@ async function performRevoke(msgId, originalText, rowElement) {
             }
         }
     }
-    
+
+    // 【群聊吃瓜】撤回消息时，通知群AI成员做出反应
+    if (currentChatType === 'group' && typeof window.sendGroupMessageToAI === 'function') {
+        setTimeout(() => {
+            window.sendGroupMessageToAI(`[System: 用户刚刚撤回了一条消息，内容是："${originalText}"。请根据你的人设自然地吐槽、追问或截图威胁，制造群内趣味。不要主动提及这是系统提示。]`);
+        }, 600);
+    }
+
 }
 
 
@@ -7302,7 +7355,8 @@ window.sendOfflineMessage = async function(isRegen = false) {
     if (oldOpts) oldOpts.remove();
 
     const history = await loadChatHistory(currentChatId);
-    const historyContext = history.slice(-15).map(h => 
+    const memoryLimit = parseInt((friend.chatSettings && friend.chatSettings.memoryLimit) || 20);
+    const historyContext = history.slice(-memoryLimit).map(h => 
         `${h.type==='sent'?'User':friend.realName}: ${h.isOffline?h.text:'(Online Memory: '+h.text+')'}`
     ).join('\n');
 
@@ -7333,6 +7387,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
     Persona: ${friend.persona}
     ${friend.worldbook ? `[🌍 WORLD DATA] Setting: ${friend.worldbook}` : ''}
     ${preset.jailbreak || ''}
+    ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[USER IDENTITY - The person you are having an offline date with]:\n    ${me.persona}` : ''; })()}
     [RELATIONSHIP STATE]
     Current affection toward the user: ${currentAffection}/100
     Current relationship stage: ${affectionStage}
@@ -7363,6 +7418,22 @@ if (isDanmakuOn) {
 }
 
     
+    // === 注入剧情总结 ===
+    if (friend.summaries && friend.summaries.length > 0) {
+        const summaryText = friend.summaries.map((s, i) => `- (第${i+1}阶段) ${s.text}`).join('\n');
+        systemPrompt += `\n\n[PAST STORY SUMMARIES]:\n${summaryText}\n`;
+    }
+    // === 注入关系日志 ===
+    if (friend.relationshipLog && friend.relationshipLog.length > 0) {
+        const relationshipText = friend.relationshipLog.map(r => `- ${r.text}`).join('\n');
+        systemPrompt += `\n\n[OUR RELATIONSHIP HISTORY]:\n${relationshipText}\n`;
+    }
+    // === 注入世界书关键词触发 ===
+    const offlineWorldInfo = constructWorldInfoPrompt(text, currentChatId);
+    if (offlineWorldInfo) {
+        systemPrompt += `\n\n[World Setting / Lorebook Data]:\n${offlineWorldInfo}\n`;
+    }
+
     // 【修复】根据开关状态决定是否添加选项指令
     if (isOfflineOptionsOn) {
         systemPrompt += `

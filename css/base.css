@@ -38,7 +38,7 @@ body {
     
     position: relative;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.08); 
+
     z-index: 1;
     font-family: var(--global-font);
     isolation: isolate;
@@ -469,7 +469,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 @media (max-width: 600px) {
     body {
         align-items: flex-start; /* 顶端对齐 */
-        background-color: #000;  /* 移动端背景变黑，更沉浸 */
+         background-color: #f7f7f7;  /* 移动端背景变黑，更沉浸 */
     }
 
     .phone {
