@@ -4,6 +4,61 @@
  */
 
 // =====================================================================
+// callAIAPI — 泡泡专用 AI 调用函数（静默返回文本，不渲染气泡）
+// 参数：systemPrompt, userMessage, history[], _, _, silent
+// 返回：Promise<string>
+// =====================================================================
+async function callAIAPI(systemPrompt, userMessage, history, _p4, _p5, _silent) {
+    const SETTINGS_KEY = 'myCoolPhone_aiSettings';
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    if (!settingsJSON) throw new Error('未配置 API，请先在设置中填写 API Key 和 Base URL');
+
+    const settings = JSON.parse(settingsJSON);
+    if (!settings.apiKey || !settings.endpoint || !settings.model) {
+        throw new Error('API Key、Base URL 或 Model 未填写完整');
+    }
+
+    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+    const apiUrl = baseUrl.endsWith('/v1')
+        ? `${baseUrl}/chat/completions`
+        : `${baseUrl}/v1/chat/completions`;
+
+    // 构建消息列表
+    const messages = [{ role: 'system', content: systemPrompt }];
+    if (Array.isArray(history) && history.length > 0) {
+        history.forEach(h => {
+            if (h && h.role && h.content) messages.push({ role: h.role, content: h.content });
+        });
+    }
+    messages.push({ role: 'user', content: userMessage || '' });
+
+    const payload = {
+        model: settings.model,
+        messages: messages,
+        temperature: parseFloat(settings.temperature || 0.7)
+    };
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${settings.apiKey}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`HTTP ${response.status} ${response.statusText}\n${errText}`);
+    }
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content ?? '';
+    if (!content.trim()) throw new Error('API 返回内容为空');
+    return content;
+}
+
+// =====================================================================
 // 安全获取全局变量辅助函数
 // =====================================================================
 function getGlobalPersonas() {

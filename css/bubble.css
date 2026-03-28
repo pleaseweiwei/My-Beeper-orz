@@ -190,3 +190,175 @@
     background: #fafafa; border: 1px solid #f0f0f0; border-radius: 12px; padding: 10px; font-size: 12px; color: #666; margin-bottom: 6px;
 }
 
+/* =====================================================
+   补全：JS 动态生成 HTML 所需的全部缺失样式
+   ===================================================== */
+
+/* --- 粉丝模式视图整体布局约束 --- */
+#bb-fan-mode-view { overflow: hidden; }
+
+/* --- 私信区布局修复（flex 子元素高度约束）--- */
+#bb-fan-content-secret { min-height: 0; overflow: hidden; }
+#bb-secret-messages { min-height: 0; }
+.bb-secret-input-wrap input { height: 44px; }
+
+/* --- 公开动态布局约束 --- */
+#bb-fan-content-public {
+    min-height: 0;
+    flex-direction: column;
+}
+
+/* --- 动态卡片：帖子头部 meta 区 --- */
+.bb-post-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* --- ARTIST 角标 --- */
+.bb-artist-badge {
+    display: inline-block;
+    background: #f0f0f0;
+    color: #999;
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* --- 未读红点 --- */
+.bb-unread-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    background: #ff4d4f;
+    color: #fff;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0 5px;
+    flex-shrink: 0;
+}
+
+/* --- 翻牌引用回复 --- */
+.bb-flip-reply {
+    font-size: 11px;
+    color: #ff7e67;
+    font-style: italic;
+    margin-top: 4px;
+    padding-left: 2px;
+}
+
+/* --- 私信锁定提示占位 --- */
+.bb-secret-locked {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: #bbb;
+}
+
+/* --- 周边商城：爱豆头部卡片 --- */
+.bb-shop-idol-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    padding: 16px 20px;
+    margin: 0 20px 16px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.02);
+    flex-shrink: 0;
+}
+.bb-shop-idol-av {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+/* --- 周边商城：商品信息区 --- */
+.bb-shop-info { flex: 1; min-width: 0; }
+
+/* --- 背包物品卡片 --- */
+.bb-backpack-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 16px 20px;
+    margin: 0 20px 12px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+}
+
+/* --- 粉丝AI好友高亮回复卡片 --- */
+.bb-ai-persona-reply {
+    border: 1.5px solid #222 !important;
+    background: #fafafa !important;
+}
+
+/* --- 销售浮动通知 --- */
+.bb-sale-floater {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    z-index: 9999;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: bbSaleFloat 4s ease forwards;
+}
+
+/* --- 危机紧急警报弹出 --- */
+.bb-crisis-alert {
+    position: absolute;
+    top: 70px;
+    left: 16px;
+    right: 16px;
+    background: #fff;
+    border-radius: 20px;
+    z-index: 9000;
+    border: 1px solid #eee;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    animation: bbCrisisSlide 0.3s ease;
+}
+.bb-crisis-alert-inner { padding: 20px; }
+
+/* --- 公关回复输入行 --- */
+.bfr-input-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+
+/* --- 动画关键帧 --- */
+@keyframes bbSaleFloat {
+    0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    70%  { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+}
+@keyframes bbCrisisSlide {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

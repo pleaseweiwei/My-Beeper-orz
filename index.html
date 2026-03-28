@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="css/bubble.css">
     <link rel="stylesheet" href="css/modules.css">
     <link rel="stylesheet" href="css/galgame.css">
+    <link rel="stylesheet" href="css/moments.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
@@ -958,7 +959,7 @@
                 </div>
                 <!-- 隐藏的文件输入框和按钮 -->
                 <div>
-                    <input type="file" id="cs-avatar-upload" accept="image/*" style="display:none;">
+                    <input type="file" id="cs-avatar-upload" accept="image/*" style="display:none;" onchange="handleCsAvatarUpload(this)">
                     <button class="btn-secondary" onclick="document.getElementById('cs-avatar-upload').click()" style="padding: 8px 15px; height:auto; width:auto;">
                         <i class="fas fa-camera"></i> 更换头像
                     </button>
@@ -2771,6 +2772,7 @@
 <script src="js/app_transfer.js"></script>
 <script src="js/app_groupchat.js"></script>
 <script src="js/app_galgame.js"></script>
+<script src="js/app_moments.js"></script>
 
 
 <div id="add-friend-modal" class="modal-overlay">
@@ -3618,9 +3620,6 @@
                     ✦ &nbsp; START ADVENTURE
                 </button>
 
-                <div class="gal-page-nav" style="padding-bottom:10px;">
-                    <button class="gal-page-nav-btn prev" onclick="galGoToPage(1)">←</button>
-                </div>
             </div>
 
         </div><!-- /gal-pages-wrapper -->

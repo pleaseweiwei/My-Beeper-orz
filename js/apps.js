@@ -3259,6 +3259,55 @@ window.closeChatSettingsPage = function() {
     setTimeout(() => { page.style.zIndex = "300"; }, 400);
 }
 
+// 3. 聊天设置头像上传处理器 (关键修复：cs-avatar-upload 的 onchange 目标)
+window.handleCsAvatarUpload = async function(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            let base64 = e.target.result;
+            // 压缩图片节省存储空间
+            if (typeof compressImage === 'function') {
+                base64 = await compressImage(base64, 300);
+            }
+            // 更新预览区域
+            const previewImg = document.querySelector('#cs-avatar-preview img');
+            if (previewImg) {
+                previewImg.src = base64;
+                previewImg.style.display = 'block';
+            }
+            // 更新隐藏域（保存时读取此值）
+            const hiddenVal = document.getElementById('cs-avatar-hidden-val');
+            if (hiddenVal) hiddenVal.value = base64;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+    input.value = '';
+};
+
+// 4. 刷新好友头像在全局 DOM 中的所有显示位置
+function refreshFriendAvatarInUI(chatId, newAvatar) {
+    if (!newAvatar || !chatId) return;
+
+    // A. 刷新当前聊天窗口中所有已渲染的接收气泡头像
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages && currentChatId === chatId) {
+        chatMessages.querySelectorAll('.chat-row.received .chat-avatar-img').forEach(img => {
+            img.src = newAvatar;
+        });
+    }
+
+    // B. 刷新心声卡片头像
+    const mindAvatar = document.querySelector('.mind-big-avatar');
+    if (mindAvatar) mindAvatar.src = newAvatar;
+
+    // C. 刷新通讯录资料页头像（如果当前打开着）
+    const cpAvatar = document.getElementById('cp-avatar');
+    if (cpAvatar && currentProfileId === chatId) cpAvatar.src = newAvatar;
+
+    // D. 刷新聊天标题区（如果此角色当前正在聊天）
+    // 头部头像（部分主题可能有）已通过 rebuildContactsList + restoreFriendListUI 覆盖
+}
+
 
 // =========================================
 //  【重构后】保存聊天设置数据 (V3 - 实现了开场白更换后自动清空)
@@ -3351,6 +3400,9 @@ window.saveChatSettings = async function() {
     await saveFriendsData();
     rebuildContactsList(); // 更新通讯录
     restoreFriendListUI(); // 更新聊天列表(已修复重复bug)
+
+    // 刷新当前聊天窗口气泡头像、心声卡、通讯录资料页头像
+    refreshFriendAvatarInUI(currentChatId, friend.avatar);
 
     // [关键] 5. 根据开场白是否变化，执行不同逻辑
     if (oldGreeting !== newGreeting) {
