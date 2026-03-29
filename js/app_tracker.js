@@ -587,7 +587,7 @@ ${history}
       body: JSON.stringify({
         model,
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 3000,
+        max_tokens: 5000,
         temperature: 0.9,
       })
     })
@@ -599,14 +599,22 @@ ${history}
       // API 返回了错误对象（如 401 key 无效、429 限速等）
       if (res.error) throw Object.assign(new Error('api_error'), { apiErr: res.error });
       const text = res.choices?.[0]?.message?.content || '';
-      const match = text.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error('no_json');
-      onSuccess(JSON.parse(match[0]));
+      // 去除 AI 可能添加的 markdown 代码块标记
+      const cleaned = text.replace(/^```[\w]*\r?\n?|```\s*$/gm, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (!match) throw Object.assign(new Error('no_json'), { code: 'no_json' });
+      let parsed;
+      try {
+        parsed = JSON.parse(match[0]);
+      } catch (parseErr) {
+        throw Object.assign(new Error('no_json'), { code: 'no_json', detail: 'JSON parse failed: ' + parseErr.message });
+      }
+      onSuccess(parsed);
     })
     .catch(err => {
       // 将结构化的错误码传递给 onError
-      const code = err.message || 'unknown';
-      const detail = err.apiErr ? (err.apiErr.message || JSON.stringify(err.apiErr)) : (err.toString());
+      const code = err.code || err.message || 'unknown';
+      const detail = err.apiErr ? (err.apiErr.message || JSON.stringify(err.apiErr)) : (err.detail || err.toString());
       onError({ code, detail, status: err.status });
     });
   }
@@ -1852,7 +1860,7 @@ ${history}
     } else if (err && err.status === 429) {
       reason = '⚠️ API 调用频率超限（429）';
       hint   = '稍后再试，或检查账户余额';
-    } else if (err && (err.code === 'no_json' || err.code === 'no_json')) {
+    } else if (err && err.code === 'no_json') {
       reason = '⚠️ AI 返回格式异常';
       hint   = '点击重试，若反复出现请换用 gpt-4o-mini 模型';
     } else if (err && (err.code === 'Failed to fetch' || (err.detail && err.detail.includes('fetch')))) {
