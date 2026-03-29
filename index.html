@@ -5289,16 +5289,6 @@
         </div>
     </div>
 </div>
-    <!-- === ↓↓↓ 新增这段脚本，用于激活保存桌面的功能 ↓↓↓ === -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(() => console.log('PWA Service Worker 注册成功'))
-                    .catch(err => console.log('PWA 注册失败', err));
-            });
-        }
-    </script>
     <!-- === [新增] 更换纸张弹窗 === -->
 <div id="ls2-paper-modal" class="modal-overlay" style="z-index: 3100;">
     <div class="modal-box" style="width: 320px;">
