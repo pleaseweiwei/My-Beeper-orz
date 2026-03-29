@@ -1,89 +1,110 @@
 /* ============================================
-   视频通话模块样式 (video_call.css)
+   视频通话模块样式 — 韩系黑白灰极简风 v2.0
    ============================================ */
+
+/* ─── CSS 变量 ─── */
+:root {
+    --vc-bg:          #0a0a0a;
+    --vc-surface:     rgba(255,255,255,0.07);
+    --vc-surface-2:   rgba(255,255,255,0.13);
+    --vc-border:      rgba(255,255,255,0.10);
+    --vc-border-2:    rgba(255,255,255,0.18);
+    --vc-text:        #ffffff;
+    --vc-text-muted:  rgba(255,255,255,0.50);
+    --vc-text-subtle: rgba(255,255,255,0.28);
+    --vc-user-bub:    rgba(245,245,245,0.16);
+    --vc-ai-bub:      rgba(255,255,255,0.08);
+    --vc-action-bg:   rgba(255,255,255,0.04);
+    --vc-action-line: rgba(255,255,255,0.22);
+    --vc-end:         #ff3b30;
+    --vc-accent:      rgba(255,255,255,0.90);
+    --vc-radius:      18px;
+    --vc-radius-sm:   10px;
+}
 
 /* ─── 来电遮罩 ─── */
 #incoming-call-overlay {
     position: absolute;
     inset: 0;
     z-index: 9000;
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    background: #0a0a0a;
     display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;
-    animation: fadeIn 0.4s ease;
+    gap: 16px;
+    animation: vcFadeIn 0.4s ease;
 }
 #incoming-call-overlay.active { display: flex; }
 
 .ic-avatar-ring {
-    width: 110px; height: 110px;
+    width: 100px; height: 100px;
     border-radius: 50%;
-    border: 3px solid rgba(255,255,255,0.15);
-    box-shadow: 0 0 0 0 rgba(255,255,255,0.4);
-    animation: ringPulse 1.5s infinite;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 0 0 0 rgba(255,255,255,0.25);
+    animation: vcRingPulse 2s infinite;
     overflow: hidden;
 }
 .ic-avatar-ring img { width: 100%; height: 100%; object-fit: cover; }
 
-@keyframes ringPulse {
-    0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
-    70%  { box-shadow: 0 0 0 25px rgba(255,255,255,0); }
+@keyframes vcRingPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.25); }
+    70%  { box-shadow: 0 0 0 22px rgba(255,255,255,0); }
     100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
 }
 
 .ic-name {
-    color: #fff; font-size: 24px; font-weight: 700;
-    font-family: 'Montserrat', sans-serif; letter-spacing: 1px;
+    color: #fff; font-size: 22px; font-weight: 700;
+    letter-spacing: 1.5px;
 }
 .ic-subtitle {
-    color: rgba(255,255,255,0.5); font-size: 13px;
-    letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(255,255,255,0.4); font-size: 11px;
+    letter-spacing: 4px; text-transform: uppercase;
 }
-.ic-actions {
-    display: flex; gap: 50px; margin-top: 30px;
-}
+.ic-actions { display: flex; gap: 52px; margin-top: 28px; }
 .ic-btn {
-    width: 64px; height: 64px; border-radius: 50%;
+    width: 62px; height: 62px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 26px; cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    font-size: 24px; cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
 }
-.ic-btn:active { transform: scale(0.9); }
-.ic-btn.reject  { background: #ff4d4f; color: #fff; box-shadow: 0 8px 20px rgba(255,77,79,0.4); }
-.ic-btn.accept  { background: #07c160; color: #fff; box-shadow: 0 8px 20px rgba(7,193,96,0.4); animation: acceptPulse 1s infinite; }
-
-@keyframes acceptPulse {
-    0%, 100% { box-shadow: 0 8px 20px rgba(7,193,96,0.4); }
-    50%       { box-shadow: 0 8px 35px rgba(7,193,96,0.7); }
+.ic-btn:active { transform: scale(0.88); opacity: 0.8; }
+.ic-btn.reject { background: var(--vc-end); color: #fff; }
+.ic-btn.accept {
+    background: #fff; color: #0a0a0a;
+    animation: vcAcceptPulse 1.2s infinite;
+}
+@keyframes vcAcceptPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
+    50%     { box-shadow: 0 0 0 14px rgba(255,255,255,0); }
 }
 
 /* ─── 通话主界面容器 ─── */
 #video-call-view {
-    position: absolute;
-    inset: 0;
+    position: absolute; inset: 0;
     z-index: 8500;
     display: none;
     flex-direction: column;
-    background: #000;
-    animation: slideUpFull 0.35s cubic-bezier(0.2,0.8,0.2,1);
+    background: var(--vc-bg);
+    animation: vcSlideUp 0.36s cubic-bezier(0.2,0.8,0.2,1);
 }
 #video-call-view.active { display: flex; }
 
-@keyframes slideUpFull {
-    from { transform: translateY(100%); opacity: 0.5; }
+@keyframes vcSlideUp {
+    from { transform: translateY(100%); opacity: 0.6; }
     to   { transform: translateY(0);    opacity: 1; }
 }
+@keyframes vcFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ─── 可视化界面 ─── */
 .vc-visual-interface {
     position: relative;
     width: 100%; height: 100%;
     display: flex; flex-direction: column;
+    overflow: hidden;
 }
 
-/* 大图背景 */
+/* AI 背景大图 */
 .vc-main-view {
     position: absolute; inset: 0;
     background: #111;
@@ -92,158 +113,315 @@
 .vc-main-img {
     width: 100%; height: 100%;
     object-fit: cover;
-    filter: blur(2px) brightness(0.7);
-    transform: scale(1.05);
+    filter: blur(3px) brightness(0.5) saturate(0.6);
+    transform: scale(1.08);
+    transition: opacity 0.3s;
 }
 .vc-main-video {
     width: 100%; height: 100%; object-fit: cover;
     position: absolute; inset: 0;
 }
-.vc-main-overlay {
-    position: absolute; bottom: 200px; left: 20px;
-    color: #fff;
-}
-.vc-main-overlay span {
-    font-size: 20px; font-weight: 700;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
-    font-family: 'Montserrat', sans-serif;
+/* 渐变遮罩让内容可读 */
+.vc-visual-interface::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.60) 0%,
+        rgba(0,0,0,0.10) 25%,
+        rgba(0,0,0,0.10) 50%,
+        rgba(0,0,0,0.80) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
 }
 
 /* 画中画 */
 .vc-pip {
-    position: absolute; top: 60px; right: 15px;
-    width: 90px; height: 120px;
-    border-radius: 14px;
+    position: absolute; top: 62px; right: 14px;
+    width: 82px; height: 110px;
+    border-radius: 12px;
     overflow: hidden;
-    border: 2px solid rgba(255,255,255,0.6);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-    cursor: pointer;
-    z-index: 10;
-    transition: transform 0.2s;
+    border: 1px solid rgba(255,255,255,0.30);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    cursor: pointer; z-index: 20;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
-.vc-pip:active { transform: scale(0.95); }
+.vc-pip:active { transform: scale(0.94); }
 .vc-pip img, .vc-pip-video {
     width: 100%; height: 100%; object-fit: cover;
 }
 
-/* 顶部状态栏 */
+/* ─── 顶部状态栏 ─── */
 .vc-top-bar {
     position: absolute; top: 0; left: 0; right: 0;
-    height: 50px;
-    display: flex; align-items: center; gap: 10px;
-    padding: 0 15px;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
-    color: #fff; z-index: 20;
+    height: 58px;
+    display: flex; align-items: center;
+    padding: 0 16px;
+    z-index: 25;
+    gap: 0;
+}
+.vc-top-left {
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 2px;
+}
+.vc-top-name {
+    font-size: 16px; font-weight: 700;
+    color: #fff; letter-spacing: 0.5px;
+    line-height: 1.2;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+}
+.vc-top-status {
+    display: flex; align-items: center; gap: 6px;
 }
 .vc-status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #07c160;
-    box-shadow: 0 0 6px #07c160;
-    animation: blink 1.5s infinite;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #e0e0e0;
+    box-shadow: 0 0 5px rgba(255,255,255,0.6);
+    animation: vcBlink 1.8s infinite;
 }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.vc-top-bar span {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 14px; font-weight: 600; letter-spacing: 1px; flex: 1;
+@keyframes vcBlink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+#vc-timer-display {
+    font-family: 'Courier New', monospace;
+    font-size: 11px; font-weight: 600;
+    color: rgba(255,255,255,0.65); letter-spacing: 2px;
 }
-.vc-top-bar i { font-size: 18px; cursor: pointer; padding: 5px; }
+.vc-minimize-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.7); font-size: 14px; cursor: pointer;
+    transition: background 0.2s;
+}
+.vc-minimize-btn:active { background: rgba(255,255,255,0.18); }
 
-/* 消息区 */
+/* ─── 记忆/世界书信息栏 ─── */
+.vc-info-strip {
+    position: absolute; top: 58px; left: 0; right: 105px;
+    height: 24px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 16px;
+    z-index: 25;
+}
+.vc-info-tag {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.8px;
+    color: rgba(255,255,255,0.38); text-transform: uppercase;
+    white-space: nowrap;
+}
+.vc-info-tag i { font-size: 8px; }
+
+/* ─── 消息区：从屏幕中部偏下开始，贴近控制栏 ─── */
 .vc-messages {
     position: absolute;
-    bottom: 130px; left: 0; right: 0;
-    max-height: 260px;
+    top: 46%;
+    left: 0; right: 0;
+    bottom: 112px;
     overflow-y: auto;
-    padding: 10px 15px;
-    display: flex; flex-direction: column; gap: 8px;
+    padding: 8px 14px 4px;
+    display: flex; flex-direction: column; gap: 6px;
     z-index: 20;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 20%);
+    /* 顶部渐隐，新消息从中部自然浮现 */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 28%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 28%);
 }
 .vc-messages::-webkit-scrollbar { display: none; }
 
+/* 单条消息行 */
 .vc-msg {
     display: flex; align-items: flex-end; gap: 8px;
-    animation: fadeIn 0.3s ease;
+    animation: vcMsgIn 0.28s ease;
 }
 .vc-msg.user { flex-direction: row-reverse; }
 
-.vc-msg-avatar {
-    width: 32px; height: 32px; border-radius: 50%;
-    object-fit: cover; flex-shrink: 0;
-    border: 2px solid rgba(255,255,255,0.4);
+@keyframes vcMsgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
-.vc-msg-bubble {
-    max-width: 65%;
-    padding: 8px 12px;
-    border-radius: 16px;
-    font-size: 13px; line-height: 1.5;
-    backdrop-filter: blur(10px);
-}
-.vc-msg.ai   .vc-msg-bubble { background: rgba(255,255,255,0.18); color: #fff; border-radius: 4px 16px 16px 16px; }
-.vc-msg.user .vc-msg-bubble { background: rgba(7,193,96,0.75); color: #fff; border-radius: 16px 4px 16px 16px; }
 
-/* 底部控制按钮 */
+/* 隐藏头像 */
+.vc-msg-avatar {
+    display: none;
+}
+
+/* 消息内容容器（包含多个块） */
+.vc-msg-content {
+    max-width: 80%;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.vc-msg.user .vc-msg-content { align-items: flex-end; }
+
+/* ── 动作块 ── */
+.vc-msg-action {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px;
+    background: var(--vc-action-bg);
+    border-left: 2px solid var(--vc-action-line);
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    font-size: 11px; line-height: 1.4;
+    color: rgba(255,255,255,0.48);
+    letter-spacing: 0.2px;
+    width: fit-content;
+}
+.vc-msg.user .vc-msg-action {
+    border-left: none;
+    border-right: 2px solid var(--vc-action-line);
+    border-radius: 8px 0 0 8px;
+}
+
+/* ── 讲话气泡 ── */
+.vc-msg-bubble {
+    padding: 8px 12px;
+    border-radius: var(--vc-radius-sm);
+    font-size: 13px; line-height: 1.55;
+    width: fit-content;
+    word-break: break-word;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+.vc-msg.ai   .vc-msg-bubble {
+    background: var(--vc-ai-bub);
+    border: 1px solid var(--vc-border);
+    color: #fff;
+    border-radius: 4px var(--vc-radius-sm) var(--vc-radius-sm) var(--vc-radius-sm);
+}
+.vc-msg.user .vc-msg-bubble {
+    background: var(--vc-user-bub);
+    border: 1px solid var(--vc-border-2);
+    color: #fff;
+    border-radius: var(--vc-radius-sm) 4px var(--vc-radius-sm) var(--vc-radius-sm);
+}
+
+/* ─── 底部控制按钮 ─── */
 .vc-controls {
-    position: absolute; bottom: 70px; left: 0; right: 0;
-    display: flex; justify-content: center; gap: 20px;
-    z-index: 20;
+    position: absolute; bottom: 60px; left: 0; right: 0;
+    display: flex; justify-content: center; align-items: center; gap: 18px;
+    z-index: 20; padding: 0 16px;
 }
 .vc-ctrl-btn {
-    width: 52px; height: 52px; border-radius: 50%;
-    background: rgba(255,255,255,0.15);
-    backdrop-filter: blur(10px);
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--vc-surface);
+    backdrop-filter: blur(12px);
     display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 18px; cursor: pointer;
-    border: 1px solid rgba(255,255,255,0.2);
-    transition: all 0.2s;
+    color: rgba(255,255,255,0.75); font-size: 16px; cursor: pointer;
+    border: 1px solid var(--vc-border);
+    transition: all 0.18s;
+    flex-shrink: 0;
 }
-.vc-ctrl-btn:active { transform: scale(0.9); }
-.vc-ctrl-btn.active { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.6); }
-.vc-ctrl-btn.end { background: #ff4d4f; border-color: #ff4d4f; }
+.vc-ctrl-btn:active { transform: scale(0.88); }
+.vc-ctrl-btn.active {
+    background: rgba(255,255,255,0.20);
+    border-color: rgba(255,255,255,0.40);
+    color: #fff;
+}
+.vc-ctrl-btn.end {
+    width: 54px; height: 54px; font-size: 18px;
+    background: var(--vc-end);
+    border-color: var(--vc-end);
+    color: #fff;
+}
+.vc-ctrl-label {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.vc-ctrl-label span {
+    font-size: 9px; color: rgba(255,255,255,0.45); letter-spacing: 0.5px;
+    text-transform: uppercase; font-weight: 600;
+}
 
-/* 输入区 */
+/* ─── 输入栏 ─── */
 .vc-input-row {
     position: absolute; bottom: 0; left: 0; right: 0;
-    height: 60px;
-    display: flex; align-items: center; gap: 8px;
+    height: 56px;
+    display: flex; align-items: center; gap: 7px;
     padding: 0 12px;
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(15px);
-    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(10,10,10,0.80);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--vc-border);
     z-index: 20;
 }
 .vc-input-row input {
-    flex: 1; background: rgba(255,255,255,0.12);
-    border: none; border-radius: 20px;
-    color: #fff; font-size: 14px;
-    padding: 8px 14px; outline: none;
+    flex: 1;
+    background: var(--vc-surface);
+    border: 1px solid var(--vc-border);
+    border-radius: 20px;
+    color: #fff; font-size: 13px;
+    padding: 7px 14px; outline: none;
+    transition: border-color 0.2s;
 }
-.vc-input-row input::placeholder { color: rgba(255,255,255,0.45); }
-.vc-input-row button {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: rgba(255,255,255,0.2); border: none; color: #fff;
-    font-size: 14px; cursor: pointer; flex-shrink: 0;
-    transition: background 0.2s;
+.vc-input-row input:focus {
+    border-color: rgba(255,255,255,0.30);
 }
-.vc-input-row button:active { background: rgba(255,255,255,0.35); }
+.vc-input-row input::placeholder { color: rgba(255,255,255,0.30); }
+.vc-input-row input.vc-recording-active {
+    border-color: rgba(255,80,80,0.6);
+    background: rgba(255,40,40,0.10);
+}
+.vc-input-row input.vc-recording-active::placeholder {
+    color: rgba(255,150,150,0.7);
+}
+
+/* 输入栏按钮 */
+.vc-input-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--vc-surface);
+    border: 1px solid var(--vc-border);
+    color: rgba(255,255,255,0.65); font-size: 13px;
+    cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s;
+    user-select: none; -webkit-user-select: none;
+}
+.vc-input-btn:active { background: var(--vc-surface-2); transform: scale(0.9); }
+
+/* 长按麦克风按钮 */
+.vc-mic-btn {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 50%;
+    color: rgba(255,255,255,0.75); font-size: 14px;
+    cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none;
+}
+.vc-mic-btn.recording {
+    background: rgba(255,50,50,0.25);
+    border-color: rgba(255,80,80,0.6);
+    color: #ff6b6b;
+    animation: vcMicPulse 0.8s infinite;
+    transform: scale(1.1);
+}
+@keyframes vcMicPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,60,60,0.4); }
+    50%      { box-shadow: 0 0 0 8px rgba(255,60,60,0); }
+}
+
+/* 发送/重回按钮 */
+.vc-send-btn {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.22);
+}
 .vc-regen-btn {
-    width: 34px !important; height: 34px !important;
-    background: rgba(255,126,103,0.25) !important;
-    border: 1px solid rgba(255,126,103,0.4) !important;
-    font-size: 13px !important;
+    background: rgba(255,180,100,0.12) !important;
+    border-color: rgba(255,160,80,0.28) !important;
+    color: rgba(255,190,100,0.85) !important;
 }
 
 /* ─── 文字/头像通话界面 ─── */
 .vc-text-interface {
     display: flex; flex-direction: column; height: 100%;
-    background: #fcfcfc;
+    background: #111;
 }
 .vc-text-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 15px 15px 10px;
-    border-bottom: 1px solid #f0f0f0;
-    background: #fff; flex-shrink: 0;
+    display: flex; align-items: center;
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: #111; flex-shrink: 0; gap: 8px;
 }
 .vc-avatars-grid {
     display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; flex: 1;
@@ -252,71 +430,101 @@
     display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 .vc-text-avatar img {
-    width: 48px; height: 48px; border-radius: 12px; object-fit: cover;
-    border: 2px solid #f0f0f0;
+    width: 46px; height: 46px; border-radius: 12px; object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.12);
 }
-.vc-text-avatar.main img { width: 64px; height: 64px; border-radius: 16px; }
-.vc-text-avatar span { font-size: 11px; color: #666; font-weight: 600; }
-.vc-end-btn {
-    font-size: 22px; color: #ff4d4f; cursor: pointer; padding: 8px;
-}
+.vc-text-avatar.main img { width: 58px; height: 58px; border-radius: 14px; }
+.vc-text-avatar span { font-size: 10px; color: rgba(255,255,255,0.45); font-weight: 600; }
+.vc-end-btn-text { font-size: 20px; color: var(--vc-end); cursor: pointer; padding: 8px; }
+
 .vc-text-interface .vc-messages {
     position: static; max-height: none; flex: 1; overflow-y: auto;
     -webkit-mask-image: none; mask-image: none;
-    padding: 15px; background: #fafafa;
+    padding: 14px; background: #0d0d0d;
 }
-.vc-text-interface .vc-msg.ai   .vc-msg-bubble { background: #f0f0f0; color: #333; }
-.vc-text-interface .vc-msg.user .vc-msg-bubble { background: #2b2b2b; color: #fff; }
+.vc-text-interface .vc-msg.ai   .vc-msg-bubble {
+    background: rgba(255,255,255,0.06); color: #eee;
+    border-color: rgba(255,255,255,0.08);
+}
+.vc-text-interface .vc-msg.user .vc-msg-bubble {
+    background: rgba(255,255,255,0.12); color: #fff;
+}
+.vc-text-interface .vc-msg-action { color: rgba(255,255,255,0.38); }
 .vc-text-interface .vc-input-row {
-    position: static; background: #fff;
-    border-top: 1px solid #eee;
+    position: static;
+    background: #111;
+    border-top: 1px solid rgba(255,255,255,0.06);
 }
-.vc-text-interface .vc-input-row input { background: #f5f5f5; color: #333; }
-.vc-text-interface .vc-input-row input::placeholder { color: #aaa; }
-.vc-text-interface .vc-input-row button { background: #2b2b2b; }
 
 /* ─── 悬浮球 ─── */
 #vc-floating-bubble {
-    position: absolute;
-    right: 15px; bottom: 100px;
-    width: 60px; height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #07c160, #0ab360);
-    box-shadow: 0 8px 20px rgba(7,193,96,0.4);
+    position: absolute; right: 16px; bottom: 96px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #222;
+    border: 1px solid rgba(255,255,255,0.20);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     display: none;
     align-items: center; justify-content: center;
     z-index: 8400; cursor: pointer;
-    animation: floatBubble 3s ease-in-out infinite;
-    border: 3px solid rgba(255,255,255,0.5);
+    animation: vcFloatBubble 3.2s ease-in-out infinite;
 }
-#vc-floating-bubble i { color: #fff; font-size: 22px; }
-
-@keyframes floatBubble {
-    0%, 100% { transform: translateY(0); }
-    50%       { transform: translateY(-6px); }
+#vc-floating-bubble i { color: rgba(255,255,255,0.80); font-size: 20px; }
+@keyframes vcFloatBubble {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-5px); }
 }
 
-/* 视频通话按钮（聊天头部） */
-.vc-header-btn {
-    cursor: pointer; padding: 8px; font-size: 18px;
-    color: #555; transition: color 0.2s;
+/* ─── 通话信息浮层 (呼叫中) ─── */
+.vc-calling-overlay {
+    position: absolute; inset: 0; z-index: 5;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; background: var(--vc-bg);
 }
-.vc-header-btn:hover { color: #07c160; }
+.vc-calling-avatar {
+    width: 88px; height: 88px; border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.15);
+    animation: vcRingPulse 2s infinite;
+}
+.vc-calling-name {
+    font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 1px;
+}
+.vc-calling-status {
+    font-size: 11px; color: rgba(255,255,255,0.4);
+    letter-spacing: 3px; text-transform: uppercase;
+}
 
-/* 语音气泡波形动画 */
-.voice-waveform {
-    display: flex; align-items: center; gap: 2px; height: 20px;
+/* ─── 语音波形 ─── */
+.vc-waveform {
+    display: flex; align-items: center; gap: 2px; height: 16px;
 }
-.voice-waveform span {
-    width: 3px; background: currentColor; border-radius: 2px;
-    animation: waveAnim 0.8s ease-in-out infinite;
+.vc-waveform span {
+    width: 2px; background: currentColor; border-radius: 2px;
+    animation: vcWave 0.8s ease-in-out infinite;
 }
-.voice-waveform span:nth-child(1) { height: 8px;  animation-delay: 0s; }
-.voice-waveform span:nth-child(2) { height: 14px; animation-delay: 0.1s; }
-.voice-waveform span:nth-child(3) { height: 10px; animation-delay: 0.2s; }
-.voice-waveform span:nth-child(4) { height: 16px; animation-delay: 0.3s; }
-.voice-waveform span:nth-child(5) { height: 8px;  animation-delay: 0.4s; }
-@keyframes waveAnim {
-    0%, 100% { transform: scaleY(1); }
-    50%       { transform: scaleY(0.4); }
+.vc-waveform span:nth-child(1) { height: 6px;  animation-delay: 0s; }
+.vc-waveform span:nth-child(2) { height: 12px; animation-delay: 0.1s; }
+.vc-waveform span:nth-child(3) { height: 8px;  animation-delay: 0.2s; }
+.vc-waveform span:nth-child(4) { height: 14px; animation-delay: 0.3s; }
+.vc-waveform span:nth-child(5) { height: 6px;  animation-delay: 0.4s; }
+@keyframes vcWave {
+    0%,100% { transform: scaleY(1); }
+    50%      { transform: scaleY(0.35); }
+}
+
+/* ─── loading 气泡 ─── */
+.vc-loading-dots {
+    display: inline-flex; gap: 4px; align-items: center; height: 16px;
+}
+.vc-loading-dots span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    animation: vcDotBounce 1.2s infinite;
+}
+.vc-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.vc-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes vcDotBounce {
+    0%,60%,100% { transform: translateY(0); opacity: 0.45; }
+    30% { transform: translateY(-5px); opacity: 1; }
 }

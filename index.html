@@ -19,7 +19,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
     <link rel="apple-touch-icon" sizes="192x192" href="icon.png">
     <!-- 外部字体和图标 -->
-    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Montserrat:wght@200;300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Montserrat:wght@200;300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- 本地样式表 -->
@@ -2849,16 +2849,21 @@
   <div class="tr-view" id="tr-view-select">
     <div class="tr-select-hero">
       <div class="tr-select-eyebrow">PRIVATE MODE</div>
-      <div class="tr-select-headline">查 手 机</div>
+      <div class="tr-select-headline">SPY</div>
     </div>
     <div class="tr-char-cards" id="tr-char-list"></div>
     <div class="tr-select-close" onclick="TrackerApp.close()">✕ 取消</div>
 
     <!-- 场景弹窗 -->
-    <div id="tr-scenario-modal">
-      <div class="tr-scenario-box">
-        <div class="tr-scenario-title">选择入侵时机</div>
-        <div class="tr-scenario-sub">TA 离开了多久？</div>
+    <div id="tr-scenario-modal" onclick="TrackerApp.closeScenarioModal()">
+      <div class="tr-scenario-box" onclick="event.stopPropagation()">
+        <div class="tr-scenario-handle"></div>
+        <div class="tr-scenario-close-btn" onclick="TrackerApp.closeScenarioModal()">✕</div>
+        <div class="tr-scenario-header">
+          <div class="tr-scenario-eyebrow">BREACH</div>
+          <div class="tr-scenario-title">Window</div>
+          <div class="tr-scenario-sub">fate decides · not you</div>
+        </div>
         <div class="tr-scenario-list" id="tr-scenario-list"></div>
       </div>
     </div>
@@ -2867,6 +2872,7 @@
   <!-- ── 视图2：锁屏 ── -->
   <div class="tr-view" id="tr-view-lock">
     <div class="tr-lock-bg" id="tr-lock-bg"></div>
+    <div class="tr-lock-back-btn" onclick="TrackerApp.backToSelect()">‹</div>
     <div class="tr-lock-content">
 
       <!-- 上方区域：头像 + 名字 + 提示 -->

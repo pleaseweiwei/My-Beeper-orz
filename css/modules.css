@@ -1760,7 +1760,6 @@ textarea#custom-css-input:focus {
     background-color: #f0f0f0;
     background-size: cover; background-position: center;
     cursor: pointer;
-    filter: sepia(0.2); /* 加一点复古滤镜 */
 }
 
 /* 手写字 */

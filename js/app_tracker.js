@@ -124,21 +124,87 @@ const TrackerApp = (() => {
     $('tr-scenario-modal').classList.add('active');
   }
 
-  // ── 场景弹窗 ──────────────────────────────────────────────
+  // ── 场景弹窗（随机抽卡版）────────────────────────────────
   function renderScenarioModal() {
     const list = $('tr-scenario-list');
     if (!list) return;
-    list.innerHTML = '';
-    SCENARIOS.forEach(s => {
-      const item = el('div', 'tr-scenario-item');
-      item.innerHTML = `<span class="tr-scenario-icon">${s.icon}</span><span class="tr-scenario-label">${s.label}</span><span class="tr-scenario-time">${s.minutes} min</span>`;
-      item.onclick = () => {
-        state.scenario = s;
-        $('tr-scenario-modal').classList.remove('active');
-        goToLock();
-      };
-      list.appendChild(item);
-    });
+
+  // 重置为"抽卡"状态
+    list.innerHTML = `
+      <div class="tr-draw-card-area" id="tr-draw-card-area">
+        <div class="tr-draw-header">
+          <div class="tr-draw-eyebrow">RANDOM SCENARIO</div>
+          <div class="tr-draw-title">抽取时机</div>
+        </div>
+        <div class="tr-draw-spread" id="tr-draw-deck" onclick="TrackerApp._drawScenarioCard()">
+          <div class="tr-spread-card sc1"></div>
+          <div class="tr-spread-card sc2"></div>
+          <div class="tr-spread-card sc3"></div>
+          <div class="tr-spread-card sc4">
+            <i class="fas fa-question" style="font-size:22px; color:rgba(255,255,255,0.5);"></i>
+          </div>
+        </div>
+        <div class="tr-draw-hint">TAP TO DRAW YOUR MOMENT</div>
+      </div>
+      <div class="tr-drawn-result" id="tr-drawn-result" style="display:none;">
+        <div class="tr-drawn-card" id="tr-drawn-card">
+          <div class="tr-drawn-icon-wrap">
+            <div class="tr-drawn-icon" id="tr-drawn-icon"></div>
+          </div>
+          <div class="tr-drawn-info">
+            <div class="tr-drawn-time" id="tr-drawn-time"></div>
+            <div class="tr-drawn-label" id="tr-drawn-label"></div>
+          </div>
+        </div>
+        <button class="tr-drawn-confirm" onclick="TrackerApp._confirmScenario()">开始入侵 ›</button>
+        <div class="tr-redraw-link" onclick="TrackerApp._resetDraw()">↻ 重新抽取</div>
+      </div>`;
+  }
+
+  function _drawScenarioCard() {
+    const deck = $('tr-draw-deck');
+    if (!deck || deck.classList.contains('drawing')) return;
+    deck.classList.add('drawing');
+
+    // 随机选择场景
+    const s = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+    state._drawnScenario = s;
+
+    setTimeout(() => {
+      const area = $('tr-draw-card-area');
+      const result = $('tr-drawn-result');
+      const icon = $('tr-drawn-icon');
+      const label = $('tr-drawn-label');
+      const time = $('tr-drawn-time');
+      if (area) area.style.display = 'none';
+      if (icon) icon.textContent = s.icon;
+      if (label) label.textContent = s.label;
+      if (time) time.textContent = `${s.minutes} MIN WINDOW`;
+      if (result) {
+        result.style.display = 'flex';
+        // 入场动画
+        result.style.animation = 'none';
+        void result.offsetWidth;
+        result.style.animation = 'tr-card-flip-in 0.5s cubic-bezier(0.34,1.56,0.64,1) both';
+      }
+    }, 600);
+  }
+
+  function _confirmScenario() {
+    if (!state._drawnScenario) return;
+    state.scenario = state._drawnScenario;
+    $('tr-scenario-modal').classList.remove('active');
+    goToLock();
+  }
+
+  function _resetDraw() {
+    state._drawnScenario = null;
+    renderScenarioModal();
+    // 重新显示抽卡区
+    const area = $('tr-draw-card-area');
+    if (area) area.style.display = '';
+    const result = $('tr-drawn-result');
+    if (result) result.style.display = 'none';
   }
 
   // ── 锁屏 ──────────────────────────────────────────────────
@@ -1757,6 +1823,16 @@ ${history}
     _wallpaperUpload,
     _wallpaperUrl,
     _wallpaperReset,
+    _drawScenarioCard,
+    _confirmScenario,
+    _resetDraw,
+    closeScenarioModal() {
+      const modal = $('tr-scenario-modal');
+      if (modal) modal.classList.remove('active');
+    },
+    backToSelect() {
+      showView('tr-view-select');
+    },
     toggleStatusTooltip() {
       const t = $('tr-status-tooltip');
       if (t) t.classList.toggle('show');
