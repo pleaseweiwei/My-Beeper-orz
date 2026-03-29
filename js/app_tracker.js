@@ -434,6 +434,8 @@ const TrackerApp = (() => {
       console.warn('[Tracker] API failed, using fallback', err);
       state.phoneData = buildFallbackData(c);
       if (state.phoneData.statusBar) applyStatusBar(state.phoneData.statusBar);
+      // 显示可见的错误横幅，告知用户 fallback 原因
+      showApiErrorBanner(err);
       // fallback 数据到了后同样重新渲染当前 app
       if (state.currentApp) openApp(state.currentApp);
     });
@@ -573,7 +575,7 @@ ${history}
       }
     } catch (e) { /* ignore */ }
 
-    if (!apiKey) { onError('no api key'); return; }
+    if (!apiKey) { onError('no_api_key'); return; }
 
     const apiUrl = apiEndpoint
       ? (apiEndpoint.endsWith('/v1') ? `${apiEndpoint}/chat/completions` : `${apiEndpoint}/v1/chat/completions`)
@@ -589,14 +591,24 @@ ${history}
         temperature: 0.9,
       })
     })
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) return r.json().then(e => { throw Object.assign(new Error('http_error'), { status: r.status, apiErr: e }); });
+      return r.json();
+    })
     .then(res => {
+      // API 返回了错误对象（如 401 key 无效、429 限速等）
+      if (res.error) throw Object.assign(new Error('api_error'), { apiErr: res.error });
       const text = res.choices?.[0]?.message?.content || '';
       const match = text.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error('no json');
+      if (!match) throw new Error('no_json');
       onSuccess(JSON.parse(match[0]));
     })
-    .catch(onError);
+    .catch(err => {
+      // 将结构化的错误码传递给 onError
+      const code = err.message || 'unknown';
+      const detail = err.apiErr ? (err.apiErr.message || JSON.stringify(err.apiErr)) : (err.toString());
+      onError({ code, detail, status: err.status });
+    });
   }
 
   // ── 异步读取：从 IDB 获取最近聊天记录（与 apps.js 保持一致）──
@@ -1823,6 +1835,54 @@ ${history}
     state.tamperLog = [];
   }
 
+  // ── API 错误横幅（手机端可见） ────────────────────────────
+  function showApiErrorBanner(err) {
+    // 移除旧横幅
+    $('tr-api-error-banner')?.remove();
+
+    let reason = '⚠️ AI 生成失败，当前显示预设内容';
+    let hint   = '请检查 AI 设置后点击重试';
+
+    if (!err || err === 'no_api_key' || (err && err.code === 'no_api_key')) {
+      reason = '⚠️ 未配置 API Key';
+      hint   = '请前往设置填写 API Key（手机浏览器需单独配置，与电脑不共享）';
+    } else if (err && err.status === 401) {
+      reason = '⚠️ API Key 无效或已过期';
+      hint   = '请检查 Key 是否正确，或重新生成';
+    } else if (err && err.status === 429) {
+      reason = '⚠️ API 调用频率超限（429）';
+      hint   = '稍后再试，或检查账户余额';
+    } else if (err && (err.code === 'no_json' || err.code === 'no_json')) {
+      reason = '⚠️ AI 返回格式异常';
+      hint   = '点击重试，若反复出现请换用 gpt-4o-mini 模型';
+    } else if (err && (err.code === 'Failed to fetch' || (err.detail && err.detail.includes('fetch')))) {
+      reason = '⚠️ 网络请求失败';
+      hint   = '可能原因：① Endpoint 是 localhost（手机无法访问电脑本地地址）② HTTP endpoint 被 HTTPS 页面拦截（混合内容）③ 网络不通';
+    }
+
+    const banner = document.createElement('div');
+    banner.id = 'tr-api-error-banner';
+    banner.style.cssText = `
+      position:absolute;bottom:70px;left:12px;right:12px;z-index:9999;
+      background:rgba(30,30,30,0.96);border:1px solid rgba(255,80,80,0.4);
+      border-radius:12px;padding:12px 14px;color:#fff;font-size:12px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.5);`;
+    banner.innerHTML = `
+      <div style="font-weight:600;color:#ff6b6b;margin-bottom:4px">${reason}</div>
+      <div style="color:#ccc;line-height:1.5;margin-bottom:10px">${hint}</div>
+      <div style="display:flex;gap:8px">
+        <div onclick="TrackerApp.refreshAll();this.closest('#tr-api-error-banner').remove();"
+             style="flex:1;text-align:center;padding:7px;background:rgba(255,255,255,0.12);
+                    border-radius:8px;cursor:pointer;font-size:12px">↻ 重试</div>
+        <div onclick="this.closest('#tr-api-error-banner').remove();"
+             style="padding:7px 14px;background:rgba(255,255,255,0.07);
+                    border-radius:8px;cursor:pointer;font-size:12px;color:#aaa">忽略</div>
+      </div>`;
+    const desktop = document.querySelector('#tr-view-desktop');
+    if (desktop) desktop.style.position = 'relative';
+    (desktop || $('trackerApp'))?.appendChild(banner);
+  }
+
   // ── Toast 通知 ────────────────────────────────────────────
   function showToast(msg) {
     let toast = $('tr-toast');
@@ -1862,31 +1922,21 @@ ${history}
     close();
   }
 
-  // ── Fallback 数据 ─────────────────────────────────────────
+  // ── Fallback 数据（API 失败时的最小占位，不含任何预设故事内容）──
   function buildFallbackData(c) {
     return {
-      statusBar: { wifiName: '请勿蹭网', bluetooth: '无线耳机Pro', battery: 23 },
-      messages: {
-        remarkName: '小傻瓜',
-        unsentDraft: '其实我……算了，你不会懂的。',
-        contacts: [
-          { emoji: '👯', name: '闺蜜小A', preview: '你那个人到底怎么样了啊', time: '11:32', unread: 3 },
-          { emoji: '🎪', name: '神秘人物', preview: '好的，明天见', time: '昨天', unread: 0 },
-        ]
-      },
-      diary: [{ date: '今天', title: '今天又想到你了', mood: '🌧️', content: `明明说好不去想了。\n但是[[我还是去你楼下转了一圈]]，没敢上去。\n\n算了。今天买了双新鞋，不开心的时候就买东西，真没出息。` }],
-      browser: {
-        searches: ['为什么喜欢一个人会失眠', '怎么让人先道歉', '附近花店几点关门', '如果先说对不起算输了吗', '情侣吵架冷战多久正常'],
-        anonPost: { platform: '匿名树洞', title: '我是不是喜欢上不该喜欢的人了', content: '最近总是控制不住去看TA的动态，感觉自己好蠢……', replies: [{ user: '过来人', text: '我懂，喜欢一个人就是会变傻' }, { user: '路过的风', text: '先表白，别后悔' }] }
-      },
-      wallet: { balance: '3,281.40', currency: '¥', note: '不能再乱花钱了', transactions: [{ desc: '花店·一束向日葵（给谁买的不说）', date: '今天', amount: '-88.00', type: 'out' }, { desc: '深夜便利店·冰淇淋×3', date: '昨天', amount: '-23.50', type: 'out' }, { desc: '转入', date: '3天前', amount: '+500.00', type: 'in' }] },
-      location: [{ time: '09:00', emoji: '🏠', place: '家', activity: '起床后发了很长时间呆' }, { time: '13:30', emoji: '💐', place: '街角花店', activity: '买了花，但不确定要不要送出去' }, { time: '21:00', emoji: '🌙', place: '楼顶', activity: '一个人看了很久的夜景' }],
-      calendar: { alarms: [{ time: '07:00', label: '起床（如果失眠的话就算了）' }, { time: '22:00', label: '提醒自己不要发消息！忍住！' }], events: [{ day: '14', month: 'FEB', title: '……什么都没发生的一天', priority: 'high' }, { day: '01', month: 'APR', title: '记得提前买好礼物（偷偷的）', priority: 'normal' }] },
-      shop: [{ emoji: '🎮', name: '限量联名手办（TA说想要的那款）', store: '二次元旗舰店', price: '¥ 399' }, { emoji: '📚', name: '那本TA一直说想看的书', store: '某书店', price: '¥ 59.9' }],
-      album: [{ icon: '📷', hint: '一张极其模糊的照片，仔细看是你在街上走路的背影，TA应该偷拍了很久', date: '上周', sensitive: false }, { icon: '🌅', hint: '一张日落的风景照，但角度很怪，像是在等什么人时随手拍的', date: '上上周', sensitive: false }, { icon: '💌', hint: '一张截图，是聊天记录里你说过的一句话，被单独截下来收藏', date: '一个月前', sensitive: true }],
-      music: { nowPlaying: { title: '我多喜欢你，你会知道', artist: '李袁杰', mood: '反复循环·睡前 🌙' }, playlist: [{ title: '突然好想你', artist: '五月天', plays: '1024次' }, { title: '说好不哭', artist: '周杰伦', plays: '527次' }, { title: '后来', artist: '刘若英', plays: '388次' }] },
-      vault: [{ title: '🔐 不能让任何人看到', content: '我存了很多TA说过的话的截图。每次闹完架就翻出来看，然后哭一会，感觉好一点了。\n我知道这样很蠢。但我舍不得删。' }, { title: '📋 关于TA的观察日记', content: '· TA喜欢喝橙汁，不喝柠檬水\n· 右手边的耳机线总是缠在一起\n· 笑起来左边有个小酒窝\n· 今天第一次发现TA会在看书的时候咬笔帽' }],
-      trash: [{ type: '已删除录音', desc: '一段43秒的语音。背景有点嘈杂，能听到深呼吸，然后是沙哑的声音说："……我只是想让你知道，不管怎样我都……"，录到一半停了。', reason: '觉得太矫情，删了' }, { type: '已删除草稿', desc: '写了800字的道歉信，里面每一句话都经过反复斟酌。', reason: '最后觉得认错了就输了，全删' }],
+      statusBar: { wifiName: '--', bluetooth: '--', battery: 100 },
+      messages:  { remarkName: '--', unsentDraft: '', contacts: [] },
+      diary:     [],
+      browser:   { searches: [], anonPost: null },
+      wallet:    { balance: '--', currency: '¥', note: '', transactions: [] },
+      location:  [],
+      calendar:  { alarms: [], events: [] },
+      shop:      [],
+      album:     [],
+      music:     { nowPlaying: { title: '--', artist: '--', mood: '' }, playlist: [] },
+      vault:     [],
+      trash:     [],
     };
   }
 

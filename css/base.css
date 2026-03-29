@@ -467,14 +467,24 @@ input:checked + .slider:before { transform: translateX(18px); }
 }
 
 @media (max-width: 600px) {
+    html {
+        /* iOS Safari 必须在 html 层声明，才能让 body 的 fill-available 生效 */
+        height: -webkit-fill-available;
+        height: 100dvh;
+    }
+
     body {
         align-items: flex-start; /* 顶端对齐 */
-         background-color: #f7f7f7;  /* 移动端背景变黑，更沉浸 */
+        background-color: #f7f7f7;  /* 移动端背景色 */
+        /* 关键修复：让 body 高度和 phone 保持一致，消除底部空白 */
+        height: -webkit-fill-available; /* iOS 旧版兜底 */
+        height: 100dvh;                 /* 现代 iOS / Android */
     }
 
     .phone {
         width: 100vw;
-        height: 100dvh; /* 使用 dvh 解决移动端地址栏遮挡问题 */
+        height: -webkit-fill-available; /* iOS 旧版兜底 */
+        height: 100dvh;                 /* 使用 dvh 解决移动端地址栏遮挡问题 */
         border-radius: 0;
         box-shadow: none;
     }
@@ -482,11 +492,11 @@ input:checked + .slider:before { transform: translateX(18px); }
     .page {
         /* 将原本的 30px 修改为 50px 或 60px */
         padding-top: 50px; 
-        padding-bottom: 80px; 
+        /* 底部 padding 兼容 iOS home indicator 安全区 */
+        padding-bottom: max(80px, calc(60px + env(safe-area-inset-bottom))); 
     }
     .dock-bar {
-        bottom: 20px; /* Dock 稍微抬高一点 */
+        /* 兼容 iOS home indicator 安全区，避免 Dock 被压在 home bar 下面 */
+        bottom: max(20px, env(safe-area-inset-bottom));
     }
 }
-
-
