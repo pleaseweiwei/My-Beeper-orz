@@ -501,6 +501,88 @@ html, body {
     /* 金色系 - 红包获得提示 */
 }
 /* =========================================
+   更新通知弹框
+   ========================================= */
+#update-notification {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.45);
+}
+#update-notification.show {
+    display: flex;
+    animation: fadeIn 0.25s ease;
+}
+.update-notif-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 28px 24px 20px;
+    width: 280px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    animation: slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+.update-notif-icon {
+    font-size: 40px;
+    margin-bottom: 4px;
+}
+.update-notif-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #111;
+    letter-spacing: 1px;
+}
+.update-notif-sub {
+    font-size: 12px;
+    color: #999;
+    text-align: center;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+.update-notif-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-top: 12px;
+}
+.update-notif-ok {
+    width: 100%;
+    height: 44px;
+    border: none;
+    border-radius: 14px;
+    background: #111;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.update-notif-ok:active { opacity: 0.75; }
+.update-notif-no-remind {
+    width: 100%;
+    height: 36px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: #aaa;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.update-notif-no-remind:active { color: #555; }
+
+/* =========================================
    [修复] 底部面板隐藏时，上边缘阴影泄漏到屏幕内的问题
    通过在隐藏状态下将面板额外下沉 60px，将阴影彻底藏在屏幕外
    ========================================= */

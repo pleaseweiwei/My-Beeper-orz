@@ -5847,5 +5847,52 @@
   <button class="flb-close-settings-btn" onclick="toggleFlbSettings(event)">关闭</button>
 </div>
 
+<!-- 更新通知弹框 -->
+<div id="update-notification">
+    <div class="update-notif-card">
+        <div class="update-notif-icon">✅</div>
+        <div class="update-notif-title">已更新</div>
+        <div class="update-notif-sub" id="update-notif-sub">最新版本已加载完成</div>
+        <div class="update-notif-actions">
+            <button class="update-notif-ok" onclick="dismissUpdateNotif(false)">好的</button>
+            <button class="update-notif-no-remind" onclick="dismissUpdateNotif(true)">下次不再提醒</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var _updateVersion = null;
+
+    function showUpdateNotif(version) {
+        _updateVersion = version;
+        var el = document.getElementById('update-notification');
+        var sub = document.getElementById('update-notif-sub');
+        if (sub) sub.textContent = '新版本已加载完成';
+        if (el) el.classList.add('show');
+    }
+
+    window.dismissUpdateNotif = function(permanent) {
+        if (permanent && _updateVersion) {
+            try { localStorage.setItem('updateDismissedVersion', _updateVersion); } catch(e) {}
+        }
+        var el = document.getElementById('update-notification');
+        if (el) el.classList.remove('show');
+    };
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'APP_UPDATED') {
+                var version = event.data.version;
+                var dismissed = '';
+                try { dismissed = localStorage.getItem('updateDismissedVersion') || ''; } catch(e) {}
+                if (dismissed !== version) {
+                    showUpdateNotif(version);
+                }
+            }
+        });
+    }
+})();
+</script>
 </body>
 </html>

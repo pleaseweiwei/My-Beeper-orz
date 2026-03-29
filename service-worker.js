@@ -20,16 +20,21 @@ self.addEventListener('install', event => {
 
 // 激活时清理旧版本的缓存（绝对不影响 localStorage 和 IndexedDB）
 self.addEventListener('activate', event => {
+    let wasUpdated = false;
     event.waitUntil(
         caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
+            const oldCaches = cacheNames.filter(name => name !== CACHE_NAME);
+            wasUpdated = oldCaches.length > 0;
+            return Promise.all(oldCaches.map(name => caches.delete(name)));
         }).then(() => self.clients.claim())
+          .then(() => self.clients.matchAll({ includeUncontrolled: true }))
+          .then(clients => {
+              if (wasUpdated) {
+                  clients.forEach(client => {
+                      client.postMessage({ type: 'APP_UPDATED', version: CACHE_NAME });
+                  });
+              }
+          })
     );
 });
 
