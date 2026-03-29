@@ -1,5 +1,5 @@
 ﻿// service-worker.js
-const CACHE_NAME = 'My-Beeper-v3'; // 每次重大更新后，把 v2 改成 v3, v4... 就能强制刷新
+const CACHE_NAME = 'My-Beeper-v4'; // 每次重大更新后，把 v2 改成 v3, v4... 就能强制刷新
 const urlsToCache = [
     './', 
     './index.html', 
