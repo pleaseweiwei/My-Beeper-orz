@@ -390,16 +390,33 @@ const TrackerApp = (() => {
     addTamperLog('【系统事件】查手机超时，被当场抓包！这将影响TA对你的态度。');
   }
 
-  // ── 一次性 API 调用 ───────────────────────────────────────
-  function loadPhoneData() {
-    showLoading(true);
+  // ── 一次性 API 调用（异步 + 缓存）──────────────────────────
+  async function loadPhoneData() {
     const c = state.selectedChar;
-    const history = getRecentHistory();
-    const worldbook = getWorldbook();
+    if (!c) return;
+    const charId = c.id || c.name;
+
+    // 优先使用缓存（同角色同人设下不重复调用）
+    const cached = getCachedPhoneData(charId);
+    if (cached) {
+      state.phoneData = cached;
+      if (cached.statusBar) applyStatusBar(cached.statusBar);
+      if (cached.messages && cached.messages.remarkName) {
+        const r = $('tr-remark-name');
+        if (r) r.textContent = `备注：${cached.messages.remarkName}`;
+      }
+      return;
+    }
+
+    showLoading(true);
+    const history    = await getRecentHistory();
+    const worldbook  = getWorldbook();
     const userPersona = getUserPersona();
     const prompt = buildPhonePrompt(c, history, worldbook, userPersona);
+
     callAI(prompt, (data) => {
       state.phoneData = data;
+      setCachedPhoneData(charId, data);
       showLoading(false);
       if (data.statusBar) applyStatusBar(data.statusBar);
       if (data.messages && data.messages.remarkName) {
@@ -424,10 +441,19 @@ const TrackerApp = (() => {
       }
     } catch (_) {}
 
+    // 优先从 friendsData 取完整 persona
+    let fullPersona = c.persona || c.description || '普通角色';
+    try {
+      if (typeof friendsData !== 'undefined' && c.id && friendsData[c.id]) {
+        const fd = friendsData[c.id];
+        fullPersona = fd.persona || fd.description || fullPersona;
+      }
+    } catch (_) {}
+
     return `你是一个沉浸式虚拟手机模拟器。请根据以下信息，生成AI角色"${c.name}"的手机全量数据快照，以**纯JSON**格式输出，不要包含任何解释或markdown代码块标记。
 
 【角色设定】
-${c.description || c.persona || '普通角色'}${pinNote}
+${fullPersona}${pinNote}
 
 【世界观】
 ${worldbook || '现代都市'}
@@ -565,26 +591,91 @@ ${history}
     .catch(onError);
   }
 
-  function getRecentHistory() {
+  // ── 异步读取：从 IDB 获取最近聊天记录（与 apps.js 保持一致）──
+  async function getRecentHistory() {
     try {
-      const msgs = JSON.parse(localStorage.getItem('chat_history') || localStorage.getItem('messages') || '[]');
-      const recent = msgs.slice(-10).map(m => `${m.role === 'user' ? '用户' : 'AI'}：${m.content}`).join('\n');
-      return recent || '（暂无聊天记录）';
-    } catch { return '（暂无聊天记录）'; }
+      const c = state.selectedChar;
+      if (c && typeof IDB !== 'undefined' && typeof scopedChatKey === 'function') {
+        const hist = await IDB.get(scopedChatKey(c.id)) || [];
+        const recent = hist
+          .filter(m => !m.isRevoked && m.type !== 'system' && m.type !== 'summary')
+          .slice(-15)
+          .map(m => {
+            const role = m.type === 'sent' ? '用户' : (m.senderName || 'AI');
+            const text = (m.text || '').replace(/\[STATUS_START\][\s\S]*?\[STATUS_END\]/gi, '').trim();
+            return `${role}：${text}`;
+          })
+          .filter(s => s.length > 3)
+          .join('\n');
+        return recent || '（暂无聊天记录）';
+      }
+    } catch (e) { console.warn('[Tracker] getRecentHistory IDB error:', e); }
+    return '（暂无聊天记录）';
   }
 
+  // ── 从全局 worldBooks 数组读取（与 app_worldbook.js 保持一致）──
   function getWorldbook() {
+    try {
+      const c = state.selectedChar;
+      if (typeof worldBooks !== 'undefined' && worldBooks.length > 0) {
+        const charData = (typeof friendsData !== 'undefined' && c) ? friendsData[c.id] : null;
+        let linkedIds = [];
+        if (charData && charData.worldbook) {
+          linkedIds = Array.isArray(charData.worldbook)
+            ? charData.worldbook
+            : [charData.worldbook];
+        }
+        const parts = [];
+        worldBooks.forEach(book => {
+          if (!book.entries || !book.entries.length) return;
+          if (!book.global && !linkedIds.includes(book.id)) return;
+          book.entries
+            .filter(e => e.enabled !== false && e.content && e.content.trim())
+            .forEach(e => parts.push(e.content.trim()));
+        });
+        if (parts.length > 0) return parts.join('\n\n');
+      }
+    } catch (e) { console.warn('[Tracker] getWorldbook error:', e); }
     try { return localStorage.getItem('worldbook_content') || ''; } catch { return ''; }
   }
 
+  // ── 获取用户人设（我的人设）──────────────────────────────────
   function getUserPersona() {
     try {
       if (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined') {
         const me = personasMeta[currentPersonaId];
-        if (me) return me.persona || me.name || '';
+        if (me) {
+          if (me.persona && me.persona.trim()) return me.persona.trim();
+          const parts = [];
+          if (me.name) parts.push(`名字：${me.name}`);
+          if (me.gender) parts.push(`性别：${me.gender}`);
+          if (parts.length) return parts.join('，');
+        }
       }
-      return localStorage.getItem('user_persona') || localStorage.getItem('userPersona') || '';
-    } catch { return ''; }
+    } catch (e) { /* ignore */ }
+    return localStorage.getItem('user_persona') || localStorage.getItem('userPersona') || '（未设置用户人设）';
+  }
+
+  // ── 缓存：存取生成好的手机数据（按角色 + 身份隔离）──────────
+  function _trCacheKey(charId) {
+    const pid = (typeof currentPersonaId !== 'undefined') ? currentPersonaId : 'default';
+    return `tr_phonedata__${pid}__${charId}`;
+  }
+  function getCachedPhoneData(charId) {
+    try {
+      const raw = localStorage.getItem(_trCacheKey(charId));
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      return (obj && obj.data) ? obj.data : null;
+    } catch { return null; }
+  }
+  function setCachedPhoneData(charId, data) {
+    try {
+      localStorage.setItem(_trCacheKey(charId), JSON.stringify({ _ts: Date.now(), data }));
+    } catch (e) { console.warn('[Tracker] cache write failed:', e); }
+  }
+  function clearCachedPhoneData(charId) {
+    try { localStorage.removeItem(_trCacheKey(charId)); } catch { /* ignore */ }
   }
 
   // ── 状态栏彩蛋 ───────────────────────────────────────────
@@ -1742,8 +1833,10 @@ ${history}
     toast._timer = setTimeout(() => toast.classList.remove('show'), 2600);
   }
 
-  // ── 全局刷新 ──────────────────────────────────────────────
+  // ── 全局刷新（清除缓存后重新生成）──────────────────────────
   function refreshAll() {
+    const c = state.selectedChar;
+    if (c) clearCachedPhoneData(c.id || c.name);
     state.phoneData = null;
     loadPhoneData();
   }
