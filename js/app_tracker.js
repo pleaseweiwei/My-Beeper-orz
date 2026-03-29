@@ -461,6 +461,7 @@ const TrackerApp = (() => {
     } catch (_) {}
 
     return `你是一个沉浸式虚拟手机模拟器。请根据以下信息，生成AI角色"${c.name}"的手机全量数据快照，以**纯JSON**格式输出，不要包含任何解释或markdown代码块标记。
+⚠️ 重要格式要求：所有JSON字符串值内禁止使用真实换行符，如需换行请使用\\n转义序列（例如："第一行\\n第二行"）。
 
 【角色设定】
 ${fullPersona}${pinNote}
@@ -563,6 +564,34 @@ ${history}
 }`;
   }
 
+  // ── JSON 修复：处理 AI 输出的字符串内含真实换行符等控制字符的问题 ──
+  function repairJSON(str) {
+    let result = '';
+    let inString = false;
+    let escape = false;
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i];
+      if (escape) {
+        result += c;
+        escape = false;
+      } else if (c === '\\' && inString) {
+        result += c;
+        escape = true;
+      } else if (c === '"') {
+        inString = !inString;
+        result += c;
+      } else if (inString) {
+        if      (c === '\n') result += '\\n';
+        else if (c === '\r') result += '\\r';
+        else if (c === '\t') result += '\\t';
+        else                 result += c;
+      } else {
+        result += c;
+      }
+    }
+    return result;
+  }
+
   function callAI(prompt, onSuccess, onError) {
     let apiKey = '', apiEndpoint = '', model = 'gpt-4o-mini';
     try {
@@ -607,7 +636,12 @@ ${history}
       try {
         parsed = JSON.parse(match[0]);
       } catch (parseErr) {
-        throw Object.assign(new Error('no_json'), { code: 'no_json', detail: 'JSON parse failed: ' + parseErr.message });
+        // 尝试修复：AI 有时在 JSON 字符串值内输出真实换行符，导致解析失败
+        try {
+          parsed = JSON.parse(repairJSON(match[0]));
+        } catch (_) {
+          throw Object.assign(new Error('no_json'), { code: 'no_json', detail: 'JSON parse failed: ' + parseErr.message });
+        }
       }
       onSuccess(parsed);
     })
@@ -846,7 +880,9 @@ ${history}
     const pData = state.phoneData;
     let html = '';
     (Array.isArray(data) ? data : [data]).forEach((entry, idx) => {
-      const content = parseScratch(escHtml(entry.content || ''));
+      // 先转义 HTML，再将换行符转为 <br>，最后处理刮刮乐语法
+      const rawText = escHtml(entry.content || '').replace(/\n/g, '<br>');
+      const content = parseScratch(rawText);
       const annotations = (pData._diaryAnnotations && pData._diaryAnnotations[idx]) || [];
       const annotHtml = annotations.map(a => `
         <div class="tr-diary-annotation">

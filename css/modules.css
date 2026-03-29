@@ -4324,6 +4324,10 @@ textarea#custom-css-input:focus {
     animation: card-slide-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+.ls2-tab-content.active {
+    display: flex;
+}
+
 /* 5. 通用艺术卡片 (Art Card) */
 .art-card {
     background: #fff;

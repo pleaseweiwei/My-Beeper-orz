@@ -1174,9 +1174,10 @@ window.ls2AddFridgeItem = function (type) {
       // buy：同时投递到 fridgeIn（30~90秒解锁）
       if (type === 'buy') {
         if (!ls2Data.fridgeIn) ls2Data.fridgeIn = [];
+        const isBlindBox = text.includes('盲盒') || text.includes('冰块') || Math.random() < 0.15;
         ls2Data.fridgeIn.push({
           id: Date.now() + 1,
-          emoji: '🛍️',
+          emoji: isBlindBox ? '🧊' : '🛍️',
           name: text,
           unlockTime: Date.now() + (Math.random() * 60000 + 30000)
         });
@@ -1345,6 +1346,16 @@ function startFridgeTimer() {
 
 window.ls2EatFood = async function (id) {
   if (!ls2Data) return;
+  const item = (ls2Data.fridgeIn || []).find(x => x.id === id);
+  if (!item) return;
+
+  if (item.emoji === '🧊' || (item.name && (item.name.includes('盲盒') || item.name.includes('冰块')))) {
+      if (typeof window.ls2OpenBlindBoxModal === 'function') {
+          window.ls2OpenBlindBoxModal(id, item.name);
+      }
+      return;
+  }
+
   ls2Data.fridgeIn = (ls2Data.fridgeIn || []).filter(x => x.id !== id);
   ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
   await saveLs2Store();
@@ -1844,3 +1855,230 @@ window.ls2ScaleNote = function(stickerId, diff) {
         renderLs2Journal();
     }
 }
+
+// === [新增] 盲盒与料理功能 (适配原生UI) ===
+let currentBlindBoxItem = null;
+let blindBoxSmashCount = 0;
+
+window.ls2OpenBlindBoxModal = function (itemId, itemName) {
+    currentBlindBoxItem = { id: itemId, name: itemName };
+    blindBoxSmashCount = 0;
+    
+    const modal = document.getElementById('ls2-blindbox-modal');
+    if (!modal) return;
+    
+    document.getElementById('ls2-bb-icon').innerText = '🧊';
+    document.getElementById('ls2-bb-title').innerText = '神秘冰块';
+    document.getElementById('ls2-bb-content').innerText = '点击下方的按钮敲碎冰块！';
+    
+    const btn = document.getElementById('ls2-bb-smash-btn');
+    if (btn) {
+        btn.innerText = '敲击 (0/3)';
+        btn.style.display = 'block';
+    }
+    
+    modal.classList.add('active');
+};
+
+window.ls2SmashBlindBox = async function () {
+    if (!currentBlindBoxItem) return;
+    blindBoxSmashCount++;
+    
+    const btn = document.getElementById('ls2-bb-smash-btn');
+    if (btn) btn.innerText = `敲击 (${blindBoxSmashCount}/3)`;
+    
+    const icon = document.getElementById('ls2-bb-icon');
+    if (icon) {
+        icon.style.transform = `scale(${1 - blindBoxSmashCount * 0.1}) rotate(${Math.random() * 20 - 10}deg)`;
+    }
+    
+    if (blindBoxSmashCount >= 3) {
+        if (btn) btn.style.display = 'none';
+        document.getElementById('ls2-bb-content').innerText = '冰块裂开了，正在解冻...';
+        
+        const aiId = ls2Data.partnerId;
+        const ai = friendsData?.[aiId] || {};
+        
+        const prompt = `
+[System Command]
+User just smashed open a frozen fridge blind box named "${currentBlindBoxItem.name}".
+Generate a surprise food item and a short fun comment from ${ai.realName || 'Partner'}.
+Return JSON only:
+{"emoji":"🎁", "name":"...", "comment":"..."}
+        `.trim();
+        
+        const res = await callAiForSpecialTask(prompt);
+        if (!res) {
+            document.getElementById('ls2-bb-content').innerText = '敲碎失败了...';
+            return;
+        }
+        
+        try {
+            const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+            
+            if (icon) {
+                icon.innerText = data.emoji || '🎁';
+                icon.style.transform = 'scale(1)';
+            }
+            document.getElementById('ls2-bb-title').innerText = data.name || '神秘礼物';
+            document.getElementById('ls2-bb-content').innerHTML = `<b>获得：${data.emoji} ${data.name}</b><br><br>${ai.realName || 'TA'}说：${data.comment}`;
+            
+            // 更新冰箱数据
+            if (ls2Data && ls2Data.fridgeIn) {
+                const idx = ls2Data.fridgeIn.findIndex(x => x.id === currentBlindBoxItem.id);
+                if (idx !== -1) {
+                    ls2Data.fridgeIn[idx].emoji = data.emoji || '🎁';
+                    ls2Data.fridgeIn[idx].name = data.name || '神秘礼物';
+                    ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+                    await saveLs2Store();
+                    renderFridgeInside();
+                }
+            }
+        } catch (e) {
+            document.getElementById('ls2-bb-content').innerText = '解析盲盒物品失败';
+        }
+    }
+};
+
+let currentCookSelectedIds = [];
+
+window.ls2OpenCookModal = function () {
+    if (!ls2Data || !ls2Data.fridgeIn || ls2Data.fridgeIn.length < 2) {
+        return ls2Alert('冰箱里至少需要2种食材才能做饭哦~');
+    }
+    
+    currentCookSelectedIds = [];
+    const modal = document.getElementById('ls2-cook-modal');
+    if (!modal) return;
+    
+    renderCookIngredients();
+    renderCookSelected();
+    
+    document.getElementById('ls2-cook-result').style.display = 'none';
+    
+    modal.classList.add('active');
+};
+
+function renderCookIngredients() {
+    const container = document.getElementById('ls2-cook-ingredients');
+    if (!container) return;
+    
+    let html = '';
+    (ls2Data.fridgeIn || []).forEach(item => {
+        // 不要显示冰块或者盲盒
+        if (item.emoji === '🧊' || (item.name && item.name.includes('盲盒'))) return;
+        // 如果未解锁，不可选
+        const isLocked = item.unlockTime && Date.now() < item.unlockTime;
+        if (isLocked) return;
+        // 如果已经被选中了，就不显示在可用列表
+        if (currentCookSelectedIds.includes(item.id)) return;
+        
+        html += `<div style="padding: 8px 12px; background: #f0f0f0; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 13px;" onclick="selectCookIngredient(${item.id})">
+            ${item.emoji} ${item.name}
+        </div>`;
+    });
+    
+    if (!html) html = '<div style="color:#aaa; font-size:12px;">没有更多可用食材了</div>';
+    container.innerHTML = html;
+}
+
+function renderCookSelected() {
+    const container = document.getElementById('ls2-cook-selected');
+    if (!container) return;
+    
+    let html = '';
+    currentCookSelectedIds.forEach(id => {
+        const item = ls2Data.fridgeIn.find(x => x.id === id);
+        if (item) {
+            html += `<div style="padding: 8px 12px; background: #fff4e6; border: 1px solid #ffd8a8; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 13px;" onclick="deselectCookIngredient(${item.id})">
+                ${item.emoji} ${item.name} <i class="fas fa-times" style="font-size:10px; color:#ff7e67; margin-left:4px;"></i>
+            </div>`;
+        }
+    });
+    
+    if (!html) html = '<div style="color:#aaa; font-size:12px; align-self: center;">点击上方食材添加到这里</div>';
+    container.innerHTML = html;
+}
+
+window.selectCookIngredient = function (id) {
+    if (currentCookSelectedIds.length >= 3) {
+        if (typeof showToast === 'function') showToast('最多只能选择3种食材');
+        return;
+    }
+    currentCookSelectedIds.push(id);
+    renderCookIngredients();
+    renderCookSelected();
+};
+
+window.deselectCookIngredient = function (id) {
+    currentCookSelectedIds = currentCookSelectedIds.filter(x => x !== id);
+    renderCookIngredients();
+    renderCookSelected();
+};
+
+window.ls2StartCooking = async function () {
+    if (currentCookSelectedIds.length < 2) {
+        if (typeof showToast === 'function') showToast('至少需要2种食材');
+        return;
+    }
+    
+    if (!ls2Data || !ls2Data.partnerId) return;
+    const aiId = ls2Data.partnerId;
+    const ai = friendsData?.[aiId] || {};
+    
+    const itemNames = currentCookSelectedIds.map(id => {
+        const item = ls2Data.fridgeIn.find(x => x.id === id);
+        return item ? item.name : '';
+    }).filter(Boolean);
+    
+    if (typeof showToast === 'function') showToast('AI主厨正在烹饪中...');
+    
+    const prompt = `
+[System Command]
+User wants to cook a meal using these ingredients: ${itemNames.join('、')}.
+Generate a creative, delicious (or funny/disastrous) dish.
+Return JSON only:
+{"emoji":"🍲", "name":"...", "desc":"一段幽默的美食点评（像中华小当家一样）"}
+    `.trim();
+    
+    const res = await callAiForSpecialTask(prompt);
+    if (!res) return;
+    
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        
+        // 删掉用过的食材
+        ls2Data.fridgeIn = ls2Data.fridgeIn.filter(x => !currentCookSelectedIds.includes(x.id));
+        
+        // 增加新料理
+        ls2Data.fridgeIn.push({
+            id: Date.now(),
+            emoji: data.emoji || '🍲',
+            name: data.name || '神秘料理',
+            unlockTime: null
+        });
+        
+        ls2Store[ls2Key(ls2Data.partnerId)] = ls2Data;
+        await saveLs2Store();
+        renderFridgeInside();
+        
+        // 更新UI
+        const resultBox = document.getElementById('ls2-cook-result');
+        const dishEl = document.getElementById('ls2-cook-dish');
+        const commentEl = document.getElementById('ls2-cook-comment');
+        
+        if (resultBox && dishEl && commentEl) {
+            dishEl.innerHTML = `${data.emoji} ${data.name}`;
+            commentEl.innerHTML = `"${data.desc}"`;
+            resultBox.style.display = 'block';
+            
+            // 清空选择
+            currentCookSelectedIds = [];
+            renderCookIngredients();
+            renderCookSelected();
+        }
+        
+    } catch (e) {
+        if (typeof showToast === 'function') showToast('烹饪失败：主厨炸毁了厨房（JSON错误）');
+    }
+};
