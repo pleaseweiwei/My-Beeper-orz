@@ -164,6 +164,151 @@ function updateAffectionUI(score) {
     if (text) text.innerText = `${s}%`;
 }
 
+/**
+ * 首次对话时，根据角色人设、剧情开场白、世界书、用户人设，
+ * 通过 AI 判断初始好感度并写入 friend.affection
+ * 仅在 history.length === 0 时调用，且每个角色只执行一次
+ */
+async function initializeAffectionScore(friendId) {
+    const friend = friendsData[friendId];
+    if (!friend || friend._affectionInitialized) return;
+
+    // 立即标记，防止并发重入
+    friend._affectionInitialized = true;
+
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    if (!settingsJSON) return;
+    const settings = JSON.parse(settingsJSON);
+    if (!settings.apiKey || !settings.endpoint || !settings.model) return;
+
+    // === 显示"判定中"占位状态 ===
+    const affFillEl = document.getElementById('affection-fill');
+    const affTextEl = document.getElementById('affection-percent-text');
+    if (affTextEl) affTextEl.innerText = '判定中...';
+    if (affFillEl) { affFillEl.style.transition = 'none'; affFillEl.style.width = '0%'; }
+
+    // === 收集角色人设 ===
+    const persona = friend.persona || '';
+
+    // === 收集开场白 ===
+    const greeting = getEffectiveGreeting(friend);
+
+    // === 收集世界书全文内容（不做关键词过滤，让AI获得完整背景） ===
+    let worldbookContent = '';
+    try {
+        const wbIds = Array.isArray(friend.worldbook)
+            ? friend.worldbook
+            : (friend.worldbook ? [friend.worldbook] : []);
+        if (wbIds.length && typeof worldBooks !== 'undefined' && worldBooks.length) {
+            worldbookContent = wbIds.map(id => {
+                const wb = worldBooks.find(w => w.id === id);
+                if (!wb) return '';
+                if (wb.entries && wb.entries.length) {
+                    return wb.entries
+                        .filter(e => e.enabled !== false)
+                        .map(e => e.content || '')
+                        .filter(Boolean)
+                        .join('\n');
+                }
+                return wb.description || wb.content || wb.title || '';
+            }).filter(Boolean).join('\n\n');
+        } else if (typeof friend.worldbook === 'string' && friend.worldbook) {
+            worldbookContent = friend.worldbook;
+        }
+        // 补充全局世界书
+        if (typeof worldBooks !== 'undefined') {
+            const globalContent = worldBooks
+                .filter(wb => wb.global)
+                .flatMap(wb => (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || ''))
+                .filter(Boolean)
+                .join('\n');
+            if (globalContent) worldbookContent = (worldbookContent ? worldbookContent + '\n\n' : '') + globalContent;
+        }
+    } catch (e) { /* 静默 */ }
+
+    // === 收集用户人设 ===
+    let myPersona = '';
+    try {
+        const me = personasMeta[currentPersonaId];
+        myPersona = me ? (me.persona || '') : '';
+    } catch (e) { /* 静默 */ }
+
+    const prompt = `请根据以下角色信息，判断该角色在初次相遇时对用户的初始好感度（0~100分）。
+
+【角色人设】
+${persona || '（未设置）'}
+
+【剧情开场白（角色的第一句话）】
+${greeting || '（无）'}
+
+【世界书 / 背景设定】
+${worldbookContent || '（无）'}
+
+【用户的人设 / 身份】
+${myPersona || '（普通用户，无特殊设定）'}
+
+评分参考：
+- 0~19：极度冷漠、敌视或对立（反派、天生仇视、绝对陌生人）
+- 20~39：疏远冷淡，保持距离（高冷角色、初次接触陌生人）
+- 40~59：中性偏友好（普通认识、同事、邻居）
+- 60~79：已有较好印象（老朋友、青梅竹马、有渊源的关系）
+- 80~100：非常亲密或深情（恋人关系、深厚纽带、命中注定型设定）
+
+请只输出一个 0 到 100 之间的整数，不要输出任何其他内容。`;
+
+    try {
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1')
+            ? `${baseUrl}/chat/completions`
+            : `${baseUrl}/v1/chat/completions`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${settings.apiKey}`
+            },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.3,
+                max_tokens: 10
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const raw = (data?.choices?.[0]?.message?.content || '').trim();
+        const match = raw.match(/\d+/);
+        const score = match ? Math.max(0, Math.min(100, parseInt(match[0], 10))) : 0;
+
+        friend.affection = score;
+        await saveFriendsData();
+
+        // 动画写入进度条
+        if (affFillEl) {
+            affFillEl.style.transition = 'width 1.2s ease';
+            affFillEl.style.width = `${score}%`;
+        }
+        if (affTextEl) affTextEl.innerText = `${score}%`;
+
+        console.log(`[initAffection] ${friendId} 初始好感度 AI 判定结果：${score}`);
+
+        // 若心声卡片已打开则刷新
+        const mindCard = document.getElementById('mind-card-overlay');
+        if (mindCard && mindCard.classList.contains('active')) {
+            refreshMindCardUI(friendId, false);
+        }
+    } catch (e) {
+        console.warn('[initAffection] 静默失败，保持默认值 0:', e);
+        // 恢复默认显示
+        if (affFillEl) { affFillEl.style.transition = ''; affFillEl.style.width = '0%'; }
+        if (affTextEl) affTextEl.innerText = '0%';
+        // 标记仍为已初始化，避免反复重试
+    }
+}
+
 function syncMindBgmToPlayer(bgmText) {
     if (!bgmText) return;
 
@@ -1580,6 +1725,11 @@ window.openChatDetail = async function(name) {
             });
         } else {
             chatMessages.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">Today</span></div>`;
+        }
+        // 首次对话：通过 AI 分析人设/开场白/世界书/用户人设，动态生成初始好感度
+        const _friend = friendsData[name];
+        if (_friend && !_friend._affectionInitialized) {
+            initializeAffectionScore(name);
         }
     }
 }
