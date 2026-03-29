@@ -30,7 +30,7 @@
     <link rel="stylesheet" href="css/bubble.css">
     <link rel="stylesheet" href="css/modules.css">
     <link rel="stylesheet" href="css/galgame.css">
-    <link rel="stylesheet" href="css/moments.css">
+    <link rel="stylesheet" href="css/tracker.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
@@ -207,7 +207,7 @@
     <div class="icon-box"><i class="fas fa-paw"></i></div>
     <span class="app-label">Pet</span>
 </div>
-            <div class="app-cell" data-app-id="tracker" onclick="alert('权限不足')"><div class="icon-box"><i class="fas fa-user-secret"></i></div><span class="app-label">Tracker</span></div>
+            <div class="app-cell" data-app-id="tracker" onclick="TrackerApp.open()"><div class="icon-box"><i class="fas fa-user-secret"></i></div><span class="app-label">Spy</span></div>
             <div class="app-cell" data-app-id="mihuashi" onclick="alert('画师列表...')"><div class="icon-box"><i class="fas fa-palette"></i></div><span class="app-label">Art</span></div>
             <div class="app-cell" data-app-id="divination" onclick="alert('今日运势：大吉')"><div class="icon-box"><i class="fas fa-star-half-alt"></i></div><span class="app-label">Fate</span></div>
             <div class="app-cell" data-app-id="myhome" onclick="alert('进入家园...')"><div class="icon-box"><i class="fas fa-home"></i></div><span class="app-label">Home</span></div>
@@ -302,7 +302,7 @@
         <div class="grid-apps p4-apps">
             <div class="app-cell" data-app-id="notes" onclick="alert('便签')"><div class="icon-box"><i class="far fa-sticky-note"></i></div><span class="app-label">Notes</span></div>
             <div class="app-cell" data-app-id="files" onclick="alert('文件管理')"><div class="icon-box"><i class="far fa-folder"></i></div><span class="app-label">Files</span></div>
-            <div class="app-cell" data-app-id="backpack" onclick="openBackpackApp()"><div class="icon-box"><i class="fas fa-shopping-bag" style="color:#f59e0b;"></i></div><span class="app-label">背包</span></div>
+            <div class="app-cell" data-app-id="backpack" onclick="openBackpackApp()"><div class="icon-box"><i class="fas fa-bag-shopping" style="color:#f59e0b;"></i></div><span class="app-label">Backpack</span></div>
             <!-- 空位占位符 -->
             <div class="app-cell" style="opacity:0.3;"><div class="icon-box" style="border:1px dashed #ccc; box-shadow:none;"><i class="fas fa-plus"></i></div></div>
         </div>
@@ -1168,6 +1168,51 @@
         </div>
 
         <!-- 保存按钮，放在最底部 -->
+        <!-- 🔐 生成手机密码按钮 (供「查手机」功能使用) -->
+        <input type="hidden" id="cs-char-id" value="">
+        <div style="
+          background: linear-gradient(135deg, #f8f8f8 0%, #fff 100%);
+          border: 1px solid #e8e8e8;
+          border-radius: 16px;
+          padding: 16px 18px;
+          margin: 20px 0 10px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        ">
+          <div style="font-size: 26px; flex-shrink: 0;">🔐</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 3px;">手机密码</div>
+            <div style="font-size: 11px; color: #aaa; line-height: 1.5;">由 AI 悄悄生成，用于「查手机」解锁</div>
+          </div>
+          <button id="btn-generate-char-pin"
+            onclick="generateAndSaveCharPin()"
+            style="
+              background: #111;
+              color: #fff;
+              border: none;
+              border-radius: 12px;
+              padding: 9px 12px;
+              font-size: 11px;
+              font-weight: 700;
+              cursor: pointer;
+              letter-spacing: 0.3px;
+              white-space: normal;
+              word-break: keep-all;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 5px;
+              flex-shrink: 0;
+              max-width: 90px;
+              text-align: center;
+              line-height: 1.3;
+              transition: opacity 0.2s;
+            ">
+            <i class="fas fa-lock" style="font-size: 11px; flex-shrink:0;"></i> 生成密码
+          </button>
+        </div>
+
         <button class="btn-save" onclick="saveChatSettings()" style="margin-top: 30px; margin-bottom: 30px;">保存配置</button>
        <button class="btn-secondary" onclick="clearCurrentChatHistory()" style="color:#ff4d4f; border-color:#ff4d4f; margin-top:10px; margin-bottom: 30px;">
     <i class="fas fa-exclamation-triangle"></i> 清空聊天记录
@@ -1273,7 +1318,7 @@
                 <img id="pet-img" src="">
             </div>
             <!-- 旅行时的背包 (隐藏) -->
-            <i class="fas fa-shopping-bag" id="pet-backpack" style="position:absolute; bottom:5px; right:-10px; font-size:20px; color:#333; display:none;"></i>
+            <i class="fas fa-bag-shopping" id="pet-backpack" style="position:absolute; bottom:5px; right:-10px; font-size:20px; color:#333; display:none;"></i>
         </div>
         
         <!-- 家具层 -->
@@ -2741,7 +2786,7 @@
                 <div style="font-size:11px; color:#aaa; font-weight:600; letter-spacing:1px;">TOTAL ITEMS</div>
                 <div style="font-size:28px; font-weight:800; color:#111; font-family:'Montserrat',sans-serif;" id="bp-total-count">0</div>
             </div>
-            <i class="fas fa-shopping-bag" style="font-size:28px; color:#f59e0b; opacity:0.5;"></i>
+            <i class="fas fa-bag-shopping" style="font-size:28px; color:#f59e0b; opacity:0.5;"></i>
         </div>
         <div id="bp-items-list" style="display:flex; flex-direction:column; gap:12px;">
             <div class="bb-empty-hint">
@@ -2772,7 +2817,280 @@
 <script src="js/app_transfer.js"></script>
 <script src="js/app_groupchat.js"></script>
 <script src="js/app_galgame.js"></script>
-<script src="js/app_moments.js"></script>
+<script src="js/app_tracker.js"></script>
+
+<!-- ============================================== -->
+<!-- 查手机 (TRACKER) APP                           -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="trackerApp" style="display:none; position:absolute; inset:0; z-index:2000;">
+
+  <!-- 倒计时胶囊 -->
+  <div id="tr-timer-pill">
+    <span class="tr-timer-heart">♥</span>
+    <span id="tr-timer-text">5:00</span>
+  </div>
+
+  <!-- 全局加载遮罩 -->
+  <div class="tr-loading-overlay" id="tr-loading-overlay">
+    <div class="tr-loading-spinner"></div>
+    <div class="tr-loading-text">SCANNING DEVICE…</div>
+    <div class="tr-loading-hint">正在加载TA的数字生活<br>请稍候片刻</div>
+  </div>
+
+  <!-- 被抓包遮罩 -->
+  <div id="tr-busted-overlay">
+    <div class="tr-busted-icon">🚨</div>
+    <div class="tr-busted-title">被抓包了！</div>
+    <div class="tr-busted-sub">TA回来了……手机还在你手里<br>这次的后果需要你自己承担</div>
+    <div class="tr-busted-btn" onclick="TrackerApp.dismissBusted()">关闭并退出</div>
+  </div>
+
+  <!-- ── 视图1：角色选择 ── -->
+  <div class="tr-view" id="tr-view-select">
+    <div class="tr-select-hero">
+      <div class="tr-select-eyebrow">PRIVATE MODE</div>
+      <div class="tr-select-headline">查 手 机</div>
+    </div>
+    <div class="tr-char-cards" id="tr-char-list"></div>
+    <div class="tr-select-close" onclick="TrackerApp.close()">✕ 取消</div>
+
+    <!-- 场景弹窗 -->
+    <div id="tr-scenario-modal">
+      <div class="tr-scenario-box">
+        <div class="tr-scenario-title">选择入侵时机</div>
+        <div class="tr-scenario-sub">TA 离开了多久？</div>
+        <div class="tr-scenario-list" id="tr-scenario-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 视图2：锁屏 ── -->
+  <div class="tr-view" id="tr-view-lock">
+    <div class="tr-lock-bg" id="tr-lock-bg"></div>
+    <div class="tr-lock-content">
+
+      <!-- 上方区域：头像 + 名字 + 提示 -->
+      <div class="tr-lock-top">
+        <div class="tr-lock-avatar-wrap">
+          <img class="tr-lock-avatar" id="tr-lock-avatar" src="icon.png">
+        </div>
+        <div class="tr-lock-name" id="tr-lock-name">Loading…</div>
+        <div class="tr-lock-hint" id="tr-lock-hint">请输入密码</div>
+      </div>
+
+      <!-- 中间区域：密码点 -->
+      <div class="tr-lock-middle">
+        <div class="tr-pin-dots">
+          <div class="tr-pin-dot"></div>
+          <div class="tr-pin-dot"></div>
+          <div class="tr-pin-dot"></div>
+          <div class="tr-pin-dot"></div>
+        </div>
+      </div>
+
+      <!-- 下方区域：数字键盘 + 面容解锁 -->
+      <div class="tr-lock-bottom">
+        <div class="tr-numpad">
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('1')">1<small>—</small></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('2')">2<small>ABC</small></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('3')">3<small>DEF</small></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('4')">4<small>GHI</small></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('5')">5<small>JKL</small></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('6')">6<small>MNO</small></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('7')">7<small>PQRS</small></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('8')">8<small>TUV</small></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('9')">9<small>WXYZ</small></button>
+          <button class="tr-num-btn empty"></button>
+          <button class="tr-num-btn" onclick="TrackerApp.handlePinInput('0')">0</button>
+          <button class="tr-num-btn del" onclick="TrackerApp.handlePinDel()">⌫</button>
+        </div>
+        <div class="tr-lock-face-hint" onclick="TrackerApp.handleFaceUnlock()">面容解锁 👁</div>
+      </div>
+      <!-- 底部装饰条 -->
+      <div class="tr-lock-footer">
+        <div class="tr-lock-footer-line"><div class="tr-lock-footer-dot"></div></div>
+        <div class="tr-lock-footer-brand">Secured Device</div>
+        <div class="tr-lock-footer-line"><div class="tr-lock-footer-dot"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── 视图3：手机桌面 ── -->
+  <div class="tr-view" id="tr-view-desktop">
+    <div class="tr-desktop-wallpaper"></div>
+    <div class="tr-desktop-overlay"></div>
+
+    <!-- 状态栏 -->
+    <div class="tr-status-bar" onclick="TrackerApp.toggleStatusTooltip()">
+      <div class="tr-status-time" id="tr-status-clock">00:00</div>
+      <div class="tr-status-right">
+        <span class="tr-wifi-name-small" id="tr-status-wifi">WiFi</span>
+        <i class="fas fa-wifi" style="font-size:11px;"></i>
+        <i class="fas fa-bluetooth-b" id="tr-status-bt" style="font-size:11px;"></i>
+        <span id="tr-status-battery" style="font-size:10px;font-weight:700;">—</span>
+      </div>
+    </div>
+    <!-- 状态栏 Tooltip -->
+    <div class="tr-status-tooltip" id="tr-status-tooltip"></div>
+
+    <!-- 时间/日期/备注 -->
+    <div class="tr-desktop-info">
+      <div class="tr-desktop-date-label" id="tr-desktop-date">Loading…</div>
+      <div class="tr-desktop-big-time" id="tr-desktop-time">--:--</div>
+      <div class="tr-remark-pill">📱 <span id="tr-remark-name">备注加载中…</span></div>
+    </div>
+
+    <!-- App 图标区 -->
+    <div class="tr-app-grid-wrap">
+      <div class="tr-grid-section-label">APPS</div>
+      <div class="tr-app-grid" id="tr-app-grid-inner"></div>
+    </div>
+
+    <!-- 底部按钮 -->
+    <div class="tr-desktop-btns">
+      <div class="tr-desk-btn" onclick="TrackerApp.changeWallpaper()">🖼 壁纸</div>
+      <div class="tr-desk-btn" onclick="TrackerApp.refreshAll()">↻ 刷新</div>
+      <div class="tr-desk-btn exit" onclick="TrackerApp.close()">✕ 退出</div>
+    </div>
+
+    <!-- ── App 视图集合 ── -->
+
+    <!-- 消息 -->
+    <div class="tr-app-view" id="tr-app-messages">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">消息</div>
+          <div class="tr-app-subtitle">MESSAGES</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 日记 -->
+    <div class="tr-app-view" id="tr-app-diary">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">私密日记</div>
+          <div class="tr-app-subtitle">SECRET DIARY</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 浏览器 -->
+    <div class="tr-app-view" id="tr-app-browser">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">无痕浏览器</div>
+          <div class="tr-app-subtitle">PRIVATE BROWSER</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 钱包 -->
+    <div class="tr-app-view" id="tr-app-wallet">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">小金库</div>
+          <div class="tr-app-subtitle">WALLET</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 足迹 -->
+    <div class="tr-app-view" id="tr-app-location">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">足迹</div>
+          <div class="tr-app-subtitle">LOCATION LOG</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 日历 -->
+    <div class="tr-app-view" id="tr-app-calendar">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">日历 · 闹钟</div>
+          <div class="tr-app-subtitle">CALENDAR</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 购物 -->
+    <div class="tr-app-view" id="tr-app-shop">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">购物车</div>
+          <div class="tr-app-subtitle">SHOPPING</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 相册 -->
+    <div class="tr-app-view" id="tr-app-album">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">相册</div>
+          <div class="tr-app-subtitle">PHOTO ALBUM</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 音乐 -->
+    <div class="tr-app-view" id="tr-app-music">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">音乐</div>
+          <div class="tr-app-subtitle">MUSIC</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 保险箱 -->
+    <div class="tr-app-view" id="tr-app-vault">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">隐私保险箱</div>
+          <div class="tr-app-subtitle">SECRET VAULT</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 废纸篓 -->
+    <div class="tr-app-view" id="tr-app-trash">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">废纸篓</div>
+          <div class="tr-app-subtitle">RECENTLY DELETED</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+  </div><!-- /tr-view-desktop -->
+
+</div><!-- /trackerApp -->
 
 
 <div id="add-friend-modal" class="modal-overlay">

@@ -1701,7 +1701,7 @@ const AVAILABLE_WORLDBOOKS = [
 let friendsData = {};
 let currentChatId = null; // 记录当前正在和谁聊天
 
-// 供其他模块（如 galgame）读取好友列表
+// 供其他模块（如 galgame）表
 window.getAllFriends = function() {
     return Object.keys(friendsData).map(id => Object.assign({ id }, friendsData[id]));
 };
@@ -2230,6 +2230,39 @@ IMPORTANT: Danmaku is OFF. Do NOT output any [DANMAKU_START]...[DANMAKU_END] blo
         // 告诉 AI 这是世界观设定
         systemPrompt += `\n\n[World Setting / Lorebook Data (Important Context)]:\n${worldInfoText}\n`;
     }
+
+    // ============================================
+    // [插入] 注入手机密码自我感知（来自查手机 APP 预生成）
+    // ============================================
+    if (currentChatType === 'single') {
+        try {
+            // 优先读取角色对象的运行时字段（_injectPinAwareness 写入）
+            let _pin = f._phonePin;
+            let _hint = f._phonePinHint;
+
+            // 没有则查 tr_pin_awareness 快速检索 key
+            if (!_pin) {
+                const _awareness = JSON.parse(localStorage.getItem('tr_pin_awareness') || '{}');
+                if (_awareness[currentChatId]) {
+                    _pin = _awareness[currentChatId].pin;
+                    _hint = _awareness[currentChatId].hint;
+                }
+            }
+
+            // 再没有则查 tr_pin_{charId} 原始存储
+            if (!_pin) {
+                const _raw = localStorage.getItem(`tr_pin_${currentChatId}`);
+                if (_raw) {
+                    const _parsed = JSON.parse(_raw);
+                    if (_parsed && _parsed.pin) { _pin = _parsed.pin; _hint = _parsed.hint; }
+                }
+            }
+
+            if (_pin) {
+                systemPrompt += `\n\n[YOUR PRIVATE SELF-KNOWLEDGE]\nYour phone unlock password is: ${_pin}.\nPassword hint (only you know): ${_hint || 'a number meaningful to you'}.\nYou remember this password yourself. Do NOT reveal it unless directly and sincerely asked by the user. If asked, you may respond in character (e.g., hesitantly, shyly, or teasingly).`;
+            }
+        } catch (_e) { /* 静默处理 */ }
+    }
     // === 【新增】注入剧情总结和关系进度记忆 ===
 if (f.summaries && f.summaries.length > 0) {
     const summaryText = f.summaries.map((s, i) => `- (第${i+1}阶段) ${s.text}`).join('\n');
@@ -2239,6 +2272,20 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
     const relationshipText = f.relationshipLog.map(r => `- ${r.text}`).join('\n');
     systemPrompt += `\n\n[OUR RELATIONSHIP HISTORY]:\n${relationshipText}\n`;
 }
+
+    // ============================================
+    // [插入] 注入"查手机"痕迹干预事件（来自 TrackerApp 蝴蝶效应系统）
+    // ============================================
+    if (currentChatType === 'single') {
+        try {
+            const _pendingTamper = JSON.parse(localStorage.getItem('tr_pending_context') || '[]');
+            if (_pendingTamper.length > 0) {
+                const _tamperEvents = _pendingTamper.join('\n');
+                systemPrompt += `\n\n[⚠️ PHONE MISCHIEF ALERT — CRITICAL CONTEXT]\n你刚刚拿回自己的手机，发现用户刚才偷偷动过你的手机，做了以下事情：\n${_tamperEvents}\n\n请根据你的人设，对这些行为做出真实、生动的反应。你可以质问、嗔怒、感动、装作没发现——完全取决于你的性格和当前状态。这些事已经发生，是客观存在的事实，请自然地融入你的下一条回复中。`;
+                localStorage.removeItem('tr_pending_context');
+            }
+        } catch (_tamperErr) { /* 静默处理 */ }
+    }
 
     // ============================================
 
@@ -2324,8 +2371,20 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
     }
 
         // 构建最终的消息列表
+    // ★ 蝴蝶效应：将查手机篡改记录注入本轮系统提示
+    const _trPending = (() => {
+        try {
+            const _p = JSON.parse(localStorage.getItem('tr_pending_context') || '[]');
+            if (_p.length > 0) {
+                localStorage.removeItem('tr_pending_context');
+                return '\n\n' + _p.join('\n');
+            }
+        } catch (_) {}
+        return '';
+    })();
+
     let finalMessages = [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemPrompt + _trPending },
         ...contextMessages,
         { role: "user", content: userMessage }
     ];

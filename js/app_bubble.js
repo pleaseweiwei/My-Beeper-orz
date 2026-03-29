@@ -1954,11 +1954,13 @@ window.openBackpackApp = function() {
     const app = document.getElementById('backpackApp');
     if (!app) return;
     app.style.display = 'flex';
+    app.classList.add('open');
     bbRenderBackpack();
 }
 window.closeBackpackApp = function() {
     const app = document.getElementById('backpackApp');
     if (!app) return;
+    app.classList.remove('open');
     app.style.display = 'none';
 }
 function bbRenderBackpack() {
