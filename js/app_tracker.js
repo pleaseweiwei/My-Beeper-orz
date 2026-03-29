@@ -304,6 +304,9 @@ const TrackerApp = (() => {
     showView('tr-view-desktop');
     startTimer();
     setupDesktop();
+    // 每次进入手机都清除缓存，确保生成最新内容
+    const c = state.selectedChar;
+    if (c) clearCachedPhoneData(c.id || c.name);
     loadPhoneData();
     // 启动时钟每秒更新
     if (state.clockInterval) clearInterval(state.clockInterval);
