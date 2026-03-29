@@ -2092,7 +2092,7 @@
 }
 .tr-chat-msg-row.sent {
   align-self: flex-end;
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 /* 头像圆圈 */
@@ -2109,7 +2109,7 @@
   box-shadow: var(--s-xs);
 }
 .tr-chat-msg-avatar.sent-avatar {
-  background: #07c160;
+  background: var(--ink3);
 }
 
 /* 气泡 */
@@ -2129,8 +2129,8 @@
   border-top-left-radius: 4px;
 }
 .tr-chat-msg-row.sent .tr-chat-msg-bubble {
-  background: #95ec69;
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--white);
   border-top-right-radius: 4px;
 }
 
@@ -2172,7 +2172,7 @@
   transition: .15s;
   box-shadow: var(--s-xs);
 }
-.tr-chat-send-btn:active { background: #07c160; transform: scale(.9); }
+.tr-chat-send-btn:active { background: var(--ink2); transform: scale(.9); }
 
 /* ══════════════════════════════════════════
    23 · 随机抽卡 — 场景弹窗 重设计
