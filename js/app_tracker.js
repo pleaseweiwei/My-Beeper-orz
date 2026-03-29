@@ -304,7 +304,8 @@ const TrackerApp = (() => {
     showView('tr-view-desktop');
     startTimer();
     setupDesktop();
-    // 每次进入手机都清除缓存，确保生成最新内容
+    // 每次进入手机都清除旧数据和缓存，确保生成最新内容
+    state.phoneData = null;
     const c = state.selectedChar;
     if (c) clearCachedPhoneData(c.id || c.name);
     loadPhoneData();
@@ -426,11 +427,15 @@ const TrackerApp = (() => {
         const r = $('tr-remark-name');
         if (r) r.textContent = `备注：${data.messages.remarkName}`;
       }
+      // 如果用户已经点进了某个 app，数据到了之后立即重新渲染
+      if (state.currentApp) openApp(state.currentApp);
     }, (err) => {
       showLoading(false);
       console.warn('[Tracker] API failed, using fallback', err);
       state.phoneData = buildFallbackData(c);
       if (state.phoneData.statusBar) applyStatusBar(state.phoneData.statusBar);
+      // fallback 数据到了后同样重新渲染当前 app
+      if (state.currentApp) openApp(state.currentApp);
     });
   }
 
