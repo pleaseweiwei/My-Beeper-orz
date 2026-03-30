@@ -898,76 +898,6 @@ ${recent || '(暂无)'}
     }
 }
 
-/* =========================================
-   群聊设置页面
-   ========================================= */
-window.openGroupSettingsPage = function (groupId) {
-    const group = groupsData[groupId || currentChatId];
-    if (!group) return;
-
-    const gid = groupId || currentChatId;
-    const page = document.getElementById('groupSettingsPage');
-    if (!page) return;
-
-    // 基础信息
-    document.getElementById('gs-group-name').value = group.name || '';
-    document.getElementById('gs-announcement').value = group.announcement || '';
-
-    // 后台活跃开关
-    const bgToggle = document.getElementById('gs-bg-activity-toggle');
-    if (bgToggle) bgToggle.checked = !!(group.settings && group.settings.bgActivityEnabled);
-    const bgInterval = document.getElementById('gs-bg-interval');
-    if (bgInterval) bgInterval.value = (group.settings && group.settings.bgActivityInterval) || 120;
-    const bgBox = document.getElementById('gs-bg-interval-box');
-    if (bgBox) bgBox.style.display = bgToggle && bgToggle.checked ? 'block' : 'none';
-
-    // 渲染成员列表
-    renderGroupMemberList(gid);
-
-    page.classList.add('show');
-    page.setAttribute('data-group-id', gid);
-};
-
-window.closeGroupSettingsPage = function () {
-    const page = document.getElementById('groupSettingsPage');
-    if (page) page.classList.remove('show');
-};
-
-window.saveGroupSettings = async function () {
-    const page = document.getElementById('groupSettingsPage');
-    const gid = page ? page.getAttribute('data-group-id') : currentChatId;
-    const group = groupsData[gid];
-    if (!group) return;
-
-    const newName = document.getElementById('gs-group-name').value.trim();
-    if (newName) group.name = newName;
-
-    group.announcement = document.getElementById('gs-announcement').value.trim();
-
-    if (!group.settings) group.settings = {};
-    group.settings.bgActivityEnabled = document.getElementById('gs-bg-activity-toggle')?.checked || false;
-    group.settings.bgActivityInterval = parseInt(document.getElementById('gs-bg-interval')?.value) || 120;
-
-    await saveGroupsData();
-
-    // 更新 chat header
-    const titleEl = document.querySelector('#chatLayer .chat-header span');
-    if (titleEl && currentChatId === gid) {
-        const memberCount = (group.members || []).length + 1;
-        titleEl.innerHTML = `${group.name}<small style="font-size:9px; color:#aaa; font-weight:400; margin-left:4px;">${memberCount}人</small>`;
-    }
-
-    // 重启后台活跃
-    startGroupBgActivity(gid);
-
-    closeGroupSettingsPage();
-    if (typeof showToast === 'function') showToast('群聊设置已保存');
-
-    // 如果有群公告，发布
-    if (group.announcement) {
-        showGroupAnnouncement(group.announcement, true);
-    }
-};
 
 function showGroupAnnouncement(text, sendToChat) {
     if (!text) return;
@@ -1808,6 +1738,1225 @@ window.transferGroupOwner = async function () {
     renderGroupMemberList(currentChatId);
     const f = friendsData[newOwnerId];
     if (typeof showToast === 'function') showToast(`群主已转让给 ${f ? (f.remark || f.realName) : newOwnerId}`);
+};
+
+/* =========================================
+   群聊设置页面 (open / close / tabs / save)
+   ========================================= */
+let _currentGroupSettingsId = null;
+
+window.openGroupSettingsPage = function (groupId) {
+    _currentGroupSettingsId = groupId;
+    const group = groupsData[groupId];
+    if (!group) return;
+
+    const page = document.getElementById('groupSettingsPage');
+    if (!page) return;
+
+    // 维护一个隐藏 input 供群成员面板使用
+    let hiddenId = document.getElementById('gs-current-group-id');
+    if (!hiddenId) {
+        hiddenId = document.createElement('input');
+        hiddenId.type = 'hidden';
+        hiddenId.id = 'gs-current-group-id';
+        document.body.appendChild(hiddenId);
+    }
+    hiddenId.value = groupId;
+
+    // ── INFO tab ──
+    const nameEl = document.getElementById('gs-group-name');
+    if (nameEl) nameEl.value = group.name || '';
+    const nickEl = document.getElementById('gs-my-nickname');
+    if (nickEl) nickEl.value = group.myNickname || '';
+
+    // 群头像
+    const avatarVal = group.customAvatar || '';
+    const avatarValEl = document.getElementById('gs-group-avatar-val');
+    const avatarUrlEl = document.getElementById('gs-group-avatar-url');
+    if (avatarValEl) avatarValEl.value = avatarVal;
+    if (avatarUrlEl) avatarUrlEl.value = avatarVal;
+    if (avatarVal) {
+        const img = document.getElementById('gs-group-avatar-img');
+        const ph  = document.getElementById('gs-group-avatar-placeholder');
+        if (img) { img.src = avatarVal; img.style.display = 'block'; }
+        if (ph)  ph.style.display = 'none';
+    }
+
+    // 我的群头像
+    if (group.myAvatar) {
+        const img = document.getElementById('gs-my-avatar-img');
+        const ph  = document.getElementById('gs-my-avatar-placeholder');
+        if (img) { img.src = group.myAvatar; img.style.display = 'block'; }
+        if (ph)  ph.style.display = 'none';
+    }
+    const frameEl = document.getElementById('gs-my-avatar-frame');
+    if (frameEl) frameEl.value = group.myAvatarFrame || '';
+
+    // 成员数标签
+    const countLabel = document.getElementById('gs-member-count-label');
+    if (countLabel) countLabel.textContent = `共 ${(group.members || []).length + 1} 位成员`;
+
+    // ── AI tab ──
+    const bgToggle = document.getElementById('gs-bg-activity-toggle');
+    if (bgToggle) {
+        bgToggle.checked = !!(group.settings && group.settings.bgActivityEnabled);
+        const box = document.getElementById('gs-bg-interval-box');
+        if (box) box.style.display = bgToggle.checked ? 'block' : 'none';
+    }
+    const bgIntervalEl = document.getElementById('gs-bg-interval');
+    if (bgIntervalEl) bgIntervalEl.value = (group.settings && group.settings.bgActivityInterval) || 120;
+
+    const memLimitEl = document.getElementById('gs-memory-limit');
+    if (memLimitEl) memLimitEl.value = group.memoryLimit || 10;
+    const replyMinEl = document.getElementById('gs-reply-min');
+    if (replyMinEl) replyMinEl.value = group.replyMin || 1;
+    const replyMaxEl = document.getElementById('gs-reply-max');
+    if (replyMaxEl) replyMaxEl.value = group.replyMax || 5;
+    const announcementEl = document.getElementById('gs-announcement');
+    if (announcementEl) announcementEl.value = group.announcement || '';
+
+    // ── VISUAL tab ──
+    const chatBgEl = document.getElementById('gs-chat-bg-url');
+    if (chatBgEl) chatBgEl.value = group.chatBgUrl || '';
+    const fontSlider = document.getElementById('gs-font-size-slider');
+    const fontVal    = document.getElementById('gs-font-size-val');
+    if (fontSlider) {
+        fontSlider.value = group.fontSize || 14;
+        if (fontVal) fontVal.textContent = (group.fontSize || 14) + 'px';
+    }
+    const cssCel = document.getElementById('gs-custom-css');
+    if (cssCel) cssCel.value = group.customCss || '';
+    const naiPosEl = document.getElementById('gs-nai-positive');
+    if (naiPosEl) naiPosEl.value = group.naiPositive || '';
+    const naiNegEl = document.getElementById('gs-nai-negative');
+    if (naiNegEl) naiNegEl.value = group.naiNegative || '';
+
+    // 渲染 CSS 预设
+    renderGsCssPresets();
+    // 加载记忆联动列表
+    loadGsLinkMemoryList(groupId);
+
+    switchGsTab('info');
+    page.classList.add('show');
+};
+
+window.closeGroupSettingsPage = function () {
+    const page = document.getElementById('groupSettingsPage');
+    if (page) page.classList.remove('show');
+};
+
+window.switchGsTab = function (tab) {
+    ['info', 'ai', 'visual', 'data'].forEach(t => {
+        const pane = document.getElementById('gs-pane-' + t);
+        const btn  = document.getElementById('gs-tab-btn-' + t);
+        if (pane) pane.classList.toggle('active', t === tab);
+        if (btn)  btn.classList.toggle('active',  t === tab);
+    });
+};
+
+window.saveGroupSettings = async function () {
+    const groupId = _currentGroupSettingsId;
+    const group   = groupsData[groupId];
+    if (!group) return;
+
+    // INFO
+    const newName = (document.getElementById('gs-group-name').value || '').trim();
+    if (newName) group.name = newName;
+    group.myNickname = (document.getElementById('gs-my-nickname').value || '').trim();
+
+    const avatarUrlVal = (document.getElementById('gs-group-avatar-url').value || '').trim()
+                      || document.getElementById('gs-group-avatar-val').value || '';
+    if (avatarUrlVal) group.customAvatar = avatarUrlVal;
+
+    const myAvatarImg = document.getElementById('gs-my-avatar-img');
+    if (myAvatarImg && myAvatarImg.src && myAvatarImg.style.display !== 'none') {
+        group.myAvatar = myAvatarImg.src;
+    }
+    group.myAvatarFrame = (document.getElementById('gs-my-avatar-frame').value || '').trim();
+
+    // AI
+    const bgToggle = document.getElementById('gs-bg-activity-toggle');
+    if (!group.settings) group.settings = {};
+    group.settings.bgActivityEnabled  = bgToggle ? bgToggle.checked : false;
+    group.settings.bgActivityInterval = parseInt(document.getElementById('gs-bg-interval').value) || 120;
+    group.memoryLimit = parseInt(document.getElementById('gs-memory-limit').value) || 10;
+    group.replyMin    = parseInt(document.getElementById('gs-reply-min').value) || 1;
+    group.replyMax    = parseInt(document.getElementById('gs-reply-max').value) || 5;
+    group.announcement = (document.getElementById('gs-announcement').value || '').trim();
+
+    // 记忆联动
+    const linkedCheckboxes = document.querySelectorAll('#gs-link-memory-container input[type="checkbox"]:checked');
+    group.linkedMemories = Array.from(linkedCheckboxes).map(cb => cb.value);
+
+    // VISUAL
+    group.chatBgUrl  = (document.getElementById('gs-chat-bg-url').value || '').trim();
+    group.fontSize   = parseInt(document.getElementById('gs-font-size-slider').value) || 14;
+    group.customCss  = document.getElementById('gs-custom-css').value || '';
+    group.naiPositive = (document.getElementById('gs-nai-positive').value || '').trim();
+    group.naiNegative = (document.getElementById('gs-nai-negative').value || '').trim();
+
+    // 应用聊天背景
+    if (currentChatId === groupId) {
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            chatMessages.style.backgroundImage = group.chatBgUrl ? `url('${group.chatBgUrl}')` : '';
+        }
+        // 更新标题
+        const titleEl = document.querySelector('#chatLayer .chat-header span');
+        if (titleEl) {
+            const memberCount = (group.members || []).length + 1;
+            titleEl.innerHTML = `${group.name}<small style="font-size:9px; color:#aaa; font-weight:400; margin-left:4px;">${memberCount}人</small>`;
+        }
+    }
+
+    // 更新聊天列表项
+    const item = document.querySelector(`.wc-chat-item[data-chat-id="${groupId}"]`);
+    if (item) {
+        const nameEl = item.querySelector('.wc-chat-name');
+        if (nameEl) nameEl.textContent = group.name;
+        if (group.customAvatar) {
+            const avatarEl = item.querySelector('img');
+            if (avatarEl) avatarEl.src = group.customAvatar;
+        }
+    }
+
+    // 重启后台活跃
+    stopGroupBgActivity(groupId);
+    startGroupBgActivity(groupId);
+
+    await saveGroupsData();
+    if (typeof showToast === 'function') showToast('群聊设置已保存');
+    closeGroupSettingsPage();
+};
+
+/* ── 头像上传处理 ── */
+window.handleGsGroupAvatarUpload = function (input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const valEl = document.getElementById('gs-group-avatar-val');
+        const urlEl = document.getElementById('gs-group-avatar-url');
+        const img   = document.getElementById('gs-group-avatar-img');
+        const ph    = document.getElementById('gs-group-avatar-placeholder');
+        if (valEl) valEl.value = dataUrl;
+        if (urlEl) urlEl.value = dataUrl;
+        if (img)  { img.src = dataUrl; img.style.display = 'block'; }
+        if (ph)   ph.style.display = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+};
+
+window.handleGsMyAvatarUpload = function (input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = document.getElementById('gs-my-avatar-img');
+        const ph  = document.getElementById('gs-my-avatar-placeholder');
+        if (img) { img.src = e.target.result; img.style.display = 'block'; }
+        if (ph)  ph.style.display = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+};
+
+window.handleGsChatBgUpload = function (input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const el = document.getElementById('gs-chat-bg-url');
+        if (el) el.value = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+};
+
+/* ── 气泡主题 ── */
+window.selectGsBubbleTheme = function (theme, btn) {
+    document.querySelectorAll('.gs-bubble-theme-btn').forEach(b => b.style.outline = '');
+    if (btn) btn.style.outline = '2px solid #111';
+    if (_currentGroupSettingsId && groupsData[_currentGroupSettingsId]) {
+        groupsData[_currentGroupSettingsId].bubbleTheme = theme;
+    }
+};
+
+/* ── CSS 预设 ── */
+function renderGsCssPresets () {
+    const container = document.getElementById('gs-css-presets-list');
+    if (!container) return;
+    container.innerHTML = '';
+    let presets = {};
+    try { presets = JSON.parse(localStorage.getItem('gsCssPresets') || '{}'); } catch (e) {}
+    Object.keys(presets).forEach(name => {
+        const chip = document.createElement('div');
+        chip.style.cssText = 'background:#f5f5f5;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;';
+        chip.innerHTML = `<span>${name}</span><i class="fas fa-times" style="color:#ccc;font-size:10px;"></i>`;
+        chip.querySelector('span').onclick = () => {
+            const el = document.getElementById('gs-custom-css');
+            if (el) el.value = presets[name];
+        };
+        chip.querySelector('i').onclick = () => {
+            delete presets[name];
+            localStorage.setItem('gsCssPresets', JSON.stringify(presets));
+            renderGsCssPresets();
+        };
+        container.appendChild(chip);
+    });
+}
+
+window.saveGsCssPreset = function () {
+    const css = (document.getElementById('gs-custom-css').value || '').trim();
+    if (!css) { if (typeof showToast === 'function') showToast('CSS 为空'); return; }
+    const name = prompt('预设名称：');
+    if (!name) return;
+    let presets = {};
+    try { presets = JSON.parse(localStorage.getItem('gsCssPresets') || '{}'); } catch (e) {}
+    presets[name] = css;
+    localStorage.setItem('gsCssPresets', JSON.stringify(presets));
+    renderGsCssPresets();
+    if (typeof showToast === 'function') showToast('预设已保存');
+};
+
+window.exportGsCss = function () {
+    const css = document.getElementById('gs-custom-css').value || '';
+    const blob = new Blob([css], { type: 'text/css' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'group-chat.css'; a.click();
+    URL.revokeObjectURL(url);
+};
+
+/* ── 群成员面板 ── */
+window.openGroupMemberPanel = function () {
+    const groupId = _currentGroupSettingsId;
+    let hiddenId = document.getElementById('gs-current-group-id');
+    if (!hiddenId) {
+        hiddenId = document.createElement('input');
+        hiddenId.type = 'hidden';
+        hiddenId.id = 'gs-current-group-id';
+        document.body.appendChild(hiddenId);
+    }
+    hiddenId.value = groupId;
+    renderGroupMemberList(groupId);
+    const panel = document.getElementById('groupMemberPanel');
+    if (panel) panel.classList.add('show');
+};
+
+window.closeGroupMemberPanel = function () {
+    const panel = document.getElementById('groupMemberPanel');
+    if (panel) panel.classList.remove('show');
+};
+
+/* ── 创建群内新成员 ── */
+window.openCreateNewMemberModal = function () {
+    ['cnm-name', 'cnm-avatar-url', 'cnm-persona'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const prev = document.getElementById('cnm-avatar-preview-img');
+    if (prev) prev.style.display = 'none';
+    document.getElementById('gs-create-member-modal').classList.add('active');
+};
+
+window.closeCreateNewMemberModal = function () {
+    document.getElementById('gs-create-member-modal').classList.remove('active');
+};
+
+window.handleCnmAvatarUpload = function (input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const urlEl = document.getElementById('cnm-avatar-url');
+        const prev  = document.getElementById('cnm-avatar-preview-img');
+        if (urlEl) urlEl.value = e.target.result;
+        if (prev)  { prev.src = e.target.result; prev.style.display = 'block'; }
+    };
+    reader.readAsDataURL(input.files[0]);
+};
+
+window.confirmCreateNewMember = async function () {
+    const nameEl = document.getElementById('cnm-name');
+    const name   = (nameEl ? nameEl.value : '').trim();
+    if (!name) { alert('请输入成员名字'); return; }
+
+    const avatarUrlEl = document.getElementById('cnm-avatar-url');
+    const personaEl   = document.getElementById('cnm-persona');
+    const avatarUrl   = (avatarUrlEl ? avatarUrlEl.value.trim() : '') ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+    const persona     = personaEl ? personaEl.value.trim() : '';
+
+    const memberId = 'npc_' + Date.now();
+    friendsData[memberId] = { realName: name, remark: name, avatar: avatarUrl, persona, isNPC: true };
+
+    const groupId = _currentGroupSettingsId;
+    const group   = groupsData[groupId];
+    if (group) {
+        if (!group.members) group.members = [];
+        group.members.push(memberId);
+        await saveGroupsData();
+        if (typeof saveFriendsData === 'function') await saveFriendsData();
+    }
+
+    closeCreateNewMemberModal();
+    renderGroupMemberList(groupId);
+    if (typeof showToast === 'function') showToast(`${name} 已加入群聊`);
+};
+
+/* ── AI 生成群成员 ── */
+window.openAiGenerateMembersModal = function () {
+    const countEl  = document.getElementById('agm-count');
+    const promptEl = document.getElementById('agm-prompt');
+    if (countEl)  countEl.value = 5;
+    if (promptEl) promptEl.value = '';
+    document.getElementById('gs-ai-generate-modal').classList.add('active');
+};
+
+window.closeAiGenerateMembersModal = function () {
+    document.getElementById('gs-ai-generate-modal').classList.remove('active');
+};
+
+window.confirmAiGenerateMembers = async function () {
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    if (!settingsJSON) { alert('请先配置 API'); return; }
+    const settings = JSON.parse(settingsJSON);
+
+    const count  = parseInt(document.getElementById('agm-count').value) || 5;
+    const prompt = (document.getElementById('agm-prompt').value || '').trim();
+    const btn    = document.getElementById('agm-confirm-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...'; }
+
+    try {
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1')
+            ? `${baseUrl}/chat/completions`
+            : `${baseUrl}/v1/chat/completions`;
+
+        const systemPrompt = `请生成 ${count} 位群聊成员的角色档案。场景背景：${prompt || '日常群聊'}。
+输出 JSON 数组，每项格式：{"name":"姓名","persona":"100字以内性格人设"}。纯 JSON，无多余文字。`;
+
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({ model: settings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.9 })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        let raw = (data?.choices?.[0]?.message?.content || '[]')
+            .replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+        let members = [];
+        try { members = JSON.parse(raw); } catch (e) { throw new Error('JSON 解析失败'); }
+
+        const groupId = _currentGroupSettingsId;
+        const group   = groupsData[groupId];
+        if (!group) return;
+        if (!group.members) group.members = [];
+
+        for (const m of members) {
+            if (!m.name) continue;
+            const memberId  = 'npc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`;
+            friendsData[memberId] = { realName: m.name, remark: m.name, avatar: avatarUrl, persona: m.persona || '', isNPC: true };
+            group.members.push(memberId);
+        }
+
+        await saveGroupsData();
+        if (typeof saveFriendsData === 'function') await saveFriendsData();
+        closeAiGenerateMembersModal();
+        renderGroupMemberList(groupId);
+        if (typeof showToast === 'function') showToast(`已生成 ${members.length} 位群友`);
+    } catch (e) {
+        alert('生成失败：' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic"></i> 开始生成'; }
+    }
+};
+
+/* ── 记忆联动列表 ── */
+function loadGsLinkMemoryList (groupId) {
+    const container = document.getElementById('gs-link-memory-container');
+    if (!container) return;
+    container.innerHTML = '';
+    const group     = groupsData[groupId];
+    const linkedIds = group ? (group.linkedMemories || []) : [];
+
+    Object.keys(friendsData).forEach(id => {
+        const f = friendsData[id];
+        if (!f) return;
+        const item      = document.createElement('div');
+        item.className  = 'checklist-item';
+        const avatarUrl = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.realName}`;
+        item.innerHTML  = `<input type="checkbox" value="${id}" ${linkedIds.includes(id) ? 'checked' : ''}><img src="${avatarUrl}" class="checklist-avatar"><span class="checklist-name">${f.remark || f.realName}</span>`;
+        item.onclick = (e) => { if (e.target.type !== 'checkbox') { const cb = item.querySelector('input'); if (cb) cb.checked = !cb.checked; } };
+        container.appendChild(item);
+    });
+
+    Object.keys(groupsData).forEach(gId => {
+        if (gId === groupId) return;
+        const g    = groupsData[gId];
+        const item = document.createElement('div');
+        item.className = 'checklist-item';
+        item.innerHTML = `<input type="checkbox" value="${gId}" ${linkedIds.includes(gId) ? 'checked' : ''}><div style="width:28px;height:28px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">👥</div><span class="checklist-name">${g.name}</span>`;
+        item.onclick = (e) => { if (e.target.type !== 'checkbox') { const cb = item.querySelector('input'); if (cb) cb.checked = !cb.checked; } };
+        container.appendChild(item);
+    });
+}
+
+/* ── DATA tab ── */
+window.importGroupChatHistory = function (input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!Array.isArray(data)) throw new Error('格式错误');
+            await IDB.set(scopedChatKey(_currentGroupSettingsId), data);
+            if (typeof showToast === 'function') showToast('导入成功');
+        } catch (err) { alert('导入失败：' + err.message); }
+    };
+    reader.readAsText(input.files[0]);
+};
+
+window.exportGroupChatHistory = async function () {
+    const groupId = _currentGroupSettingsId;
+    const history = await loadChatHistory(groupId);
+    if (!history || history.length === 0) {
+        if (typeof showToast === 'function') showToast('暂无聊天记录');
+        return;
+    }
+    const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `group_${groupId}_history.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+window.openGroupChatSearch = function () {
+    const kwEl = document.getElementById('gs-search-keyword');
+    const resEl = document.getElementById('gs-search-results');
+    if (kwEl)  kwEl.value = '';
+    if (resEl) resEl.innerHTML = `
+        <div style="text-align:center;color:#ccc;font-size:13px;padding:40px 0;">
+            <i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:0.3;"></i>
+            输入关键词开始搜索
+        </div>`;
+    const page = document.getElementById('groupChatSearchPage');
+    if (page) page.classList.add('show');
+};
+
+window.closeGroupChatSearch = function () {
+    const page = document.getElementById('groupChatSearchPage');
+    if (page) page.classList.remove('show');
+};
+
+window.performGroupChatSearch = async function () {
+    const keyword = (document.getElementById('gs-search-keyword').value || '').trim();
+    const speaker = document.getElementById('gs-search-speaker').value;
+    const resultsContainer = document.getElementById('gs-search-results');
+
+    if (!keyword) {
+        resultsContainer.innerHTML = `<div style="text-align:center;color:#ccc;font-size:13px;padding:40px 0;">输入关键词开始搜索</div>`;
+        return;
+    }
+
+    const history = await loadChatHistory(_currentGroupSettingsId);
+    if (!history || history.length === 0) {
+        resultsContainer.innerHTML = `<div style="text-align:center;color:#ccc;padding:40px 0;">暂无聊天记录</div>`;
+        return;
+    }
+
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let results   = history.filter(msg => {
+        if (msg.type === 'system') return false;
+        if (speaker === 'sent'     && msg.type !== 'sent')     return false;
+        if (speaker === 'received' && msg.type !== 'received') return false;
+        return (msg.text || '').includes(keyword);
+    });
+
+    if (results.length === 0) {
+        resultsContainer.innerHTML = `<div style="text-align:center;color:#ccc;padding:40px 0;">未找到匹配内容</div>`;
+        return;
+    }
+
+    resultsContainer.innerHTML = results.slice(-50).map(msg => {
+        const text = (msg.text || '').replace(
+            new RegExp(escaped, 'gi'),
+            m => `<mark style="background:#fff3cd;">${m}</mark>`
+        );
+        const sender = msg.senderName || (msg.type === 'sent' ? '我' : 'AI');
+        return `<div style="background:#fff;border-radius:12px;padding:12px 15px;margin-bottom:10px;border:1px solid #eee;">
+            <div style="font-size:11px;color:#aaa;margin-bottom:5px;">${sender}</div>
+            <div style="font-size:13px;color:#333;line-height:1.5;">${text}</div>
+        </div>`;
+    }).join('');
+};
+
+window.clearGroupChatHistory = async function () {
+    if (!confirm('确定要清空群聊记录吗？此操作不可恢复。')) return;
+    try { await IDB.delete(scopedChatKey(_currentGroupSettingsId)); } catch (e) {}
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages && currentChatId === _currentGroupSettingsId) chatMessages.innerHTML = '';
+    if (typeof showToast === 'function') showToast('聊天记录已清空');
+};
+
+/* =========================================
+   群聊设置页面入口
+   ========================================= */
+let currentGroupSettingsId = null;
+
+window.openGroupSettingsPage = function (groupId) {
+    const page = document.getElementById('groupSettingsPage');
+    if (!page) return;
+    const group = groupsData[groupId];
+    if (!group) return;
+
+    currentGroupSettingsId = groupId;
+    switchGsTab('info');
+
+    // INFO: 群头像
+    const avatarUrl = group.avatar || '';
+    const gsAvatarVal = document.getElementById('gs-group-avatar-val');
+    const gsAvatarImg = document.getElementById('gs-group-avatar-img');
+    const gsAvatarPlaceholder = document.getElementById('gs-group-avatar-placeholder');
+    const gsAvatarUrlInput = document.getElementById('gs-group-avatar-url');
+    if (gsAvatarVal) gsAvatarVal.value = avatarUrl;
+    if (gsAvatarUrlInput) gsAvatarUrlInput.value = avatarUrl;
+    if (gsAvatarImg && gsAvatarPlaceholder) {
+        if (avatarUrl) {
+            gsAvatarImg.src = avatarUrl;
+            gsAvatarImg.style.display = 'block';
+            gsAvatarPlaceholder.style.display = 'none';
+        } else {
+            gsAvatarImg.style.display = 'none';
+            gsAvatarPlaceholder.style.display = 'block';
+        }
+    }
+
+    // INFO: 群名
+    const gsGroupName = document.getElementById('gs-group-name');
+    if (gsGroupName) gsGroupName.value = group.name || '';
+
+    // INFO: 我的昵称
+    const gsMyNickname = document.getElementById('gs-my-nickname');
+    if (gsMyNickname) gsMyNickname.value = group.myNickname || '';
+
+    // INFO: 我的头像
+    const myAvatarImg = document.getElementById('gs-my-avatar-img');
+    const myAvatarPlaceholder = document.getElementById('gs-my-avatar-placeholder');
+    const myAvatarUrl = group.myAvatar || '';
+    if (myAvatarImg && myAvatarPlaceholder) {
+        if (myAvatarUrl) {
+            myAvatarImg.src = myAvatarUrl;
+            myAvatarImg.style.display = 'block';
+            myAvatarPlaceholder.style.display = 'none';
+        } else {
+            myAvatarImg.style.display = 'none';
+            myAvatarPlaceholder.style.display = 'block';
+        }
+    }
+    const gsMyAvatarFrame = document.getElementById('gs-my-avatar-frame');
+    if (gsMyAvatarFrame) gsMyAvatarFrame.value = group.myAvatarFrame || '';
+
+    // INFO: 成员数量
+    const memberCountLabel = document.getElementById('gs-member-count-label');
+    if (memberCountLabel) {
+        const count = (group.members || []).length + 1;
+        memberCountLabel.textContent = `${count} 位成员`;
+    }
+
+    // AI tab
+    const settings = group.settings || {};
+    const bgToggle = document.getElementById('gs-bg-activity-toggle');
+    const bgIntervalBox = document.getElementById('gs-bg-interval-box');
+    const bgInterval = document.getElementById('gs-bg-interval');
+    const memoryLimit = document.getElementById('gs-memory-limit');
+    const replyMin = document.getElementById('gs-reply-min');
+    const replyMax = document.getElementById('gs-reply-max');
+    const announcement = document.getElementById('gs-announcement');
+    if (bgToggle) bgToggle.checked = !!settings.bgActivityEnabled;
+    if (bgIntervalBox) bgIntervalBox.style.display = settings.bgActivityEnabled ? 'block' : 'none';
+    if (bgInterval) bgInterval.value = settings.bgActivityInterval || 120;
+    if (memoryLimit) memoryLimit.value = settings.memoryLimit || 20;
+    if (replyMin) replyMin.value = settings.replyMin || 1;
+    if (replyMax) replyMax.value = settings.replyMax || 5;
+    if (announcement) announcement.value = group.announcement || '';
+
+    // MEMORY LINK
+    renderGsLinkMemoryList(group);
+
+    // VISUAL tab
+    const chatBgUrl = document.getElementById('gs-chat-bg-url');
+    if (chatBgUrl) chatBgUrl.value = group.chatBgUrl || '';
+    const fontSizeSlider = document.getElementById('gs-font-size-slider');
+    const fontSizeVal = document.getElementById('gs-font-size-val');
+    if (fontSizeSlider) fontSizeSlider.value = group.fontSize || 14;
+    if (fontSizeVal) fontSizeVal.textContent = (group.fontSize || 14) + 'px';
+    const customCss = document.getElementById('gs-custom-css');
+    if (customCss) customCss.value = group.customCss || '';
+    const naiPositive = document.getElementById('gs-nai-positive');
+    if (naiPositive) naiPositive.value = group.naiPositive || '';
+    const naiNegative = document.getElementById('gs-nai-negative');
+    if (naiNegative) naiNegative.value = group.naiNegative || '';
+
+    // 气泡主题高亮
+    document.querySelectorAll('.gs-bubble-theme-btn').forEach(btn => {
+        btn.style.outline = '';
+    });
+    const activeThemeBtn = document.querySelector(`.gs-bubble-theme-btn[data-theme="${group.bubbleTheme || ''}"]`);
+    if (activeThemeBtn) activeThemeBtn.style.outline = '2px solid #007aff';
+
+    renderGsCssPresets();
+    page.classList.add('show');
+};
+
+window.closeGroupSettingsPage = function () {
+    const page = document.getElementById('groupSettingsPage');
+    if (page) page.classList.remove('show');
+};
+
+/* =========================================
+   Tab 切换
+   ========================================= */
+window.switchGsTab = function (tabName) {
+    ['info', 'ai', 'visual', 'data'].forEach(t => {
+        const btn = document.getElementById(`gs-tab-btn-${t}`);
+        const pane = document.getElementById(`gs-pane-${t}`);
+        if (btn) btn.classList.toggle('active', t === tabName);
+        if (pane) pane.classList.toggle('active', t === tabName);
+    });
+};
+
+/* =========================================
+   群成员面板
+   ========================================= */
+window.openGroupMemberPanel = function () {
+    const panel = document.getElementById('groupMemberPanel');
+    if (!panel) return;
+    const groupId = currentGroupSettingsId || currentChatId;
+    const hiddenId = document.getElementById('gs-current-group-id');
+    if (hiddenId) hiddenId.value = groupId;
+    renderGroupMemberList(groupId);
+    panel.classList.add('show');
+};
+
+window.closeGroupMemberPanel = function () {
+    const panel = document.getElementById('groupMemberPanel');
+    if (panel) panel.classList.remove('show');
+};
+
+/* =========================================
+   保存群聊设置
+   ========================================= */
+window.saveGroupSettings = async function () {
+    const groupId = currentGroupSettingsId || currentChatId;
+    const group = groupsData[groupId];
+    if (!group) return;
+
+    // INFO
+    const avatarUrlInput = document.getElementById('gs-group-avatar-url')?.value.trim();
+    const avatarVal = document.getElementById('gs-group-avatar-val')?.value || '';
+    const groupAvatarUrl = gsGroupAvatarDataUrl || avatarUrlInput || avatarVal || '';
+    if (groupAvatarUrl) group.avatar = groupAvatarUrl;
+    gsGroupAvatarDataUrl = null;
+
+    const groupName = document.getElementById('gs-group-name')?.value.trim();
+    if (groupName) group.name = groupName;
+
+    group.myNickname = document.getElementById('gs-my-nickname')?.value.trim() || '';
+    group.myAvatarFrame = document.getElementById('gs-my-avatar-frame')?.value.trim() || '';
+
+    if (gsMyAvatarDataUrl) {
+        group.myAvatar = gsMyAvatarDataUrl;
+        gsMyAvatarDataUrl = null;
+    }
+
+    // AI
+    if (!group.settings) group.settings = {};
+    group.settings.bgActivityEnabled = document.getElementById('gs-bg-activity-toggle')?.checked || false;
+    group.settings.bgActivityInterval = parseInt(document.getElementById('gs-bg-interval')?.value || '120');
+    group.settings.memoryLimit = parseInt(document.getElementById('gs-memory-limit')?.value || '20');
+    group.settings.replyMin = parseInt(document.getElementById('gs-reply-min')?.value || '1');
+    group.settings.replyMax = parseInt(document.getElementById('gs-reply-max')?.value || '5');
+    group.announcement = document.getElementById('gs-announcement')?.value || '';
+
+    // Link memory
+    const linkChecks = document.querySelectorAll('#gs-link-memory-container input[type="checkbox"]:checked');
+    group.settings.linkMemoryIds = Array.from(linkChecks).map(cb => cb.value);
+
+    // VISUAL
+    group.chatBgUrl = document.getElementById('gs-chat-bg-url')?.value.trim() || '';
+    group.fontSize = parseInt(document.getElementById('gs-font-size-slider')?.value || '14');
+    group.customCss = document.getElementById('gs-custom-css')?.value || '';
+    group.naiPositive = document.getElementById('gs-nai-positive')?.value || '';
+    group.naiNegative = document.getElementById('gs-nai-negative')?.value || '';
+
+    await saveGroupsData();
+
+    // 如果当前正在看这个群，应用视觉设置并更新标题
+    if (currentChatId === groupId) {
+        applyGroupVisualSettings(groupId);
+        const titleEl = document.querySelector('#chatLayer .chat-header span');
+        if (titleEl) {
+            const memberCount = (group.members || []).length + 1;
+            titleEl.innerHTML = `${group.name}<small style="font-size:9px; color:#aaa; font-weight:400; margin-left:4px;">${memberCount}人</small>`;
+        }
+    }
+
+    // 重启/停止后台活跃
+    if (group.settings.bgActivityEnabled) {
+        startGroupBgActivity(groupId);
+    } else {
+        stopGroupBgActivity(groupId);
+    }
+
+    if (typeof showToast === 'function') showToast('群聊设置已保存');
+    closeGroupSettingsPage();
+};
+
+/* =========================================
+   应用群聊视觉设置
+   ========================================= */
+function applyGroupVisualSettings(groupId) {
+    const group = groupsData[groupId];
+    if (!group) return;
+
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) {
+        chatMessages.style.backgroundImage = group.chatBgUrl ? `url(${group.chatBgUrl})` : '';
+        chatMessages.style.backgroundSize = 'cover';
+        chatMessages.style.backgroundPosition = 'center';
+    }
+
+    let styleEl = document.getElementById('group-custom-css-style');
+    if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'group-custom-css-style';
+        document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = group.customCss || '';
+
+    const chatLayer = document.getElementById('chatLayer');
+    if (chatLayer) {
+        chatLayer.className = chatLayer.className.replace(/\bbubble-theme-\S+/g, '').trim();
+        if (group.bubbleTheme) {
+            chatLayer.classList.add(`bubble-theme-${group.bubbleTheme}`);
+        }
+    }
+}
+
+/* =========================================
+   气泡主题选择
+   ========================================= */
+window.selectGsBubbleTheme = function (theme, btn) {
+    document.querySelectorAll('.gs-bubble-theme-btn').forEach(b => { b.style.outline = ''; });
+    if (btn) btn.style.outline = '2px solid #007aff';
+    const groupId = currentGroupSettingsId || currentChatId;
+    if (groupsData[groupId]) groupsData[groupId].bubbleTheme = theme;
+};
+
+/* =========================================
+   头像上传
+   ========================================= */
+let gsGroupAvatarDataUrl = null;
+let gsMyAvatarDataUrl = null;
+
+window.handleGsGroupAvatarUpload = function (input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        gsGroupAvatarDataUrl = dataUrl;
+        const img = document.getElementById('gs-group-avatar-img');
+        const placeholder = document.getElementById('gs-group-avatar-placeholder');
+        const val = document.getElementById('gs-group-avatar-val');
+        if (img) { img.src = dataUrl; img.style.display = 'block'; }
+        if (placeholder) placeholder.style.display = 'none';
+        if (val) val.value = dataUrl;
+        const urlInput = document.getElementById('gs-group-avatar-url');
+        if (urlInput) urlInput.value = '';
+    };
+    reader.readAsDataURL(file);
+};
+
+window.handleGsMyAvatarUpload = function (input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        gsMyAvatarDataUrl = dataUrl;
+        const img = document.getElementById('gs-my-avatar-img');
+        const placeholder = document.getElementById('gs-my-avatar-placeholder');
+        if (img) { img.src = dataUrl; img.style.display = 'block'; }
+        if (placeholder) placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+};
+
+window.handleGsChatBgUpload = function (input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const urlInput = document.getElementById('gs-chat-bg-url');
+        if (urlInput) urlInput.value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+/* =========================================
+   CSS 预设
+   ========================================= */
+const GS_CSS_PRESETS_KEY = 'myCoolPhone_gsCssPresets';
+
+function renderGsCssPresets() {
+    const container = document.getElementById('gs-css-presets-list');
+    if (!container) return;
+    try {
+        const presets = JSON.parse(localStorage.getItem(GS_CSS_PRESETS_KEY) || '[]');
+        container.innerHTML = '';
+        presets.forEach((preset) => {
+            const btn = document.createElement('button');
+            btn.style.cssText = 'background:#f5f5f7;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;';
+            btn.textContent = preset.name;
+            btn.onclick = () => {
+                const textarea = document.getElementById('gs-custom-css');
+                if (textarea) textarea.value = preset.css;
+            };
+            container.appendChild(btn);
+        });
+    } catch (e) {}
+}
+
+window.saveGsCssPreset = function () {
+    const css = document.getElementById('gs-custom-css')?.value || '';
+    if (!css.trim()) { if (typeof showToast === 'function') showToast('CSS 为空'); return; }
+    const name = prompt('预设名称：');
+    if (!name) return;
+    try {
+        const presets = JSON.parse(localStorage.getItem(GS_CSS_PRESETS_KEY) || '[]');
+        presets.push({ name, css });
+        localStorage.setItem(GS_CSS_PRESETS_KEY, JSON.stringify(presets));
+        renderGsCssPresets();
+        if (typeof showToast === 'function') showToast('预设已保存');
+    } catch (e) {}
+};
+
+window.exportGsCss = function () {
+    const css = document.getElementById('gs-custom-css')?.value || '';
+    if (!css.trim()) { if (typeof showToast === 'function') showToast('CSS 为空'); return; }
+    const blob = new Blob([css], { type: 'text/css' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'group_custom.css';
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+/* =========================================
+   Link Memory 列表渲染
+   ========================================= */
+function renderGsLinkMemoryList(group) {
+    const container = document.getElementById('gs-link-memory-container');
+    if (!container) return;
+    container.innerHTML = '';
+    const linkedIds = (group.settings && group.settings.linkMemoryIds) || [];
+    Object.keys(friendsData).forEach(id => {
+        const f = friendsData[id];
+        if (!f) return;
+        const item = document.createElement('label');
+        item.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:12px;';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = id;
+        cb.checked = linkedIds.includes(id);
+        const avatar = document.createElement('img');
+        avatar.src = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(f.realName || id)}`;
+        avatar.style.cssText = 'width:24px;height:24px;border-radius:50%;object-fit:cover;';
+        const span = document.createElement('span');
+        span.textContent = f.remark || f.realName || id;
+        item.appendChild(cb);
+        item.appendChild(avatar);
+        item.appendChild(span);
+        container.appendChild(item);
+    });
+    if (container.children.length === 0) {
+        container.innerHTML = '<div style="color:#ccc;font-size:12px;text-align:center;padding:15px;">暂无可选角色</div>';
+    }
+}
+
+/* =========================================
+   聊天记录操作
+   ========================================= */
+window.exportGroupChatHistory = async function () {
+    const groupId = currentGroupSettingsId || currentChatId;
+    const history = await loadChatHistory(groupId);
+    if (!history || history.length === 0) {
+        if (typeof showToast === 'function') showToast('没有聊天记录');
+        return;
+    }
+    const group = groupsData[groupId];
+    const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${group ? group.name : groupId}_chat_history.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+window.importGroupChatHistory = function (input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!Array.isArray(data)) { alert('格式错误：需要 JSON 数组'); return; }
+            const groupId = currentGroupSettingsId || currentChatId;
+            if (!confirm(`将导入 ${data.length} 条记录，会覆盖现有记录，确定吗？`)) return;
+            await IDB.set(scopedChatKey(groupId), data);
+            if (typeof showToast === 'function') showToast('导入成功');
+            input.value = '';
+        } catch (err) {
+            alert('导入失败：' + err.message);
+        }
+    };
+    reader.readAsText(file);
+};
+
+window.clearGroupChatHistory = async function () {
+    const groupId = currentGroupSettingsId || currentChatId;
+    const group = groupsData[groupId];
+    if (!confirm(`确定清空 "${group ? group.name : ''}" 的所有聊天记录吗？此操作不可恢复！`)) return;
+    await IDB.set(scopedChatKey(groupId), []);
+    if (groupsData[groupId]) {
+        groupsData[groupId].lastMessage = '';
+        await saveGroupsData();
+    }
+    if (currentChatId === groupId) {
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) chatMessages.innerHTML = '';
+    }
+    if (typeof showToast === 'function') showToast('聊天记录已清空');
+};
+
+/* =========================================
+   群聊搜索
+   ========================================= */
+window.openGroupChatSearch = function () {
+    const page = document.getElementById('groupChatSearchPage');
+    if (!page) return;
+    const keyword = document.getElementById('gs-search-keyword');
+    if (keyword) keyword.value = '';
+    const dateInput = document.getElementById('gs-search-date');
+    if (dateInput) dateInput.value = '';
+    const results = document.getElementById('gs-search-results');
+    if (results) results.innerHTML = '<div style="text-align:center;color:#ccc;font-size:13px;padding:40px 0;"><i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:0.3;"></i>输入关键词开始搜索</div>';
+    page.classList.add('show');
+};
+
+window.closeGroupChatSearch = function () {
+    const page = document.getElementById('groupChatSearchPage');
+    if (page) page.classList.remove('show');
+};
+
+window.performGroupChatSearch = async function () {
+    const keyword = (document.getElementById('gs-search-keyword')?.value || '').trim().toLowerCase();
+    const speaker = document.getElementById('gs-search-speaker')?.value || 'all';
+    const date = document.getElementById('gs-search-date')?.value || '';
+    const groupId = currentGroupSettingsId || currentChatId;
+    const history = await loadChatHistory(groupId);
+    const results = document.getElementById('gs-search-results');
+    if (!results) return;
+
+    let filtered = history || [];
+    if (keyword) filtered = filtered.filter(m => (m.text || '').toLowerCase().includes(keyword));
+    if (speaker === 'sent') filtered = filtered.filter(m => m.type === 'sent');
+    else if (speaker === 'received') filtered = filtered.filter(m => m.type === 'received');
+    if (date) {
+        filtered = filtered.filter(m => {
+            if (!m.id) return false;
+            const parts = m.id.split('_');
+            const ts = parts.map(p => parseInt(p)).find(n => n > 1000000000000);
+            if (!ts) return false;
+            return new Date(ts).toISOString().startsWith(date);
+        });
+    }
+
+    if (filtered.length === 0) {
+        results.innerHTML = '<div style="text-align:center;color:#bbb;padding:30px;font-size:13px;">没有找到相关消息</div>';
+        return;
+    }
+
+    results.innerHTML = filtered.map(m => {
+        const sender = m.type === 'sent' ? '我' : (m.senderName || 'AI');
+        const text = (m.text || '').substring(0, 120).replace(/</g, '&lt;');
+        return `<div style="padding:12px;background:#fff;border-radius:12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+            <div style="font-size:11px;color:#999;margin-bottom:4px;">${sender}</div>
+            <div style="font-size:13px;color:#333;">${text}</div>
+        </div>`;
+    }).join('');
+};
+
+/* =========================================
+   创建新群成员 Modal
+   ========================================= */
+window.openCreateNewMemberModal = function () {
+    const modal = document.getElementById('gs-create-member-modal');
+    if (!modal) return;
+    const nameInput = document.getElementById('cnm-name');
+    const avatarUrl = document.getElementById('cnm-avatar-url');
+    const persona = document.getElementById('cnm-persona');
+    const preview = document.getElementById('cnm-avatar-preview-img');
+    if (nameInput) nameInput.value = '';
+    if (avatarUrl) avatarUrl.value = '';
+    if (persona) persona.value = '';
+    if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    modal.classList.add('active');
+};
+
+window.closeCreateNewMemberModal = function () {
+    document.getElementById('gs-create-member-modal')?.classList.remove('active');
+};
+
+window.handleCnmAvatarUpload = function (input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const urlInput = document.getElementById('cnm-avatar-url');
+        const preview = document.getElementById('cnm-avatar-preview-img');
+        if (urlInput) urlInput.value = dataUrl;
+        if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
+    };
+    reader.readAsDataURL(file);
+};
+
+window.confirmCreateNewMember = async function () {
+    const groupId = currentGroupSettingsId || currentChatId;
+    const group = groupsData[groupId];
+    if (!group) return;
+
+    const name = document.getElementById('cnm-name')?.value.trim();
+    if (!name) { alert('请输入成员名字'); return; }
+    const avatarUrl = document.getElementById('cnm-avatar-url')?.value.trim() ||
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+    const persona = document.getElementById('cnm-persona')?.value.trim() || '';
+
+    // 作为专属NPC写入friendsData（使用临时ID）
+    const npcId = 'npc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    friendsData[npcId] = {
+        realName: name,
+        remark: name,
+        avatar: avatarUrl,
+        persona: persona,
+        isNPC: true
+    };
+    await saveFriendsData();
+
+    if (!group.members) group.members = [];
+    group.members.push(npcId);
+    await saveGroupsData();
+
+    closeCreateNewMemberModal();
+    renderGroupMemberList(groupId);
+
+    const sysMsg = `${name} 加入了群聊`;
+    if (currentChatId === groupId) {
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            const div = document.createElement('div');
+            div.style.cssText = 'text-align:center; margin:8px 0;';
+            div.innerHTML = `<span style="background:rgba(0,0,0,0.04); padding:3px 10px; border-radius:4px; font-size:11px; color:#999;">${sysMsg}</span>`;
+            chatMessages.appendChild(div);
+        }
+    }
+    await saveMessageToHistory(groupId, { text: sysMsg, type: 'system' });
+    if (typeof showToast === 'function') showToast(`${name} 已加入群聊`);
+};
+
+/* =========================================
+   AI 生成成员 Modal
+   ========================================= */
+window.openAiGenerateMembersModal = function () {
+    const modal = document.getElementById('gs-ai-generate-modal');
+    if (!modal) return;
+    const countInput = document.getElementById('agm-count');
+    const promptInput = document.getElementById('agm-prompt');
+    if (countInput) countInput.value = '5';
+    if (promptInput) promptInput.value = '';
+    modal.classList.add('active');
+};
+
+window.closeAiGenerateMembersModal = function () {
+    document.getElementById('gs-ai-generate-modal')?.classList.remove('active');
+};
+
+window.confirmAiGenerateMembers = async function () {
+    const groupId = currentGroupSettingsId || currentChatId;
+    const group = groupsData[groupId];
+    if (!group) return;
+
+    const count = parseInt(document.getElementById('agm-count')?.value || '5');
+    const promptText = document.getElementById('agm-prompt')?.value.trim() || '一群普通的年轻人';
+
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+    if (!settingsJSON) { alert('请先配置 API'); return; }
+    const settings = JSON.parse(settingsJSON);
+
+    const confirmBtn = document.getElementById('agm-confirm-btn');
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...'; }
+
+    try {
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+        const systemPrompt = `请生成 ${count} 个群聊成员，场景：${promptText}。
+每个成员输出JSON格式：{"name":"名字","persona":"性格与背景（50字以内）","avatar":"（留空）"}
+只输出JSON数组，无多余文字。`;
+
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({ model: settings.model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.9 })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        let rawReply = (data?.choices?.[0]?.message?.content || '[]').replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+        let members = [];
+        try { members = JSON.parse(rawReply); } catch (e) { throw new Error('JSON解析失败'); }
+
+        if (!group.members) group.members = [];
+        let addedCount = 0;
+        for (const m of members) {
+            if (!m.name) continue;
+            const npcId = 'npc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`;
+            friendsData[npcId] = {
+                realName: m.name,
+                remark: m.name,
+                avatar: avatarUrl,
+                persona: m.persona || '',
+                isNPC: true
+            };
+            group.members.push(npcId);
+            addedCount++;
+        }
+        await saveFriendsData();
+        await saveGroupsData();
+
+        closeAiGenerateMembersModal();
+        renderGroupMemberList(groupId);
+        if (typeof showToast === 'function') showToast(`已添加 ${addedCount} 位成员`);
+    } catch (err) {
+        alert('生成失败：' + err.message);
+    } finally {
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = '<i class="fas fa-magic"></i> 开始生成'; }
+    }
 };
 
 console.log('[app_groupchat.js] 群聊模块已加载');

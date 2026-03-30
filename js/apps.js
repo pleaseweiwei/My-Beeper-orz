@@ -4,6 +4,8 @@ let currentAiController = null;
 // --- LocalStorage Keys ---
 const SETTINGS_KEY = 'myCoolPhone_aiSettings';
 const PRESETS_KEY = 'myCoolPhone_aiPresets';
+const VOICE_PRESETS_KEY = 'myCoolPhone_voicePresets';
+const IMAGEGEN_PRESETS_KEY = 'myCoolPhone_imagegenPresets';
 const THEME_KEY = 'myCoolPhone_themeSettings';
 const ICONS_KEY = 'myCoolPhone_customIcons';
 const THEME_PRESETS_KEY = 'myCoolPhone_themePresets'; // 新增：主题预设Key
@@ -1267,6 +1269,8 @@ function initSettingsAndPresets() {
         }
     } else { updateUIForProvider('custom'); }
     loadPresetsToUI();
+    loadVoicePresetsToUI();
+    loadImagegenPresetsToUI();
 }
 // [新增] 初始化线下模式系统（读取预设和配置）
 function initOfflineSystem() {
@@ -1334,6 +1338,10 @@ function saveAllSettings() {
         enableMetaDelete: document.getElementById('enable-meta-delete-toggle') ? document.getElementById('enable-meta-delete-toggle').checked : false
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    // 同时保存图像生成设置
+    if (typeof saveImagegenSettingsUI === 'function') {
+        saveImagegenSettingsUI();
+    }
     if (typeof toggleSettings === 'function') {
         toggleSettings();
     }
@@ -1360,8 +1368,9 @@ function saveNewPreset() {
 
 function loadPresetsToUI() {
     const presetSelect = document.getElementById('preset-select');
+    if (!presetSelect) return;
     const presets = JSON.parse(localStorage.getItem(PRESETS_KEY) || '{}');
-    presetSelect.innerHTML = '<option value="">-- 选择一个预设 --</option>';
+    presetSelect.innerHTML = '<option value="">── 选择已保存配置 ──</option>';
     Object.keys(presets).forEach(key => { const opt = document.createElement('option'); opt.value = key; opt.text = key; presetSelect.appendChild(opt); });
 }
 
@@ -1389,6 +1398,232 @@ function applySelectedPreset(e) {
         }, 50);
     }
 }
+
+/* =========================================
+   Settings Panel · Section Collapse Toggle
+   ========================================= */
+window.toggleStgSection = function(sectionId) {
+    const bd = document.getElementById('stg-bd-' + sectionId);
+    const hd = document.getElementById('stg-hd-' + sectionId);
+    if (!bd) return;
+    const isOpen = bd.classList.contains('open');
+    bd.classList.toggle('open', !isOpen);
+    if (hd) hd.classList.toggle('open', !isOpen);
+};
+
+/* =========================================
+   API Presets (使用现有 PRESETS_KEY)
+   ========================================= */
+window.deleteApiPreset = function() {
+    const sel = document.getElementById('preset-select');
+    const name = sel ? sel.value : '';
+    if (!name) { if (typeof showToast === 'function') showToast('请先选择一个预设'); return; }
+    if (!confirm(`删除 API 预设 "${name}"？`)) return;
+    const presets = JSON.parse(localStorage.getItem(PRESETS_KEY) || '{}');
+    delete presets[name];
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+    loadPresetsToUI();
+    if (typeof showToast === 'function') showToast('已删除 · Deleted');
+};
+
+/* =========================================
+   Voice Presets
+   ========================================= */
+function loadVoicePresetsToUI() {
+    const sel = document.getElementById('voice-preset-select');
+    if (!sel) return;
+    const presets = JSON.parse(localStorage.getItem(VOICE_PRESETS_KEY) || '{}');
+    sel.innerHTML = '<option value="">── 选择语音配置 ──</option>';
+    Object.keys(presets).forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k; opt.text = k;
+        sel.appendChild(opt);
+    });
+}
+
+window.saveVoicePreset = function() {
+    const name = (document.getElementById('voice-preset-name')?.value || '').trim();
+    if (!name) { if (typeof showToast === 'function') showToast('请输入预设名称'); return; }
+    const preset = {
+        voiceApiKey: document.getElementById('voiceApiKeyInput')?.value || '',
+        voiceGroupId: document.getElementById('voiceGroupIdInput')?.value || '',
+        voiceModel: document.getElementById('voice-model-select')?.value || ''
+    };
+    const presets = JSON.parse(localStorage.getItem(VOICE_PRESETS_KEY) || '{}');
+    presets[name] = preset;
+    localStorage.setItem(VOICE_PRESETS_KEY, JSON.stringify(presets));
+    document.getElementById('voice-preset-name').value = '';
+    loadVoicePresetsToUI();
+    if (typeof showToast === 'function') showToast(`语音预设 "${name}" 已保存 ✓`);
+};
+
+window.applyVoicePreset = function() {
+    const sel = document.getElementById('voice-preset-select');
+    const name = sel ? sel.value : '';
+    if (!name) return;
+    const presets = JSON.parse(localStorage.getItem(VOICE_PRESETS_KEY) || '{}');
+    const p = presets[name];
+    if (!p) return;
+    const vak = document.getElementById('voiceApiKeyInput');
+    const vgk = document.getElementById('voiceGroupIdInput');
+    const vms = document.getElementById('voice-model-select');
+    if (vak) vak.value = p.voiceApiKey || '';
+    if (vgk) vgk.value = p.voiceGroupId || '';
+    if (vms && p.voiceModel) {
+        let found = false;
+        for (let i = 0; i < vms.options.length; i++) {
+            if (vms.options[i].value === p.voiceModel) { found = true; break; }
+        }
+        if (!found) {
+            const opt = document.createElement('option');
+            opt.value = p.voiceModel; opt.text = p.voiceModel;
+            vms.appendChild(opt);
+        }
+        vms.value = p.voiceModel;
+    }
+    if (typeof showToast === 'function') showToast(`已应用语音预设：${name}`);
+};
+
+window.deleteVoicePreset = function() {
+    const sel = document.getElementById('voice-preset-select');
+    const name = sel ? sel.value : '';
+    if (!name) { if (typeof showToast === 'function') showToast('请先选择一个预设'); return; }
+    if (!confirm(`删除语音预设 "${name}"？`)) return;
+    const presets = JSON.parse(localStorage.getItem(VOICE_PRESETS_KEY) || '{}');
+    delete presets[name];
+    localStorage.setItem(VOICE_PRESETS_KEY, JSON.stringify(presets));
+    loadVoicePresetsToUI();
+    if (typeof showToast === 'function') showToast('已删除 · Deleted');
+};
+
+/* =========================================
+   ImageGen Presets
+   ========================================= */
+function loadImagegenPresetsToUI() {
+    const sel = document.getElementById('imagegen-preset-select');
+    if (!sel) return;
+    const presets = JSON.parse(localStorage.getItem(IMAGEGEN_PRESETS_KEY) || '{}');
+    sel.innerHTML = '<option value="">── 选择生图配置 ──</option>';
+    Object.keys(presets).forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k; opt.text = k;
+        sel.appendChild(opt);
+    });
+}
+
+function _readImagegenFormValues() {
+    const getVal = (id, fallback = '') => { const el = document.getElementById(id); return el ? el.value : fallback; };
+    const getChecked = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
+    return {
+        naiApiKey: getVal('nai-api-key'),
+        naiModel: getVal('nai-model-select'),
+        naiSize: getVal('nai-size-select'),
+        naiSteps: getVal('nai-steps-input', '28'),
+        naiCfg: getVal('nai-cfg-input', '5'),
+        naiSampler: getVal('nai-sampler-select'),
+        naiSeed: getVal('nai-seed-input', '-1'),
+        naiQuality: getChecked('nai-quality-toggle'),
+        naiSmea: getChecked('nai-smea-toggle'),
+        naiSmeaDyn: getChecked('nai-smea-dyn-toggle'),
+        naiUcPreset: getVal('nai-uc-preset', '0'),
+        naiProxy: getVal('nai-proxy-select'),
+        naiCustomProxy: getVal('nai-custom-proxy'),
+        naiPositive: getVal('nai-default-positive'),
+        naiNegative: getVal('nai-default-negative'),
+        polApiKey: getVal('pol-api-key'),
+        polModel: getVal('pol-model-input', 'flux'),
+        polEnhance: getChecked('pol-enhance-toggle'),
+        engine: getVal('imagegen-active-engine', 'nai'),
+        offlineAuto: getChecked('imagegen-offline-auto'),
+        offlineEngine: getVal('imagegen-offline-engine', 'pollinations')
+    };
+}
+
+function _applyImagegenFormValues(p) {
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.value = v; };
+    const setChecked = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.checked = v; };
+    setVal('nai-api-key', p.naiApiKey);
+    setVal('nai-steps-input', p.naiSteps);
+    setVal('nai-cfg-input', p.naiCfg);
+    setVal('nai-seed-input', p.naiSeed);
+    setVal('nai-uc-preset', p.naiUcPreset);
+    setVal('nai-custom-proxy', p.naiCustomProxy);
+    setVal('nai-default-positive', p.naiPositive);
+    setVal('nai-default-negative', p.naiNegative);
+    setVal('pol-api-key', p.polApiKey);
+    setVal('pol-model-input', p.polModel);
+    setChecked('nai-quality-toggle', p.naiQuality);
+    setChecked('nai-smea-toggle', p.naiSmea);
+    setChecked('nai-smea-dyn-toggle', p.naiSmeaDyn);
+    setChecked('pol-enhance-toggle', p.polEnhance);
+    setChecked('imagegen-offline-auto', p.offlineAuto);
+    // selects with possible dynamic options
+    const selectMap = {
+        'nai-model-select': 'naiModel',
+        'nai-size-select': 'naiSize',
+        'nai-sampler-select': 'naiSampler',
+        'nai-proxy-select': 'naiProxy',
+        'imagegen-active-engine': 'engine',
+        'imagegen-offline-engine': 'offlineEngine'
+    };
+    Object.entries(selectMap).forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        const val = p[key];
+        if (!el || val === undefined) return;
+        let found = false;
+        for (let i = 0; i < el.options.length; i++) {
+            if (el.options[i].value === val) { found = true; break; }
+        }
+        if (!found && val) {
+            const opt = document.createElement('option');
+            opt.value = val; opt.text = val;
+            el.appendChild(opt);
+        }
+        if (val) el.value = val;
+    });
+    // Show custom proxy box if needed
+    const customProxyBox = document.getElementById('nai-custom-proxy-box');
+    if (customProxyBox) customProxyBox.style.display = (p.naiProxy === 'custom') ? 'block' : 'none';
+}
+
+window.saveImagegenPreset = function() {
+    const name = (document.getElementById('imagegen-preset-name')?.value || '').trim();
+    if (!name) { if (typeof showToast === 'function') showToast('请输入预设名称'); return; }
+    const preset = _readImagegenFormValues();
+    const presets = JSON.parse(localStorage.getItem(IMAGEGEN_PRESETS_KEY) || '{}');
+    presets[name] = preset;
+    localStorage.setItem(IMAGEGEN_PRESETS_KEY, JSON.stringify(presets));
+    document.getElementById('imagegen-preset-name').value = '';
+    loadImagegenPresetsToUI();
+    if (typeof showToast === 'function') showToast(`生图预设 "${name}" 已保存 ✓`);
+};
+
+window.applyImagegenPreset = function() {
+    const sel = document.getElementById('imagegen-preset-select');
+    const name = sel ? sel.value : '';
+    if (!name) return;
+    const presets = JSON.parse(localStorage.getItem(IMAGEGEN_PRESETS_KEY) || '{}');
+    const p = presets[name];
+    if (!p) return;
+    _applyImagegenFormValues(p);
+    if (typeof showToast === 'function') showToast(`已应用生图预设：${name}`);
+};
+
+window.deleteImagegenPreset = function() {
+    const sel = document.getElementById('imagegen-preset-select');
+    const name = sel ? sel.value : '';
+    if (!name) { if (typeof showToast === 'function') showToast('请先选择一个预设'); return; }
+    if (!confirm(`删除生图预设 "${name}"？`)) return;
+    const presets = JSON.parse(localStorage.getItem(IMAGEGEN_PRESETS_KEY) || '{}');
+    delete presets[name];
+    localStorage.setItem(IMAGEGEN_PRESETS_KEY, JSON.stringify(presets));
+    loadImagegenPresetsToUI();
+    if (typeof showToast === 'function') showToast('已删除 · Deleted');
+};
+
+/* =========================================
+   End of new preset systems
+   ========================================= */
 
 async function fetchAndPopulateModels() {
     const apiKey = document.getElementById('apiKeyInput').value;
@@ -1588,13 +1823,17 @@ function getEffectiveGreeting(friend) {
 
 window.toggleGreetingEditor = function() {
     const mode = document.getElementById('cs-greeting-mode')?.value || 'custom';
-    const box = document.getElementById('cs-greeting-custom-box');
-    setSoftDisplay(box, mode === 'custom', 'block');
+    const customBox = document.getElementById('cs-greeting-custom-box');
+    const tavernBox = document.getElementById('cs-greeting-tavern-box');
+    
+    // 让自定义框和酒馆卡框互斥显示，就不会出现两个叠在一起了
+    if (customBox) setSoftDisplay(customBox, mode === 'custom', 'block');
+    if (tavernBox) setSoftDisplay(tavernBox, mode === 'tavern', 'block');
 };
+
 window.renderGreetingListUI = function(friend) {
     const listWrap = document.getElementById('cs-greeting-list');
-    const preview = document.getElementById('cs-greeting-tavern');
-    if (!listWrap || !preview) return;
+    if (!listWrap) return;
 
     const arr = Array.isArray(friend.greetingList) ? friend.greetingList : (friend.tavernGreeting ? [friend.tavernGreeting] : []);
     const selected = Number.isInteger(friend.greetingSelected) ? friend.greetingSelected : 0;
@@ -1602,7 +1841,6 @@ window.renderGreetingListUI = function(friend) {
     listWrap.innerHTML = '';
     if (!arr.length) {
         listWrap.innerHTML = '<div style="padding:10px;color:#999;font-size:12px;">此角色卡没有可用开场白</div>';
-        preview.value = '';
         return;
     }
 
@@ -1618,14 +1856,10 @@ window.renderGreetingListUI = function(friend) {
                 const r = item.querySelector('input[type="radio"]');
                 if (r) r.checked = true;
             }
-            // 关键：在点击时只更新 friend 内存对象，不立即保存
             friend.greetingSelected = idx;
-            preview.value = txt;
         };
         listWrap.appendChild(item);
     });
-
-    preview.value = arr[selected] || arr[0] || '';
 };
 
 
@@ -2502,9 +2736,10 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
 
     // === 五维记忆引擎：§4 情景记忆 & §3 跨聊天记忆注入 ===
     if (currentChatType === 'single') {
-        // § 4 动态情景记忆：注入当前真实时间 + 距上次聊天时长
+        // § 4 动态情景记忆：注入当前真实时间 + 距上次聊天时长（受时间感知开关控制）
         if (typeof buildSituationalAwareness === 'function') {
-            systemPrompt += `\n\n[SITUATIONAL AWARENESS]:\n${buildSituationalAwareness(chatSettings)}`;
+            const _sa = buildSituationalAwareness(chatSettings);
+            if (_sa) systemPrompt += `\n\n[SITUATIONAL AWARENESS]:\n${_sa}`;
         }
         // § 3 跨聊天记忆互通：注入关联角色近期对话片段
         if (typeof buildLinkedMemoryContext === 'function') {
@@ -2635,6 +2870,11 @@ if (!aiReply.trim()) {
                       // ------ 单聊结果解析 (修正版：先清理结构块，再做翻译) ------
             
             let rawReply = aiReply;          // 原始完整回复
+
+            // === [图像生成] 解析并处理图像指令 (naiimag / REALIMAG / NAIIMAG) ===
+            if (typeof processImagegenFromAIReply === 'function') {
+                rawReply = await processImagegenFromAIReply(rawReply, currentChatId);
+            }
             let extractedDanmaku = [];       // 弹幕数组
             let finalTranslation = null;     // 气泡翻译文本
             let momentText = null;           // 朋友圈正文
@@ -2695,11 +2935,20 @@ if (statusMatch) {
     const statusBlock = statusMatch[1];
 
     const readStatusValue = (key) => {
-        const reg = new RegExp(`${key}[:：]\\s*(.*)`, 'i');
+        // 支持多行捕获：抓取当前字段直到下一个字段名或块结尾
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const reg = new RegExp(
+            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n[A-Za-z]+[:：]|\\n\\[STATUS_END\\]|$)`,
+            'i'
+        );
         const m = statusBlock.match(reg);
         return m ? m[1].trim() : '';
     };
 
+    // 安全防护：若聊天对象在 AI 请求期间被删除，直接跳过状态更新
+    if (!friendsData[currentChatId]) {
+        rawReply = rawReply.replace(statusRegex, '').trim();
+    } else {
     if (!friendsData[currentChatId].mindState) friendsData[currentChatId].mindState = {};
     if (typeof friendsData[currentChatId].affection !== 'number') friendsData[currentChatId].affection = 0;
 
@@ -2722,28 +2971,10 @@ if (statusMatch) {
 
     saveFriendsData();
 
-    const actionEl = document.getElementById('mind-action-val');
-    const locEl = document.getElementById('mind-location-val');
-    const weaEl = document.getElementById('mind-weather-val');
-    const kaoEl = document.getElementById('mind-kaomoji-display');
-    const murEl = document.getElementById('mind-murmur-text');
-    const secEl = document.getElementById('mind-hidden-text');
-    const darkEl = document.getElementById('mind-dark-hidden-text');
-    const bgmEl = document.getElementById('now-playing-bgm');
-    const affTextEl = document.getElementById('affection-percent-text');
-    const affFillEl = document.getElementById('affection-fill');
+    // 统一通过 refreshMindCardUI 刷新心声卡片（头像、昵称、跑马灯动画等一并同步）
+    refreshMindCardUI(currentChatId, false);
 
-    if (actionEl) actionEl.innerText = friendsData[currentChatId].mindState.action;
-    if (locEl) locEl.innerText = friendsData[currentChatId].mindState.location;
-    if (weaEl) weaEl.innerText = friendsData[currentChatId].mindState.weather;
-    if (kaoEl) kaoEl.innerText = friendsData[currentChatId].mindState.kaomoji;
-    if (murEl) murEl.innerText = friendsData[currentChatId].mindState.murmur;
-    if (secEl) secEl.innerText = friendsData[currentChatId].mindState.hiddenThought;
-    if (darkEl) darkEl.innerText = friendsData[currentChatId].mindState.darkThought;
-    if (bgmEl) bgmEl.innerText = friendsData[currentChatId].mindState.bgm;
-    if (affTextEl) affTextEl.innerText = `${friendsData[currentChatId].affection}%`;
-    if (affFillEl) affFillEl.style.width = `${friendsData[currentChatId].affection}%`;
-
+    // 更新首页音乐组件（refreshMindCardUI 不含此部分）
     const homeTitle = document.getElementById('home-music-title');
     const homeArtist = document.getElementById('home-music-artist');
     const bgmText = friendsData[currentChatId].mindState.bgm || 'No BGM';
@@ -2760,6 +2991,7 @@ if (statusMatch) {
     if (typeof saveHomeMusicText === 'function') saveHomeMusicText();
 
     rawReply = rawReply.replace(statusRegex, '').trim();
+    } // end null safety check
 }
 
 
@@ -2898,7 +3130,15 @@ if (!avatarUrl) {
                     finalContent = TransferApp.parseAndHandleAITransfer(finalContent);
                 }
                 // 1. 按换行符拆分正文 (过滤空行)
-                const textSegments = finalContent.split('\n').map(s => s.trim()).filter(s => s);
+                let textSegments = finalContent.split('\n').map(s => s.trim()).filter(s => s);
+                // 回复条数区间控制 (replyMin ~ replyMax)
+                const _replyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
+                const _replyMax = Math.max(_replyMin, parseInt(chatSettings.replyMax) || 5);
+                if (textSegments.length > _replyMax) {
+                    const _kept = textSegments.slice(0, _replyMax - 1);
+                    _kept.push(textSegments.slice(_replyMax - 1).join(' '));
+                    textSegments = _kept;
+                }
                 
                 // 2. 按换行符拆分翻译 (如果有)
                 const transSegments = finalTranslation ? finalTranslation.split('\n').map(s => s.trim()).filter(s => s) : [];
@@ -2949,7 +3189,7 @@ if (!avatarUrl) {
 // 6. 发射弹幕（保留原逻辑）
 if (isDanmakuOn && extractedDanmaku.length > 0) {
     danmakuPool = extractedDanmaku;
-    startDanmakuBatch();
+    startDanmakuBatch(0); // 线上聊天模式：立即开始发送弹幕，无需等待
 } else if (isDanmakuOn) {
     if (typeof generateDanmakuReaction === 'function') {
         generateDanmakuReaction(finalContent, 'fallback');
@@ -3327,7 +3567,7 @@ window.openChatSettingsPage = function() {
 const greetingMode = friend.greetingMode || (friend.tavernGreeting ? 'tavern' : 'custom');
 document.getElementById('cs-greeting-mode').value = greetingMode;
 document.getElementById('cs-greeting-custom').value = friend.greetingCustom || friend.greeting || '';
-document.getElementById('cs-greeting-tavern').value = friend.tavernGreeting || '';
+
 toggleGreetingEditor();
 renderGreetingListUI(friend);
 
@@ -3451,14 +3691,40 @@ renderGreetingListUI(friend);
     // 【修复5】渲染允许使用的表情包复选框
     renderChatSettingsStickerCheckboxes();
 
+    // === [图像生成] 加载角色专属提示词 ===
+    if (typeof loadCharImagegenSettings === 'function') {
+        loadCharImagegenSettings();
+    }
 
     // 记忆互通 UI 渲染
     if (typeof renderLinkMemoryUI === 'function') {
         renderLinkMemoryUI();
     }
 
+    // --- [新增] 填充记录管理 / 时间感知 / 回复条数 ---
+    const timeAwarenessToggle = document.getElementById('cs-time-awareness-toggle');
+    if (timeAwarenessToggle) {
+        const timeOn = settings.timeAwareness !== undefined ? settings.timeAwareness : true;
+        timeAwarenessToggle.checked = timeOn;
+        const customBox = document.getElementById('cs-custom-time-box');
+        if (customBox) customBox.style.display = timeOn ? 'none' : 'block';
+        const customInput = document.getElementById('cs-custom-time-input');
+        if (customInput) customInput.value = settings.customTime || '';
+    }
+    const replyMinEl = document.getElementById('cs-reply-min');
+    const replyMaxEl = document.getElementById('cs-reply-max');
+    if (replyMinEl) replyMinEl.value = settings.replyMin !== undefined ? settings.replyMin : 1;
+    if (replyMaxEl) replyMaxEl.value = settings.replyMax !== undefined ? settings.replyMax : 5;
+
     // 最后显示页面 (滑入动画)
     page.classList.add('show');
+
+    // --- [桌宠] 同步悬浮桌宠设置到 UI ---
+    if (typeof FloatPet !== 'undefined' && typeof FloatPet.syncToSettings === 'function') {
+        const csCharId = document.getElementById('cs-char-id');
+        if (csCharId) csCharId.value = currentChatId;
+        FloatPet.syncToSettings(currentChatId);
+    }
 }
 
 // 2. 关闭设置页面
@@ -3467,6 +3733,210 @@ window.closeChatSettingsPage = function() {
     if (page) page.classList.remove('show');
     setTimeout(() => { page.style.zIndex = "300"; }, 400);
 }
+
+// =========================================
+//  记录管理 & 搜索功能 (单人聊天设置)
+// =========================================
+
+// 切换自定义时间框的显示/隐藏（时间感知开关 onchange 回调）
+window.toggleCustomTimeBox = function(checkbox) {
+    const box = document.getElementById('cs-custom-time-box');
+    if (!box) return;
+    box.style.display = checkbox.checked ? 'none' : 'block';
+};
+
+// 导入聊天记录（从 JSON 文件）
+window.importChatHistoryFromSettings = async function(input) {
+    if (!input.files || !input.files[0]) return;
+    if (!currentChatId) { showToast('请先打开一个聊天'); input.value = ''; return; }
+    const file = input.files[0];
+    input.value = '';
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        // 兼容数组格式和包装格式
+        let history = Array.isArray(data) ? data : (data.history || data.messages || []);
+        if (!Array.isArray(history) || history.length === 0) {
+            showToast('文件格式不正确或记录为空'); return;
+        }
+        if (!confirm(`确定导入 ${history.length} 条记录？当前聊天记录将被覆盖。`)) return;
+        const histKey = (typeof scopedChatKey === 'function') ? scopedChatKey(currentChatId) : currentChatId;
+        await IDB.set(histKey, history);
+        showToast(`成功导入 ${history.length} 条记录 ✓`);
+        if (typeof openChatDetail === 'function') openChatDetail(currentChatId);
+    } catch (e) {
+        showToast('导入失败: ' + e.message);
+    }
+};
+
+// 导出当前角色的聊天记录为 JSON
+window.exportChatHistoryFromSettings = async function() {
+    if (!currentChatId) { showToast('请先打开一个聊天'); return; }
+    try {
+        let history = [];
+        if (typeof loadChatHistory === 'function') {
+            history = await loadChatHistory(currentChatId) || [];
+        } else {
+            const histKey = (typeof scopedChatKey === 'function') ? scopedChatKey(currentChatId) : currentChatId;
+            history = await IDB.get(histKey) || [];
+        }
+        if (history.length === 0) { showToast('当前聊天记录为空'); return; }
+        const friend = friendsData[currentChatId] || {};
+        const exportData = {
+            chatId: currentChatId,
+            characterName: friend.remark || friend.realName || currentChatId,
+            exportTime: new Date().toISOString(),
+            history: history
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const charName = friend.remark || friend.realName || currentChatId;
+        a.download = `chat_${charName}_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.json`;
+        a.href = url;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(`已导出 ${history.length} 条记录 ✓`);
+    } catch (e) {
+        showToast('导出失败: ' + e.message);
+    }
+};
+
+// 打开聊天搜索页
+window.openChatSearch = function() {
+    const page = document.getElementById('chatSearchPage');
+    if (!page) return;
+    // 重置搜索状态
+    const kw = document.getElementById('search-keyword-input');
+    if (kw) kw.value = '';
+    const sp = document.getElementById('search-speaker-select');
+    if (sp) sp.value = 'all';
+    const dt = document.getElementById('search-date-input');
+    if (dt) dt.value = '';
+    const results = document.getElementById('chat-search-results');
+    if (results) results.innerHTML = `<div style="text-align:center;color:#ccc;font-size:13px;padding:40px 0;">
+        <i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:0.3;"></i>
+        输入关键词开始搜索</div>`;
+    page.classList.add('show');
+};
+
+// 关闭聊天搜索页
+window.closeChatSearch = function() {
+    const page = document.getElementById('chatSearchPage');
+    if (page) page.classList.remove('show');
+};
+
+// 执行聊天搜索
+window.performChatSearch = async function() {
+    const keyword = (document.getElementById('search-keyword-input')?.value || '').trim().toLowerCase();
+    const speaker = document.getElementById('search-speaker-select')?.value || 'all';
+    const dateStr = document.getElementById('search-date-input')?.value || '';
+    const container = document.getElementById('chat-search-results');
+    if (!container) return;
+
+    if (!keyword && !dateStr && speaker === 'all') {
+        container.innerHTML = `<div style="text-align:center;color:#ccc;font-size:13px;padding:40px 0;">
+            <i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:0.3;"></i>
+            输入关键词开始搜索</div>`;
+        return;
+    }
+    if (!currentChatId) {
+        container.innerHTML = `<div style="text-align:center;color:#ccc;font-size:13px;padding:20px;">请先打开一个聊天</div>`;
+        return;
+    }
+
+    let history = [];
+    try {
+        if (typeof loadChatHistory === 'function') {
+            history = await loadChatHistory(currentChatId) || [];
+        }
+    } catch (e) {}
+
+    const friend = friendsData[currentChatId] || {};
+    const charName = friend.remark || friend.realName || 'TA';
+
+    // 筛选
+    let results = [];
+    history.forEach((msg, idx) => {
+        if (msg.type === 'system' || msg.type === 'summary') return;
+        if (speaker === 'sent' && msg.type !== 'sent') return;
+        if (speaker === 'received' && msg.type !== 'received') return;
+        if (dateStr && msg.timestamp) {
+            const msgDate = new Date(msg.timestamp).toISOString().slice(0, 10);
+            if (msgDate !== dateStr) return;
+        }
+        if (keyword) {
+            const textLower = (msg.text || '').toLowerCase();
+            if (!textLower.includes(keyword)) return;
+        }
+        results.push({ ...msg, _origIdx: idx });
+    });
+
+    if (results.length === 0) {
+        container.innerHTML = `<div style="text-align:center;color:#ccc;font-size:13px;padding:40px 0;">
+            <i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:0.3;"></i>
+            未找到相关内容</div>`;
+        return;
+    }
+
+    const highlight = (text, kw) => {
+        if (!kw) return text;
+        const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark style="background:#ffe58f;border-radius:2px;padding:0 1px;">$1</mark>');
+    };
+
+    const pad = n => String(n).padStart(2, '0');
+    container.innerHTML = `<div style="font-size:11px;color:#aaa;margin-bottom:12px;padding:0 2px;">共找到 ${results.length} 条结果</div>` +
+        results.map((msg) => {
+            const isSent = msg.type === 'sent';
+            const name = isSent ? '我' : charName;
+            const avatar = isSent
+                ? (personasMeta && personasMeta[currentPersonaId]?.avatar ? personasMeta[currentPersonaId].avatar : '')
+                : (friend.avatar || '');
+            const timeStr = msg.timestamp ? (() => {
+                const d = new Date(msg.timestamp);
+                return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            })() : '';
+            const rawText = (msg.text || '').substring(0, 200) + ((msg.text || '').length > 200 ? '...' : '');
+            const displayText = highlight(rawText.replace(/</g,'&lt;').replace(/>/g,'&gt;'), keyword);
+            const origIdx = msg._origIdx;
+
+            return `<div class="sk-summary-item" style="cursor:pointer;margin-bottom:8px;" onclick="jumpToSearchResult(${origIdx})">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+                    ${avatar
+                        ? `<img src="${avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+                        : `<div style="width:24px;height:24px;border-radius:50%;background:#eee;flex-shrink:0;"></div>`}
+                    <span style="font-size:12px;font-weight:700;color:#333;">${name}</span>
+                    <span style="font-size:10px;color:#aaa;margin-left:auto;">${timeStr}</span>
+                </div>
+                <div style="font-size:13px;color:#555;line-height:1.5;padding-left:32px;">${displayText}</div>
+            </div>`;
+        }).join('');
+};
+
+// 跳转到搜索结果对应的消息位置
+window.jumpToSearchResult = function(msgIndex) {
+    closeChatSearch();
+    closeChatSettingsPage();
+    setTimeout(() => {
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+        const allRows = chatMessages.querySelectorAll('.chat-row');
+        // msgIndex 对应的是历史记录数组索引，DOM 中的气泡行与之大致对应
+        const target = allRows[msgIndex] || allRows[allRows.length - 1];
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 高亮闪烁效果
+            const bubble = target.querySelector('.message-bubble');
+            if (bubble) {
+                const origBg = bubble.style.background;
+                bubble.style.transition = 'background 0.3s';
+                bubble.style.background = 'rgba(255, 229, 100, 0.6)';
+                setTimeout(() => { bubble.style.background = origBg || ''; }, 2000);
+            }
+        }
+    }, 350);
+};
 
 // 3. 聊天设置头像上传处理器 (关键修复：cs-avatar-upload 的 onchange 目标)
 window.handleCsAvatarUpload = async function(input) {
@@ -3592,6 +4062,17 @@ window.saveChatSettings = async function() {
     friend.chatSettings.voiceSpeed = parseFloat(document.getElementById('cs-voice-speed').value) || 1.0;
     friend.chatSettings.voiceLang = document.getElementById('cs-voice-lang').value;
 
+    // [新增] 时间感知 & 回复条数
+    const taEl = document.getElementById('cs-time-awareness-toggle');
+    friend.chatSettings.timeAwareness = taEl ? taEl.checked : true;
+    const ctEl = document.getElementById('cs-custom-time-input');
+    friend.chatSettings.customTime = ctEl ? ctEl.value.trim() : '';
+    const rmn = document.getElementById('cs-reply-min');
+    const rmx = document.getElementById('cs-reply-max');
+    friend.chatSettings.replyMin = rmn ? Math.max(1, parseInt(rmn.value) || 1) : 1;
+    friend.chatSettings.replyMax = rmx ? Math.max(1, parseInt(rmx.value) || 5) : 5;
+    if (friend.chatSettings.replyMin > friend.chatSettings.replyMax) friend.chatSettings.replyMax = friend.chatSettings.replyMin;
+
  const selectedStickers = document.querySelectorAll('#cs-sticker-categories input[type="checkbox"]:checked');
     friend.chatSettings.activeStickers = Array.from(selectedStickers).map(cb => cb.value);
     // 恢复记忆引擎持久字段（lastChatTime 不受保存操作影响）
@@ -3601,6 +4082,10 @@ window.saveChatSettings = async function() {
         friend.chatSettings.linkMemory = getLinkMemoryConfig();
     } else if (_prevLinkMemory) {
         friend.chatSettings.linkMemory = _prevLinkMemory;
+    }
+    // === [图像生成] 保存角色专属提示词 ===
+    if (typeof saveCharImagegenSettings === 'function') {
+        saveCharImagegenSettings();
     }
     // [关键] 3. 在所有数据更新后，获取新的有效开场白
     const newGreeting = getEffectiveGreeting(friend);

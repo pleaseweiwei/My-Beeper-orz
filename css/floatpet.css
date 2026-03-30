@@ -1,0 +1,450 @@
+/* =============================================
+   悬浮桌宠 v3 · Floating Desktop Pet
+   PNG精灵 · 随机行走 · 对话框跟随头顶
+   ============================================= */
+
+/* ── Wrapper (covers full phone, overflow visible for bubble) ── */
+#float-pet-wrap {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 8000;
+    overflow: visible;
+}
+
+/* ══════════════════════════════════════
+   Pet Body — positioned by walk engine
+   ══════════════════════════════════════ */
+#float-pet-body {
+    position: absolute;
+    width: 72px;
+    pointer-events: all;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    /* No transition on left/top — walk engine drives them at 60fps */
+}
+
+#float-pet-body.fp-dragging {
+    cursor: grabbing;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.28));
+}
+
+/* ══════════════════════════════════════
+   Speech Bubble — ALWAYS above sprite
+   bottom: calc(100% + 8px) positions it
+   just above #float-pet-body's height.
+   ══════════════════════════════════════ */
+.fp-bubble {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.78) translateY(12px);
+    transform-origin: bottom center;
+
+    max-width: 192px;
+    min-width: 76px;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px 14px 14px 4px;
+    padding: 10px 13px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.14),
+        0 0 0 1px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    font-size: 12px;
+    line-height: 1.65;
+    color: #1a1a1a;
+    font-weight: 500;
+    word-break: break-all;
+    pointer-events: none;
+    opacity: 0;
+    white-space: pre-line;
+    z-index: 8002;
+    transition: opacity 0.22s ease,
+                transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.fp-bubble.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1) translateY(0);
+}
+
+/* Tail — points down-left by default */
+.fp-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 18px;
+    border-right: 8px solid transparent;
+    border-top: 8px solid rgba(255, 255, 255, 0.97);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.06));
+}
+
+/* When pet is on right side → bubble tail on right */
+.fp-bubble.fp-bubble-right {
+    border-radius: 14px 14px 4px 14px;
+    left: auto;
+    right: 50%;
+    transform: translateX(50%) scale(0.78) translateY(12px);
+    transform-origin: bottom center;
+}
+.fp-bubble.fp-bubble-right.show {
+    transform: translateX(50%) scale(1) translateY(0);
+}
+.fp-bubble.fp-bubble-right::after {
+    left: auto;
+    right: 18px;
+    border-right: 0;
+    border-left: 8px solid transparent;
+}
+
+/* When pet is near top → bubble appears BELOW sprite (avoids overflow:hidden clip) */
+.fp-bubble.fp-bubble-below {
+    bottom: auto;
+    top: calc(100% + 8px);
+    transform-origin: top center;
+    transform: translateX(-50%) scale(0.78) translateY(-12px);
+}
+.fp-bubble.fp-bubble-below.show {
+    transform: translateX(-50%) scale(1) translateY(0);
+}
+/* Tail points UP when bubble is below sprite */
+.fp-bubble.fp-bubble-below::after {
+    bottom: auto;
+    top: -8px;
+    left: 18px;
+    border-top: none;
+    border-bottom: 8px solid rgba(255, 255, 255, 0.97);
+}
+/* right + below combo */
+.fp-bubble.fp-bubble-right.fp-bubble-below {
+    left: auto;
+    right: 50%;
+    transform: translateX(50%) scale(0.78) translateY(-12px);
+    transform-origin: top center;
+}
+.fp-bubble.fp-bubble-right.fp-bubble-below.show {
+    transform: translateX(50%) scale(1) translateY(0);
+}
+.fp-bubble.fp-bubble-right.fp-bubble-below::after {
+    left: auto;
+    right: 18px;
+    border-left: 8px solid transparent;
+    border-right: 0;
+}
+
+/* ══════════════════════════════════════
+   Sprite Container
+   ══════════════════════════════════════ */
+.fp-sprite-wrap {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    cursor: grab;
+    -webkit-tap-highlight-color: transparent;
+}
+.fp-sprite-wrap:active { cursor: grabbing; }
+
+/* ── Inner image wrap — handles idle float animation ── */
+.fp-sprite-img-wrap {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Idle floating animation on the wrap (translateY only) */
+#float-pet-body.fp-walk-idle .fp-sprite-img-wrap {
+    animation: fp-sprite-float 3.4s ease-in-out infinite;
+}
+@keyframes fp-sprite-float {
+    0%, 100% { transform: translateY(0px);  }
+    50%       { transform: translateY(-6px); }
+}
+
+/* ── PNG Sprite Image — handles scaleX flip ── */
+.fp-sprite-img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    object-position: center bottom;
+    display: block;
+    pointer-events: none;
+    image-rendering: auto;
+    /* Smooth flip transition */
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.16));
+}
+
+/* Facing left — mirror horizontally */
+.fp-sprite-img.fp-face-left {
+    transform: scaleX(-1);
+}
+
+/* Scanning glow on sprite */
+#float-pet-body.fp-scanning .fp-sprite-img {
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.16))
+            drop-shadow(0 0 14px rgba(255, 126, 103, 0.55));
+}
+
+/* ── Emoji sprite (when style = emoji) ── */
+.fp-sprite-emoji {
+    font-size: 46px;
+    line-height: 1;
+    pointer-events: none;
+    display: block;
+    text-align: center;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+}
+
+/* ══════════════════════════════════════
+   Observe / Scan Icon  (above sprite)
+   ══════════════════════════════════════ */
+.fp-observe-icon {
+    position: absolute;
+    top: -26px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 18px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.18));
+    z-index: 3;
+}
+.fp-observe-icon.active {
+    opacity: 1;
+    animation: fp-bounce-up 0.55s ease-in-out infinite alternate;
+}
+@keyframes fp-bounce-up {
+    from { transform: translateX(-50%) translateY(0)   scale(1);    }
+    to   { transform: translateX(-50%) translateY(-8px) scale(1.12); }
+}
+
+/* ══════════════════════════════════════
+   Scan Rings  (pulse outward from sprite)
+   ══════════════════════════════════════ */
+.fp-scan-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2.5px solid #ff7e67;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s;
+    z-index: 1;
+}
+.fp-scan-ring.active {
+    opacity: 1;
+    animation: fp-ring-pulse 1s ease-in-out infinite;
+}
+.fp-scan-ring-2 {
+    position: absolute;
+    inset: -16px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 126, 103, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s;
+    z-index: 1;
+}
+.fp-scan-ring-2.active {
+    opacity: 1;
+    animation: fp-ring-pulse 1s ease-in-out 0.28s infinite;
+}
+@keyframes fp-ring-pulse {
+    0%, 100% { transform: scale(1);    opacity: 0.9;  }
+    50%      { transform: scale(1.4);  opacity: 0.06; }
+}
+
+/* ── Online dot ── */
+.fp-live-dot {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 10px;
+    height: 10px;
+    background: #07c160;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    pointer-events: none;
+    z-index: 4;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+    transition: background 0.3s;
+}
+#float-pet-body.fp-scanning .fp-live-dot {
+    background: #ff7e67;
+    animation: fp-dot-blink 0.65s ease-in-out infinite;
+}
+@keyframes fp-dot-blink {
+    0%, 100% { transform: scale(1);    opacity: 1;    }
+    50%      { transform: scale(1.45); opacity: 0.55; }
+}
+
+/* ══════════════════════════════════════
+   Camera Flash  (attached to .phone)
+   ══════════════════════════════════════ */
+.fp-camera-flash {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0);
+    pointer-events: none;
+    z-index: 8500;
+    border-radius: inherit;
+}
+.fp-camera-flash.fp-flash-go {
+    animation: fp-flash-anim 0.48s ease-out forwards;
+}
+@keyframes fp-flash-anim {
+    0%   { background: rgba(255, 255, 255, 0);    }
+    12%  { background: rgba(255, 255, 255, 0.82); }
+    100% { background: rgba(255, 255, 255, 0);    }
+}
+
+/* ══════════════════════════════════════
+   Thinking dots  (3-dot bounce)
+   ══════════════════════════════════════ */
+.fp-thinking-dots {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 2px 0;
+}
+.fp-thinking-dots span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ccc;
+    animation: fp-dot-bounce 1.1s ease-in-out infinite;
+}
+.fp-thinking-dots span:nth-child(1) { animation-delay: 0s;    }
+.fp-thinking-dots span:nth-child(2) { animation-delay: 0.18s; }
+.fp-thinking-dots span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes fp-dot-bounce {
+    0%, 80%, 100% { transform: scale(0.55); opacity: 0.4; }
+    40%           { transform: scale(1.25); opacity: 1;   }
+}
+
+/* ══════════════════════════════════════
+   聊天设置中的桌宠配置区
+   ══════════════════════════════════════ */
+.fp-cs-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    color: #ff7e67;
+    background: rgba(255, 126, 103, 0.1);
+    border: 1px solid rgba(255, 126, 103, 0.25);
+    border-radius: 6px;
+    padding: 2px 6px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.fp-chip-row {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.fp-chip {
+    background: #f5f5f7;
+    border: 1.5px solid transparent;
+    border-radius: 10px;
+    padding: 6px 13px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.16s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+.fp-chip:active { transform: scale(0.93); }
+.fp-chip.fp-sel {
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #1a1a1a;
+}
+.fp-chip.fp-sel-warm {
+    background: #ff7e67;
+    color: #fff;
+    border-color: #ff7e67;
+}
+
+.fp-sub-hint {
+    font-size: 11px;
+    color: #bbb;
+    line-height: 1.55;
+    margin-top: 8px;
+}
+
+.fp-preview-strip {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f9f9f9;
+    border-radius: 14px;
+    padding: 12px 14px;
+    border: 1px solid #f0f0f0;
+}
+.fp-preview-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #eee;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-size: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.fp-preview-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+.fp-preview-bubble-text {
+    font-size: 11.5px;
+    color: #333;
+    line-height: 1.55;
+    background: #fff;
+    border-radius: 10px 10px 3px 10px;
+    padding: 8px 10px;
+    flex: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* cs-input 复用 */
+.cs-input {
+    width: 100%;
+    border: 1.5px solid #eee;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    outline: none;
+    background: #fafafa;
+    color: #333;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.cs-input:focus {
+    border-color: #aaa;
+    background: #fff;
+}

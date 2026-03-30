@@ -31,6 +31,8 @@
     <link rel="stylesheet" href="css/modules.css">
     <link rel="stylesheet" href="css/galgame.css">
     <link rel="stylesheet" href="css/tracker.css">
+    <link rel="stylesheet" href="css/novel.css">
+    <link rel="stylesheet" href="css/floatpet.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
@@ -148,7 +150,7 @@
 </div>
 
 
-            <div class="app-cell" data-app-id="novel"><div class="icon-box"><i class="fas fa-book-open"></i></div><span class="app-label">Novel</span></div>
+            <div class="app-cell" data-app-id="novel" onclick="openNovelApp()"><div class="icon-box"><i class="fas fa-book-open"></i></div><span class="app-label">Novel</span></div>
         </div>
     </div>
 
@@ -690,251 +692,389 @@
                 </div>
             </div>
             
-            <div class="settings-content">
+                                   <div class="settings-content">
                 
-                <!-- Tab 1: AI 设置 -->
+                <!-- ==========================================
+                     Tab 1: AI 设置 (完整版 + 韩系高级布局)
+                     ========================================== -->
                 <div id="tab-content-ai" class="tab-content active">
-                    <div class="form-group">
-                        <label>API 服务商</label>
-                        <select id="api-provider-select">
-                            <option value="custom">自定义 / NewAPI</option>
-                            <option value="gemini">Google Gemini</option>
-                            <option value="claude">Anthropic Claude</option>
-                            <option value="deepseek">DeepSeek</option>
-                            <option value="minimax">Minimax (国内)</option>
-                            <option value="minimax_global">Minimax (海外)</option>
-                        </select>
+
+                  <!-- ═══ CONNECTION ═══ -->
+                  <div class="stg-label">CONNECTION <span class="stg-cn">接口配置</span></div>
+                  <div class="stg-card">
+                    <div class="form-group stg-flex-row">
+                      <label>服务商 (Provider)</label>
+                      <select id="api-provider-select">
+                        <option value="custom">自定义 / NewAPI</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="claude">Anthropic Claude</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="minimax">Minimax (国内)</option>
+                        <option value="minimax_global">Minimax (海外)</option>
+                      </select>
                     </div>
-                    <div class="form-group">
-                        <label>API Key</label>
-                        <input type="password" id="apiKeyInput" placeholder="请输入你的 API Key">
+                    <div class="form-group stg-flex-row">
+                      <label>API Key</label>
+                      <input type="password" id="apiKeyInput" placeholder="输入 Key">
                     </div>
-                    <div class="form-group" id="api-groupid-group" style="display:none;">
-                        <label>Group ID (Minimax 需要)</label>
-                        <input type="text" id="apiGroupIdInput" placeholder="请输入 Group ID">
+                    <div class="form-group stg-flex-row" id="api-groupid-group" style="display:none;">
+                      <label>Group ID</label>
+                      <input type="text" id="apiGroupIdInput" placeholder="仅 Minimax">
                     </div>
-                    <div class="form-group" id="api-endpoint-group">
-                        <label>API Base URL</label>
-                        <input type="text" id="apiEndpointInput" placeholder="https://api.example.com">
+                    <div class="form-group stg-flex-row" id="api-endpoint-group">
+                      <label>Base URL</label>
+                      <input type="text" id="apiEndpointInput" placeholder="https://...">
+                    </div>
+                    <div class="form-group stg-flex-row">
+                      <label>聊天模型 (Model)</label>
+                      <div class="input-with-button">
+                        <select id="model-select"></select>
+                        <button id="fetch-models-btn" type="button"><i class="fas fa-sync-alt"></i></button>
+                      </div>
+                    </div>
+                    <div class="form-group stg-flex-row">
+                      <label>发散度 (Temp) <span id="temperature-value" style="font-weight:800; color:#222; margin-left:6px;">0.7</span></label>
+                      <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7" style="width: 50%;">
                     </div>
                     
-                    <div class="form-group">
-                        <label>Model</label>
-                        <div class="input-with-button">
-                            <select id="model-select"></select>
-                            <button id="fetch-models-btn" type="button"><i class="fas fa-sync-alt"></i></button>
-                        </div>
+                    <!-- 预设区域 -->
+                    <div class="stg-preset-zone">
+                      <div class="stg-preset-zone-label">API 快速配置预设</div>
+                      <div class="stg-preset-row">
+                        <select id="preset-select"><option value="">── 选择已保存配置 ──</option></select>
+                        <button class="stg-ps-btn stg-ps-del" onclick="deleteApiPreset()" title="删除预设"><i class="fas fa-trash"></i></button>
+                      </div>
+                      <div class="stg-preset-save-row">
+                        <input type="text" id="preset-name-input" placeholder="保存为新预设...">
+                        <button id="save-preset-btn" type="button" class="stg-ps-btn stg-ps-save">保存</button>
+                      </div>
                     </div>
-                    <div class="form-group">
-                        <label>Temperature: <span id="temperature-value">0.7</span></label>
-                        <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7">
+                  </div>
+
+                  <!-- ═══ VOICE TTS ═══ -->
+                  <div class="stg-label">VOICE TTS <span class="stg-cn">语音合成</span></div>
+                  <div class="stg-card">
+                    <div class="form-group stg-flex-row">
+                      <label>Voice API Key</label>
+                      <input type="password" id="voiceApiKeyInput" placeholder="MiniMax Key">
                     </div>
-
-                    <hr class="settings-divider">
-
-                                        <div class="settings-section-title" style="margin-bottom: 10px;">语音合成 API (TTS)</div>
-                    <!-- 新增：专属于MiniMax语音的 API 鉴权配置 -->
-                    <div class="form-group" style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom: 15px;">
-                        <div style="font-size:11px; color:#888; margin-bottom:10px;">
-                            <i class="fas fa-info-circle"></i> 语音接口需使用 MiniMax 开放平台专属凭证。
-                        </div>
-                        <label>语音 API Key</label>
-                        <input type="password" id="voiceApiKeyInput" placeholder="输入 MiniMax 语音 API Key" style="margin-bottom: 10px;">
-                        
-                        <label>语音 Group ID</label>
-                        <input type="text" id="voiceGroupIdInput" placeholder="输入 MiniMax 团队 Group ID">
+                    <div class="form-group stg-flex-row">
+                      <label>Voice Group ID</label>
+                      <input type="text" id="voiceGroupIdInput" placeholder="Team ID">
                     </div>
-
-                    <div class="form-group">
-                        <label>Voice Model</label>
-                        <div class="input-with-button">
-                            <select id="voice-model-select">
-                                <option value="speech-01-turbo">speech-01-turbo</option>
-                            </select>
-                            <button id="fetch-voice-models-btn" onclick="fetchAndPopulateVoiceModels()" type="button" title="拉取语音模型"><i class="fas fa-sync-alt"></i></button>
-                        </div>
-                    </div>
-
-
-                    <hr class="settings-divider">
-
-                    <div class="form-group">
-                        <label>加载预设 (Load Preset)</label>
-                        <select id="preset-select">
-                            <option value="">-- 选择一个预设 --</option>
+                    <div class="form-group stg-flex-row">
+                      <label>语音模型</label>
+                      <div class="input-with-button">
+                        <select id="voice-model-select">
+                          <option value="speech-01-turbo">speech-01-turbo</option>
                         </select>
+                        <button id="fetch-voice-models-btn" onclick="fetchAndPopulateVoiceModels()" type="button"><i class="fas fa-sync-alt"></i></button>
+                      </div>
                     </div>
-                    <div class="form-group">
-                        <label>保存当前为新预设</label>
-                        <div class="input-with-button">
-                            <input type="text" id="preset-name-input" placeholder="例如 '翻译助手'">
-                            <button id="save-preset-btn" type="button">Save</button>
-                        </div>
+                    <div class="stg-preset-zone">
+                      <div class="stg-preset-zone-label">语音预设</div>
+                      <div class="stg-preset-row">
+                        <select id="voice-preset-select"><option value="">── 选择语音配置 ──</option></select>
+                        <button class="stg-ps-btn stg-ps-del" onclick="deleteVoicePreset()"><i class="fas fa-trash"></i></button>
+                      </div>
+                      <div class="stg-preset-save-row">
+                        <input type="text" id="voice-preset-name" placeholder="保存为新预设...">
+                        <button class="stg-ps-btn stg-ps-save" onclick="saveVoicePreset()">保存</button>
+                      </div>
                     </div>
-                                        <!-- === 新增：全量数据备份与恢复入口 (完美适配现有的灰色主题) === -->
-                    <hr class="settings-divider">
-                    <div class="form-group">
-                        <label>全量数据存档与恢复</label>
-                        <div style="display:flex; gap:10px;">
-                            <button type="button" class="btn-secondary" onclick="exportFullAppData()">
-                                <i class="fas fa-file-export"></i> 导出存档
-                            </button>
-                            <label class="btn-secondary file-btn" style="margin:0;">
-                                <i class="fas fa-file-import"></i> 导入恢复
-                                <input type="file" id="import-full-data-input" accept=".json" style="display:none;" onchange="importFullAppData(this)">
-                            </label>
-                        </div>
-                        <div class="form-text">打包所有的聊天记录、人设、图库和配置，生成 JSON 文件。</div>
+                  </div>
+
+                                    <!-- ═══ IMAGE GEN · 图像生成 (极简傻瓜版) ═══ -->
+                  <div class="stg-label">IMAGE GEN <span class="stg-cn">智能配图</span></div>
+                  <div class="stg-card">
+
+                    <!-- 核心极简开关 -->
+                    <div class="stg-toggle-row">
+                      <div>
+                        <div class="stg-tr-title">沉浸式自动配图</div>
+                        <div class="stg-tr-sub">聊天时 AI 自动为您绘制场景插画</div>
+                      </div>
+                      <label class="switch" style="margin:0; flex-shrink:0;">
+                        <input type="checkbox" id="imagegen-offline-auto">
+                        <span class="slider round"></span>
+                      </label>
                     </div>
 
-                    <button id="save-settings-btn" class="btn-save">保存所有设置</button>
-<hr class="settings-divider">
-                    <div class="form-group">
-                        <label>系统维护</label>
-                        <button type="button" class="btn-secondary" onclick="forceUpdateAppLossless()" style="width: 100%;">
-                            <i class="fas fa-sync-alt"></i> 无损检测并更新应用 (不丢数据)
-                        </button>
-                        <div class="form-text">当网页在手机上和电脑预览不一致时点击</div>
+                    <!-- 引擎选择 (隐式同步线下引擎) -->
+                    <div class="form-group stg-flex-row">
+                      <label>生图引擎</label>
+                      <select id="imagegen-active-engine" onchange="document.getElementById('imagegen-offline-engine').value = this.value; document.getElementById('simple-nai-panel').style.display = (this.value === 'nai') ? 'block' : 'none'; document.getElementById('simple-pol-panel').style.display = (this.value === 'pollinations') ? 'block' : 'none';">
+                        <option value="pollinations">Pollinations (免费免配 / 推荐)</option>
+                        <option value="nai">NovelAI (二次元专业 / 需 Key)</option>
+                      </select>
+                      <!-- 隐藏的同步选择器，保证底层代码不出错 -->
+                      <select id="imagegen-offline-engine" style="display:none;">
+                          <option value="pollinations">Pollinations</option>
+                          <option value="nai">NovelAI</option>
+                      </select>
+                    </div>
 
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 5px;">
-                            <label style="margin:0; font-weight:500; color: #333;">开启预演删除 Meta</label>
-                            <label class="switch" style="margin: 0; transform: scale(0.9);">
-                                <input type="checkbox" id="enable-meta-delete-toggle">
+                    <!-- 1. Pollinations 极简面板 (默认显示) -->
+                    <div id="simple-pol-panel" style="display:block;">
+                      <div class="form-group stg-flex-row">
+                        <label>画面风格</label>
+                        <!-- 直接替代原来的 input，让用户傻瓜式选择 -->
+                        <select id="pol-model-input">
+                          <option value="flux">Flux (默认超清画质)</option>
+                          <option value="flux-anime">Anime (唯美二次元)</option>
+                          <option value="flux-realism">Realism (真实摄影写实)</option>
+                          <option value="flux-3d">3D (立体材质渲染)</option>
+                          <option value="turbo">Turbo (极速出图模式)</option>
+                        </select>
+                      </div>
+                      <div class="stg-toggle-row" style="border-bottom:none;">
+                        <div class="stg-tr-title">AI 画质强制增强</div>
+                        <label class="switch" style="margin:0;"><input type="checkbox" id="pol-enhance-toggle" checked><span class="slider round"></span></label>
+                      </div>
+                      <!-- 隐藏的秘钥输入框 (免费版通常不需要) -->
+                      <input type="hidden" id="pol-api-key" value="">
+                    </div>
+
+                    <!-- 2. NovelAI 极简面板 (按需显示) -->
+                    <div id="simple-nai-panel" style="display:none;">
+                      <div class="form-group stg-flex-row">
+                        <label>API Key</label>
+                        <input type="password" id="nai-api-key" placeholder="输入 NAI 秘钥 (pst-...)">
+                      </div>
+                      <div class="form-group stg-flex-row">
+                        <label>模型类型</label>
+                        <select id="nai-model-select"></select>
+                      </div>
+                      <div class="form-group stg-flex-row" style="border-bottom:none;">
+                        <label>画面比例</label>
+                        <select id="nai-size-select"></select>
+                      </div>
+                    </div>
+
+                    <!-- 一键测试大按钮 -->
+                    <div class="form-group" style="padding-top:0; border-bottom:none;">
+                      <button type="button" class="stg-ps-btn" onclick="openImagegenTestModal()" style="width:100%; background:#2b2b2b; color:#fff; height:46px; font-size:12px; border-radius:16px;">
+                        <i class="fas fa-magic" style="margin-right:8px; color:#ffd700;"></i> 立即测试生图
+                      </button>
+                    </div>
+
+                    <!-- ==============================================
+                         3. 极客高级设置 (默认折叠隐藏，不污染小白视野)
+                         ============================================== -->
+                    <div class="stg-collapse-hd" onclick="toggleStgSection('imagegen-advanced')">
+                      <div class="stg-ch-left" style="color:#a0a0a5; font-size:10px; font-weight:700; letter-spacing:1px;">
+                        <i class="fas fa-sliders-h"></i> 高级参数 (Advanced)
+                      </div>
+                      <i class="fas fa-chevron-down stg-chevron" style="color:#a0a0a5; font-size:10px;"></i>
+                    </div>
+                    
+                    <div class="stg-collapse-bd" id="stg-bd-imagegen-advanced" style="display:none; padding-top:8px;">
+                        <!-- 预设管理也扔到高级设置里 -->
+                        <div class="stg-preset-zone" style="padding-top:0;">
+                          <div class="stg-preset-zone-label">参数预设管理</div>
+                          <div class="stg-preset-row">
+                            <select id="imagegen-preset-select"><option value="">── 选择生图配置 ──</option></select>
+                            <button class="stg-ps-btn stg-ps-del" onclick="deleteImagegenPreset()" style="width:40px;"><i class="fas fa-trash"></i></button>
+                          </div>
+                          <div class="stg-preset-save-row">
+                            <input type="text" id="imagegen-preset-name" placeholder="保存当前为新预设...">
+                            <button class="stg-ps-btn stg-ps-save" onclick="saveImagegenPreset()">保存</button>
+                          </div>
+                        </div>
+
+                        <div class="stg-preset-zone-label" style="margin-top:10px;">NovelAI 专业微调</div>
+                        <div class="form-group stg-flex-row"><label>步数 (Steps)</label><input type="number" id="nai-steps-input" value="28"></div>
+                        <div class="form-group stg-flex-row"><label>相关性 (CFG)</label><input type="number" id="nai-cfg-input" value="5"></div>
+                        <div class="form-group stg-flex-row"><label>采样器 (Sampler)</label><select id="nai-sampler-select"></select></div>
+                        <div class="form-group stg-flex-row"><label>种子 (Seed: -1随机)</label><input type="number" id="nai-seed-input" value="-1"></div>
+                        <div class="stg-toggle-row"><div class="stg-tr-title">Quality Tag</div><label class="switch" style="margin:0;"><input type="checkbox" id="nai-quality-toggle" checked><span class="slider round"></span></label></div>
+                        <div class="stg-toggle-row"><div class="stg-tr-title">SMEA</div><label class="switch" style="margin:0;"><input type="checkbox" id="nai-smea-toggle"><span class="slider round"></span></label></div>
+                        <div class="stg-toggle-row"><div class="stg-tr-title">SMEA DYN</div><label class="switch" style="margin:0;"><input type="checkbox" id="nai-smea-dyn-toggle"><span class="slider round"></span></label></div>
+                        <div class="form-group stg-flex-row"><label>UC Preset (内置负面)</label><select id="nai-uc-preset"><option value="0">0 - 重度</option><option value="1">1 - 轻度</option><option value="2">2 - 人类</option><option value="3">3 - 禁用</option></select></div>
+                        <div class="form-group stg-flex-row"><label>CORS 代理</label><select id="nai-proxy-select" onchange="toggleNaiCustomProxy(this.value)"><option value="https://corsproxy.io/?">corsproxy.io (推荐)</option><option value="https://api.codetabs.com/v1/proxy/?quest=">codetabs</option><option value="">不使用代理</option><option value="custom">自定义代理 URL</option></select></div>
+                        <div id="nai-custom-proxy-box" class="form-group stg-flex-row" style="display:none;"><label>自定义代理</label><input type="text" id="nai-custom-proxy" placeholder="https://..."></div>
+                        <div class="form-group"><label style="margin-bottom:6px;">默认正面提示词</label><textarea id="nai-default-positive" rows="2"></textarea></div>
+                        <div class="form-group" style="border-bottom:none;"><label style="margin-bottom:6px;">默认负面提示词</label><textarea id="nai-default-negative" rows="2"></textarea></div>
+                    </div>
+                  </div>
+
+
+                  <!-- ═══ DATA · 数据管理 ═══ -->
+                  <div class="stg-label">SYSTEM <span class="stg-cn">系统数据</span></div>
+                  <div class="stg-card">
+                    <div class="form-group">
+                      <label style="margin-bottom:6px;">全量数据备份 / 恢复</label>
+                      <div style="display:flex; gap:10px;">
+                        <button type="button" class="stg-ps-btn stg-ps-save" onclick="exportFullAppData()" style="flex:1;"><i class="fas fa-arrow-down"></i> 导出存档</button>
+                        <label class="stg-ps-btn" style="flex:1; margin:0; background:rgba(0,0,0,0.05); color:#555; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                          <i class="fas fa-arrow-up" style="margin-right:6px;"></i> 导入恢复
+                          <input type="file" id="import-full-data-input" accept=".json" style="display:none;" onchange="importFullAppData(this)">
+                        </label>
+                      </div>
+                    </div>
+                    <div class="stg-toggle-row">
+                      <div>
+                        <div class="stg-tr-title">预演删除 Meta 模式</div>
+                        <div class="stg-tr-sub">好感度 100 时触发特殊删除体验</div>
+                      </div>
+                      <label class="switch" style="margin:0; flex-shrink:0;">
+                        <input type="checkbox" id="enable-meta-delete-toggle">
+                        <span class="slider round"></span>
+                      </label>
+                    </div>
+                    <div class="form-group" style="border-bottom:none;">
+                      <button type="button" class="stg-ps-btn" onclick="forceUpdateAppLossless()" style="width:100%; background:rgba(0,0,0,0.05); color:#555;">
+                        <i class="fas fa-sync-alt"></i> 无损更新并重载缓存
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="stg-save-area">
+                    <button id="save-settings-btn" class="btn-save">保存 AI 设置 · Save</button>
+                  </div>
+                </div>
+
+                <!-- ==========================================
+                     Tab 2: 主题美化 (韩系重构版)
+                     ========================================== -->
+                <div id="tab-content-theme" class="tab-content" style="display:none;">
+
+                    <!-- 1. 全局配置 -->
+                    <div class="stg-label">GLOBAL <span class="stg-cn">全局外观</span></div>
+                    <div class="stg-card">
+                        <div class="stg-toggle-row">
+                            <div>
+                                <div class="stg-tr-title">显示状态栏</div>
+                                <div class="stg-tr-sub">顶部时间与电量显示</div>
+                            </div>
+                            <label class="switch" style="margin:0; flex-shrink:0;">
+                                <input type="checkbox" id="show-statusbar-time-toggle" checked>
                                 <span class="slider round"></span>
                             </label>
                         </div>
-                        <div class="form-text">开启后，且好感度达到 100 时，预演删除和删除才会触发meta</div>
-                    </div>
-
-
-                </div>
-
-                <!-- Tab 2: 主题美化 -->
-                <div id="tab-content-theme" class="tab-content" style="display:none;">
-
-                           <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
-                        <label style="margin:0;">显示状态栏</label>
-                        <label class="switch">
-                            <input type="checkbox" id="show-statusbar-time-toggle" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                
-                    <hr class="settings-divider">
-
-                    <div class="form-group">
-                        <label>壁纸设置</label>
-                        <div class="input-with-button">
-                            <input type="text" id="wallpaper-url-input" placeholder="图片 URL...">
-                            <label class="file-upload-btn">
-                                <i class="fas fa-image"></i>
-                                <input type="file" id="wallpaper-file-input" accept="image/*" style="display:none;">
+                        <div class="form-group stg-flex-row">
+                            <label>主题强调色</label>
+                            <input type="color" id="theme-color-picker" value="#222222" style="width:32px; height:32px; border:none; padding:0; background:none; cursor:pointer; border-radius:50%; overflow:hidden;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                <span>全局字号缩放</span>
+                                <span id="font-scale-value" style="color:#2b2b2b; font-weight:800;">100%</span>
                             </label>
-                        </div>
-                        <button onclick="resetWallpaper()" style="margin-top:5px; width:100%; padding:8px; border:1px solid #ddd; background:#fff; border-radius:8px;">恢复默认壁纸</button>
-                    </div>
-
-                    <hr class="settings-divider">
-
-                    <!-- === 新增：全局 CSS 代码编辑器 === -->
-                    <div class="form-group">
-                        <label>全局自定义 CSS (Custom CSS)</label>
-                        <textarea id="custom-css-input" placeholder="/* 在这里输入 CSS 代码，实时生效 */&#10;例如: .icon-box { border-radius: 50%; }" spellcheck="false"></textarea>
-                        <div class="form-text">输入 CSS 代码可深度美化界面 (支持实时预览)</div>
-                    </div>
-
-                    <hr class="settings-divider">
-
-                    <!-- === 新增：主题预设与导入导出 === -->
-                    <div class="form-group">
-                        <label>主题预设管理 (Theme Presets)</label>
-                        <select id="theme-preset-select">
-                            <option value="">-- 选择已保存的主题 --</option>
-                        </select>
-                        <div class="input-with-button" style="margin-top:10px;">
-                            <input type="text" id="theme-preset-name" placeholder="预设名称 (如: 暗黑模式)">
-                            <button id="save-theme-preset-btn" title="保存当前主题"><i class="fas fa-save"></i></button>
-                            <button id="delete-theme-preset-btn" title="删除选中" style="color:#ff4d4f;"><i class="fas fa-trash"></i></button>
+                            <input type="range" id="font-scale-slider" min="0.8" max="1.3" step="0.05" value="1" style="width:100%;">
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>备份与分享</label>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn-secondary" id="export-theme-btn"><i class="fas fa-file-export"></i> 导出 (JSON)</button>
-                            <label class="btn-secondary file-btn" style="margin:0;">
-                                <i class="fas fa-file-import"></i> 导入
-                                <input type="file" id="import-theme-file" accept=".json" style="display:none;">
-                            </label>
+                    <!-- 2. 壁纸 -->
+                    <div class="stg-label">WALLPAPER <span class="stg-cn">壁纸设置</span></div>
+                    <div class="stg-card">
+                        <div class="form-group stg-flex-row">
+                            <label>主屏幕壁纸</label>
+                            <div class="input-with-button">
+                                <input type="text" id="wallpaper-url-input" placeholder="输入 URL...">
+                                <label class="btn-secondary" style="margin:0; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:12px; cursor:pointer; background:rgba(0,0,0,0.04); border:none;">
+                                    <i class="fas fa-image" style="color:#666;"></i>
+                                    <input type="file" id="wallpaper-file-input" accept="image/*" style="display:none;">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group" style="border-bottom:none;">
+                            <button onclick="resetWallpaper()" class="stg-ps-btn" style="width:100%; background:rgba(255,77,79,0.05); color:#ff4d4f;">清空壁纸 (恢复纯色)</button>
                         </div>
                     </div>
-                    
-                    <hr class="settings-divider">
 
-                    <div class="form-group">
-                        <label>字体来源</label>
-                        <select id="font-source-select" onchange="toggleFontInput(this.value)">
-                            <option value="preset">预设字体</option>
-                            <option value="custom">导入 URL</option>
-                        </select>
+                    <!-- 3. 字体设置 -->
+                    <div class="stg-label">TYPOGRAPHY <span class="stg-cn">字体排版</span></div>
+                    <div class="stg-card">
+                        <div class="form-group stg-flex-row">
+                            <label>字体来源</label>
+                            <select id="font-source-select" onchange="toggleFontInput(this.value)">
+                                <option value="preset">内置精选</option>
+                                <option value="custom">外链导入</option>
+                            </select>
+                        </div>
+                        <div class="form-group stg-flex-row" id="group-font-preset">
+                            <label>选择字体</label>
+                            <select id="font-family-select">
+                                <option value="'Montserrat', sans-serif">Montserrat (现代圆润)</option>
+                                <option value="'PingFang SC', sans-serif">PingFang (系统黑体)</option>
+                                <option value="'Playfair Display', serif">Playfair (优雅衬线)</option>
+                                <option value="'Alex Brush', cursive">Alex Brush (连笔手写)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="group-font-custom" style="display:none;">
+                            <label style="margin-bottom:6px;">字体 URL (WOFF2/TTF)</label>
+                            <input type="text" id="custom-font-url" placeholder="https://...">
+                        </div>
+                        <div class="form-group" style="border-bottom:none; padding-bottom:8px;">
+                            <div class="font-preview-box" id="font-preview-box" style="background:rgba(0,0,0,0.02); border-radius:16px; padding:16px; text-align:center;">
+                                <div style="font-size:24px; line-height:1.2; font-weight:600;">12:30</div>
+                                <div style="font-size:11px; margin-top:4px; color:#888;">Live a beautiful life.</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group" id="group-font-preset">
-                        <label>选择预设</label>
-                        <select id="font-family-select">
-                            <option value="'Montserrat', sans-serif">Montserrat (Default)</option>
-                            <option value="'Playfair Display', serif">Playfair Display (Serif)</option>
-                            <option value="'Alex Brush', cursive">Alex Brush (Handwriting)</option>
-                            <option value="'Courier New', monospace">Courier New (Retro)</option>
-                            <option value="system-ui, sans-serif">System Default</option>
-                        </select>
+                    <!-- 4. 高级美化 -->
+                    <div class="stg-label">CUSTOMIZATION <span class="stg-cn">深度美化</span></div>
+                    <div class="stg-card">
+                        <div class="form-group stg-flex-row">
+                            <label>替换桌面图标</label>
+                            <select id="app-icon-select" style="width:50%;">
+                                <option value="">- 选择 APP -</option>
+                            </select>
+                        </div>
+                        <div class="form-group stg-flex-row" style="padding-top:0;">
+                            <div id="icon-preview-area" style="width:40px; height:40px; border-radius:12px; background:rgba(0,0,0,0.04); display:flex; justify-content:center; align-items:center; overflow:hidden;">
+                                <span style="font-size:10px; color:#aaa;">预览</span>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <label class="stg-ps-btn" style="margin:0; display:flex; align-items:center; background:rgba(0,0,0,0.05); color:#444; cursor:pointer;">
+                                    上传 <input type="file" id="app-icon-file" accept="image/*" style="display:none;">
+                                </label>
+                                <button id="reset-icon-btn" class="stg-ps-btn stg-ps-del" style="display:none;">重置</button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="border-bottom:none;">
+                            <label style="margin-bottom:8px;">高级 CSS 注入</label>
+                            <textarea id="custom-css-input" rows="4" placeholder="/* 在这里编写 CSS */&#10;.icon-box { border-radius: 50%; }" spellcheck="false" style="font-family:monospace;"></textarea>
+                        </div>
                     </div>
 
-                    <div class="form-group" id="group-font-custom" style="display:none;">
-                        <label>字体文件 URL (woff2/ttf)</label>
-                        <input type="text" id="custom-font-url" placeholder="https://example.com/font.woff2">
-                    </div>
-
-                    <div class="form-group">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <label style="margin:0;">主题文字颜色</label>
-                            <input type="color" id="theme-color-picker" value="#222222" style="width:40px; height:30px; border:none; padding:0; background:none;">
+                    <!-- 5. 预设与备份 -->
+                    <div class="stg-label">PRESETS <span class="stg-cn">主题预设</span></div>
+                    <div class="stg-card">
+                        <div class="stg-preset-zone" style="border-top:none; padding-top:8px;">
+                            <div class="stg-preset-row">
+                                <select id="theme-preset-select">
+                                    <option value="">-- 选择已存主题 --</option>
+                                </select>
+                            </div>
+                            <div class="stg-preset-save-row">
+                                <input type="text" id="theme-preset-name" placeholder="命名新主题...">
+                                <button id="save-theme-preset-btn" class="stg-ps-btn stg-ps-save"><i class="fas fa-save"></i></button>
+                                <button id="delete-theme-preset-btn" class="stg-ps-btn stg-ps-del"><i class="fas fa-trash"></i></button>
+                            </div>
                         </div>
                         
-                        <div class="font-preview-box" id="font-preview-box">
-                            <div style="font-size:24px; line-height:1.2;">12:30</div>
-                            <div style="font-size:14px;">Good Morning</div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>字体大小: <span id="font-scale-value">100%</span></label>
-                        <input type="range" id="font-scale-slider" min="0.8" max="1.3" step="0.05" value="1">
-                    </div>
-
-                    <hr class="settings-divider">
-
-                    <div class="form-group">
-                        <label>自定义 APP 图标</label>
-                        <select id="app-icon-select">
-                            <option value="">-- 选择 APP --</option>
-                        </select>
-                        <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
-                            <div id="icon-preview-area" style="width:48px; height:48px; border-radius:12px; background:#eee; display:flex; justify-content:center; align-items:center; overflow:hidden;">
-                                <span style="font-size:10px; color:#999;">预览</span>
+                        <div class="form-group stg-flex-row" style="border-top:1px solid rgba(0,0,0,0.03); border-bottom:none;">
+                            <label>主题导入/导出</label>
+                            <div style="display:flex; gap:8px;">
+                                <button id="export-theme-btn" class="stg-ps-btn" style="background:rgba(0,0,0,0.05); color:#555;">导出</button>
+                                <label class="stg-ps-btn" style="margin:0; background:rgba(0,0,0,0.05); color:#555; display:flex; align-items:center; cursor:pointer;">
+                                    导入 <input type="file" id="import-theme-file" accept=".json" style="display:none;">
+                                </label>
                             </div>
-                            <label class="btn-save" style="width:auto; padding:0 15px; display:flex; align-items:center; margin:0; font-size:12px; height:36px;">
-                                上传图标 <i class="fas fa-upload" style="margin-left:5px;"></i>
-                                <input type="file" id="app-icon-file" accept="image/*" style="display:none;">
-                            </label>
                         </div>
-                        <button id="reset-icon-btn" style="margin-top:10px; width:100%; padding:8px; border:1px solid #ddd; background:#fff; border-radius:8px; display:none;">重置此图标</button>
                     </div>
 
-                    <button id="save-theme-btn" class="btn-save" style="margin-top:30px;">保存所有主题配置</button>
-                </div>
+                    <div class="stg-save-area">
+                        <button id="save-theme-btn" class="btn-save">保存主题设置 · Apply</button>
+                    </div>
 
+                </div>
             </div>
+
+
         </div><!-- === [新增] 聊天详细设置独立页面 === -->
 <div class="chat-settings-page-view" id="chatSettingsPage">
     <div class="chat-settings-page-header">
@@ -945,280 +1085,419 @@
         <div style="width: 24px;"></div>
     </div>
     
-    <div class="chat-settings-page-content">
-             <!-- 1. 角色信息 (重构版：头像上传、真名、世界书多选) -->
-        <div class="settings-section-title" style="margin-top: 0;">角色档案 (Profile)</div>
-        
-        <!-- 头像修改 (改为点击上传式) -->
-        <div class="form-group">
-            <label>头像 (Avatar)</label>
-            <div style="display:flex; align-items:center; gap:15px;">
-                <!-- 头像预览区域 -->
-                <div id="cs-avatar-preview" style="width:64px; height:64px; border-radius:16px; background:#eee; border:2px solid #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.08); overflow:hidden; flex-shrink:0;">
-                    <img src="" style="width:100%; height:100%; object-fit:cover; display:none;">
-                </div>
-                <!-- 隐藏的文件输入框和按钮 -->
-                <div>
-                    <input type="file" id="cs-avatar-upload" accept="image/*" style="display:none;" onchange="handleCsAvatarUpload(this)">
-                    <button class="btn-secondary" onclick="document.getElementById('cs-avatar-upload').click()" style="padding: 8px 15px; height:auto; width:auto;">
-                        <i class="fas fa-camera"></i> 更换头像
-                    </button>
-                    <!-- 隐藏域，用于存储实际的图片数据 -->
+    <div class="chat-settings-page-content" style="padding:0; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column;">
+
+        <!-- ══ Tab 切换栏 ══ -->
+        <div class="cs-tab-bar">
+            <button class="cs-tab-btn active" id="cs-tab-btn-persona" onclick="switchCsTab('persona')">PERSONA</button>
+            <button class="cs-tab-btn" id="cs-tab-btn-chat" onclick="switchCsTab('chat')">CHAT</button>
+            <button class="cs-tab-btn" id="cs-tab-btn-files" onclick="switchCsTab('files')">FILES</button>
+        </div>
+
+        <!-- ══════════════════════════════
+             Tab 1: PERSONA
+             ══════════════════════════════ -->
+        <div class="cs-tab-pane active" id="cs-pane-persona">
+
+            <div class="cs-label">PROFILE</div>
+            <div class="cs-white-card">
+                <!-- 头像行 -->
+                <div class="cs-row">
+                    <div id="cs-avatar-preview" style="width:52px;height:52px;border-radius:13px;background:#f0f0f0;overflow:hidden;flex-shrink:0;">
+                        <img src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+                    </div>
+                    <div style="flex:1;">
+                        <div class="cs-row-label">头像</div>
+                        <div class="cs-row-sub">Avatar</div>
+                    </div>
                     <input type="hidden" id="cs-avatar-hidden-val">
+                    <input type="file" id="cs-avatar-upload" accept="image/*" style="display:none;" onchange="handleCsAvatarUpload(this)">
+                    <button onclick="document.getElementById('cs-avatar-upload').click()" style="background:#f5f5f7;border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;color:#444;cursor:pointer;flex-shrink:0;">更换</button>
+                </div>
+                <!-- 双列名字 -->
+                <div style="display:flex;border-top:1px solid #f2f2f2;">
+                    <div style="flex:1;padding:14px 18px;border-right:1px solid #f2f2f2;">
+                        <div class="cs-field-title">NICKNAME</div>
+                        <input type="text" id="cs-remark" placeholder="备注名">
+                    </div>
+                    <div style="flex:1;padding:14px 18px;">
+                        <div class="cs-field-title">REAL NAME ✱</div>
+                        <input type="text" id="cs-realname" placeholder="真实姓名">
+                    </div>
+                </div>
+                <!-- 开场白 -->
+                <div class="cs-col" style="border-top:1px solid #f2f2f2;">
+                    <div class="cs-field-title">GREETING</div>
+                    <select id="cs-greeting-mode" onchange="toggleGreetingEditor()">
+                        <option value="none">不设开场白</option>
+                        <option value="custom">自定义开场白</option>
+                        <option value="tavern">读取酒馆卡</option>
+                    </select>
+                </div>
+                <div class="cs-col" id="cs-greeting-custom-box" style="border-top:1px solid #f2f2f2;display:none;">
+                    <textarea id="cs-greeting-custom" rows="3" placeholder="自定义第一句话..."></textarea>
+                </div>
+                <div class="cs-col" id="cs-greeting-tavern-box" style="border-top:1px solid #f2f2f2;display:none;padding-top:15px;">
+    <div id="cs-greeting-list" class="worldbook-checklist-container" style="margin-bottom:0; max-height:180px;"></div>
+</div>
+
+            </div>
+
+            <div class="cs-label">PERSONA ✱</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <textarea id="cs-persona" rows="8" placeholder="角色的核心性格、身份设定..." style="line-height:1.65;"></textarea>
                 </div>
             </div>
-        </div>
 
-        <div style="display: flex; gap: 15px;">
-            <div class="form-group" style="flex:1;">
-                <label>备注名 (Nickname)</label>
-                <input type="text" id="cs-remark" placeholder="聊天窗口显示的名称">
-            </div>
-            <div class="form-group" style="flex:1;">
-                <label>真实姓名 (Real Name) <span style="color:red">*</span></label>
-                <input type="text" id="cs-realname" placeholder="角色的真名">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <!-- 开场白设置 -->
-<div class="form-group">
-    <label>开场白来源 (Greeting Source)</label>
-    <select id="cs-greeting-mode" onchange="toggleGreetingEditor()">
-        <option value="none">不开场白</option>
-        <option value="custom">自定义开场白</option>
-        <option value="tavern">读取酒馆卡开场白</option>
-        <!-- === 【新增】更换开场白的提示 === -->
-<div class="form-text" style="color: #ff7e67; font-weight: bold; margin-top: -5px; margin-bottom: 10px;">
-    <i class="fas fa-info-circle"></i> 注意：更换开场白后，为保证剧情连贯，请选择清空角色聊天记录。
-</div>
-
-    </select>
-</div>
-
-<div class="form-group" id="cs-greeting-custom-box">
-    <label>自定义开场白</label>
-    <textarea id="cs-greeting-custom" rows="3" placeholder="你自己写第一句..."></textarea>
-</div>
-
-<div class="form-group" id="cs-greeting-tavern-box">
-    <label>酒馆卡开场白列表</label>
-    <div id="cs-greeting-list" class="worldbook-checklist-container"></div>
-    <textarea id="cs-greeting-tavern" rows="3" readonly placeholder="选择后在这里预览"></textarea>
-</div>
-
-
-            <label>人设 (Persona) <span style="color:red">*</span></label>
-            <textarea id="cs-persona" rows="6" placeholder="角色的核心性格、身份设定..." style="height:auto; font-size:13px;"></textarea>
-            
-        </div>
-
-
-        <!-- 世界书 (改为多选框容器，JS动态加载) -->
-        <div class="form-group">
-            <label>世界书设定 (Worldbooks) - 多选</label>
-            <div id="cs-worldbook-container" class="worldbook-checklist-container">
-                <!-- JS 将在这里动态生成复选框 -->
-                <div style="color:#999; font-size:12px; padding:10px;">正在加载世界书列表...</div>
-            </div>
-        </div>
-                        <!-- === [修改] 纯净的表情包授权入口 === -->
-        <div class="form-group" style="margin-top: 15px;">
-            <label>允许 TA 使用的表情包 (Stickers)</label>
-            <div style="font-size:11px; color:#999; margin-bottom:8px;">勾选后TA才可使用。如果要添加新表情，请在聊天界面的 😀笑脸 菜单中导入。</div>
-            <div id="cs-sticker-categories" class="worldbook-checklist-container" style="max-height: 160px; background:#fafafa; border-color:#eee;">
-                <!-- JS 动态填充可用的分类复选框 -->
-            </div>
-        </div>
-
-        <!-- === [新增] 视觉解析开关 === -->
-        <div class="form-group" style="margin-top: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <label style="margin:0; font-weight:500;">开启表情包视觉解析 (Vision)</label>
-                <label class="switch">
-                    <input type="checkbox" id="cs-vision-sticker-toggle">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <span class="form-text" style="display:block;">开启后，TA会直接“看”这个表情包图片；关闭则只发送表情包的名字。需配合 gpt-4o, gemini-1.5-pro 等视觉模型使用。</span>
-        </div>
-
-
-
-        <hr class="settings-divider">
-
-        <!-- 2. 高级功能 (重构版：翻译下拉、主动发言时间) -->
-        <div class="settings-section-title">高级功能 (Advanced)</div>
-            
-        <!-- 记忆 -->
-        <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <label style="margin:0; display:block;">上下文记忆轮数</label>
-                <span class="form-text" style="margin:0;">仅发送最近 N 轮对话。</span>
-            </div>
-            <input type="number" id="cs-memory-limit" placeholder="20" style="width: 80px; text-align:center;" min="5">
-        </div>
-
-        <!-- 翻译设置 (改造成下拉框 + 输入框) -->
-        <div class="form-group" style="margin-top: 25px;">
-            <label>翻译模式 (Translation Mode)</label>
-            <select id="cs-translation-mode">
-                <option value="off">关闭 (Off)</option>
-                <option value="ai_to_zh">翻译AI输出到中文 (Translate AI output to ZH)</option>
-                <option value="ai_to_en">翻译AI输出到英文 (Translate AI output to EN)</option>
-            </select>
-            
-            <div style="margin-top: 10px;">
-                <label style="font-size: 11px; color: #888;">强制输出语言 (Target Language)</label>
-                <input type="text" id="cs-target-lang" placeholder="例如: English, Japanese (留空则默认)">
-                <span class="form-text" style="display:block; margin-top:4px;">强制 AI 使用该语言回复，优先级高于翻译模式。</span>
-            </div>
-        </div>
-
-        <!-- 主动发言 (增加时间选项，默认隐藏) -->
-        <div class="form-group" style="margin-top: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <label style="margin:0; font-weight:500;">无操作主动发言</label>
-                <label class="switch">
-                    <input type="checkbox" id="cs-inactivity-toggle">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <!-- 隐藏的时间输入区域，JS控制显示 -->
-            <div id="cs-inactivity-time-box" style="display:none; background:#f5f5f7; padding:15px; border-radius:12px;">
-                <label style="margin-bottom:5px;">触发时间间隔 (秒)</label>
-                <input type="number" id="cs-inactivity-time" placeholder="300" value="300" min="60" style="background:#fff;">
-                <span class="form-text" style="display:block; margin-top:4px;">如果超过此时间无对话，AI 将尝试主动发起话题。</span>
-            </div>
-        </div>
-
-        <hr class="settings-divider">
-
-        <!-- 记忆互通 (Cross-Chat Memory) -->
-        <div class="settings-section-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>记忆互通 (Cross-Chat Memory)</span>
-        </div>
-        <div style="font-size:11px; color:#888; margin-bottom:10px; line-height:1.6;">
-            <i class="fas fa-link" style="color:#ff7e67;"></i>
-            勾选后，TA 将能看到你与其他角色/群聊的最近对话。
-        </div>
-        <div id="cs-link-memory-container" class="worldbook-checklist-container" style="max-height:200px; background:#fafafa; border-color:#eee;">
-            <div style="color:#ccc; font-size:12px; text-align:center; padding:15px;">
-                <i class="fas fa-spinner fa-spin"></i> 加载中...
-            </div>
-        </div>
-
-        <hr class="settings-divider">
-
-        <!-- 3. 状态栏正则设置 (酒馆风格重构，默认隐藏) -->
-        <div class="settings-section-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>状态栏抓取 (Regex)</span>
-            <label class="switch" style="transform:scale(0.8);">
-                <input type="checkbox" id="cs-status-regex-toggle">
-                <span class="slider round"></span>
-            </label>
-        </div>
-        
-        <div id="cs-status-regex-box" style="display:none; flex-direction:column; gap:15px; background:#f9f9f9; padding:15px; border-radius:16px; border:1px solid #eee;">
-            
-            <div class="form-group" style="margin:0;">
-                <label>1. 状态栏格式要求 (Prompt Instruction)</label>
-                <span class="form-text" style="margin-bottom:5px; display:block;">提示 AI 按照什么格式输出状态数据。</span>
-                <textarea id="cs-status-format-req" rows="4" placeholder="例如：请在回复最后附带状态栏，格式为：&#10;[STATUS]&#10;心情:开心&#10;地点:家&#10;[/STATUS]" style="font-family:monospace; font-size:11px; height:auto;"></textarea>
+            <div class="cs-label">WORLDBOOKS</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div id="cs-worldbook-container" class="worldbook-checklist-container">
+                        <div style="color:#bbb;font-size:12px;padding:4px 0;">正在加载...</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group" style="margin:0;">
-                <label>2. 提取正则 (Extraction Regex)</label>
-                <span class="form-text" style="margin-bottom:5px; display:block;">用于从回复中提取出状态栏内容块。</span>
-                <textarea id="cs-status-extract-regex" rows="2" placeholder="例如：/\[STATUS\]([\s\S]*?)\[\/STATUS\]/i" style="font-family:monospace; font-size:11px; color:#d63384; background:#fff; height:auto;"></textarea>
+            <div class="cs-label">STICKERS</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div style="font-size:11px;color:#bbb;margin-bottom:10px;">勾选后 TA 才可使用。😀 菜单中可添加新表情。</div>
+                    <div id="cs-sticker-categories" class="worldbook-checklist-container" style="max-height:140px;"></div>
+                </div>
+                <div class="cs-row">
+                    <div style="flex:1;">
+                        <div class="cs-row-label">视觉解析 Vision</div>
+                        <div class="cs-row-sub">TA 直接"看"图片，需视觉模型</div>
+                    </div>
+                    <label class="switch" style="margin:0;flex-shrink:0;">
+                        <input type="checkbox" id="cs-vision-sticker-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
             </div>
 
-            <div class="form-group" style="margin:0;">
-                <label>3. 正则替换 (Regex Replacement)</label>
-                <span class="form-text" style="margin-bottom:5px; display:block;">将提取到的内容从最终气泡中移除 (留空则不移除)。</span>
-                <textarea id="cs-status-replace-regex" rows="2" placeholder="例如：(留空)" style="font-family:monospace; font-size:11px; background:#fff; height:auto;"></textarea>
+            <div class="cs-label">VOICE TTS</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div class="cs-field-title">VOICE ID</div>
+                    <input type="text" id="cs-voice-id" placeholder="例: female-shaonv（Minimax 音色 ID）">
+                </div>
+                <div class="cs-col">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <div class="cs-field-title" style="margin:0;">SPEED</div>
+                        <span style="font-size:14px;font-weight:800;color:#222;font-family:'Montserrat';" id="cs-voice-speed-val">1.0</span>
+                    </div>
+                    <input type="range" id="cs-voice-speed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('cs-voice-speed-val').innerText=parseFloat(this.value).toFixed(1)" style="accent-color:#111;">
+                </div>
+                <div class="cs-col">
+                    <div class="cs-field-title">LANGUAGE BOOST</div>
+                    <select id="cs-voice-lang">
+                        <option value="">自动判断 (Auto)</option>
+                        <option value="zh">中文</option>
+                        <option value="en">英文</option>
+                        <option value="jp">日语</option>
+                        <option value="ko">韩语</option>
+                        <option value="yue">粤语</option>
+                    </select>
+                </div>
             </div>
-        </div>
 
+            <!-- ═══ DESKTOP PET ═══ -->
+            <div class="cs-label">DESKTOP PET <span class="fp-cs-badge">✨ NEW</span></div>
+            <div class="cs-white-card">
+                <!-- Main Toggle Row -->
+                <div class="cs-row">
+                    <div style="flex:1;">
+                        <div class="cs-row-label">启用悬浮桌宠</div>
+                        <div class="cs-row-sub">TA 将化身桌宠，实时陪伴并吐槽你 👀</div>
+                    </div>
+                    <label class="switch" style="margin:0;flex-shrink:0;">
+                        <input type="checkbox" id="cs-fp-toggle" onchange="FloatPet.onToggle(this)">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
 
-        <hr class="settings-divider">
+                <!-- Expanded Settings (shown when enabled) -->
+                <div id="cs-fp-box" style="display:none;">
 
-        <!-- 4. 个性化语音设置 (Voice) -->
-        <div class="settings-section-title">个性化语音 (Voice TTS)</div>
-        <div class="form-group">
-            <label>音色绑定 (Voice ID)</label>
-            <input type="text" id="cs-voice-id" placeholder="例如: male-qs01, female-shaonv">
-            <span class="form-text" style="display:block;">为该角色指定 Minimax 音色 ID。</span>
-        </div>
-        <div class="form-group">
-            <label>语速调节 (Speed): <span id="cs-voice-speed-val">1.0</span>x</label>
-            <input type="range" id="cs-voice-speed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('cs-voice-speed-val').innerText=this.value">
-        </div>
-        <div class="form-group">
-            <label>语言/方言增强 (Language Boost)</label>
-            <select id="cs-voice-lang">
-                <option value="">自动判断 (Auto)</option>
-                <option value="zh">中文</option>
-                <option value="en">英文</option>
-                <option value="jp">日语</option>
-                <option value="ko">韩语</option>
-                <option value="yue">粤语</option>
-            
-            </select>
-        </div>
+                    <!-- Observe Interval -->
+                    <div class="cs-col" style="border-top:1px solid #f2f2f2;padding-top:14px;">
+                        <div class="cs-field-title" style="margin-bottom:0;">🕐 观察间隔</div>
+                        <div class="fp-chip-row">
+                            <button class="fp-chip fp-interval-chip" data-v="3"  onclick="FloatPet.setInterval(3,this)">3 分钟</button>
+                            <button class="fp-chip fp-interval-chip" data-v="5"  onclick="FloatPet.setInterval(5,this)">5 分钟</button>
+                            <button class="fp-chip fp-interval-chip fp-sel" data-v="10" onclick="FloatPet.setInterval(10,this)">10 分钟</button>
+                            <button class="fp-chip fp-interval-chip" data-v="15" onclick="FloatPet.setInterval(15,this)">15 分钟</button>
+                            <button class="fp-chip fp-interval-chip" data-v="0"  onclick="FloatPet.setInterval(0,this)">随机 🎲</button>
+                        </div>
+                        <div class="fp-sub-hint">💡 双击桌宠可随时触发一次即时观察</div>
+                    </div>
 
-        <!-- 保存按钮，放在最底部 -->
-        <!-- 🔐 生成手机密码按钮 (供「查手机」功能使用) -->
-        <input type="hidden" id="cs-char-id" value="">
-        <div style="
-          background: linear-gradient(135deg, #f8f8f8 0%, #fff 100%);
-          border: 1px solid #e8e8e8;
-          border-radius: 16px;
-          padding: 16px 18px;
-          margin: 20px 0 10px;
-          display: flex;
-          align-items: center;
-          gap: 14px;
-        ">
-          <div style="font-size: 26px; flex-shrink: 0;">🔐</div>
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 3px;">手机密码</div>
-            <div style="font-size: 11px; color: #aaa; line-height: 1.5;">由 AI 悄悄生成，用于「查手机」解锁</div>
-          </div>
-          <button id="btn-generate-char-pin"
-            onclick="generateAndSaveCharPin()"
-            style="
-              background: #111;
-              color: #fff;
-              border: none;
-              border-radius: 12px;
-              padding: 9px 12px;
-              font-size: 11px;
-              font-weight: 700;
-              cursor: pointer;
-              letter-spacing: 0.3px;
-              white-space: normal;
-              word-break: keep-all;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 5px;
-              flex-shrink: 0;
-              max-width: 90px;
-              text-align: center;
-              line-height: 1.3;
-              transition: opacity 0.2s;
-            ">
-            <i class="fas fa-lock" style="font-size: 11px; flex-shrink:0;"></i> 生成密码
-          </button>
-        </div>
+                    <!-- Pet Style -->
+                    <div class="cs-col" style="border-top:1px solid #f2f2f2;padding-top:14px;">
+                        <div class="cs-field-title" style="margin-bottom:0;">🎨 桌宠形象</div>
+                        <div class="fp-chip-row">
+                            <button class="fp-chip fp-style-chip fp-sel-warm" data-v="avatar" onclick="FloatPet.setStyle('avatar',this)">AI 头像</button>
+                            <button class="fp-chip fp-style-chip" data-v="emoji"  onclick="FloatPet.setStyle('emoji',this)">表情符号</button>
+                            <button class="fp-chip fp-style-chip" data-v="custom" onclick="FloatPet.setStyle('custom',this)">自定义图片</button>
+                        </div>
+                        <!-- Emoji input -->
+                        <div id="fp-emoji-wrap" style="display:none;margin-top:10px;">
+                            <input id="fp-emoji-input" type="text" placeholder="输入 Emoji，如 🐱 🐼 🦊"
+                                   style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:10px 14px;font-size:22px;text-align:center;background:#fafafa;"
+                                   oninput="FloatPet.onEmojiChange(this.value)">
+                        </div>
+                        <!-- Custom URL input -->
+                        <div id="fp-url-wrap" style="display:none;margin-top:10px;">
+                            <input id="fp-url-input" type="text" placeholder="GIF / 图片 URL …"
+                                   class="cs-input"
+                                   oninput="FloatPet.onUrlChange(this.value)">
+                        </div>
+                    </div>
 
-        <button class="btn-save" onclick="saveChatSettings()" style="margin-top: 30px; margin-bottom: 30px;">保存配置</button>
-       <button class="btn-secondary" onclick="clearCurrentChatHistory()" style="color:#ff4d4f; border-color:#ff4d4f; margin-top:10px; margin-bottom: 30px;">
-    <i class="fas fa-exclamation-triangle"></i> 清空聊天记录
-</button>
+                    <!-- Commentary Style -->
+                    <div class="cs-col" style="border-top:1px solid #f2f2f2;padding-top:14px;">
+                        <div class="cs-field-title" style="margin-bottom:8px;">💬 吐槽风格</div>
+                        <select id="fp-mood-select" class="cs-input" onchange="FloatPet.onMoodChange(this.value)">
+                            <option value="auto">🎭 跟随 TA 人设 (Auto)</option>
+                            <option value="tsundere">😤 傲娇 — 表面嫌弃实则关心</option>
+                            <option value="caring">🥰 贴心闺蜜 — 温柔体贴</option>
+                            <option value="snarky">😏 毒舌 — 犀利一针见血</option>
+                            <option value="cute">🌸 可爱懵懂 — 天真无邪</option>
+                        </select>
+                    </div>
+
+                    <!-- Preview Strip -->
+                    <div class="fp-preview-strip">
+                        <div class="fp-preview-avatar" id="fp-preview-avatar-inner">🐱</div>
+                        <div class="fp-preview-bubble-text" id="fp-preview-bubble-text">开启后，TA 会在这里吐槽你 👆</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div><!-- /cs-pane-persona -->
+
+        <!-- ══════════════════════════════
+             Tab 2: CHAT
+             ══════════════════════════════ -->
+        <div class="cs-tab-pane" id="cs-pane-chat">
+
+            <div class="cs-label">DIALOGUE</div>
+            <div class="cs-white-card">
+                <div class="cs-row">
+    <div style="flex:1;">
+        <div class="cs-row-label">记忆轮数限制</div>
+        <div class="cs-row-sub">仅发送最近对话</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <input type="number" id="cs-memory-limit" placeholder="20" min="5" style="width:60px;text-align:center;border:1px solid #eee;border-radius:10px;padding:6px;font-size:16px;font-weight:700;color:#222;background:#f9f9f9;outline:none;box-sizing:border-box;">
+        <span style="font-size:12px;color:#bbb;font-weight:700;">轮</span>
     </div>
 </div>
+
+                <div class="cs-col">
+                    <div class="cs-field-title" style="margin-bottom:12px;">REPLY BUBBLES</div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:10px;color:#bbb;font-weight:700;margin-bottom:6px;">MIN</div>
+                            <input type="number" id="cs-reply-min" min="1" max="10" value="1" style="width:100%;text-align:center;border:1.5px solid #eee;border-radius:12px;padding:10px 4px;font-size:20px;font-weight:800;color:#222;background:#f9f9f9;outline:none;box-sizing:border-box;">
+                        </div>
+                        <div style="color:#ddd;font-size:20px;padding-top:22px;flex-shrink:0;">—</div>
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:10px;color:#bbb;font-weight:700;margin-bottom:6px;">MAX</div>
+                            <input type="number" id="cs-reply-max" min="1" max="10" value="5" style="width:100%;text-align:center;border:1.5px solid #eee;border-radius:12px;padding:10px 4px;font-size:20px;font-weight:800;color:#222;background:#f9f9f9;outline:none;box-sizing:border-box;">
+                        </div>
+                    </div>
+                </div>
+                <div class="cs-row">
+                    <div style="flex:1;">
+                        <div class="cs-row-label">无操作主动发言</div>
+                        <div class="cs-row-sub">超时后 AI 主动发起话题</div>
+                    </div>
+                    <label class="switch" style="margin:0;flex-shrink:0;">
+                        <input type="checkbox" id="cs-inactivity-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="cs-col" id="cs-inactivity-time-box" style="display:none;">
+                    <div class="cs-field-title">TRIGGER INTERVAL (秒)</div>
+                    <input type="number" id="cs-inactivity-time" placeholder="300" value="300" min="60" style="font-size:20px;font-weight:800;color:#222;">
+                </div>
+            </div>
+
+            <div class="cs-label">LANGUAGE</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div class="cs-field-title">TRANSLATION MODE</div>
+                    <select id="cs-translation-mode">
+                        <option value="off">关闭 (Off)</option>
+                        <option value="ai_to_zh">翻译AI输出 → 中文</option>
+                        <option value="ai_to_en">翻译AI输出 → 英文</option>
+                    </select>
+                </div>
+                <div class="cs-col">
+                    <div class="cs-field-title">TARGET LANGUAGE</div>
+                    <input type="text" id="cs-target-lang" placeholder="例: English, Japanese (留空则默认)">
+                </div>
+            </div>
+
+            <div class="cs-label">TIME</div>
+            <div class="cs-white-card">
+                <div class="cs-row">
+                    <div style="flex:1;">
+                        <div class="cs-row-label">开启实时时间</div>
+                        <div class="cs-row-sub">AI 感知当前北京时间</div>
+                    </div>
+                    <label class="switch" style="margin:0;flex-shrink:0;">
+                        <input type="checkbox" id="cs-time-awareness-toggle" onchange="toggleCustomTimeBox(this)">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="cs-col" id="cs-custom-time-box" style="display:none;">
+                    <div class="cs-field-title">CUSTOM TIME（穿越专用）</div>
+                    <input type="text" id="cs-custom-time-input" placeholder="例: 大唐开元三年，春日午后">
+                </div>
+            </div>
+
+            <div class="cs-label">MEMORY LINK</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div style="font-size:11px;color:#bbb;margin-bottom:10px;">勾选后 TA 可读取其他角色/群聊的最近对话</div>
+                    <div id="cs-link-memory-container" class="worldbook-checklist-container" style="max-height:180px;">
+                        <div style="color:#ccc;font-size:12px;text-align:center;padding:15px;"><i class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cs-label">
+                <span>STATUS REGEX</span>
+                <label class="switch" style="margin:0;" onclick="event.stopPropagation()">
+                    <input type="checkbox" id="cs-status-regex-toggle" onchange="(function(c){var b=document.getElementById('cs-status-regex-box');if(b)b.style.display=c?'flex':'none';})(this.checked)">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div id="cs-status-regex-box" style="display:none;flex-direction:column;gap:0;">
+                <div class="cs-white-card">
+                    <div class="cs-col">
+                        <div class="cs-field-title">1 · PROMPT INSTRUCTION</div>
+                        <textarea id="cs-status-format-req" rows="4" placeholder="告知 AI 输出状态栏的格式..." style="font-family:monospace;font-size:12px;line-height:1.5;"></textarea>
+                    </div>
+                    <div class="cs-col">
+                        <div class="cs-field-title">2 · EXTRACTION REGEX</div>
+                        <textarea id="cs-status-extract-regex" rows="2" placeholder="/\[STATUS\]([\s\S]*?)\[\/STATUS\]/i" style="font-family:monospace;font-size:12px;color:#d63384;"></textarea>
+                    </div>
+                    <div class="cs-col">
+                        <div class="cs-field-title">3 · REMOVE REGEX</div>
+                        <textarea id="cs-status-replace-regex" rows="2" placeholder="（留空则不移除）" style="font-family:monospace;font-size:12px;"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cs-label">IMAGE GENERATION</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div class="cs-field-title">角色专属正面提示词 (Char Positive Prompt)</div>
+                    <textarea id="cs-char-img-positive" rows="3" placeholder="例如: nai3, solo, 1girl, white hair, purple eyes..."></textarea>
+                </div>
+                <div class="cs-col">
+                    <div class="cs-field-title">角色专属负面提示词 (Char Negative Prompt)</div>
+                    <textarea id="cs-char-img-negative" rows="2" placeholder="例如: multiple girls, boy..."></textarea>
+                </div>
+                <div class="cs-col" style="font-size:11px; color:#aaa; line-height:1.5;">
+                    <i class="fas fa-info-circle"></i> 此提示词会与 API 设置中的系统默认词合并，在 AI 发图时自动使用。
+                </div>
+            </div>
+
+        </div><!-- /cs-pane-chat -->
+
+        <!-- ══════════════════════════════
+             Tab 3: FILES
+             ══════════════════════════════ -->
+        <div class="cs-tab-pane" id="cs-pane-files">
+
+            <div class="cs-label">SECURITY</div>
+            <div class="cs-white-card">
+                <div class="cs-row">
+                    <div style="font-size:22px;flex-shrink:0;line-height:1;">🔐</div>
+                    <div style="flex:1;">
+                        <div class="cs-row-label">手机密码</div>
+                        <div class="cs-row-sub">用于「查手机」解锁</div>
+                    </div>
+                    <button id="btn-generate-char-pin" onclick="generateAndSaveCharPin()" style="background:#111;color:#fff;border:none;border-radius:10px;padding:9px 16px;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:1px;flex-shrink:0;">生成</button>
+                </div>
+            </div>
+
+            <div class="cs-label">RECORDS</div>
+            <div class="cs-white-card">
+                <label style="display:flex;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;">
+                    <i class="fas fa-file-import" style="font-size:15px;color:#888;width:18px;text-align:center;flex-shrink:0;"></i>
+                    <div class="cs-row-label" style="flex:1;">导入聊天记录</div>
+                    <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+                    <input type="file" id="cs-import-history-input" accept=".json" style="display:none;" onchange="importChatHistoryFromSettings(this)">
+                </label>
+                <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;border-top:1px solid #f2f2f2;" onclick="exportChatHistoryFromSettings()">
+                    <i class="fas fa-file-export" style="font-size:15px;color:#888;width:18px;text-align:center;flex-shrink:0;"></i>
+                    <div class="cs-row-label" style="flex:1;">导出聊天记录</div>
+                    <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;border-top:1px solid #f2f2f2;" onclick="openChatSearch()">
+                    <i class="fas fa-search" style="font-size:15px;color:#888;width:18px;text-align:center;flex-shrink:0;"></i>
+                    <div class="cs-row-label" style="flex:1;">查找聊天内容</div>
+                    <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+                </div>
+            </div>
+
+            <div class="cs-label">DANGER</div>
+            <div class="cs-white-card">
+                <div class="cs-danger-row" onclick="clearCurrentChatHistory()">
+                    <div style="font-size:13px;font-weight:700;color:#ff4d4f;">清空聊天记录</div>
+                    <div style="font-size:11px;color:#ffb3b3;margin-top:3px;">此操作不可恢复，请谨慎</div>
+                </div>
+            </div>
+
+        </div><!-- /cs-pane-files -->
+
+        <!-- 底部固定保存栏 -->
+        <input type="hidden" id="cs-char-id" value="">
+        <div class="cs-save-footer">
+            <button class="btn-save" onclick="saveChatSettings()" style="width:100%;">SAVE</button>
+        </div>
+
+    </div><!-- /chat-settings-page-content -->
+</div><!-- /chatSettingsPage -->
+
+<!-- ══════ 聊天搜索页面 ══════ -->
+<div class="chat-settings-page-view" id="chatSearchPage" style="background:#f5f5f7;z-index:1200;display:flex;flex-direction:column;">
+    <div class="chat-settings-page-header">
+        <i class="fas fa-chevron-left" onclick="closeChatSearch()"></i>
+        <span>查找聊天内容</span>
+        <div style="width:24px;"></div>
+    </div>
+    <div style="padding:15px 20px;background:#fff;border-bottom:1px solid #eee;flex-shrink:0;">
+        <div style="display:flex;gap:10px;align-items:center;background:#f5f5f7;border-radius:12px;padding:10px 15px;margin-bottom:10px;">
+            <i class="fas fa-search" style="color:#aaa;font-size:14px;"></i>
+            <input type="text" id="search-keyword-input" placeholder="搜索关键词..." style="flex:1;border:none;background:transparent;outline:none;font-size:14px;color:#333;" oninput="performChatSearch()">
+            <i class="fas fa-times" style="color:#ccc;cursor:pointer;font-size:14px;" onclick="document.getElementById('search-keyword-input').value='';performChatSearch()"></i>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <select id="search-speaker-select" onchange="performChatSearch()" style="flex:1;border:1px solid #eee;background:#f9f9f9;border-radius:10px;padding:8px 10px;font-size:12px;outline:none;">
+                <option value="all">全部发言人</option>
+                <option value="sent">我发送的</option>
+                <option value="received">TA 发送的</option>
+            </select>
+            <input type="date" id="search-date-input" onchange="performChatSearch()" style="flex:1;border:1px solid #eee;background:#f9f9f9;border-radius:10px;padding:8px 10px;font-size:12px;outline:none;color:#333;">
+        </div>
+    </div>
+    <div id="chat-search-results" style="flex:1;overflow-y:auto;padding:15px 20px;">
+        <div style="text-align:center;color:#ccc;font-size:13px;padding:40px 0;">
+            <i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:0.3;"></i>
+            输入关键词开始搜索
+        </div>
+    </div>
+</div>
+
 <!-- 好友资料页（复用 chat-settings-page 的样式） -->
 <div class="chat-settings-page-view" id="contactProfilePage">
     <div class="chat-settings-page-header">
@@ -1406,7 +1685,7 @@
                         <input type="text" id="adopt-owner-name" placeholder="例如: 妈妈 / 主人 / 姐姐" readonly style="background:#f0f0f0;">
                     </div>
                     <div class="form-group">
-                        <label>家中另一个重要的人 (AI)</label>
+                        <label>家中另一个重要的人</label>
                         <select id="adopt-target-ai" style="width:100%; height:40px; border-radius:8px; border:1px solid #ddd;"></select>
                         <div class="form-text">宠物发朋友圈时会经常提到 TA 哦</div>
                     </div>
@@ -2008,7 +2287,7 @@
                 <i class="fas fa-times" onclick="document.getElementById('ls2-cook-modal').classList.remove('active')"></i>
             </div>
             <div class="modal-body" style="padding: 20px; text-align: center;">
-                <div style="font-size: 12px; color: #888; margin-bottom: 15px;">选择冰箱里的食材，让 AI 帮你做道菜吧！</div>
+                <div style="font-size: 12px; color: #888; margin-bottom: 15px;">选择冰箱里的食材，帮你做道菜吧！</div>
                 <div id="ls2-cook-ingredients" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:20px; min-height: 50px;">
                     <!-- JS 渲染可用食材 -->
                 </div>
@@ -2404,7 +2683,7 @@
             <i class="fas fa-times" onclick="document.getElementById('live-global-wb-modal').classList.remove('active')"></i>
         </div>
         <div class="modal-body">
-            <div style="font-size:11px; color:#888; margin-bottom:10px;">此设定将影响整个 LIVE App 里 AI 给你点赞、评论和发微信的语气及背景。</div>
+            <div style="font-size:11px; color:#888; margin-bottom:10px;">此设定将影响整个 LIVE App 里TA点赞、评论和发微信的语气及背景。</div>
             <textarea id="live-global-wb-content" rows="6" placeholder="例如：当前是末世求生世界...或者我是豪门千金..." style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; background:#fafafa; font-size:12px; resize:vertical; outline:none;"></textarea>
         </div>
         <div class="modal-footer">
@@ -2626,7 +2905,7 @@
     </div>
 
 <!-- =============================================
-     群聊设置页面
+     群聊设置页面 (V2.0 美化版)
      ============================================= -->
 <div class="chat-settings-page-view" id="groupSettingsPage">
     <div class="chat-settings-page-header">
@@ -2634,63 +2913,277 @@
         <span>群聊设置</span>
         <div style="width:24px;"></div>
     </div>
-    <div class="chat-settings-page-content">
-        <!-- 基础信息 -->
-        <div class="settings-section-title" style="margin-top:0;">群基本信息</div>
-        <div class="form-group">
-            <label>群名称</label>
-            <input type="text" id="gs-group-name" placeholder="输入群名称">
-        </div>
-        <div class="form-group">
-            <label>群公告 (最高优先级，AI 成员必须遵守)</label>
-            <textarea id="gs-announcement" rows="3" placeholder="例如：本群禁止讨论政治话题，请保持友好。也可用于跑团规则设定。"></textarea>
+    <div class="chat-settings-page-content" style="padding:0; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column;">
+
+        <!-- ══ Tab 切换栏 ══ -->
+        <div class="cs-tab-bar">
+            <button class="cs-tab-btn active" id="gs-tab-btn-info" onclick="switchGsTab('info')">INFO</button>
+            <button class="cs-tab-btn" id="gs-tab-btn-ai" onclick="switchGsTab('ai')">AI</button>
+            <button class="cs-tab-btn" id="gs-tab-btn-visual" onclick="switchGsTab('visual')">VISUAL</button>
+            <button class="cs-tab-btn" id="gs-tab-btn-data" onclick="switchGsTab('data')">DATA</button>
         </div>
 
-        <hr class="settings-divider">
+        <!-- ══ Tab 1: INFO ══ -->
+        <div class="cs-tab-pane active" id="gs-pane-info">
 
-        <!-- 后台活跃 -->
-        <div class="settings-section-title">群聊后台实时活动</div>
-        <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <label style="margin:0; display:block;">开启后台活跃</label>
-                <span class="form-text" style="margin:0;">关闭应用后，群成员仍会自动聊天</span>
+            <div class="cs-label">GROUP PROFILE</div>
+            <div class="cs-white-card">
+                <div class="cs-row">
+                    <div id="gs-group-avatar-preview" style="width:52px;height:52px;border-radius:13px;background:#f0f0f0;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                        <img id="gs-group-avatar-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+                        <i class="fas fa-users" style="color:#ccc;font-size:20px;" id="gs-group-avatar-placeholder"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div class="cs-row-label">群头像</div>
+                        <div class="cs-row-sub">Group Avatar</div>
+                    </div>
+                    <input type="hidden" id="gs-group-avatar-val">
+                    <input type="file" id="gs-group-avatar-upload" accept="image/*" style="display:none;" onchange="handleGsGroupAvatarUpload(this)">
+                    <button onclick="document.getElementById('gs-group-avatar-upload').click()" style="background:#f5f5f7;border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;color:#444;cursor:pointer;flex-shrink:0;">更换</button>
+                </div>
+                <div class="cs-col" style="border-top:1px solid #f2f2f2;">
+                    <div class="cs-field-title">AVATAR URL</div>
+                    <input type="text" id="gs-group-avatar-url" placeholder="或输入图片网址...">
+                </div>
+                <div class="cs-col" style="border-top:1px solid #f2f2f2;">
+                    <div class="cs-field-title">GROUP NAME ✱</div>
+                    <input type="text" id="gs-group-name" placeholder="群聊名称（AI 会识别此名称）">
+                </div>
+                <div class="cs-col" style="border-top:1px solid #f2f2f2;">
+                    <div class="cs-field-title">MY NICKNAME IN GROUP</div>
+                    <input type="text" id="gs-my-nickname" placeholder="我的群昵称（AI 会用此名称称呼你）">
+                </div>
             </div>
-            <label class="switch" style="margin:0;">
-                <input type="checkbox" id="gs-bg-activity-toggle" onchange="document.getElementById('gs-bg-interval-box').style.display=this.checked?'block':'none'">
-                <span class="slider round"></span>
-            </label>
-        </div>
-        <div id="gs-bg-interval-box" style="display:none; background:#f9f9f9; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:8px;">
-            <label style="font-size:12px; color:#555;">触发间隔 (秒)</label>
-            <input type="number" id="gs-bg-interval" value="120" min="30" style="margin-top:6px;">
-            <span class="form-text" style="display:block; margin-top:4px;">每隔此秒数，群成员会自动生成聊天内容。</span>
+
+            <div class="cs-label">MY PRESENCE</div>
+            <div class="cs-white-card">
+                <div class="cs-row">
+                    <div id="gs-my-avatar-preview" style="width:52px;height:52px;border-radius:50%;background:#f0f0f0;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;">
+                        <img id="gs-my-avatar-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+                        <i class="fas fa-user" style="color:#ccc;font-size:20px;" id="gs-my-avatar-placeholder"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div class="cs-row-label">我的群头像</div>
+                        <div class="cs-row-sub">My Avatar in this group</div>
+                    </div>
+                    <input type="file" id="gs-my-avatar-upload" accept="image/*" style="display:none;" onchange="handleGsMyAvatarUpload(this)">
+                    <button onclick="document.getElementById('gs-my-avatar-upload').click()" style="background:#f5f5f7;border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;color:#444;cursor:pointer;flex-shrink:0;">更换</button>
+                </div>
+                <div class="cs-col" style="border-top:1px solid #f2f2f2;">
+                    <div class="cs-field-title">AVATAR FRAME URL（头像框）</div>
+                    <input type="text" id="gs-my-avatar-frame" placeholder="头像框图片链接（可选）">
+                </div>
+            </div>
+
+            <div class="cs-label">MEMBERS</div>
+            <div class="cs-white-card">
+                <div class="cs-row" style="cursor:pointer;" onclick="openGroupMemberPanel()">
+                    <div style="font-size:22px;flex-shrink:0;line-height:1;">👥</div>
+                    <div style="flex:1;">
+                        <div class="cs-row-label">管理群成员</div>
+                        <div class="cs-row-sub" id="gs-member-count-label">查看与管理所有群成员</div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+                </div>
+                <div class="cs-row" style="cursor:pointer;border-top:1px solid #f2f2f2;" onclick="transferGroupOwner()">
+                    <div style="font-size:22px;flex-shrink:0;line-height:1;">👑</div>
+                    <div style="flex:1;">
+                        <div class="cs-row-label" style="color:#ff7e67;">转让群主</div>
+                        <div class="cs-row-sub">将群主权限转让给成员</div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+                </div>
+            </div>
+
+            <div class="cs-label">DANGER</div>
+            <div class="cs-white-card">
+                <div class="cs-danger-row" onclick="exitOrDeleteGroup()">
+                    <div style="font-size:13px;font-weight:700;color:#ff4d4f;">退出 / 解散群聊</div>
+                    <div style="font-size:11px;color:#ffb3b3;margin-top:3px;">此操作不可恢复</div>
+                </div>
+            </div>
         </div>
 
-        <hr class="settings-divider">
+        <!-- ══ Tab 2: AI ══ -->
+        <div class="cs-tab-pane" id="gs-pane-ai">
 
-        <!-- 成员管理 -->
-        <div class="settings-section-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>群成员管理</span>
-        </div>
-        <div id="gs-members-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;">
-            <!-- JS 动态填充 -->
+            <div class="cs-label">BACKGROUND ACTIVITY</div>
+            <div class="cs-white-card">
+                <div class="cs-row">
+                    <div style="flex:1;">
+                        <div class="cs-row-label">群聊后台实时活动</div>
+                        <div class="cs-row-sub">关闭应用后，群成员仍会自动聊天</div>
+                    </div>
+                    <label class="switch" style="margin:0;flex-shrink:0;">
+                        <input type="checkbox" id="gs-bg-activity-toggle" onchange="document.getElementById('gs-bg-interval-box').style.display=this.checked?'block':'none'">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="cs-col" id="gs-bg-interval-box" style="display:none;border-top:1px solid #f2f2f2;">
+                    <div class="cs-field-title">TRIGGER INTERVAL (秒)</div>
+                    <input type="number" id="gs-bg-interval" placeholder="120" min="30" style="font-size:20px;font-weight:800;color:#222;">
+                </div>
+            </div>
+
+            <div class="cs-label">DIALOGUE</div>
+            <div class="cs-white-card">
+                <div class="cs-row">
+                    <div style="flex:1;">
+                        <div class="cs-row-label">上下文记忆条数</div>
+                        <div class="cs-row-sub">AI 能记住最近多少条消息</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                        <input type="number" id="gs-memory-limit" placeholder="10" min="5" style="width:60px;text-align:center;border:1px solid #eee;border-radius:10px;padding:6px;font-size:16px;font-weight:700;color:#222;background:#f9f9f9;outline:none;box-sizing:border-box;">
+                        <span style="font-size:12px;color:#bbb;font-weight:700;">条</span>
+                    </div>
+                </div>
+                <div class="cs-col" style="border-top:1px solid #f2f2f2;">
+                    <div class="cs-field-title">REPLY BUBBLES</div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:10px;color:#bbb;font-weight:700;margin-bottom:6px;">MIN</div>
+                            <input type="number" id="gs-reply-min" min="1" max="10" value="1" style="width:100%;text-align:center;border:1.5px solid #eee;border-radius:12px;padding:10px 4px;font-size:20px;font-weight:800;color:#222;background:#f9f9f9;outline:none;box-sizing:border-box;">
+                        </div>
+                        <div style="color:#ddd;font-size:20px;padding-top:22px;flex-shrink:0;">—</div>
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:10px;color:#bbb;font-weight:700;margin-bottom:6px;">MAX</div>
+                            <input type="number" id="gs-reply-max" min="1" max="10" value="5" style="width:100%;text-align:center;border:1.5px solid #eee;border-radius:12px;padding:10px 4px;font-size:20px;font-weight:800;color:#222;background:#f9f9f9;outline:none;box-sizing:border-box;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cs-label">MEMORY LINK</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div style="font-size:11px;color:#bbb;margin-bottom:10px;">勾选后，AI 可读取其他角色/群聊的最近对话</div>
+                    <div id="gs-link-memory-container" class="worldbook-checklist-container" style="max-height:180px;">
+                        <div style="color:#ccc;font-size:12px;text-align:center;padding:15px;"><i class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cs-label">ANNOUNCEMENT</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div style="font-size:11px;color:#bbb;margin-bottom:8px;">群公告是最高优先级规则，所有 AI 群员都会严格遵守。</div>
+                    <textarea id="gs-announcement" rows="4" placeholder="在这里编写群公告…"></textarea>
+                </div>
+            </div>
+
+        </div><!-- /gs-pane-ai -->
+
+        <!-- ══ Tab 3: VISUAL ══ -->
+        <div class="cs-tab-pane" id="gs-pane-visual">
+
+            <div class="cs-label">BACKGROUND</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div class="cs-field-title">CHAT BACKGROUND URL</div>
+                    <div style="display:flex;gap:10px;">
+                        <input type="text" id="gs-chat-bg-url" placeholder="输入图片链接…" style="flex:1;">
+                        <label style="flex-shrink:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;background:#f0f0f0;border:none;">
+                            <i class="fas fa-upload" style="color:#666;font-size:13px;"></i>
+                            <input type="file" id="gs-chat-bg-file" accept="image/*" style="display:none;" onchange="handleGsChatBgUpload(this)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cs-label">BUBBLE THEME</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div style="font-size:11px;color:#bbb;margin-bottom:12px;">选择气泡配色方案</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                        <button class="gs-bubble-theme-btn" data-theme="" onclick="selectGsBubbleTheme('',this)" style="background:#fff;border:1.5px solid #eee;border-radius:10px;padding:8px 14px;font-size:12px;cursor:pointer;">默认</button>
+                        <button class="gs-bubble-theme-btn" data-theme="pink-blue" onclick="selectGsBubbleTheme('pink-blue',this)" style="background:linear-gradient(135deg,#fce4ec,#e3f2fd);border:1.5px solid #eee;border-radius:10px;padding:8px 14px;font-size:12px;cursor:pointer;">粉蓝</button>
+                        <button class="gs-bubble-theme-btn" data-theme="dark" onclick="selectGsBubbleTheme('dark',this)" style="background:#222;color:#fff;border:1.5px solid #222;border-radius:10px;padding:8px 14px;font-size:12px;cursor:pointer;">黑白</button>
+                        <button class="gs-bubble-theme-btn" data-theme="green-black" onclick="selectGsBubbleTheme('green-black',this)" style="background:linear-gradient(135deg,#e8f5e9,#212121);border:1.5px solid #eee;border-radius:10px;padding:8px 14px;font-size:12px;cursor:pointer;color:#1b5e20;">绿黑</button>
+                        <button class="gs-bubble-theme-btn" data-theme="purple" onclick="selectGsBubbleTheme('purple',this)" style="background:linear-gradient(135deg,#f3e5f5,#ede7f6);border:1.5px solid #eee;border-radius:10px;padding:8px 14px;font-size:12px;cursor:pointer;">紫梦</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cs-label">FONT SIZE</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="font-size:12px;font-weight:600;color:#555;">字体大小</span>
+                        <span id="gs-font-size-val" style="font-size:14px;font-weight:800;color:#222;">14px</span>
+                    </div>
+                    <input type="range" id="gs-font-size-slider" min="11" max="20" step="1" value="14" style="width:100%;accent-color:#111;" oninput="document.getElementById('gs-font-size-val').textContent=this.value+'px'">
+                </div>
+            </div>
+
+            <div class="cs-label">CUSTOM CSS</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div style="font-size:11px;color:#bbb;margin-bottom:8px;">仅在此群聊界面生效的 CSS 代码</div>
+                    <textarea id="gs-custom-css" rows="5" placeholder="/* 例如 */&#10;.message-bubble { border-radius: 4px; }" style="font-family:monospace;font-size:12px;"></textarea>
+                </div>
+                <div class="cs-row" style="border-top:1px solid #f2f2f2;">
+                    <div style="flex:1;"><div class="cs-row-label">CSS 预设</div><div id="gs-css-presets-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div></div>
+                    <div style="display:flex;gap:8px;flex-shrink:0;">
+                        <button onclick="saveGsCssPreset()" style="background:#f5f5f7;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;">保存预设</button>
+                        <button onclick="exportGsCss()" style="background:#f5f5f7;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;">导出</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cs-label">NOVELAI IMAGE</div>
+            <div class="cs-white-card">
+                <div class="cs-col">
+                    <div class="cs-field-title">群专属正面提示词</div>
+                    <textarea id="gs-nai-positive" rows="3" placeholder="例如：anime style, group chat scene…"></textarea>
+                </div>
+                <div class="cs-col" style="border-top:1px solid #f2f2f2;">
+                    <div class="cs-field-title">群专属负面提示词</div>
+                    <textarea id="gs-nai-negative" rows="2" placeholder="例如：nsfw, bad quality…"></textarea>
+                </div>
+            </div>
+
+        </div><!-- /gs-pane-visual -->
+
+        <!-- ══ Tab 4: DATA ══ -->
+        <div class="cs-tab-pane" id="gs-pane-data">
+
+            <div class="cs-label">RECORDS</div>
+            <div class="cs-white-card">
+                <label style="display:flex;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;">
+                    <i class="fas fa-file-import" style="font-size:15px;color:#888;width:18px;text-align:center;flex-shrink:0;"></i>
+                    <div class="cs-row-label" style="flex:1;">导入聊天记录</div>
+                    <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+                    <input type="file" id="gs-import-history-input" accept=".json" style="display:none;" onchange="importGroupChatHistory(this)">
+                </label>
+                <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;border-top:1px solid #f2f2f2;" onclick="exportGroupChatHistory()">
+                    <i class="fas fa-file-export" style="font-size:15px;color:#888;width:18px;text-align:center;flex-shrink:0;"></i>
+                    <div class="cs-row-label" style="flex:1;">导出聊天记录</div>
+                    <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;border-top:1px solid #f2f2f2;" onclick="openGroupChatSearch()">
+                    <i class="fas fa-search" style="font-size:15px;color:#888;width:18px;text-align:center;flex-shrink:0;"></i>
+                    <div class="cs-row-label" style="flex:1;">查找聊天内容</div>
+                    <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+                </div>
+            </div>
+
+            <div class="cs-label">DANGER</div>
+            <div class="cs-white-card">
+                <div class="cs-danger-row" onclick="clearGroupChatHistory()">
+                    <div style="font-size:13px;font-weight:700;color:#ff4d4f;">清空群聊记录</div>
+                    <div style="font-size:11px;color:#ffb3b3;margin-top:3px;">此操作不可恢复，请谨慎</div>
+                </div>
+            </div>
+
+        </div><!-- /gs-pane-data -->
+
+        <!-- 底部固定保存栏 -->
+        <div class="cs-save-footer">
+            <button class="btn-save" onclick="saveGroupSettings()" style="width:100%;">SAVE</button>
         </div>
 
-        <hr class="settings-divider">
-
-        <!-- 危险区 -->
-        <div class="settings-section-title">高级操作</div>
-        <div style="display:flex; flex-direction:column; gap:10px; padding-bottom:40px;">
-            <button class="btn-save" onclick="saveGroupSettings()">保存群聊设置</button>
-            <button class="btn-secondary" onclick="transferGroupOwner()" style="color:#ff7e67; border-color:#ff7e67;">
-                <i class="fas fa-crown"></i> 转让群主
-            </button>
-            <button class="btn-secondary" onclick="exitOrDeleteGroup()" style="color:#ff4d4f; border-color:#ff4d4f;">
-                <i class="fas fa-door-open"></i> 退出 / 解散群聊
-            </button>
-        </div>
-    </div>
-</div>
+    </div><!-- /chat-settings-page-content -->
+</div><!-- /groupSettingsPage -->
 
 <!-- =============================================
      发红包弹窗
@@ -2820,6 +3313,97 @@
     </div>
 </div>
 
+<!-- =============================================
+     群成员管理面板
+     ============================================= -->
+<input type="hidden" id="gs-current-group-id" value="">
+<div class="chat-settings-page-view" id="groupMemberPanel" style="z-index:400;">
+    <div class="chat-settings-page-header">
+        <i class="fas fa-chevron-left" onclick="closeGroupMemberPanel()"></i>
+        <span>群成员管理</span>
+        <div style="width:24px;"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;background:#f5f5f7;padding-bottom:40px;">
+        <div class="cs-label" style="padding:0 20px;margin-top:14px;">ADD MEMBERS</div>
+        <div class="cs-white-card" style="margin:0 20px 16px;">
+            <div class="cs-row" style="cursor:pointer;" onclick="openAddMemberModal(document.getElementById('gs-current-group-id').value)">
+                <div style="font-size:20px;flex-shrink:0;line-height:1;">👤</div>
+                <div style="flex:1;"><div class="cs-row-label">从好友列表添加</div><div class="cs-row-sub">将已有 AI 角色拉入群聊</div></div>
+                <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+            </div>
+            <div class="cs-row" style="cursor:pointer;border-top:1px solid #f2f2f2;" onclick="openCreateNewMemberModal()">
+                <div style="font-size:20px;flex-shrink:0;line-height:1;">✏️</div>
+                <div style="flex:1;"><div class="cs-row-label">创建群内新成员</div><div class="cs-row-sub">手动输入名字、头像和人设，专属 NPC</div></div>
+                <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+            </div>
+            <div class="cs-row" style="cursor:pointer;border-top:1px solid #f2f2f2;" onclick="openAiGenerateMembersModal()">
+                <div style="font-size:20px;flex-shrink:0;line-height:1;">✨</div>
+                <div style="flex:1;"><div class="cs-row-label">AI 生成成员</div><div class="cs-row-sub">输入场景，AI 自动生成 1-20 位性格各异的群友</div></div>
+                <i class="fas fa-chevron-right" style="font-size:11px;color:#ddd;"></i>
+            </div>
+        </div>
+        <div class="cs-label" style="padding:0 20px;">CURRENT MEMBERS</div>
+        <div id="gs-members-list" style="margin:0 20px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,0.04);"></div>
+    </div>
+</div>
+
+<!-- 创建新群成员 Modal -->
+<div id="gs-create-member-modal" class="modal-overlay">
+    <div class="modal-box" style="width:320px;">
+        <div class="modal-header"><span>创建群内新成员</span><i class="fas fa-times" onclick="closeCreateNewMemberModal()"></i></div>
+        <div class="modal-body">
+            <div class="input-group"><label>成员名字 *</label><input type="text" id="cnm-name" placeholder="例如：小云"></div>
+            <div class="input-group">
+                <label>头像 URL（可选）</label>
+                <div style="display:flex;gap:10px;">
+                    <input type="text" id="cnm-avatar-url" placeholder="留空则自动生成头像">
+                    <label style="flex-shrink:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;background:#f0f0f0;border:none;">
+                        <i class="fas fa-upload" style="color:#666;font-size:13px;"></i>
+                        <input type="file" id="cnm-avatar-file" accept="image/*" style="display:none;" onchange="handleCnmAvatarUpload(this)">
+                    </label>
+                </div>
+                <img id="cnm-avatar-preview-img" src="" style="display:none;width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #eee;margin-top:8px;">
+            </div>
+            <div class="input-group"><label>人设（性格与背景描述）</label><textarea id="cnm-persona" rows="4" placeholder="例如：活泼开朗的大学生，喜欢二次元，说话带点傲娇..."></textarea></div>
+        </div>
+        <div class="modal-footer"><button class="btn-cancel" onclick="closeCreateNewMemberModal()">取消</button><button class="btn-confirm" onclick="confirmCreateNewMember()">创建</button></div>
+    </div>
+</div>
+
+<!-- AI 生成群成员 Modal -->
+<div id="gs-ai-generate-modal" class="modal-overlay">
+    <div class="modal-box" style="width:320px;">
+        <div class="modal-header"><span>✨ AI 生成群成员</span><i class="fas fa-times" onclick="closeAiGenerateMembersModal()"></i></div>
+        <div class="modal-body">
+            <div class="input-group"><label>生成人数（1-20）</label><input type="number" id="agm-count" value="5" min="1" max="20"></div>
+            <div class="input-group"><label>场景提示词</label><textarea id="agm-prompt" rows="3" placeholder="例如：一群喜欢探险的大学生&#10;例如：修仙门派的弟子们"></textarea></div>
+            <div style="font-size:11px;color:#aaa;margin-top:10px;line-height:1.5;"><i class="fas fa-info-circle"></i> AI 将为每位成员生成独特的姓名、性格和背景人设，添加为群内专属 NPC。</div>
+        </div>
+        <div class="modal-footer"><button class="btn-cancel" onclick="closeAiGenerateMembersModal()">取消</button><button class="btn-confirm" id="agm-confirm-btn" onclick="confirmAiGenerateMembers()"><i class="fas fa-magic"></i> 开始生成</button></div>
+    </div>
+</div>
+
+<!-- 群聊搜索页面 -->
+<div class="chat-settings-page-view" id="groupChatSearchPage" style="background:#f5f5f7;z-index:1200;display:flex;flex-direction:column;">
+    <div class="chat-settings-page-header"><i class="fas fa-chevron-left" onclick="closeGroupChatSearch()"></i><span>查找群聊内容</span><div style="width:24px;"></div></div>
+    <div style="padding:15px 20px;background:#fff;border-bottom:1px solid #eee;flex-shrink:0;">
+        <div style="display:flex;gap:10px;align-items:center;background:#f5f5f7;border-radius:12px;padding:10px 15px;margin-bottom:10px;">
+            <i class="fas fa-search" style="color:#aaa;font-size:14px;"></i>
+            <input type="text" id="gs-search-keyword" placeholder="搜索关键词..." style="flex:1;border:none;background:transparent;outline:none;font-size:14px;color:#333;" oninput="performGroupChatSearch()">
+            <i class="fas fa-times" style="color:#ccc;cursor:pointer;font-size:14px;" onclick="document.getElementById('gs-search-keyword').value='';performGroupChatSearch()"></i>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <select id="gs-search-speaker" onchange="performGroupChatSearch()" style="flex:1;border:1px solid #eee;background:#f9f9f9;border-radius:10px;padding:8px 10px;font-size:12px;outline:none;">
+                <option value="all">全部发言人</option><option value="sent">我发送的</option><option value="received">群友发送的</option>
+            </select>
+            <input type="date" id="gs-search-date" onchange="performGroupChatSearch()" style="flex:1;border:1px solid #eee;background:#f9f9f9;border-radius:10px;padding:8px 10px;font-size:12px;outline:none;color:#333;">
+        </div>
+    </div>
+    <div id="gs-search-results" style="flex:1;overflow-y:auto;padding:15px 20px;">
+        <div style="text-align:center;color:#ccc;font-size:13px;padding:40px 0;"><i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;opacity:0.3;"></i>输入关键词开始搜索</div>
+    </div>
+</div>
+
 <!-- ============================================== -->
 <!-- [背包 APP] Bubble 购物收藏 -->
 <!-- ============================================== -->
@@ -2848,6 +3432,7 @@
 </div>
 
     <script src="js/core.js"></script>
+    <script src="js/app_imagegen.js"></script>
     <script src="js/apps.js"></script>
     <script src="js/app_worldbook.js"></script>
     <script src="js/app_bubble.js?v=4"></script>
@@ -2867,6 +3452,29 @@
 <script src="js/app_groupchat.js"></script>
 <script src="js/app_galgame.js"></script>
 <script src="js/app_tracker.js"></script>
+<script src="js/app_novel.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="js/app_floatpet.js"></script>
+<script>
+function openNovelApp() {
+  var el = document.getElementById('novelApp');
+  if (el) { el.classList.add('open'); NovelApp.init(); }
+}
+function closeNovelApp() {
+  var el = document.getElementById('novelApp');
+  if (el) { el.classList.remove('open'); }
+}
+
+// 聊天设置 — 三栏 Tab 切换
+function switchCsTab(id) {
+  ['persona','chat','files'].forEach(function(t) {
+    var pane = document.getElementById('cs-pane-' + t);
+    var btn  = document.getElementById('cs-tab-btn-' + t);
+    if (pane) pane.classList.toggle('active', t === id);
+    if (btn)  btn.classList.toggle('active',  t === id);
+  });
+}
+</script>
 
 <!-- ============================================== -->
 <!-- 查手机 (TRACKER) APP                           -->
@@ -3147,6 +3755,11 @@
 
 </div><!-- /trackerApp -->
 
+
+<!-- ============================================== -->
+<!-- 📚 Novel App                                   -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="novelApp"></div>
 
 <div id="add-friend-modal" class="modal-overlay">
     <div class="modal-box">
@@ -3541,7 +4154,7 @@
         <div class="form-group">
             <label>回复最大字数 (Target Length): <span id="off-len-val">200</span></label>
             <input type="range" id="offline-max-len" min="50" max="5000" step="50" oninput="document.getElementById('off-len-val').innerText=this.value; saveOfflineConfig();">
-            <div class="form-text">注意：这只是给 AI 的建议长度，并非绝对截断。</div>
+            <div class="form-text">注意：这只是建议长度，并非绝对截断。</div>
         </div>
 <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
     <label style="margin:0; font-weight:500;">开启流式传输 (Streaming)</label>

@@ -112,6 +112,18 @@ window.buildLinkedMemoryContext = async function(chatSettings) {
 
 /* ─── § 4  动态情景记忆：时间感知 ─── */
 window.buildSituationalAwareness = function(chatSettings) {
+    const timeOn = chatSettings && chatSettings.timeAwareness !== undefined ? chatSettings.timeAwareness : true;
+
+    if (!timeOn) {
+        // 时间感知关闭：使用自定义时间（穿越剧情）或不注入任何时间信息
+        const customTime = chatSettings && chatSettings.customTime;
+        if (customTime && customTime.trim()) {
+            return `当前时间: ${customTime.trim()}`;
+        }
+        return ''; // 完全不注入时间
+    }
+
+    // 时间感知开启：使用真实北京时间
     const now = Date.now();
     const lastTime = chatSettings && chatSettings.lastChatTime;
     let timeLine = '';
