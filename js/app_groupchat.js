@@ -175,11 +175,15 @@ window.openGroupChat = async function (groupId) {
                 sysDiv.innerHTML = `<span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:4px; font-size:11px; color:#999;">${msg.text}</span>`;
                 chatMessages.appendChild(sysDiv);
             } else {
-                // 获取发送者头像
-                let avatar = msg.customAvatar;
-                if (!avatar && msg.senderName && friendsData[msg.senderName]) {
-                    avatar = friendsData[msg.senderName].avatar;
+                // 获取发送者头像：优先使用当前 friendsData 中的最新头像，保证头像更新后能全局同步
+                let avatar = null;
+                if (msg.senderName) {
+                    const liveMem = findMemberByName(msg.senderName, group.members);
+                    if (liveMem && liveMem.avatar) {
+                        avatar = liveMem.avatar; // 始终读取最新头像
+                    }
                 }
+                if (!avatar) avatar = msg.customAvatar; // 兜底：使用历史存档头像
                 if (!avatar && msg.senderName) {
                     avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.senderName)}`;
                 }
@@ -228,11 +232,19 @@ function injectGroupPlusPanel() {
 
     // 群专属按钮：白底黑图案，与其他按钮保持一致
     const groupBtns = [
-        { icon: 'fa-gift',       label: '发红包',  fn: 'openSendRedPacketModal()' },
-        { icon: 'fa-poll',       label: '群投票',  fn: 'openGroupVoteModal()' },
-        { icon: 'fa-video',      label: '群视频',  fn: 'openGroupVideoCall()' },
-        { icon: 'fa-user-secret',label: '匿名',    fn: 'toggleAnonymousMode()' },
+        { icon: 'fa-gift',        label: '发红包',  fn: 'openSendRedPacketModal()' },
+        { icon: 'fa-poll',        label: '群投票',  fn: 'openGroupVoteModal()' },
+        { icon: 'fa-video',       label: '群视频',  fn: 'openGroupVideoCall()' },
+        { icon: 'fa-user-secret', label: '匿名',    fn: 'toggleAnonymousMode()' },
     ];
+
+    // 将原有「线下模式」按钮的点击行为切换为群聊版本
+    const origOfflineBtn = Array.from(plusGrid.querySelectorAll('.plus-item:not(.group-exclusive-btn)'))
+        .find(el => el.querySelector('span') && el.querySelector('span').textContent.trim() === '线下模式');
+    if (origOfflineBtn) {
+        origOfflineBtn._origOnclick = origOfflineBtn.onclick;
+        origOfflineBtn.onclick = () => openGroupOfflineMode();
+    }
 
     groupBtns.forEach(btn => {
         const div = document.createElement('div');
@@ -248,6 +260,17 @@ function injectGroupPlusPanel() {
    ========================================= */
 window.removeGroupPlusPanel = function () {
     document.querySelectorAll('#panel-plus .group-exclusive-btn').forEach(el => el.remove());
+
+    // 恢复原有「线下模式」按钮的 onclick
+    const plusGrid = document.querySelector('#panel-plus .plus-grid');
+    if (plusGrid) {
+        const origOfflineBtn = Array.from(plusGrid.querySelectorAll('.plus-item'))
+            .find(el => el.querySelector('span') && el.querySelector('span').textContent.trim() === '线下模式');
+        if (origOfflineBtn && origOfflineBtn._origOnclick !== undefined) {
+            origOfflineBtn.onclick = origOfflineBtn._origOnclick;
+            delete origOfflineBtn._origOnclick;
+        }
+    }
 };
 
 /* =========================================
@@ -2960,3 +2983,563 @@ window.confirmAiGenerateMembers = async function () {
 };
 
 console.log('[app_groupchat.js] 群聊模块已加载');
+
+/* =========================================
+   群聊线下模式 (Group Offline Mode) V1.0
+   仿照单聊线下模式，支持多角色叙事
+   ========================================= */
+
+// ── 拦截 openOfflineMode：群聊时走群聊专属版本 ──
+(function () {
+    const _origOpen = window.openOfflineMode;
+    window.openOfflineMode = function () {
+        if (currentChatType === 'group') {
+            openGroupOfflineMode();
+            return;
+        }
+        if (typeof _origOpen === 'function') _origOpen();
+    };
+})();
+
+// ── 拦截 sendOfflineMessage：群聊时走群聊专属版本 ──
+(function () {
+    const _origSend = window.sendOfflineMessage;
+    window.sendOfflineMessage = async function (isRegen = false) {
+        if (currentChatType === 'group') {
+            return await sendGroupOfflineMessage(isRegen);
+        }
+        if (typeof _origSend === 'function') return await _origSend(isRegen);
+    };
+})();
+
+/* ─── 打开群聊线下模式 ─── */
+window.openGroupOfflineMode = function () {
+    if (!currentChatId || currentChatType !== 'group') return;
+    const group = groupsData[currentChatId];
+    if (!group) return;
+
+    // 关闭加号面板
+    const panel = document.getElementById('chat-extra-panels');
+    if (panel) panel.classList.remove('open');
+
+    const modal = document.getElementById('offlineModeView');
+    if (!modal) return;
+
+    // 设置头部标题
+    const nameEl = document.getElementById('offline-char-name');
+    if (nameEl) nameEl.innerText = group.name;
+
+    // 设置背景：优先群头像，其次第一位成员头像，再次用文字头像
+    const bgLayer = document.getElementById('offline-bg-layer');
+    if (bgLayer) {
+        const bgUrl = group.avatar || group.customAvatar || '';
+        if (bgUrl) {
+            bgLayer.style.backgroundImage = `url('${bgUrl}')`;
+        } else {
+            const firstId = (group.members || [])[0];
+            const firstMem = firstId ? friendsData[firstId] : null;
+            const fallback = (firstMem && firstMem.avatar)
+                ? firstMem.avatar
+                : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(group.name)}&backgroundColor=cccccc`;
+            bgLayer.style.backgroundImage = `url('${fallback}')`;
+        }
+    }
+
+    // 渲染历史
+    renderGroupOfflineHistory(currentChatId);
+
+    // 应用线下模式自定义背景（与单聊线下模式保持一致）
+    if (typeof applyOfflineVisuals === 'function') applyOfflineVisuals();
+
+    modal.classList.add('show');
+
+    // 同步工具栏按钮状态（与单聊线下模式保持一致）
+    const dmBtn = document.getElementById('offline-danmaku-btn');
+    if (dmBtn) dmBtn.innerText = `弹幕: ${(typeof isDanmakuOn !== 'undefined' && isDanmakuOn) ? 'ON' : 'OFF'}`;
+
+    const optBtn = document.getElementById('offline-options-btn');
+    if (optBtn) optBtn.innerText = `选项分支: ${(typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) ? 'ON' : 'OFF'}`;
+};
+
+/* ─── 渲染群聊线下历史 ─── */
+async function renderGroupOfflineHistory(groupId) {
+    const container = document.getElementById('offline-log-container');
+    if (!container) return;
+
+    // 确保弹幕区存在（与单聊线下保持结构一致）
+    if (!container.querySelector('.offline-danmaku-area')) {
+        container.insertAdjacentHTML('beforeend', `
+            <div class="offline-danmaku-area">
+                <div class="danmaku-area-header">REAL-TIME COMMENTS</div>
+                <div id="offline-danmaku-log"></div>
+            </div>
+        `);
+    }
+
+    // 清除旧的剧情条目，但保留弹幕区
+    container.querySelectorAll('.offline-entry').forEach(el => el.remove());
+    document.getElementById('vn-options-box')?.remove();
+
+    const dmLog = document.getElementById('offline-danmaku-log');
+    if (dmLog) dmLog.innerHTML = '';
+
+    const group = groupsData[groupId];
+    const history = await loadChatHistory(groupId);
+
+    if (!history || history.length === 0) {
+        // 显示聚会开场提示
+        const memberNames = (group.members || []).slice(0, 4).map(id => {
+            const f = friendsData[id];
+            return f ? (f.remark || f.realName) : id;
+        }).join('、');
+        const extra = (group.members || []).length > 4 ? ` 等${(group.members || []).length}人` : '';
+        _appendGroupOfflineSystemEntry(`✨ 大家相聚在一起：${memberNames}${extra}`);
+    } else {
+        history.forEach(msg => {
+            if (!msg.isOffline) return;
+            if (msg.type === 'system') {
+                _appendGroupOfflineSystemEntry(msg.text);
+                return;
+            }
+            const role = msg.type === 'sent' ? 'user' : 'ai';
+            const name = role === 'user' ? '你' : (msg.senderName || 'AI');
+            appendGroupOfflineEntry(role, msg.text, name, msg.id, msg.customAvatar);
+        });
+    }
+
+    setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+}
+
+/* ─── 添加系统提示行 ─── */
+function _appendGroupOfflineSystemEntry(text) {
+    const container = document.getElementById('offline-log-container');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = 'offline-entry system';
+    div.innerHTML = `<div class="oe-text" style="text-align:center;color:#aaa;font-size:12px;font-style:italic;padding:6px 0;">${
+        (text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+    }</div>`;
+    const dmArea = container.querySelector('.offline-danmaku-area');
+    if (dmArea) container.insertBefore(div, dmArea);
+    else container.appendChild(div);
+}
+
+/* ─── 添加一条群聊线下条目（带头像，可修改/删除/重试） ─── */
+function appendGroupOfflineEntry(role, text, name, msgId, avatarUrl) {
+    const container = document.getElementById('offline-log-container');
+    if (!container) return;
+
+    const safeId = msgId || ('grp_off_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
+
+    const div = document.createElement('div');
+    div.className = `offline-entry ${role}`;
+    div.setAttribute('data-msg-id', safeId);
+
+    // 补全 AI 头像
+    if (!avatarUrl && role === 'ai') {
+        const group = groupsData[currentChatId];
+        if (group) {
+            const mem = findMemberByName(name, group.members);
+            avatarUrl = (mem && mem.avatar)
+                ? mem.avatar
+                : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+        } else {
+            avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+        }
+    }
+
+    // 格式化文本：*动作* → 斜体，「对话」→ 加粗
+    const formattedText = (text || '')
+        .replace(/\*(.*?)\*/g, '<i>*$1*</i>')
+        .replace(/「(.*?)」/g, '<b>「$1」</b>')
+        .replace(/\n/g, '<br>');
+
+    // 操作按钮（与单聊线下模式保持一致）
+    const actionsHtml = `
+        <div class="oe-actions">
+            <div class="oe-btn" onclick="regenerateOfflineMessage('${safeId}')" title="重试/重回">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+            <div class="oe-btn" onclick="openModifyOffline('${safeId}')" title="修改">
+                <i class="fas fa-pen"></i>
+            </div>
+            <div class="oe-btn delete" onclick="deleteOfflineMsgUI('${safeId}')" title="删除">
+                <i class="fas fa-trash"></i>
+            </div>
+        </div>`;
+
+    if (role === 'ai') {
+        // AI 条目：显示头像 + 角色名
+        const avatarHtml = avatarUrl
+            ? `<img src="${avatarUrl}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid rgba(255,255,255,0.5);" onerror="this.style.display='none'">`
+            : '';
+        div.innerHTML = `
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+                ${avatarHtml}
+                <div class="oe-name" style="font-size:11px;font-weight:700;letter-spacing:0.5px;">${name}</div>
+            </div>
+            <div class="oe-text serif">${formattedText}</div>
+            ${actionsHtml}`;
+    } else {
+        // 用户条目：与单聊线下模式相同
+        div.innerHTML = `
+            <div class="oe-name">你</div>
+            <div class="oe-text">${formattedText}</div>
+            ${actionsHtml}`;
+    }
+
+    const dmArea = container.querySelector('.offline-danmaku-area');
+    if (dmArea) container.insertBefore(div, dmArea);
+    else container.appendChild(div);
+
+    container.scrollTop = container.scrollHeight;
+}
+
+/* ─── 群聊线下模式 · 发送/生成 ─── */
+async function sendGroupOfflineMessage(isRegen = false) {
+    // ── 停止生成按钮逻辑 ──
+    const sendBtn = document.querySelector('.offline-send-btn');
+    if (sendBtn && sendBtn.classList.contains('sending')) {
+        if (typeof currentAiController !== 'undefined' && currentAiController) {
+            currentAiController.abort();
+            currentAiController = null;
+            if (typeof showToast === 'function') showToast('已停止生成');
+        }
+        return;
+    }
+
+    // 中止旧请求
+    if (typeof currentAiController !== 'undefined' && currentAiController) {
+        currentAiController.abort();
+    }
+    if (typeof AbortController !== 'undefined') {
+        window.currentAiController = new AbortController();
+    }
+
+    // 清空弹幕区
+    if (typeof hideOfflineDanmakuArea === 'function') hideOfflineDanmakuArea(true);
+
+    const input = document.getElementById('offline-input');
+    let userText = (input ? input.value.trim() : '') || (!isRegen ? '*静静地等待大家的反应*' : '');
+
+    const group = groupsData[currentChatId];
+    if (!group) return;
+
+    // 上屏用户输入
+    if (!isRegen && userText) {
+        const userMsgId = 'grp_off_u_' + Date.now();
+        appendGroupOfflineEntry('user', userText, '你', userMsgId, null);
+        await saveMessageToHistory(currentChatId, {
+            id: userMsgId, text: userText, type: 'sent',
+            senderName: 'ME', isOffline: true
+        });
+    }
+    if (input) input.value = '';
+
+    // 检查 API 配置
+    const settingsJSON = localStorage.getItem(typeof SETTINGS_KEY !== 'undefined' ? SETTINGS_KEY : 'myCoolPhone_aiSettings');
+    if (!settingsJSON) {
+        if (typeof showAiErrorModal === 'function')
+            showAiErrorModal('群聊线下模式无法生成', '请先在 Settings → AI Chat 配置 API Key / Base URL / Model');
+        return;
+    }
+    const settings = JSON.parse(settingsJSON);
+
+    // ── 构建成员人设 ──
+    const activeMemberIds = (group.members || []).filter(id => !((group.mutedMembers || []).includes(id)));
+    const dispatched = smartDispatchMembers(activeMemberIds, [], userText);
+
+    let membersInfo = '';
+    for (const memberId of dispatched) {
+        const mem = friendsData[memberId];
+        if (!mem) continue;
+        const title = (group.memberTitles || {})[memberId] ? ` [${group.memberTitles[memberId]}]` : '';
+        const shard = await getShardedMemoryForMember(memberId, currentChatId, []);
+        const shardNote = shard ? `\n  （${mem.realName}的私人记忆）${shard}` : '';
+        // 读取好感度
+        const affection = Math.max(0, Math.min(100, Number(mem.affection || 0)));
+        const affStage = (typeof getAffectionStage === 'function') ? getAffectionStage(affection) : '普通';
+        membersInfo += `角色名: ${mem.realName || memberId}${title}\n人设: ${(mem.persona || '普通的聚会成员').slice(0, 150)}\n好感度: ${affection}/100 (关系阶段: ${affStage})  ← 据此决定对用户的亲密度、眼神接触、肢体界限，不得跨越当前阶段${shardNote}\n---\n`;
+    }
+
+    const benchIds = activeMemberIds.filter(id => !dispatched.includes(id));
+    const benchNote = benchIds.length > 0
+        ? `\n[当前旁观中（不主动发言）]: ${benchIds.map(id => { const f = friendsData[id]; return f ? (f.realName || id) : id; }).join('、')}`
+        : '';
+
+    // ── 历史记录 ──
+    const history = await loadChatHistory(currentChatId);
+    const recentOffline = history.filter(m => m.isOffline).slice(-20);
+    const historyText = recentOffline.map(m => {
+        const sender = m.type === 'sent' ? '你' : (m.senderName || 'AI');
+        return `${sender}: ${(m.text || '').substring(0, 100)}`;
+    }).join('\n');
+
+    // ── 获取当前场景地点 ──
+    let currentLocation = '线下聚会中';
+    for (const id of dispatched) {
+        const mem = friendsData[id];
+        if (mem && mem.mindState && mem.mindState.location && mem.mindState.location !== '未知地点') {
+            currentLocation = mem.mindState.location;
+            break;
+        }
+    }
+
+    // ── 用户人设 ──
+    const myPersonaStr = (() => {
+        if (typeof personasMeta === 'undefined' || typeof currentPersonaId === 'undefined') return '';
+        const me = personasMeta[currentPersonaId];
+        return (me && me.persona) ? `[你的身份]: ${me.persona}` : '';
+    })();
+
+    // ── 世界书 ──
+    const worldInfoText = (typeof constructWorldInfoPrompt === 'function')
+        ? constructWorldInfoPrompt(userText, currentChatId)
+        : '';
+
+    // ── 字数限制 ──
+    const maxLen = parseInt((typeof offlineConfig !== 'undefined' && offlineConfig.maxLength) || 200);
+    const perCharLen = Math.max(60, Math.round(maxLen / Math.max(dispatched.length, 1)));
+
+    // ── 选项指令 ──
+    const optionsInstr = (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn)
+        ? `\n[OPTIONS_INSTRUCTION]\n在全部叙事结束后，生成3个用户可执行的动作选项（从用户视角写）：\n[OPTIONS_START]\n1. (选项1)\n2. (选项2)\n3. (选项3)\n[OPTIONS_END]`
+        : '';
+
+    // ── 弹幕指令 ──
+    const danmakuInstr = (typeof isDanmakuOn !== 'undefined' && isDanmakuOn)
+        ? `\n[DANMAKU_START]\n生成5-8条简体中文网友弹幕，评论这场多人线下互动（禁止辱女或歧视类词汇）\n[DANMAKU_END]`
+        : '';
+
+    // ── 群公告 ──
+    const announcementStr = group.announcement ? `\n[群公告（最高优先级，所有人必须遵守）]: ${group.announcement}` : '';
+
+    const systemPrompt = `[系统：群体线下聚会叙事引擎 V1.0]
+你正在模拟一场多人共同参与的真实线下聚会。
+当前地点：【${currentLocation}】
+在场总人数：${dispatched.length} 人
+
+[参与叙事的成员档案]
+${membersInfo || '（暂无成员信息）'}
+${benchNote}
+
+${myPersonaStr}
+${announcementStr}
+${worldInfoText ? `\n[世界观设定]\n${worldInfoText}` : ''}
+
+[近期线下互动记录]
+${historyText || '（刚刚开始聚会）'}
+
+[核心叙事规则 — 严格遵守]
+1. 【多角色参与】：必须让2-4个成员参与互动，允许相互呼应与打断，体现真实聚会感。
+2. 【沉浸叙事】：用 *星号* 包裹动作/肢体语言，用 「」 包裹直接对话，不能只有台词。
+3. 【场景融入】：叙事要自然融入当前场景（${currentLocation}），注意灯光/声音/空间感。
+4. 【字数要求】：每位角色叙事约${perCharLen}字，总长度控制在${maxLen}字以内。
+5. 【输出格式】：必须输出纯 JSON 数组，每项格式：{"name":"角色名","content":"叙事正文","affection_delta":整数}
+   - affection_delta：本次互动后该角色对用户好感度的变化，整数范围 -2 ~ +2（0 表示无变化）
+   - 不要在 JSON 数组外添加任何多余文字。
+6. 【好感度驱动】：好感度低的角色应表现出更多保留/疏离；高好感角色自然更亲近，但仍需符合人设与场景。
+
+${danmakuInstr}
+${optionsInstr}
+
+用户（你）刚才说/做了："${userText}"
+请生成本次聚会的多角色沉浸叙事（纯 JSON 数组）：`;
+
+    // ── Loading 条目 ──
+    const container = document.getElementById('offline-log-container');
+    const loadingId = 'grp_loading_' + Date.now();
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = loadingId;
+    loadingDiv.className = 'offline-entry ai';
+    loadingDiv.innerHTML = `<div class="oe-text"><i class="fas fa-circle-notch fa-spin" style="margin-right:6px;"></i>群友们正在行动中…</div>`;
+    const dmAreaEl = container.querySelector('.offline-danmaku-area');
+    if (dmAreaEl) container.insertBefore(loadingDiv, dmAreaEl);
+    else container.appendChild(loadingDiv);
+
+    if (sendBtn) {
+        sendBtn.classList.add('sending');
+        sendBtn.innerHTML = '<i class="fas fa-stop"></i>';
+    }
+
+    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+    const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+    // 历史上下文（只传线下消息）
+    const contextMsgs = recentOffline.slice(-10).map(m => ({
+        role: m.type === 'sent' ? 'user' : 'assistant',
+        content: (m.text || '').substring(0, 150)
+    }));
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${settings.apiKey}`
+            },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    ...contextMsgs,
+                    { role: 'user', content: userText || '（继续）' }
+                ],
+                temperature: parseFloat(settings.temperature || 0.9),
+                max_tokens: Math.max(maxLen * 4, 1200)
+            }),
+            signal: (typeof currentAiController !== 'undefined' && currentAiController)
+                ? currentAiController.signal : undefined
+        });
+
+        document.getElementById(loadingId)?.remove();
+        if (sendBtn) {
+            sendBtn.classList.remove('sending');
+            sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        }
+
+        const resText = await response.clone().text().catch(() => '');
+        if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}\n\n${resText}`);
+
+        let data;
+        try { data = await response.json(); }
+        catch (e) { throw new Error(`响应不是 JSON\n\n${resText}`); }
+
+        let rawReply = (data?.choices?.[0]?.message?.content || '').trim();
+        if (!rawReply) {
+            if (typeof showAiErrorModal === 'function')
+                showAiErrorModal('群聊线下生成空回', 'choices[0].message.content 为空');
+            return;
+        }
+
+        // ── 清理 Markdown ──
+        rawReply = rawReply.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+
+        // ── 提取选项分支 ──
+        let extractedOptions = [];
+        const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
+        const optMatch = rawReply.match(optRegex);
+        if (optMatch) {
+            extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => /^\d+\./.test(s));
+            rawReply = rawReply.replace(optRegex, '').trim();
+        }
+
+        // ── 提取弹幕 ──
+        const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
+        const danmakuMatch = rawReply.match(danmakuRegex);
+        if (danmakuMatch) {
+            const dList = danmakuMatch[1].split('\n').map(s => s.trim()).filter(Boolean);
+            if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn && dList.length > 0) {
+                if (typeof danmakuPool !== 'undefined') danmakuPool = dList;
+                if (typeof startDanmakuBatch === 'function') startDanmakuBatch(0);
+            }
+            rawReply = rawReply.replace(danmakuRegex, '').trim();
+        }
+
+        // ── 解析 JSON ──
+        let messages = [];
+        try {
+            messages = JSON.parse(rawReply);
+            if (!Array.isArray(messages)) messages = [];
+        } catch (e) {
+            // 备用：逐行解析 "名字: 内容" 格式
+            rawReply.split('\n').forEach(line => {
+                line = line.trim();
+                const m = line.match(/^([^:：\[{]+)[:：](.*)/);
+                if (m && m[2].trim()) messages.push({ name: m[1].trim(), content: m[2].trim() });
+            });
+        }
+
+        if (messages.length === 0) {
+            if (typeof showAiErrorModal === 'function')
+                showAiErrorModal('群聊线下解析失败', `无法从以下内容中解析出角色叙事：\n\n${rawReply.substring(0, 300)}`);
+            return;
+        }
+
+        // ── 逐条延迟展示 ──
+        document.getElementById('vn-options-box')?.remove();
+
+        for (let i = 0; i < messages.length; i++) {
+            const msg = messages[i];
+            if (!msg.name || !msg.content) continue;
+
+            // 首条无延迟，后续条目模拟打字节奏
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 500));
+            }
+
+            const mem = findMemberByName(msg.name, group.members);
+            const avatarUrl = (mem && mem.avatar)
+                ? mem.avatar
+                : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.name)}`;
+
+            const aiMsgId = 'grp_off_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            appendGroupOfflineEntry('ai', msg.content, msg.name, aiMsgId, avatarUrl);
+
+            await saveMessageToHistory(currentChatId, {
+                id: aiMsgId, text: msg.content, type: 'received',
+                senderName: msg.name, customAvatar: avatarUrl, isOffline: true
+            });
+
+            // 更新群列表预览
+            if (groupsData[currentChatId]) {
+                groupsData[currentChatId].lastMessage = `${msg.name}: ${msg.content.substring(0, 30)}`;
+                saveGroupsData();
+            }
+
+            // ── 处理好感度变化 ──
+            if (typeof msg.affection_delta === 'number' && msg.affection_delta !== 0 && mem) {
+                const delta = Math.max(-2, Math.min(2, Math.round(msg.affection_delta)));
+                const memberId = Object.keys(friendsData).find(id => friendsData[id] === mem);
+                if (memberId && typeof friendsData[memberId].affection === 'number') {
+                    const oldVal = friendsData[memberId].affection;
+                    friendsData[memberId].affection = Math.max(0, Math.min(100, oldVal + delta));
+                    if (typeof saveFriendsData === 'function') saveFriendsData();
+                    // 浮动提示
+                    const sign = delta > 0 ? '+' : '';
+                    if (typeof showToast === 'function') {
+                        showToast(`${msg.name} 好感度 ${sign}${delta} → ${friendsData[memberId].affection}`);
+                    }
+                }
+            }
+        }
+
+        // ── 渲染选项分支 ──
+        if (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn && extractedOptions.length > 0) {
+            const optDiv = document.createElement('div');
+            optDiv.id = 'vn-options-box';
+            optDiv.className = 'vn-options-container';
+            extractedOptions.forEach(opt => {
+                const btn = document.createElement('div');
+                btn.className = 'vn-option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    if (typeof selectOfflineOption === 'function') selectOfflineOption(opt);
+                };
+                optDiv.appendChild(btn);
+            });
+            const dmAreaFinal = container.querySelector('.offline-danmaku-area');
+            if (dmAreaFinal) container.insertBefore(optDiv, dmAreaFinal);
+            else container.appendChild(optDiv);
+            setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+        }
+
+    } catch (e) {
+        document.getElementById(loadingId)?.remove();
+        if (sendBtn) {
+            sendBtn.classList.remove('sending');
+            sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        }
+
+        if (e.name === 'AbortError') {
+            if (typeof showToast === 'function') showToast('已停止生成');
+            return;
+        }
+
+        if (typeof showAiErrorModal === 'function') {
+            showAiErrorModal('群聊线下模式生成失败', (e && e.message) ? e.message : String(e));
+        }
+    }
+}
+
+console.log('[app_groupchat.js] 群聊线下模式模块已加载');

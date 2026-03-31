@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nexus Test</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="css/nexus.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #222; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+#nexusApp {
+  width: 390px; height: 700px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 40px;
+  border: 2px solid rgba(255,255,255,0.1);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+}
+</style>
+</head>
+<body>
+<div id="nexusApp" class="open"></div>
+
+<script>
+// Stub globals
+window.currentPersonaId = 'test_user';
+window.personasMeta = {
+  test_user: { name: '财阀千金', avatar: '', personality: '高傲但内心柔软，商界精英，喜欢穿高定', description: '财阀千金人设' }
+};
+window.worldBooks = [
+  { id: 'wb1', title: '赛博朋克 2077', category: 'Sci-Fi', entries: [
+    { comment: '背景', content: '霓虹与钢铁构成的反乌托邦都市', enabled: true },
+    { comment: '阵营', content: '企业、街头帮派、亡命之徒', enabled: true }
+  ]},
+  { id: 'wb2', title: '中世纪吸血鬼', category: 'Gothic', entries: [
+    { comment: '背景', content: '黑暗中世纪，吸血鬼统治着夜晚', enabled: true }
+  ]},
+  { id: 'wb3', title: '霍格沃茨', category: 'Fantasy', entries: [
+    { comment: '背景', content: '魔法学院，巫师与麻瓜共存的世界', enabled: true }
+  ]}
+];
+window.friendsData = {
+  'friend_001': {
+    name: '苏夜',
+    remark: '苏夜',
+    realName: '苏夜',
+    role: '神秘学者',
+    personality: '冷漠寡言，内心敏感，对超自然现象有强烈执念',
+    tags: ['吸血鬼猎人', '暗恋者', '神秘系'],
+    affection: 72,
+    avatar: '',
+  },
+  'friend_002': {
+    name: '霍晨',
+    remark: '霍晨',
+    role: '赏金猎人',
+    description: '傲娇外表下藏着一颗热血的心，擅长近战，不善言辞',
+    tags: ['赛博改造', '忠诚', '反派'],
+    affection: 45,
+    avatar: '',
+  },
+  'friend_003': {
+    name: '普通联系人',
+    affection: 30,
+  },
+};
+</script>
+<script src="js/app_nexus.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  NexusApp.init();
+  // Inject a test node directly
+  NexusApp.getNodes().push({
+    id: 'npc_demo1', name: '苏辞', role: '神秘保镖',
+    tags: ['傲娇','赛博','暗恋'],
+    bondText: '表面是财阀千金的赛博保镖，暗地里却是吸血鬼猎人',
+    affection: 72, orbit: 1, color: ['#111111','#333333'],
+    x: 195 + 90, y: 350 - 20, vx: 0, vy: 0, avatar: '', isNPC: true,
+    personality: '外冷内热，无法对弱者无动于衷',
+    opening: '"……你就是财阀千金？比我想象中有趣一些。"'
+  });
+  NexusApp.getLinks().push({
+    from: '__me__', to: 'npc_demo1',
+    label: '暗恋', myView: '高傲的大小姐', theirView: '需要保护的人', tension: 75
+  });
+  // Force re-render
+  setTimeout(function() {
+    NexusApp.open();
+  }, 100);
+});
+</script>
+</body>
+</html>

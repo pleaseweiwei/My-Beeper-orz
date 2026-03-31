@@ -41,6 +41,16 @@
 ├─ service-worker.js         # PWA Service Worker（缓存/离线支持）
 ├─ icon.png                  # 应用图标
 ├─ AI_CODEMAP.md             # 当前这份 AI 代码地图
+├─ android/                  # Android 原生悬浮窗包装层（FloatPet 用）
+│  ├─ README.md
+│  └─ app/src/main/
+│     ├─ AndroidManifest.xml
+│     ├─ assets/floatpet_overlay.html   # Android 悬浮窗内嵌的 H5 页面
+│     └─ java/com/beeper/floatpet/
+│        ├─ MainActivity.java
+│        ├─ FloatingWindowService.java
+│        ├─ ScreenshotActivity.java
+│        └─ BootReceiver.java
 ├─ css/
 │  ├─ style.css              # 主样式
 │  ├─ animations.css         # 动画样式
@@ -49,7 +59,12 @@
 │  ├─ overrides.css          # 覆盖样式/补丁样式（末尾含 Bubble App v3.0 全量样式）
 │  ├─ bubble.css             # Bubble 偶像模块专属样式
 │  ├─ music.css              # 音乐播放器专属样式
-│  └─ video_call.css         # 通话界面专属样式
+│  ├─ video_call.css         # 通话界面专属样式
+│  ├─ tracker.css            # 查手机(Tracker)模块专属样式
+│  ├─ novel.css              # 小说 App 专属样式
+│  ├─ galgame.css            # Gal 游戏模块专属样式
+│  ├─ sms_phone.css          # 短信 & 电话模块专属样式
+│  └─ floatpet.css           # 悬浮宠物模块专属样式
 └─ js/
    ├─ core.js                # 基础 UI 行为
    ├─ apps.js                # 主业务中枢：聊天/设置/好友/朋友圈/AI/摘要/线下模式等
@@ -66,7 +81,14 @@
    ├─ app_voice_call.js      # 语音/视频通话模块
    ├─ app_memory.js          # 五维记忆引擎模块
    ├─ app_transfer.js        # 双向虚拟转账模块
-   └─ app_groupchat.js       # 群聊完整功能模块
+   ├─ app_groupchat.js       # 群聊完整功能模块
+   ├─ app_tracker.js         # 查手机模拟器模块（痕迹干预 & 蝴蝶效应）
+   ├─ app_novel.js           # 小说 App（AI 生成/阅读/书架/排行榜）
+   ├─ app_imagegen.js        # 图像生成双引擎（NovelAI + Pollinations）
+   ├─ app_galgame.js         # Gal 游戏 / 视觉小说互动模块
+   ├─ app_sms.js             # 短信 App 模拟模块
+   ├─ app_phone_call.js      # 普通电话模拟模块
+   └─ app_floatpet.js        # 悬浮宠物（FloatPet）模块
 ```
 
 ---
@@ -88,6 +110,22 @@
 - 发布新版本需要清除旧缓存时
 
 > **历史备注：** 项目曾使用过三个一次性维护脚本（`_fix_groupchat.js`、`fix_bubble.py`、`add_bubble_css.py`），均已执行完毕后删除。其中 `add_bubble_css.py` 将 Bubble App v3.0 全量样式注入了 `css/overrides.css` 末尾，如需修改 Bubble 样式，直接编辑 `css/overrides.css` 末尾或 `css/bubble.css` 即可。
+
+---
+
+### `android/`
+**作用：Android 原生包装层，专门用于 FloatPet 悬浮窗功能。**
+
+- `FloatingWindowService.java` — 系统级悬浮窗 Service，负责创建和管理悬浮宠物窗口
+- `MainActivity.java` — 启动入口，请求悬浮窗权限并启动 Service
+- `ScreenshotActivity.java` — 截图辅助 Activity
+- `BootReceiver.java` — 开机自启动接收器
+- `assets/floatpet_overlay.html` — 悬浮窗内嵌的 H5 前端页面（对应 `js/app_floatpet.js` 的前端逻辑）
+
+**什么时候看：**
+- 需要改 Android 悬浮窗权限或 Service 行为时
+- 需要改悬浮宠物在 Android 端的展示逻辑时
+- 打包发布 Android APK 时
 
 ---
 
@@ -114,13 +152,21 @@
 <script src="js/app_memory.js"></script>
 <script src="js/app_transfer.js"></script>
 <script src="js/app_groupchat.js"></script>
+<script src="js/app_sms.js"></script>
+<script src="js/app_phone_call.js"></script>
+<script src="js/app_galgame.js"></script>
+<script src="js/app_tracker.js"></script>
+<script src="js/app_novel.js"></script>
+<script src="js/app_imagegen.js"></script>
+<script src="js/app_floatpet.js"></script>
 ```
 
 ### 结论
 - `core.js` 是底层基础行为
 - `apps.js` 是主系统中枢
-- 中间的 `app_*.js` 是分模块扩展（原有模块）
-- 最后四个是新增模块，依赖前面的全局变量（`friendsData`、`IDB`、`appendMessage` 等）
+- 中间的 `app_*.js` 是分模块扩展
+- 后半段新增模块（`app_sms.js` 起）依赖前面的全局变量（`friendsData`、`IDB`、`appendMessage` 等）
+- `app_imagegen.js` 是纯工具函数集合，挂钩到聊天气泡系统
 - **不要随便调整顺序**，否则可能打破全局函数依赖
 
 ---
@@ -154,6 +200,12 @@
 - Pay App
 - 通话界面（视频通话主界面 + 来电遮罩 + 悬浮球）
 - 群聊设置页 / 群聊各种弹窗（红包、投票、群视频、加成员）
+- Tracker App（查手机）
+- Novel App（小说）
+- Galgame App
+- SMS App（短信）
+- Phone Call App（电话）
+- FloatPet App（悬浮宠物）
 - 各种 modal、overlay、浮层、文件输入框
 
 **什么时候先看它：**
@@ -209,26 +261,10 @@
 - 各种全局存储与数据迁移
 
 #### 典型函数类型
-- 数据类：
-  - `loadFriendsData`
-  - `saveFriendsData`
-  - `loadChatHistory`
-  - `saveMessageToHistory`
-- UI 渲染类：
-  - `refreshMindCardUI`
-  - `renderMomentsFeed`
-  - `restoreFriendListUI`
-  - `renderSummaryUI`
-- AI 请求类：
-  - `sendMessageToAI`
-  - `callAiForSpecialTask`
-  - `triggerAiReactionForMoment`
-  - `triggerAIReplyForPendingContext`
-- 配置类：
-  - `initThemeSettings`
-  - `saveAllSettings`
-  - `fetchAndPopulateModels`
-  - `initPersonaSystem`
+- 数据类：`loadFriendsData`、`saveFriendsData`、`loadChatHistory`、`saveMessageToHistory`
+- UI 渲染类：`refreshMindCardUI`、`renderMomentsFeed`、`restoreFriendListUI`、`renderSummaryUI`
+- AI 请求类：`sendMessageToAI`、`callAiForSpecialTask`、`triggerAiReactionForMoment`、`triggerAIReplyForPendingContext`
+- 配置类：`initThemeSettings`、`saveAllSettings`、`fetchAndPopulateModels`、`initPersonaSystem`
 
 **什么时候先看它：**
 - 聊天功能
@@ -252,12 +288,7 @@
 **作用：世界书 / Lorebook 管理。**
 
 已确认核心函数：
-- `loadWorldBooks`
-- `saveWorldBooksData`
-- `renderShelf`
-- `openBookDetail`
-- `renderEntriesList`
-- `constructWorldInfoPrompt`
+- `loadWorldBooks`、`saveWorldBooksData`、`renderShelf`、`openBookDetail`、`renderEntriesList`、`constructWorldInfoPrompt`
 
 **负责：**
 - 世界书加载、保存
@@ -310,33 +341,14 @@
 **作用：钱包 / 金融 / 兼职 / 股市 / 投资。**
 
 已确认功能范围非常大，包括：
-- 钱包主页
-- 账单
-- 零钱 / 银行卡 / 理财
-- 亲密付
-- 每月收入
-- 兼职小游戏
-- 模拟股市
-- 顶流造星企划
+- 钱包主页、账单、零钱 / 银行卡 / 理财
+- 亲密付、每月收入、兼职小游戏、模拟股市、顶流造星企划
 
 典型函数：
-- `loadPayData`
-- `savePayData`
-- `renderPayMainPage`
-- `renderYuebaoPage`
-- `renderCareerPage`
-- `startJobTimer`
-- `initStockMarket`
-- `generateNewMarket`
+- `loadPayData`、`savePayData`、`renderPayMainPage`、`renderYuebaoPage`、`renderCareerPage`
+- `startJobTimer`、`initStockMarket`、`generateNewMarket`
 
 **注意：`app_transfer.js` 直接读写 `payData.balance`，与本文件共享余额数据。**
-
-**什么时候看：**
-- 改钱包页面
-- 改收支逻辑
-- 改兼职玩法
-- 改股票数据和交易
-- 改投资小游戏
 
 ---
 
@@ -344,20 +356,7 @@
 **作用：电子宠物系统。**
 
 已确认功能：
-- 宠物状态
-- 房间 / 家具
-- 拖拽
-- 商店
-- 宠物朋友圈
-- 旅行
-- 领养流程
-- 宠物设置
-
-**什么时候看：**
-- 改宠物成长
-- 改宠物房间
-- 改商店
-- 改旅行 / 相册 / 宠物动态
+- 宠物状态、房间 / 家具、拖拽、商店、宠物朋友圈、旅行、领养流程、宠物设置
 
 ---
 
@@ -365,82 +364,28 @@
 **作用：情侣空间 / 双人宇宙。**
 
 已确认功能：
-- 大厅与关系入口
-- Journal / 手账
-- 冰箱
-- QA
-- Tasks
-- 自动事件
-- 绑定关系
-- 页面切换和设置
-
-**什么时候看：**
-- 改情侣空间主界面
-- 改手账
-- 改冰箱贴纸
-- 改自动生成逻辑
-- 改情侣任务和互动
+- 大厅与关系入口、Journal / 手账、冰箱、QA、Tasks、自动事件、绑定关系
 
 ---
 
 ### `js/app_arcade.js`
 **作用：双人游乐场小游戏合集。**
 
-已确认包含多组小游戏逻辑，例如：
-- 真心话
-- Emoji 同频
-- 平行宇宙逃亡
-- 扭蛋机
-- 同居领地战
-- 骰子
-- 娃娃机
-- 飞行棋
-- 抽鬼牌
-- 翻翻乐
-- 双人跳跃
-
-**什么时候看：**
-- 改小游戏规则
-- 改小游戏胜负逻辑
-- 改 AI 对手表现
-- 改分数或结算流程
+包含：真心话、Emoji 同频、平行宇宙逃亡、扭蛋机、同居领地战、骰子、娃娃机、飞行棋、抽鬼牌、翻翻乐、双人跳跃等。
 
 ---
 
 ### `js/app_map.js`
 **作用：地图与地点探索。**
 
-已确认功能：
-- 地图数据读写
-- 地图列表
-- 地点列表 / marker
-- 地点编辑
-- 角色选择
-- 场景探索弹窗
-
-**什么时候看：**
-- 改地图主界面
-- 改地点编辑
-- 改探索流程
-- 改地点与角色绑定
+已确认功能：地图数据读写、地图列表、地点列表 / marker、地点编辑、角色选择、场景探索弹窗。
 
 ---
 
 ### `js/app_live.js`
 **作用：LIVE 社交内容流。**
 
-已确认功能：
-- LIVE 数据读写
-- Discover / Friends / Messages / Me 等页面
-- 发布动态
-- AI 互动反馈
-- 个人页同步
-
-**什么时候看：**
-- 改 LIVE 五个 Tab
-- 改动态发布
-- 改 AI 点赞评论
-- 改直播感 / 社交流表现
+已确认功能：LIVE 数据读写、Discover / Friends / Messages / Me 等页面、发布动态、AI 互动反馈。
 
 ---
 
@@ -454,12 +399,6 @@
 - 人设档案导入导出 (TXT)
 - 全局身份切换和加载同步
 
-**什么时候看：**
-- 改人设档案表单字段 (`PB_KEYS`)
-- 改 AI 自动生成的 prompt 格式
-- 改头像预览或人设弹窗逻辑
-- 改人设导出功能
-
 ---
 
 ### `js/app_voice_call.js`
@@ -468,18 +407,15 @@
 核心状态对象：`VideoCallState`（全局单例）
 
 已确认功能：
-- **可视化通话模式**（画中画 + 真实摄像头）
-- **纯文字/头像通话模式**（根据好友 `chatSettings.callMode` 自动切换）
+- 可视化通话模式（画中画 + 真实摄像头）
+- 纯文字/头像通话模式
 - AI 主动发起来电（`triggerIncomingCall`）
-- 来电铃声（Web Audio API 合成，无需外部音频文件）
-- 通话计时器
-- 摄像头开关 / 前后摄切换（`toggleCallCamera` / `handleCameraFlip`）
-- 大小屏切换（画中画点击 `switchVideoViews`）
-- TTS 语音朗读 AI 回复（`toggleCallVoice`，调用 Minimax TTS）
-- 通话中截帧发给 AI（`captureVideoFrame`）
-- 最小化为悬浮球（`minimizeVideoCall` / `restoreVideoCall`），可拖拽
-- 重Roll 上一条 AI 回复（`regenLastCallMsg`）
-- 挂断后自动将通话记录注入聊天历史，并触发 AI 发出通话后感想
+- 来电铃声（Web Audio API 合成）
+- 摄像头开关 / 前后摄切换
+- TTS 语音朗读 AI 回复（Minimax TTS）
+- 通话中截帧发给 AI
+- 最小化为悬浮球（可拖拽）
+- 挂断后自动注入聊天历史并触发 AI 感想
 - 解析 AI 回复中的 `[VIDEO_CALL]` 标签触发来电
 
 **关键全局函数：**
@@ -487,20 +423,8 @@
 - `triggerIncomingCall(chatId)`
 - `acceptIncomingCall()` / `rejectIncomingCall()`
 - `endVideoCall()`
-- `openVideoCallFromChat()` — 聊天工具栏发起通话的入口
-- `checkForVideoCallRequest(replyText, chatId)` — AI 回复后解析触发来电
-
-**关联容器 ID：**
-- `video-call-view` — 通话主界面（动态渲染）
-- `incoming-call-overlay` — 来电遮罩层
-- `vc-floating-bubble` — 最小化悬浮球
-
-**什么时候看：**
-- 改通话 UI 布局
-- 改 AI 通话中的 prompt
-- 改来电 / 挂断 / 最小化逻辑
-- 改 TTS 朗读接入
-- 改摄像头截帧逻辑
+- `openVideoCallFromChat()`
+- `checkForVideoCallRequest(replyText, chatId)`
 
 ---
 
@@ -510,38 +434,12 @@
 > 这个文件是"记忆中间件"，不直接渲染 App 界面，而是向 `apps.js` 提供构建上下文的工具函数。
 
 已确认功能：
-
-**§1 短期记忆**
-- `buildTimestampedContext(history, memoryLimit)` — 将聊天历史转为带时间戳的上下文字符串，多模态内容自动转义（表情包、语音、转账、位置）
-
-**§2 长期记忆精简**
-- `condenseSummaries()` — AI 一键将多段总结压缩成一段核心纲要
-
-**§3 记忆互通**
-- `buildLinkedMemoryContext(chatSettings)` — 跨聊天上下文注入（将其他好友的近期对话作为附加上下文）
-- `renderLinkMemoryUI()` / `getLinkMemoryConfig()` — 聊天设置里的"互通记忆"选人 UI
-
-**§4 动态情景记忆**
-- `buildSituationalAwareness(chatSettings)` — 生成当前时间 + 距上次对话时长的时间感知字符串
-
-**§5 记忆分支与回溯（存档/读档系统）**
-- `saveCheckpoint()` — 存档当前聊天历史 + 好友记忆快照（最多20个）
-- `loadCheckpoint(cpId)` — 读档（物理覆盖 IDB + friendsData 记忆字段）
-- `deleteCheckpoint(cpId)` — 删除存档
-- `renderCheckpointList()` — 渲染存档列表 UI（在 summaryPageView 内）
-- 存档数据存在 IDB，key 为 `'mem_checkpoints_' + scopedChatKey(chatId)`
-
-**§6 工具函数**
-- `callAIRaw(promptText, maxTokens)` — 轻量 AI 调用（不渲染气泡，供内部自动总结/精简使用）
-
-**关联容器 ID：**
-- `checkpoint-list-container` — 存档列表（在 `summaryPageView` 内）
-
-**什么时候看：**
-- 改 AI 上下文构建方式（时间戳、跨聊天、时间感知）
-- 改存档/读档功能
-- 改记忆总结精简逻辑
-- 改聊天设置页的"互通记忆"UI
+- `buildTimestampedContext(history, memoryLimit)` — 带时间戳的上下文字符串
+- `condenseSummaries()` — AI 压缩多段总结
+- `buildLinkedMemoryContext(chatSettings)` — 跨聊天上下文注入
+- `buildSituationalAwareness(chatSettings)` — 时间感知字符串
+- `saveCheckpoint()` / `loadCheckpoint(cpId)` / `deleteCheckpoint(cpId)` — 存档读档
+- `renderCheckpointList()` — 存档列表 UI
 
 ---
 
@@ -550,32 +448,14 @@
 
 暴露为 `window.TransferApp`（IIFE 模块模式）。
 
-已确认功能：
-- **用户→AI 转账**：弹窗输入金额 → 扣减 `payData.balance` → AI 根据人设+亲密度判定接收/拒绝 → 卡片状态实时更新
-- **AI→用户 转账**：解析 AI 回复中的 `[TRANSFER:金额:备注]` 标签自动发起 → 用户点击收款/拒收
-- 转账卡片气泡渲染（`appendTransferBubble`），样式独立于普通聊天气泡
-- 账单流水（`openLedger`）：最近50条记录，存于 `localStorage` 的 `wc_transfer_ledger`
-- 转账历史写入聊天 IDB，退出后重进能复现卡片（`[WC_TRANSFER:...]` 标签格式）
-- 与 `app_pay.js` 的 `payData.balance` 共享余额，收款/退款实时同步
+关键公开 API：
+- `TransferApp.openTransferModal()`
+- `TransferApp.confirmUserTransfer()`
+- `TransferApp.userAcceptAITransfer(id)` / `userRejectAITransfer(id)`
+- `TransferApp.parseAndHandleAITransfer(text)`
+- `TransferApp.openLedger()`
 
-**关键公开 API：**
-- `TransferApp.openTransferModal()` — 打开转账弹窗（plus 菜单入口）
-- `TransferApp.confirmUserTransfer()` — 用户确认发起转账
-- `TransferApp.userAcceptAITransfer(id)` / `userRejectAITransfer(id)` — 用户操作 AI 发来的转账
-- `TransferApp.parseAndHandleAITransfer(text)` — 解析 AI 回复中的 `[TRANSFER:...]` 标签
-- `TransferApp.openLedger()` — 打开账单流水弹窗
-- `window.openTransferModal()` — 全局快捷入口
-
-**依赖关系：**
-- `app_pay.js` → 读写 `payData.balance`、调用 `savePayData()`
-- `apps.js` → `saveMessageToHistory`、`appendMessage`、`currentPersonaId`、`friendsData`
-
-**什么时候看：**
-- 改转账卡片 UI
-- 改 AI 判定转账接收的逻辑
-- 改账单流水
-- 改 `[TRANSFER:...]` 标签解析
-- 改余额联动逻辑
+依赖：`app_pay.js`（`payData.balance`）、`apps.js`（`saveMessageToHistory`、`appendMessage`）
 
 ---
 
@@ -584,53 +464,239 @@
 
 > 注意：此文件会**覆写**全局的 `window.sendMessageToAI` 和 `window.appendMessage`，群聊时劫持这两个核心函数。
 
-已确认功能：
+已确认功能：群聊 AI 回复引擎、智能调度器、视角记忆切片、后台活跃系统、@ 艾特功能、匿名聊天模式、发红包、群投票、群视频通话、悄悄话/拉小群系统、群聊设置页。
 
-**核心群聊逻辑**
-- `sendGroupMessageToAI(userMessage)` — 群聊 AI 回复引擎，输出 JSON 数组，逐条延迟展示
-- 智能调度器（`smartDispatchMembers`）：从所有群成员中筛选最可能发言的 3-4 人，避免每次全员回复
-- 视角记忆切片（Memory Sharding）：每个成员有独立的私人记忆摘要（`generateMemoryShards`）
-- 后台活跃系统（`startGroupBgActivity`）：用户不在线时 AI 自动在群里聊天，产生未读消息
+---
 
-**@ 艾特功能**
-- 输入框输入 `@` 自动弹出成员下拉选择（支持实时搜索过滤）
-- `@所有人` 特殊选项
+### `js/app_tracker.js` ⭐ 新增
+**作用：查手机模拟器 v2.0 — 痕迹干预与蝴蝶效应系统。**
 
-**匿名聊天模式**
-- `toggleAnonymousMode()` — 随机分配动物匿名名称（如"🦊 匿名狐狸"）
+暴露为 `window.TrackerApp`（IIFE 模块模式）。  
+关键 CSS：`css/tracker.css`  
+关键容器 ID：`trackerApp`
 
-**群聊专属功能**（注入到 + 号面板）
-- 发红包（`openSendRedPacketModal`）：拼手气/普通红包，AI 自动抢，手气王高亮
-- 群投票（`openGroupVoteModal`）：多选项投票，AI 自动投票，实时进度条
-- 群视频通话（`openGroupVideoCall`）：模拟各成员接听/拒绝状态
-- 匿名模式（`toggleAnonymousMode`）
+#### 功能流程
+1. **角色选择**（从 `friendsData` 加载可选角色列表）
+2. **场景抽卡**（随机从4个场景中抽取：洗澡/睡觉/出门/开会，每个场景有倒计时窗口）
+3. **锁屏解锁**（PIN码/面容识别，PIN 由 `generateAndSaveCharPin()` 预生成并存 localStorage）
+4. **手机桌面**（倒计时压力、仿 iOS 桌面、11个 App 图标）
+5. **AI 一次性生成全量手机数据**（单次 API 调用，生成包含11个模块的完整 JSON）
+6. **各 App 渲染**：消息、日记、浏览器、钱包、足迹、日历、购物车、相册、音乐、保险箱、废纸篓
+7. **篡改工具栏**：每个 App 内均有上下文操作按钮
 
-**悄悄话 / 拉小群系统**（Gossip System）
-- AI 回复中含 `{"cmd":{"type":"create_private_group",...}}` 时，自动创建新的私聊小群
+#### 核心篡改操作（影响主线剧情）
+| 操作 | 函数 | 注入上下文说明 |
+|---|---|---|
+| 改备注名 | `changeRemark()` | 将变更注入 `tamperLog` |
+| 代TA给联系人发消息 | `sendContactReply(idx)` | 注入"冒充发消息"上下文 |
+| 拉黑联系人 | `blockContact(idx)` | 注入"帮TA拉黑"上下文 |
+| 用TA手机给自己发消息 | `sendMsgToSelf()` → `_doSendToSelf()` | 注入"偷发消息"上下文 |
+| 写日记批注 | `addDiaryAnnotation(idx)` | 注入"翻日记写批注"上下文 |
+| 设恶搞闹钟 | `setPrankAlarm()` | 注入"设闹钟"上下文 |
+| 帮TA下单 | `checkoutItem(idx)` / `checkoutAll()` | 注入"下单"上下文 |
+| 清空购物车 | `clearCart()` | 注入"清空购物车"上下文 |
 
-**群聊设置页**
-- `openGroupSettingsPage(groupId)` — 打开群设置（群名、公告、后台活跃、成员管理）
-- 成员管理：禁言、设置头衔、踢出、添加成员、转让群主、退出/解散群聊
+#### 蝴蝶效应机制
+- 所有篡改操作通过 `addTamperLog(msg)` 记录到 `state.tamperLog`
+- 关闭 App 时调用 `injectTamperContext()`，将日志写入 `localStorage` 的 `tr_pending_context`
+- `apps.js` 的 `triggerAIReplyForPendingContext()` 会消费此队列，在下次聊天时让 AI 根据这些事件做出剧情反应
 
-**数据存储**
-- 群数据存于 IDB，key 为 `scopedLSKey('myCoolPhone_groupsData')`
-- 群聊历史同样走 `loadChatHistory / saveMessageToHistory`
+#### 联系人聊天子系统
+- `openContactChat(idx, contact)` — 在消息 App 内打开微信风格的聊天面板
+- `generateContactChatHistory(idx, contact)` — AI 生成或从缓存读取聊天历史（6-10条）
+- `generateAutoReply(idx)` — 对方自动 AI 回复（发消息后约1.5-3.5秒触发）
+- `buildFallbackConversation(charName, contact)` — API 失败时的本地 fallback 对话
 
-**关联容器 ID：**
-- `groupSettingsPage` — 群聊设置页
-- `group-add-member-modal` — 添加群成员弹窗
-- `group-redpacket-modal` — 发红包弹窗
-- `group-vote-modal` — 群投票弹窗
-- `group-video-call-modal` — 群视频通话弹窗
+#### 数据缓存
+- 手机数据缓存 key：`tr_phonedata__${personaId}__${charId}`
+- PIN 码存储 key：`tr_pin_${charId}`
+- 壁纸存储 key：`tr_wallpaper_${charKey}`
+- 每次进入手机会清除旧缓存，强制重新生成
+
+#### 关键全局函数
+- `TrackerApp.open()` — 打开 App（从桌面图标或 dock 触发）
+- `TrackerApp.close()` — 关闭并触发蝴蝶效应注入
+- `generateAndSaveCharPin()` — 全局函数，在聊天设置页为角色预生成手机密码
+- `_injectPinAwareness(charId, pin, hint)` — 将 PIN 写入角色上下文数据
 
 **什么时候看：**
-- 改群聊 AI 回复引擎
-- 改 @ 艾特逻辑
-- 改红包 / 投票系统
-- 改群成员管理
-- 改后台活跃系统
-- 改悄悄话/拉小群逻辑
-- 改群聊设置页
+- 改查手机流程（角色选择/场景/锁屏/桌面）
+- 改 AI 生成手机数据的 prompt 结构
+- 改篡改操作的种类和上下文注入内容
+- 改联系人聊天子系统
+- 改 PIN 码生成和存储逻辑
+- 改蝴蝶效应触发机制
+
+---
+
+### `js/app_novel.js` ⭐ 新增
+**作用：小说 App — AI 生成 / 阅读 / 书架 / 排行榜。**
+
+暴露为 `window.NovelApp`（IIFE 模块模式），通过 MutationObserver 在容器 `open` 时自动 `init()`。  
+关键 CSS：`css/novel.css`  
+关键容器 ID：`novelApp`
+
+#### 四栏底部 Tab 结构
+| Tab | 功能 |
+|---|---|
+| 论坛 | 所有 AI 生成的书、按热度排序、类型筛选、AI 生成面板 |
+| 书架 | 收藏的书 + 导入的 TXT |
+| 排行榜 | 全部书按热度排名、AI 编辑点评 |
+| 我的 | 用户主页、作品数、粉丝数、作者工坊（大纲扩写 + 发布章节） |
+
+#### AI 生成流程
+1. 选择角色（可多选，从 `friendsData` 读取）
+2. 选择题材（10种类型）
+3. 随机摇梗（从 `TROPE_POOL` 抽取灵感碎片）
+4. 选择生成章数（1/2/3/5章）
+5. 逐章调用 API 生成（第1章包含书名，后续章节基于上一章末尾续写）
+
+#### 阅读器功能
+- 段落级评论（点击气泡数 → 底部弹出评论列表，AI 生成 + 本地随机池）
+- 划线分享（双击段落 → 发送片段给陪读角色，AI 生成陪读回应）
+- 续写下一章（最后一页显示续写按钮，调用 API 生成）
+- 陪读系统（伴读角色随机在阅读过程中出现对话气泡）
+- 防沉迷系统（凌晨0-4点弹出警告，10分钟小睡选项）
+
+#### TXT 导入
+- 支持文件上传或文本粘贴
+- 自动按"第X章"分割为多页
+- 存入 `state.books`，`isImported: true` 标记
+
+#### 社交联动
+- 分享给微信角色（`shareToWeChat`）：发送小说卡片气泡，2分钟后 AI 角色发送读后感
+- 读后感 AI 生成（`triggerPostReadingReaction`）：写入聊天历史并触发未读角标
+
+#### 数据持久化
+- 存储 key：`novel_state_v3`（含书架、收藏、我的作品、陪读角色设置、热度统计）
+- 待发送反应队列：`novel_pending_reactions`
+
+**什么时候看：**
+- 改小说生成流程或 prompt
+- 改阅读器功能（评论、划线、续写）
+- 改陪读/防沉迷/分享逻辑
+- 改书架、导入、排行榜
+
+---
+
+### `js/app_imagegen.js` ⭐ 新增
+**作用：图像生成双引擎模块（NovelAI + Pollinations Flux）。**
+
+> 这个文件**没有专属 App 容器**，是工具函数集合，挂钩到聊天气泡系统。
+
+关键设置 key：`myCoolPhone_imagegenSettings`
+
+#### 双引擎对比
+| 引擎 | 函数 | 特点 |
+|---|---|---|
+| NovelAI (NAI) | `generateImageNai()` | 需要 NAI API Key；支持 V3/V4/V4.5；SSE 流式响应；需 CORS 代理 |
+| Pollinations | `generateImagePollinations()` | 免费；支持 flux 等模型；自动重试3次 |
+
+#### 与聊天系统的挂钩
+AI 回复文本中可以嵌入以下格式触发自动生图：
+
+| 格式 | 引擎 | 说明 |
+|---|---|---|
+| `{"type":"naiimag","prompt":"..."}` | NAI | JSON格式 |
+| `[NAIIMAG:prompt]` | NAI | 标签格式 |
+| `[REALIMAG:prompt]` | Pollinations | 标签格式 |
+
+- `parseAndHandleImageCommands(rawReply, chatId)` — 解析并异步触发生图，返回去掉指令后的纯文本
+- `window.processImagegenFromAIReply(rawReply, chatId)` — `apps.js` 调用的入口钩子
+
+#### 图片气泡功能
+- 重绘（`rerollImage`）：新 seed 重新生成
+- 下载（`downloadGeneratedImage`）
+- 全屏查看（`openImageFullscreen`）
+- 长按右键菜单（`showImageBubbleMenu`）
+- 历史恢复（`tryRestoreGeneratedImageBubble`）：从 `[GENIMG_DATA:...] ` 格式恢复图片气泡
+
+#### 提示词构建
+- `buildFinalPrompt(aiScenePrompt, chatId)` — 场景词 + 角色专属正面词 + 系统默认词
+- `buildFinalNegativePrompt(chatId)` — 角色专属负面词 + 系统默认负面词
+- 角色专属词存在 `friendsData[chatId].imagegenSettings.charPositivePrompt/charNegativePrompt`
+
+#### 线下模式自动生图
+- `generateOfflineModeImage(sceneDescription, chatId)` — 线下模式 AI 回复后自动插入插图（需在设置中开启 `offlineAutoImage`）
+
+#### 设置 UI
+- `window.initImagegenSettingsUI()` — 初始化设置页中的图像生成配置项
+- `window.saveImagegenSettingsUI()` — 保存设置
+- `window.openImagegenTestModal()` — 打开测试生成弹窗
+
+**什么时候看：**
+- 改图像生成引擎参数或模型选项
+- 改 AI 回复触发生图的指令格式
+- 改图片气泡 UI（重绘/下载/全屏）
+- 改提示词构建逻辑
+- 改设置页中的图像生成配置
+- 改线下模式自动插图
+
+---
+
+### `js/app_galgame.js` ⭐ 新增
+**作用：Gal 游戏 / 视觉小说风格互动模块。**
+
+关键 CSS：`css/galgame.css`  
+关键容器 ID：`galgameApp`（待确认）
+
+**已知特征：**
+- 提供视觉小说风格的剧情演出界面
+- 可能包含立绘展示、场景背景、对话框系统
+
+**什么时候看：**
+- 改 Gal 游戏风格对话演出界面
+- 改场景/立绘/背景逻辑
+- 改 Gal 游戏专属 prompt 或剧情推进逻辑
+
+---
+
+### `js/app_sms.js` ⭐ 新增
+**作用：短信 App 模拟模块。**
+
+关键 CSS：`css/sms_phone.css`（与电话模块共享）
+
+**已知特征：**
+- 模拟手机短信界面
+- 可能支持 AI 生成短信内容
+- 与 `app_phone_call.js` 共享样式文件
+
+**什么时候看：**
+- 改短信列表或对话界面
+- 改短信 AI 内容生成逻辑
+
+---
+
+### `js/app_phone_call.js` ⭐ 新增
+**作用：普通电话（拨号盘/通话记录）模拟模块。**
+
+关键 CSS：`css/sms_phone.css`（与短信模块共享）
+
+> 注意：与 `app_voice_call.js` 不同，本模块是 **UI 模拟层**（拨号盘 / 通话记录），`app_voice_call.js` 是带 AI 对话的真实语音/视频通话功能。
+
+**什么时候看：**
+- 改拨号盘 UI
+- 改通话记录列表
+- 改与 `app_voice_call.js` 的联动逻辑
+
+---
+
+### `js/app_floatpet.js` ⭐ 新增
+**作用：悬浮宠物（FloatPet）模块。**
+
+关键 CSS：`css/floatpet.css`  
+关联 Android：`android/app/src/main/assets/floatpet_overlay.html`
+
+**已知特征：**
+- 在屏幕上显示可拖拽的悬浮宠物角色
+- Android 端通过 `FloatingWindowService` 以系统级悬浮窗呈现
+- Web 端与 Android 端共用 `floatpet_overlay.html` 作为前端渲染层
+
+**什么时候看：**
+- 改悬浮宠物的外观/动画
+- 改宠物与用户的互动行为
+- 改 Web 端悬浮层逻辑
+- 改 Android 悬浮窗权限或 Service 行为（需同看 `android/` 目录）
 
 ---
 
@@ -639,296 +705,187 @@
 ---
 
 ### A. 聊天主系统 / AI 回复 / 微信界面
-先看：
-- `index.html`
-- `js/apps.js`
-
-关键词建议搜索：
-- `wechatApp`
-- `chatLayer`
-- `chatMessages`
-- `chatForm`
-- `sendMessageToAI`
-- `toggleChat`
-- `openChatSettingsPage`
+先看：`index.html`、`js/apps.js`  
+搜索：`wechatApp`、`chatLayer`、`chatMessages`、`sendMessageToAI`
 
 ---
 
 ### B. 好友 / 通讯录 / 添加好友
-先看：
-- `index.html`
-- `js/apps.js`
-
-关键词建议搜索：
-- `contacts-list-container`
-- `add-friend-modal`
-- `loadFriendsData`
-- `saveFriendsData`
-- `deleteFriendInternal`
+先看：`index.html`、`js/apps.js`  
+搜索：`contacts-list-container`、`add-friend-modal`、`loadFriendsData`
 
 ---
 
 ### C. 群聊
-先看：
-- `index.html`
-- `js/app_groupchat.js`
-
-关键词建议搜索：
-- `groupsData`
-- `groupSettingsPage`
-- `sendGroupMessageToAI`
-- `openGroupChat`
-- `confirmCreateGroup`
-- `group-redpacket-modal`
-- `group-vote-modal`
-
-> **注意：** `app_groupchat.js` 覆写了 `window.sendMessageToAI`，群聊时不走 `apps.js` 的逻辑。
+先看：`index.html`、`js/app_groupchat.js`  
+搜索：`groupsData`、`groupSettingsPage`、`sendGroupMessageToAI`  
+> **注意：** `app_groupchat.js` 覆写了 `window.sendMessageToAI`
 
 ---
 
 ### D. 朋友圈 / Moments
-先看：
-- `index.html`
-- `js/apps.js`
-
-关键词建议搜索：
-- `moments-feed-list`
-- `post-moment-modal`
-- `renderMomentsFeed`
-- `triggerAiReactionForMoment`
-- `triggerAiReplyToComment`
+先看：`index.html`、`js/apps.js`  
+搜索：`moments-feed-list`、`renderMomentsFeed`、`triggerAiReactionForMoment`
 
 ---
 
 ### E. 设置 / API / 模型 / 主题 / 预设
-先看：
-- `index.html`
-- `js/apps.js`
-
-关键词建议搜索：
-- `settingsView`
-- `preset-editor`
-- `initThemeSettings`
-- `saveAllSettings`
-- `fetchAndPopulateModels`
-- `saveThemeConfig`
+先看：`index.html`、`js/apps.js`  
+搜索：`settingsView`、`initThemeSettings`、`saveAllSettings`、`fetchAndPopulateModels`
 
 ---
 
 ### F. 世界书
-先看：
-- `index.html`
-- `js/app_worldbook.js`
-
-关键词建议搜索：
-- `worldBookApp`
-- `wb-shelf-view`
-- `wb-detail-view`
-- `renderShelf`
-- `constructWorldInfoPrompt`
+先看：`index.html`、`js/app_worldbook.js`  
+搜索：`worldBookApp`、`renderShelf`、`constructWorldInfoPrompt`
 
 ---
 
 ### G. Bubble
-先看：
-- `index.html`
-- `js/app_bubble.js`
-
-关键词建议搜索：
-- `bubbleApp`
-- `bb-idol-view`
-- `bb-fan-view`
-- `renderCommentsModal`
+先看：`index.html`、`js/app_bubble.js`  
+搜索：`bubbleApp`、`bb-idol-view`、`renderCommentsModal`
 
 ---
 
 ### H. 音乐播放器
-先看：
-- `index.html`
-- `js/app_music.js`
-
-关键词建议搜索：
-- `musicPlayerView`
-- `global-audio-player`
-- `renderPlaylist`
-- `updatePlayerUI`
+先看：`index.html`、`js/app_music.js`  
+搜索：`musicPlayerView`、`renderPlaylist`、`updatePlayerUI`
 
 ---
 
 ### I. 钱包 / 理财 / 股市 / 打工
-先看：
-- `index.html`
-- `js/app_pay.js`
-
-关键词建议搜索：
-- `payApp`
-- `coin-game-view`
-- `pay-page-stock`
-- `renderPayMainPage`
-- `renderYuebaoPage`
-- `initStockMarket`
+先看：`index.html`、`js/app_pay.js`  
+搜索：`payApp`、`renderPayMainPage`、`initStockMarket`
 
 ---
 
-### J. 虚拟转账（聊天中的转账功能）
-先看：
-- `js/app_transfer.js`
-- `js/app_pay.js`（余额数据）
-
-关键词建议搜索：
-- `TransferApp`
-- `openTransferModal`
-- `appendTransferBubble`
-- `parseAndHandleAITransfer`
-- `wc_transfer_ledger`
-- `[TRANSFER:`
-- `[WC_TRANSFER:`
-
-> **注意：** 转账余额直接读写 `payData.balance`，改余额逻辑需同时看 `app_pay.js`。
+### J. 虚拟转账
+先看：`js/app_transfer.js`、`js/app_pay.js`（余额数据）  
+搜索：`TransferApp`、`openTransferModal`、`appendTransferBubble`、`[TRANSFER:`
 
 ---
 
 ### K. 宠物
-先看：
-- `index.html`
-- `js/app_pet.js`
-
-关键词建议搜索：
-- `petApp`
-- `pet-room-stage`
-- `pet-settings-modal`
-- `loadPetData`
-- `updatePetStatsUI`
-- `renderShopList`
+先看：`index.html`、`js/app_pet.js`  
+搜索：`petApp`、`pet-room-stage`、`loadPetData`
 
 ---
 
 ### L. Love Space / 双人宇宙
-先看：
-- `index.html`
-- `js/app_lovespace.js`
-
-关键词建议搜索：
-- `loveSpaceApp`
-- `ls2-lobby-view`
-- `ls2-main-view`
-- `renderLs2Journal`
-- `renderLs2Fridge`
-- `renderLs2Tasks`
+先看：`index.html`、`js/app_lovespace.js`  
+搜索：`loveSpaceApp`、`ls2-lobby-view`、`renderLs2Journal`
 
 ---
 
 ### M. 地图
-先看：
-- `index.html`
-- `js/app_map.js`
-
-关键词建议搜索：
-- `mapApp`
-- `map-canvas`
-- `map-sidebar`
-- `renderMapList`
-- `renderMapView`
-- `openSceneModal`
+先看：`index.html`、`js/app_map.js`  
+搜索：`mapApp`、`renderMapList`、`openSceneModal`
 
 ---
 
 ### N. LIVE
-先看：
-- `index.html`
-- `js/app_live.js`
-
-关键词建议搜索：
-- `liveApp`
-- `live-tab-discover`
-- `live-tab-messages`
-- `renderLiveUI`
-- `triggerLiveReactions`
+先看：`index.html`、`js/app_live.js`  
+搜索：`liveApp`、`live-tab-discover`、`renderLiveUI`
 
 ---
 
 ### O. Arcade 小游戏
-先看：
-- `index.html`
-- `js/app_arcade.js`
-
-关键词建议搜索：
-- `gameApp`
-- `gc-view-lobby`
-- `g1_` ~ `g11_`（各游戏前缀）
+先看：`index.html`、`js/app_arcade.js`  
+搜索：`gameApp`、`gc-view-lobby`、`g1_` ~ `g11_`
 
 ---
 
 ### P. 线下模式 / Tavern 风格聊天
-先看：
-- `index.html`
-- `js/apps.js`
-
-关键词建议搜索：
-- `offlineModeView`
-- `offline-log-container`
-- `offline-settings-panel`
-- `renderOfflineHistory`
-- `triggerOfflineRetry`
-- `updateOfflineMessage`
+先看：`index.html`、`js/apps.js`  
+搜索：`offlineModeView`、`offline-log-container`、`renderOfflineHistory`
 
 ---
 
 ### Q. 剧情总结 / 记忆中枢 / 存档读档
-先看：
-- `index.html`
-- `js/apps.js`（总结触发逻辑）
-- `js/app_memory.js`（存档、上下文构建、跨聊天互通）
-
-关键词建议搜索：
-- `summaryPageView`
-- `renderSummaryUI`
-- `executeSummaryProcess`
-- `generateGrandSummary`
-- `checkpoint-list-container`
-- `saveCheckpoint`
-- `loadCheckpoint`
-- `buildTimestampedContext`
-- `buildLinkedMemoryContext`
+先看：`index.html`、`js/apps.js`（总结触发）、`js/app_memory.js`（存档/上下文构建）  
+搜索：`summaryPageView`、`saveCheckpoint`、`buildTimestampedContext`
 
 ---
 
-### R. 身份系统与人设生成器 / Persona
-先看：
-- `index.html`
-- `js/apps.js` (身份系统核心逻辑)
-- `js/app_persona.js` (人设填表与 AI 生成)
-
-关键词建议搜索：
-- `identity-modal`
-- `personaBuilderApp`
-- `initPersonaSystem`
-- `applyPersonaToUI`
-- `generatePersonaByAI`
-- `PB_KEYS`
+### R. 身份系统与人设生成器
+先看：`index.html`、`js/apps.js`、`js/app_persona.js`  
+搜索：`identity-modal`、`personaBuilderApp`、`generatePersonaByAI`、`PB_KEYS`
 
 ---
 
 ### S. 语音/视频通话
-先看：
-- `index.html`
-- `js/app_voice_call.js`
+先看：`index.html`、`js/app_voice_call.js`  
+搜索：`video-call-view`、`startVideoCall`、`triggerIncomingCall`、`VideoCallState`
 
-关键词建议搜索：
-- `video-call-view`
-- `incoming-call-overlay`
-- `vc-floating-bubble`
-- `startVideoCall`
-- `triggerIncomingCall`
-- `endVideoCall`
-- `VideoCallState`
-- `openVideoCallFromChat`
+---
+
+### T. 查手机（Tracker） ⭐ 新增
+先看：`index.html`、`js/app_tracker.js`  
+搜索：`trackerApp`、`TrackerApp`、`tr-view-select`、`tr-view-lock`、`tr-view-desktop`、`tr-app-`
+
+关键词：
+- `tr-scenario-modal` — 场景抽卡弹窗
+- `tr-pin-dot` — PIN 码输入点
+- `tr-timer-pill` — 倒计时胶囊
+- `tr-app-messages` / `tr-app-diary` 等 — 各 App 视图容器
+- `generateAndSaveCharPin` — 角色密码生成（聊天设置页调用）
+- `tr_pending_context` — 蝴蝶效应待处理队列（localStorage）
+
+---
+
+### U. 小说 App（Novel） ⭐ 新增
+先看：`index.html`、`js/app_novel.js`  
+搜索：`novelApp`、`NovelApp`、`novel-tab-forum`、`novel-fullreader`
+
+关键词：
+- `novel-bottom-tabs` — 底部 Tab 栏
+- `novel-gen-panel` — AI 生成面板
+- `novel-comment-sheet` — 段落评论底部弹出
+- `novel-antiaddict-overlay` — 防沉迷遮罩
+- `novel_state_v3` — 持久化存储 key
+- `novel_pending_reactions` — 读后感待触发队列
+
+---
+
+### V. 图像生成（ImageGen） ⭐ 新增
+先看：`js/app_imagegen.js`（无专属容器，挂钩到聊天系统）  
+搜索：`processImagegenFromAIReply`、`parseAndHandleImageCommands`、`generateImages`、`IMAGEGEN_SETTINGS_KEY`
+
+关键词：
+- `imagegen-test-modal` — 测试生成弹窗
+- `imagegen-fullscreen-overlay` — 全屏查看遮罩
+- `imagegen-context-menu` — 图片右键菜单
+- `[REALIMAG:`、`[NAIIMAG:`、`"type":"naiimag"` — AI 回复中的生图指令格式
+- `[GENIMG_DATA:` — 历史记录中图片数据的存储格式
+
+---
+
+### W. Gal 游戏 ⭐ 新增
+先看：`index.html`、`js/app_galgame.js`  
+搜索：`galgameApp`（或类似容器 ID）
+
+---
+
+### X. 短信 App ⭐ 新增
+先看：`index.html`、`js/app_sms.js`  
+搜索：`smsApp`（或类似容器 ID）、`css/sms_phone.css`
+
+---
+
+### Y. 电话 App ⭐ 新增
+先看：`index.html`、`js/app_phone_call.js`  
+搜索：`phoneCallApp`（或类似容器 ID）、`css/sms_phone.css`
+
+---
+
+### Z. 悬浮宠物（FloatPet） ⭐ 新增
+先看：`index.html`、`js/app_floatpet.js`  
+如需改 Android 端：`android/app/src/main/java/com/beeper/floatpet/`  
+搜索：`floatPetApp`（或类似容器 ID）、`floatpet_overlay.html`
 
 ---
 
 ## 6. `index.html` 中的重要 App 容器 ID
-
-这些容器通常就是对应 JS 模块的落点。
 
 | 功能 | 关键容器 ID |
 |---|---|
@@ -959,6 +916,14 @@
 | 群红包弹窗 | `group-redpacket-modal` |
 | 群投票弹窗 | `group-vote-modal` |
 | 群视频通话弹窗 | `group-video-call-modal` |
+| 查手机 App | `trackerApp` |
+| 小说 App | `novelApp` |
+| Gal 游戏 App | `galgameApp`（待确认） |
+| 短信 App | `smsApp`（待确认） |
+| 电话 App | `phoneCallApp`（待确认） |
+| 悬浮宠物 App | `floatPetApp`（待确认） |
+| 图像生成测试弹窗 | `imagegen-test-modal` |
+| 图像全屏查看 | `imagegen-fullscreen-overlay` |
 
 ---
 
@@ -974,14 +939,21 @@
 | `css/bubble.css` | Bubble 偶像模块专属样式 |
 | `css/music.css` | 音乐播放器专属样式 |
 | `css/video_call.css` | 通话界面专属样式（`.vc-*` 前缀类名） |
+| `css/tracker.css` | 查手机模块专属样式（`.tr-*` 前缀类名） |
+| `css/novel.css` | 小说 App 专属样式（`.novel-*` 前缀类名） |
+| `css/galgame.css` | Gal 游戏模块专属样式 |
+| `css/sms_phone.css` | 短信 & 电话模块共享样式 |
+| `css/floatpet.css` | 悬浮宠物专属样式 |
 
 ### 改样式的建议
-- 改通话界面样式 → 优先看 `css/video_call.css`（`.vc-*` 前缀）
+- 改查手机界面 → 优先看 `css/tracker.css`（`.tr-*` 前缀）
+- 改小说 App → 优先看 `css/novel.css`（`.novel-*` 前缀）
+- 改通话界面 → 优先看 `css/video_call.css`（`.vc-*` 前缀）
 - 改 Bubble 样式 → 优先看 `css/bubble.css` 或 `css/overrides.css` 末尾
-- 改音乐播放器样式 → 优先看 `css/music.css`
+- 改音乐播放器 → 优先看 `css/music.css`
+- 改短信/电话界面 → 优先看 `css/sms_phone.css`
+- 改悬浮宠物 → 优先看 `css/floatpet.css`
 - 不清楚样式来源时，先全局搜索类名/ID
-- 小修优先改已有文件，不建议一开始就再新建更多样式文件
-- 如果是"临时补丁式改动"，通常适合放在 `overrides.css`
 
 ---
 
@@ -994,20 +966,10 @@
 4. 找渲染函数、打开函数、保存函数
 5. 最后查相关 CSS
 
----
-
 ### 场景 2：改聊天或 AI 行为
 1. 先看 `js/apps.js`
 2. 如果是群聊相关，看 `js/app_groupchat.js`（它覆写了 `sendMessageToAI`）
-3. 搜索：
-   - `sendMessageToAI`
-   - `loadChatHistory`
-   - `saveMessageToHistory`
-   - `renderOfflineHistory`
-   - `callAiForSpecialTask`
-4. 如果 UI 也要改，再回看 `index.html`
-
----
+3. 如果涉及图像生成，看 `js/app_imagegen.js`
 
 ### 场景 3：改弹窗
 1. 在 `index.html` 搜弹窗容器 `id`
@@ -1015,65 +977,67 @@
 3. 找关闭函数：`closeXxx` / `toggleXxx`
 4. 找提交/保存函数：`saveXxx` / `confirmXxx`
 
----
-
 ### 场景 4：加一个新功能
 先判断属于哪种：
 
-- 属于聊天主系统 → `js/apps.js`
-- 属于群聊 → `js/app_groupchat.js`
-- 属于通话 → `js/app_voice_call.js`
-- 属于记忆/存档/上下文 → `js/app_memory.js`
-- 属于转账 → `js/app_transfer.js`
-- 属于世界书 → `js/app_worldbook.js`
-- 属于 LIVE → `js/app_live.js`
-- 属于宠物 → `js/app_pet.js`
-- 属于钱包 → `js/app_pay.js`
-- 属于小游戏 → `js/app_arcade.js`
-- 属于用户人设填表/生成 → `js/app_persona.js`
-
-如果需要新页面：
-- 容器写到 `index.html`
-- 行为写到对应 JS 模块
-- 样式写到合适的 CSS 文件
+- 聊天主系统 → `js/apps.js`
+- 群聊 → `js/app_groupchat.js`
+- 通话 → `js/app_voice_call.js`
+- 记忆/存档/上下文 → `js/app_memory.js`
+- 转账 → `js/app_transfer.js`
+- 世界书 → `js/app_worldbook.js`
+- 查手机 → `js/app_tracker.js`
+- 小说 → `js/app_novel.js`
+- 图像生成 → `js/app_imagegen.js`
+- Gal 游戏 → `js/app_galgame.js`
+- 短信 → `js/app_sms.js`
+- 电话 → `js/app_phone_call.js`
+- 悬浮宠物 → `js/app_floatpet.js`
+- LIVE → `js/app_live.js`
+- 宠物 → `js/app_pet.js`
+- 钱包 → `js/app_pay.js`
+- 小游戏 → `js/app_arcade.js`
+- 用户人设 → `js/app_persona.js`
 
 ---
 
 ## 9. 模块间关键依赖关系
 
-以下依赖关系在修改时需要特别注意：
-
 | 文件 | 依赖 / 覆写关系 |
 |---|---|
-| `app_groupchat.js` | **覆写** `window.sendMessageToAI`（群聊时劫持）<br>**覆写** `window.appendMessage`（处理红包/投票卡片）<br>依赖 `apps.js` 的 `IDB`、`friendsData`、`currentChatId`、`appendMessage`、`saveFriendsData` |
-| `app_transfer.js` | 依赖 `app_pay.js` 的 `payData.balance`、`savePayData()`<br>依赖 `apps.js` 的 `saveMessageToHistory`、`appendMessage`、`currentPersonaId`、`friendsData` |
-| `app_memory.js` | 依赖 `apps.js` 的 `IDB`、`friendsData`、`saveFriendsData`、`loadChatHistory`、`scopedChatKey`<br>暴露工具函数供 `apps.js` 调用（`buildTimestampedContext`、`buildSituationalAwareness` 等） |
-| `app_voice_call.js` | 依赖 `apps.js` 的 `friendsData`、`currentChatId`、`appendMessage`、`saveMessageToHistory`、`sendMessageToAI`<br>依赖 `app_persona.js` 的 `personasMeta`、`currentPersonaId` |
+| `app_groupchat.js` | **覆写** `window.sendMessageToAI`（群聊时劫持）<br>**覆写** `window.appendMessage`（处理红包/投票卡片）<br>依赖 `apps.js` 的 `IDB`、`friendsData`、`currentChatId` |
+| `app_transfer.js` | 依赖 `app_pay.js` 的 `payData.balance`、`savePayData()`<br>依赖 `apps.js` 的 `saveMessageToHistory`、`appendMessage` |
+| `app_memory.js` | 依赖 `apps.js` 的 `IDB`、`friendsData`、`loadChatHistory`<br>暴露工具函数供 `apps.js` 调用 |
+| `app_voice_call.js` | 依赖 `apps.js` 的 `friendsData`、`appendMessage`、`sendMessageToAI`<br>依赖 `app_persona.js` 的 `personasMeta`、`currentPersonaId` |
+| `app_tracker.js` | 依赖 `apps.js` 的 `friendsData`、`IDB`、`scopedChatKey`、`triggerAIReplyForPendingContext`<br>依赖 `app_worldbook.js` 的 `worldBooks`<br>依赖 `app_persona.js` 的 `personasMeta`、`currentPersonaId`<br>写入 `tr_pending_context`（由 `apps.js` 的 `triggerAIReplyForPendingContext` 消费） |
+| `app_novel.js` | 依赖 `apps.js` 的 `friendsData`、`appendMessage`、`saveMessageToHistory`、`currentChatId`<br>依赖 `app_persona.js` 的 `personasMeta`、`currentPersonaId`<br>依赖 `app_worldbook.js` 的 `worldBooks` |
+| `app_imagegen.js` | 依赖 `apps.js` 的 `friendsData`、`currentChatId`、`appendMessage`、`saveMessageToHistory`、`IDB`、`scopedChatKey`<br>通过 `window.processImagegenFromAIReply` 被 `apps.js` 调用 |
 
 ---
 
 ## 10. 对后续 AI 最重要的判断结论
 
-### 这个项目最重要的四个事实
+### 这个项目最重要的几个事实
 1. **`index.html` 非常大，是整个系统的 DOM 总装配文件**
 2. **`js/apps.js` 是总业务核心**
 3. **其余 `js/app_xxx.js` 是各子 App 模块**
 4. **`app_groupchat.js` 会覆写全局 `sendMessageToAI` 和 `appendMessage`，群聊时行为与私聊完全不同**
+5. **`app_tracker.js` 的"蝴蝶效应"通过 `tr_pending_context` 向聊天主线注入事件，由 `apps.js` 消费**
+6. **`app_imagegen.js` 是工具函数集合，没有独立容器，通过钩子函数挂载到聊天气泡系统**
 
 ### 所以修改前请先判断：
 - 这是"系统级功能"还是"子 App 功能"？
 - 改动是"DOM 结构"还是"业务逻辑"？
 - 是只改一个模块，还是会影响多个模块？
 - 如果是群聊相关，是否会与 `app_groupchat.js` 的函数覆写冲突？
+- 如果涉及 AI 回复后处理，是否需要同时检查 `app_imagegen.js` 的钩子？
 
 ---
 
 ## 11. 给后续 AI 的最短执行提示词
 
-如果要把这份目录交给另一个 AI，可以直接先喂它这段：
-
 ```text
-你现在要修改这个项目，但请先遵守以下规则：
+你现在要修改这个项目，请先遵守以下规则：
 
 1. 先阅读 AI_CODEMAP.md，再开始改代码。
 2. 这个项目是 index.html + 全局 JS 的单页应用。
@@ -1094,11 +1058,20 @@
    - js/app_memory.js         五维记忆引擎（存档读档、跨聊天记忆、时间感知）
    - js/app_transfer.js       双向虚拟转账（window.TransferApp）
    - js/app_groupchat.js      群聊（覆写 sendMessageToAI 和 appendMessage！）
+   - js/app_tracker.js        查手机模拟器（TrackerApp，蝴蝶效应注入聊天主线）
+   - js/app_novel.js          小说 App（NovelApp，AI生成/阅读/分享）
+   - js/app_imagegen.js       图像生成双引擎（NAI + Pollinations，挂钩到聊天气泡）
+   - js/app_galgame.js        Gal 游戏/视觉小说
+   - js/app_sms.js            短信 App
+   - js/app_phone_call.js     电话 App（UI模拟，与 app_voice_call.js 不同）
+   - js/app_floatpet.js       悬浮宠物（含 Android 端 android/ 目录）
 6. 修改前先判断功能归属到哪个文件。
 7. 涉及界面时同时检查 index.html 和对应 JS 文件。
 8. 不要随便调整 script 加载顺序。
 9. 优先局部修改，不要无必要重构 apps.js。
 10. 改群聊相关功能前，必须先看 app_groupchat.js，它覆写了核心全局函数。
+11. app_tracker.js 的蝴蝶效应通过 localStorage 的 tr_pending_context 向 apps.js 注入聊天上下文。
+12. app_imagegen.js 没有独立 App 容器，是工具函数集合，由 apps.js 通过 processImagegenFromAIReply 调用。
 ```
 
 ---
@@ -1118,4 +1091,4 @@
 
 ## 13. 一句话版本
 
-> **先看 `AI_CODEMAP.md` → 再判断是改 `index.html`、`js/apps.js`，还是某个 `js/app_xxx.js`。群聊功能必看 `app_groupchat.js`（它覆写了全局函数）。**
+> **先看 `AI_CODEMAP.md` → 再判断是改 `index.html`、`js/apps.js`，还是某个 `js/app_xxx.js`。群聊必看 `app_groupchat.js`（覆写全局函数）；查手机改 `app_tracker.js`；小说改 `app_novel.js`；图像生成改 `app_imagegen.js`（无独立容器，挂钩聊天系统）。**

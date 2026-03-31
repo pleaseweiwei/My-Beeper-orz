@@ -468,23 +468,25 @@ input:checked + .slider:before { transform: translateX(18px); }
 
 @media (max-width: 600px) {
     html {
-        /* iOS Safari 必须在 html 层声明，才能让 body 的 fill-available 生效 */
-        height: -webkit-fill-available;
-        height: 100dvh;
+        /* --vh 由 JS setVh() 写入，等于 window.innerHeight（真实可视高度） */
+        height: var(--vh, 100dvh);
     }
 
     body {
-        align-items: flex-start; /* 顶端对齐 */
-        background-color: #f7f7f7;  /* 移动端背景色 */
-        /* 关键修复：让 body 高度和 phone 保持一致，消除底部空白 */
-        height: -webkit-fill-available; /* iOS 旧版兜底 */
-        height: 100dvh;                 /* 现代 iOS / Android */
+        align-items: flex-start;       /* 顶端对齐，配合 phone 100% 高度铺满 */
+        background-color: #f7f7f7;
+        /* 优先用 JS 写入的 --vh；JS 未执行时依次降级 */
+        height: var(--vh, 100dvh);
+        min-height: var(--vh, 100dvh); /* 兜底，防止内容短时收缩 */
+        overflow: hidden;
     }
 
     .phone {
         width: 100vw;
-        height: -webkit-fill-available; /* iOS 旧版兜底 */
-        height: 100dvh;                 /* 使用 dvh 解决移动端地址栏遮挡问题 */
+        /* 核心修复：--vh = window.innerHeight，精准等于可视区高度，
+           消除 iOS Safari 因地址栏/工具栏造成的底部空白 */
+        height: var(--vh, 100dvh);
+        min-height: var(--vh, 100dvh);
         border-radius: 0;
         box-shadow: none;
     }

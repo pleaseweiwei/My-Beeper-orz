@@ -557,6 +557,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 【修复】加上 await 确保后续红点更新等逻辑能读到最新鲜的数据
     await loadFriendsData();
+    // 桌宠外观依赖 friendsData（头像），数据加载完后刷新一次
+    if (typeof FloatPet !== 'undefined' && typeof FloatPet.refresh === 'function') {
+        FloatPet.refresh();
+    }
     // 新增：加载朋友圈数据
     loadMomentsFeed();
 
@@ -862,6 +866,17 @@ function initThemeSettings() {
         if(cssInput) cssInput.value = '';
     }
 
+    // 2b. 全局聊天 CSS
+    const globalChatCssInput = document.getElementById('global-chat-css-input');
+    const globalChatStyleTag = document.getElementById('dynamic-global-chat-css');
+    if (savedTheme.globalChatCSS) {
+        if (globalChatStyleTag) globalChatStyleTag.innerHTML = savedTheme.globalChatCSS;
+        if (globalChatCssInput) globalChatCssInput.value = savedTheme.globalChatCSS;
+    } else {
+        if (globalChatStyleTag) globalChatStyleTag.innerHTML = '';
+        if (globalChatCssInput) globalChatCssInput.value = '';
+    }
+
     // 3. 字体
     if (savedTheme.fontType === 'custom' && savedTheme.customFontUrl) {
         loadCustomFont(savedTheme.customFontUrl);
@@ -973,6 +988,15 @@ function setupThemeEvents() {
     if(cssInput) {
         cssInput.addEventListener('input', (e) => {
             document.getElementById('dynamic-custom-css').innerHTML = e.target.value;
+        });
+    }
+
+    // 全局聊天 CSS 实时预览
+    const globalChatCssInputEl = document.getElementById('global-chat-css-input');
+    if (globalChatCssInputEl) {
+        globalChatCssInputEl.addEventListener('input', (e) => {
+            const tag = document.getElementById('dynamic-global-chat-css');
+            if (tag) tag.innerHTML = e.target.value;
         });
     }
 
@@ -1090,6 +1114,9 @@ function saveThemeConfig() {
 
     // 保存 CSS
     theme.customCSS = document.getElementById('custom-css-input').value;
+    // 保存全局聊天 CSS
+    const _gcInput = document.getElementById('global-chat-css-input');
+    if (_gcInput) theme.globalChatCSS = _gcInput.value;
 
     localStorage.setItem(THEME_KEY, JSON.stringify(theme));
     initThemeSettings();
@@ -1406,7 +1433,8 @@ window.toggleStgSection = function(sectionId) {
     const bd = document.getElementById('stg-bd-' + sectionId);
     const hd = document.getElementById('stg-hd-' + sectionId);
     if (!bd) return;
-    const isOpen = bd.classList.contains('open');
+    const isOpen = bd.style.display !== 'none' && bd.style.display !== '';
+    bd.style.display = isOpen ? 'none' : 'block';
     bd.classList.toggle('open', !isOpen);
     if (hd) hd.classList.toggle('open', !isOpen);
 };
@@ -1822,45 +1850,85 @@ function getEffectiveGreeting(friend) {
 
 
 window.toggleGreetingEditor = function() {
-    const mode = document.getElementById('cs-greeting-mode')?.value || 'custom';
-    const customBox = document.getElementById('cs-greeting-custom-box');
-    const tavernBox = document.getElementById('cs-greeting-tavern-box');
-    
-    // 让自定义框和酒馆卡框互斥显示，就不会出现两个叠在一起了
-    if (customBox) setSoftDisplay(customBox, mode === 'custom', 'block');
-    if (tavernBox) setSoftDisplay(tavernBox, mode === 'tavern', 'block');
+    // 统一编辑版 — 保留此函数供兼容性调用，无需任何操作
 };
 
 window.renderGreetingListUI = function(friend) {
-    const listWrap = document.getElementById('cs-greeting-list');
-    if (!listWrap) return;
+    renderGreetingPresetsUI(friend);
+};
 
-    const arr = Array.isArray(friend.greetingList) ? friend.greetingList : (friend.tavernGreeting ? [friend.tavernGreeting] : []);
-    const selected = Number.isInteger(friend.greetingSelected) ? friend.greetingSelected : 0;
+function renderGreetingPresetsUI(friend) {
+    const container = document.getElementById('cs-greeting-presets');
+    if (!container) return;
+    container.innerHTML = '';
 
-    listWrap.innerHTML = '';
-    if (!arr.length) {
-        listWrap.innerHTML = '<div style="padding:10px;color:#999;font-size:12px;">此角色卡没有可用开场白</div>';
-        return;
-    }
+    const arr = Array.isArray(friend.greetingList) ? friend.greetingList :
+        (friend.tavernGreeting ? [friend.tavernGreeting] : []);
+
+    if (!arr.length) return; // 没有预设则不显示
+
+    // 小标题
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:#bbb;font-weight:700;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase;';
+    label.innerText = '▼ 预设开场白（点击填入）';
+    container.appendChild(label);
+
+    const numChars = ['一','二','三','四','五','六','七','八','九','十'];
+
+    // 外层滚动容器
+    const scrollBox = document.createElement('div');
+    scrollBox.style.cssText = [
+        'border:1px solid #e8e8e8',
+        'border-radius:10px',
+        'overflow-y:auto',
+        'max-height:120px',
+        'background:#fafafa'
+    ].join(';');
 
     arr.forEach((txt, idx) => {
-        const item = document.createElement('div');
-        item.className = 'wb-checklist-item';
-        item.innerHTML = `
-            <input type="radio" name="cs-greeting-radio" value="${idx}" ${idx === selected ? 'checked' : ''}>
-            <span class="wb-checklist-name">开场白 ${idx + 1}</span>
-        `;
-        item.onclick = (e) => {
-            if (e.target.type !== 'radio') {
-                const r = item.querySelector('input[type="radio"]');
-                if (r) r.checked = true;
-            }
-            friend.greetingSelected = idx;
+        const preview = String(txt).trim();
+        if (!preview) return;
+
+        const row = document.createElement('div');
+        const label = `开场白${numChars[idx] || (idx + 1)}`;
+        row.style.cssText = [
+            'padding:8px 12px',
+            'font-size:12px',
+            'font-weight:600',
+            'color:#555',
+            'cursor:pointer',
+            'border-bottom:1px solid #f0f0f0',
+            'transition:background 0.1s',
+            'user-select:none'
+        ].join(';');
+        row.innerText = label;
+
+        row.addEventListener('mouseenter', () => { row.style.background = '#333'; row.style.color = '#fff'; });
+        row.addEventListener('mouseleave', () => { row.style.background = ''; row.style.color = '#555'; });
+
+        row.onclick = () => {
+            const ta = document.getElementById('cs-greeting-unified');
+            if (!ta) return;
+            ta.value = preview;
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 260) + 'px';
+            ta.style.outline = '2px solid #333';
+            setTimeout(() => { ta.style.outline = ''; }, 700);
+            // 高亮选中行
+            scrollBox.querySelectorAll('div').forEach(r => r.style.background = '');
+            row.style.background = '#f0f0f0';
+            row.style.color = '#333';
         };
-        listWrap.appendChild(item);
+
+        scrollBox.appendChild(row);
     });
-};
+
+    // 去掉最后一行的底部边框
+    const lastRow = scrollBox.lastElementChild;
+    if (lastRow) lastRow.style.borderBottom = 'none';
+
+    container.appendChild(scrollBox);
+}
 
 
 
@@ -1900,6 +1968,9 @@ window.openChatDetail = async function(name) {
 
         chatView.classList.add('show');
     }
+
+    // 应用单聊视觉美化设置（背景/气泡主题/CSS）
+    applySingleChatVisualSettings(name);
 
     const chatMessages = document.getElementById('chatMessages');
     chatMessages.innerHTML = ''; 
@@ -2756,12 +2827,12 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
     }
 
         // 构建最终的消息列表
-    // ★ 蝴蝶效应：将查手机篡改记录注入本轮系统提示
+    // ★ 转账/拍一拍等行为上下文注入（独立于查手机蝴蝶效应，使用专属 key）
     const _trPending = (() => {
         try {
-            const _p = JSON.parse(localStorage.getItem('tr_pending_context') || '[]');
+            const _p = JSON.parse(localStorage.getItem('tr_action_context') || '[]');
             if (_p.length > 0) {
-                localStorage.removeItem('tr_pending_context');
+                localStorage.removeItem('tr_action_context');
                 return '\n\n' + _p.join('\n');
             }
         } catch (_) {}
@@ -3129,6 +3200,9 @@ if (!avatarUrl) {
                 if (typeof TransferApp !== 'undefined' && TransferApp.parseAndHandleAITransfer) {
                     finalContent = TransferApp.parseAndHandleAITransfer(finalContent);
                 }
+                if (typeof PatApp !== 'undefined' && PatApp.parseAndHandleAIPat) {
+                    finalContent = PatApp.parseAndHandleAIPat(finalContent, currentChatId);
+                }
                 // 1. 按换行符拆分正文 (过滤空行)
                 let textSegments = finalContent.split('\n').map(s => s.trim()).filter(s => s);
                 // 回复条数区间控制 (replyMin ~ replyMax)
@@ -3256,8 +3330,8 @@ window.featureCreateGroup = function() {
     } else {
         friendNames.forEach(name => {
             const f = friendsData[name];
-            // 使用 DiceBear 生成头像
-            const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.realName}`;
+            // 优先使用已设置的头像，无头像时再使用 DiceBear 随机头像
+            const avatarUrl = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(f.realName || name)}`;
             
             const item = document.createElement('div');
             item.className = 'checklist-item';
@@ -3563,13 +3637,17 @@ window.openChatSettingsPage = function() {
     document.getElementById('cs-realname').value = friend.realName || '';
     document.getElementById('cs-remark').value = friend.remark || '';
     document.getElementById('cs-persona').value = friend.persona || '';
-   // 开场白设置回填
-const greetingMode = friend.greetingMode || (friend.tavernGreeting ? 'tavern' : 'custom');
-document.getElementById('cs-greeting-mode').value = greetingMode;
-document.getElementById('cs-greeting-custom').value = friend.greetingCustom || friend.greeting || '';
-
-toggleGreetingEditor();
-renderGreetingListUI(friend);
+    // 开场白统一编辑框回填
+    const _currentGreeting = getEffectiveGreeting(friend);
+    const _unifiedTA = document.getElementById('cs-greeting-unified');
+    if (_unifiedTA) {
+        _unifiedTA.value = _currentGreeting;
+        _unifiedTA.style.height = 'auto';
+        if (_currentGreeting) {
+            _unifiedTA.style.height = Math.min(_unifiedTA.scrollHeight, 260) + 'px';
+        }
+    }
+    renderGreetingPresetsUI(friend);
 
  
     
@@ -3715,6 +3793,34 @@ renderGreetingListUI(friend);
     const replyMaxEl = document.getElementById('cs-reply-max');
     if (replyMinEl) replyMinEl.value = settings.replyMin !== undefined ? settings.replyMin : 1;
     if (replyMaxEl) replyMaxEl.value = settings.replyMax !== undefined ? settings.replyMax : 5;
+
+    // --- [新增] VISUAL 美化设置加载 ---
+    const csChatBgUrlEl = document.getElementById('cs-chat-bg-url');
+    if (csChatBgUrlEl) csChatBgUrlEl.value = settings.chatBgUrl || '';
+    const csFontSliderEl = document.getElementById('cs-font-size-slider');
+    const csFontValEl = document.getElementById('cs-font-size-val');
+    if (csFontSliderEl) {
+        csFontSliderEl.value = settings.fontSize || 14;
+        if (csFontValEl) csFontValEl.textContent = (settings.fontSize || 14) + 'px';
+    }
+    const csCssEl = document.getElementById('cs-custom-css');
+    if (csCssEl) csCssEl.value = settings.customCss || '';
+    // 高亮气泡主题按钮
+    document.querySelectorAll('.cs-bubble-theme-btn').forEach(b => { b.style.outline = ''; });
+    const activeCsThemeBtn = document.querySelector(`.cs-bubble-theme-btn[data-theme="${settings.bubbleTheme || ''}"]`);
+    if (activeCsThemeBtn) activeCsThemeBtn.style.outline = '2px solid #007aff';
+
+    // --- [新增] 主动发动态频率设置 ---
+    const momentFreqEl = document.getElementById('cs-moment-freq-enabled');
+    const momentFreqTimeEl = document.getElementById('cs-moment-freq-time');
+    const momentFreqPromptEl = document.getElementById('cs-moment-freq-prompt');
+    const momentFreqBox = document.getElementById('cs-moment-freq-box');
+    if (momentFreqEl) {
+        momentFreqEl.checked = settings.momentFreqEnabled || false;
+        if (momentFreqTimeEl) momentFreqTimeEl.value = settings.momentFreqTime || 60;
+        if (momentFreqPromptEl) momentFreqPromptEl.value = settings.momentFreqPrompt || '';
+        if (momentFreqBox) setSoftDisplay(momentFreqBox, momentFreqEl.checked, 'block');
+    }
 
     // 最后显示页面 (滑入动画)
     page.classList.add('show');
@@ -4024,11 +4130,24 @@ window.saveChatSettings = async function() {
         return;
     }
 
-    // 开场白设置
-    friend.greetingMode = document.getElementById('cs-greeting-mode').value;
-    friend.greetingCustom = document.getElementById('cs-greeting-custom').value.trim();
-    const selectedGreetingRadio = document.querySelector('input[name="cs-greeting-radio"]:checked');
-    friend.greetingSelected = selectedGreetingRadio ? parseInt(selectedGreetingRadio.value, 10) : 0;
+    // 开场白设置 (统一编辑版)
+    const _unifiedGreetingVal = (document.getElementById('cs-greeting-unified')?.value || '').trim();
+    const _greetList = Array.isArray(friend.greetingList) ? friend.greetingList :
+        (friend.tavernGreeting ? [friend.tavernGreeting] : []);
+    const _matchIdx = _greetList.findIndex(g => String(g).trim() === _unifiedGreetingVal);
+    if (!_unifiedGreetingVal) {
+        friend.greetingMode = 'none';
+        friend.greetingCustom = '';
+        friend.greetingSelected = 0;
+    } else if (_matchIdx >= 0) {
+        friend.greetingMode = 'tavern';
+        friend.greetingSelected = _matchIdx;
+        friend.greetingCustom = '';
+    } else {
+        friend.greetingMode = 'custom';
+        friend.greetingCustom = _unifiedGreetingVal;
+        friend.greetingSelected = 0;
+    }
 
     // 世界书
     const selectedWbCheckboxes = document.querySelectorAll('#cs-worldbook-container input[type="checkbox"]:checked');
@@ -4073,8 +4192,29 @@ window.saveChatSettings = async function() {
     friend.chatSettings.replyMax = rmx ? Math.max(1, parseInt(rmx.value) || 5) : 5;
     if (friend.chatSettings.replyMin > friend.chatSettings.replyMax) friend.chatSettings.replyMax = friend.chatSettings.replyMin;
 
- const selectedStickers = document.querySelectorAll('#cs-sticker-categories input[type="checkbox"]:checked');
+    // [新增] VISUAL 美化设置保存
+    const csBgEl = document.getElementById('cs-chat-bg-url');
+    if (csBgEl) friend.chatSettings.chatBgUrl = csBgEl.value.trim();
+    const csFsEl = document.getElementById('cs-font-size-slider');
+    if (csFsEl) friend.chatSettings.fontSize = parseInt(csFsEl.value) || 14;
+    const csCssEl2 = document.getElementById('cs-custom-css');
+    if (csCssEl2) friend.chatSettings.customCss = csCssEl2.value;
+    // bubbleTheme 由 selectCsSingleBubbleTheme 实时写入，此处只做兜底（避免丢失）
+    if (!friend.chatSettings.bubbleTheme) friend.chatSettings.bubbleTheme = '';
+
+    const selectedStickers = document.querySelectorAll('#cs-sticker-categories input[type="checkbox"]:checked');
     friend.chatSettings.activeStickers = Array.from(selectedStickers).map(cb => cb.value);
+
+    // [新增] 主动发动态频率设置保存
+    const mfEl = document.getElementById('cs-moment-freq-enabled');
+    const mfTimeEl = document.getElementById('cs-moment-freq-time');
+    const mfPromptEl = document.getElementById('cs-moment-freq-prompt');
+    if (mfEl) {
+        friend.chatSettings.momentFreqEnabled = mfEl.checked;
+        friend.chatSettings.momentFreqTime = mfTimeEl ? (parseInt(mfTimeEl.value) || 60) : 60;
+        friend.chatSettings.momentFreqPrompt = mfPromptEl ? mfPromptEl.value.trim() : '';
+    }
+
     // 恢复记忆引擎持久字段（lastChatTime 不受保存操作影响）
     if (_prevLastChatTime) friend.chatSettings.lastChatTime = _prevLastChatTime;
     // 保存记忆互通配置（从 app_memory.js 的 UI 读取）
@@ -4097,6 +4237,9 @@ window.saveChatSettings = async function() {
 
     // 刷新当前聊天窗口气泡头像、心声卡、通讯录资料页头像
     refreshFriendAvatarInUI(currentChatId, friend.avatar);
+
+    // 应用视觉美化设置（背景/主题/CSS 实时生效）
+    applySingleChatVisualSettings(currentChatId);
 
     // [关键] 5. 根据开场白是否变化，执行不同逻辑
     if (oldGreeting !== newGreeting) {
@@ -4852,29 +4995,12 @@ window.confirmSendLocation = function() {
 
 // --- 功能 C: 拍一拍 (防闪屏优化版) ---
 window.triggerNudge = function() {
-    // 1. 先关闭面板
-    document.getElementById('chat-extra-panels').classList.remove('open');
-    
-    // 2. 延迟 150ms 渲染系统提示
-    setTimeout(() => {
-        const chatMessages = document.getElementById('chatMessages');
-        const note = document.createElement('div');
-        note.className = 'msg-nudge-system';
-        note.innerText = `You nudged "${friendsData[currentChatId]?.realName || 'Hannah'}"`;
-        chatMessages.appendChild(note);
-        
-        // 3. 在下一帧滚动并触发小震动
-        requestAnimationFrame(() => {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            chatMessages.style.animation = 'none';
-            setTimeout(() => chatMessages.style.animation = 'float-slow 0.2s ease', 10);
-        });
-
-        // 4. 延迟触发 AI 回应
-        setTimeout(() => {
-            sendMessageToAI(`[System: User just "nudged" (double-tapped) you. React playfully or ask what's up.]`);
-        }, 500);
-    }, 150);
+    // 委托给 PatApp — 双击头像触发拍一拍弹窗
+    document.getElementById('chat-extra-panels')?.classList.remove('open');
+    const cid = (typeof window.currentChatId !== 'undefined') ? window.currentChatId : null;
+    if (cid && typeof PatApp !== 'undefined') {
+        PatApp.openPatModal(cid);
+    }
 }
 
 
@@ -4987,6 +5113,18 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
         chatMessages.appendChild(row);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         return; // 直接退出，不再渲染后面的头像和多选框
+    }
+
+    // === [PAT_NOTICE] 拍一拍系统提示气泡 ===
+    if (text && text.startsWith('[PAT_NOTICE]')) {
+        const noticeText = text.replace('[PAT_NOTICE]', '');
+        const noticeBubble = document.createElement('div');
+        noticeBubble.className = 'pat-notice-bubble';
+        const safeText = noticeText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        noticeBubble.innerHTML = `<span>${safeText}</span>`;
+        chatMessages.appendChild(noticeBubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return;
     }
     // === [新增] 多选框容器 (默认隐藏，CSS控制) ===
     const checkboxWrap = document.createElement('div');
@@ -5239,6 +5377,8 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
     // === [新增] 转账卡片从历史加载时渲染 ===
     else if (text.startsWith('[WC_TRANSFER:')) {
         bubble.classList.add('rich-bubble');
+        // 重置气泡样式，让转账卡片接管视觉
+        bubble.style.cssText = 'background:transparent!important;padding:0!important;box-shadow:none!important;border-radius:0!important;max-width:250px;';
         isRichContent = true;
         const _inner = text.replace('[WC_TRANSFER:', '').replace(/\]$/, '');
         const _parts = _inner.split('|');
@@ -8696,16 +8836,14 @@ window.saveOfflineConfig = function() {
 
 // 新增：应用视觉效果函数
 function applyOfflineVisuals() {
-    // 1. 背景图
+    // 1. 背景图（自定义配置覆盖）
     const bgLayer = document.getElementById('offline-bg-layer');
     if (offlineConfig.bgImage) {
         bgLayer.style.backgroundImage = `url('${offlineConfig.bgImage}')`;
         bgLayer.style.opacity = '1'; // 确保不透明
-        bgLayer.style.filter = 'none'; // 去掉默认的模糊（可选）
-    } else {
-        // 如果没设，恢复默认模糊头像逻辑（需要重新获取当前好友头像，这里简化处理）
-        bgLayer.style.backgroundImage = 'none';
+        bgLayer.style.filter = 'none'; // 去掉默认的模糊
     }
+    // 没有自定义背景时，保持调用方已设置的角色/群头像背景，不清空
 
     // 2. CSS
     let styleTag = document.getElementById('offline-dynamic-style');
@@ -8716,6 +8854,67 @@ function applyOfflineVisuals() {
     }
     styleTag.innerHTML = offlineConfig.customCSS || '';
 }
+
+/* =========================================
+   [新增] 单聊视觉美化设置应用函数
+   ========================================= */
+function applySingleChatVisualSettings(chatId) {
+    const friend = friendsData[chatId];
+    if (!friend) return;
+    const settings = friend.chatSettings || {};
+
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) {
+        chatMessages.style.backgroundImage = settings.chatBgUrl ? `url(${settings.chatBgUrl})` : '';
+        if (settings.chatBgUrl) {
+            chatMessages.style.backgroundSize = 'cover';
+            chatMessages.style.backgroundPosition = 'center';
+        }
+        chatMessages.style.fontSize = settings.fontSize ? settings.fontSize + 'px' : '';
+    }
+
+    let styleEl = document.getElementById('single-chat-custom-css-style');
+    if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'single-chat-custom-css-style';
+        document.head.appendChild(styleEl);
+    }
+    // 单人 CSS 为空时，回退使用全局聊天 CSS
+    if (settings.customCss) {
+        styleEl.textContent = settings.customCss;
+    } else {
+        const savedTheme = JSON.parse(localStorage.getItem(THEME_KEY) || '{}');
+        styleEl.textContent = savedTheme.globalChatCSS || '';
+    }
+
+    const chatLayer = document.getElementById('chatLayer');
+    if (chatLayer) {
+        chatLayer.className = chatLayer.className.replace(/\bbubble-theme-\S+/g, '').trim();
+        if (settings.bubbleTheme) {
+            chatLayer.classList.add(`bubble-theme-${settings.bubbleTheme}`);
+        }
+    }
+}
+
+window.selectCsSingleBubbleTheme = function(theme, btn) {
+    document.querySelectorAll('.cs-bubble-theme-btn').forEach(b => { b.style.outline = ''; });
+    if (btn) btn.style.outline = '2px solid #007aff';
+    if (currentChatId && friendsData[currentChatId]) {
+        if (!friendsData[currentChatId].chatSettings) friendsData[currentChatId].chatSettings = {};
+        friendsData[currentChatId].chatSettings.bubbleTheme = theme;
+    }
+};
+
+window.handleCsChatBgUpload = function(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const el = document.getElementById('cs-chat-bg-url');
+        if (el) el.value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
 
 // 修改 toggleOfflineSettings 以填充新数据
 const originalToggleOffline = window.toggleOfflineSettings;

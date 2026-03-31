@@ -3520,107 +3520,115 @@ textarea#custom-css-input:focus {
    [全新] 记忆中枢 (Summary) 韩系高定 UI
    ========================================= */
 
-/* 容器卡片 */
+/* 容器卡片：缩小圆角和内边距，让排版更紧凑 */
 .summary-k-card {
-    background: #ffffff; border-radius: 20px; padding: 24px 20px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.03);
+    background: #ffffff; border-radius: 16px; padding: 16px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.03);
 }
 
-/* 标题 */
-.sk-title { font-size: 14px; font-weight: 800; color: #111; display: flex; align-items: center; gap: 8px; }
-.sk-title i { color: #888; font-size: 13px; }
+/* 标题：字号微调 */
+.sk-title { font-size: 13px; font-weight: 800; color: #111; display: flex; align-items: center; gap: 6px; }
+.sk-title i { color: #888; font-size: 12px; }
 
-/* 分割线 */
-.sk-divider { height: 1px; background: #f0f0f0; margin: 20px 0; }
+/* 分割线：减少上下留白 */
+.sk-divider { height: 1px; background: #f0f0f0; margin: 12px 0; }
 
-/* 统计大字 */
-.sk-stat-box { display: flex; flex-direction: column; gap: 4px; }
-.sk-stat-box .label { font-size: 11px; color: #999; font-weight: 600; letter-spacing: 0.5px; }
-.sk-stat-box .value { font-size: 32px; font-weight: 300; color: #111; font-family: 'Montserrat', sans-serif; line-height: 1; }
-.sk-stat-box .value small { font-size: 12px; font-weight: 600; color: #aaa; margin-left: 2px; }
+/* 统计大字：缩减巨大字号，显得更秀气 */
+.sk-stat-box { display: flex; flex-direction: column; gap: 2px; }
+.sk-stat-box .label { font-size: 10px; color: #999; font-weight: 600; letter-spacing: 0.5px; }
+.sk-stat-box .value { font-size: 24px; font-weight: 300; color: #111; font-family: 'Montserrat', sans-serif; line-height: 1; }
+.sk-stat-box .value small { font-size: 10px; font-weight: 600; color: #aaa; margin-left: 2px; }
 
-/* 按钮组 */
+/* 按钮组：压低高度、减小字号与圆角 */
 .sk-btn-primary { 
-    width: 100%; padding: 14px; background: #111; color: #fff; 
-    border: none; border-radius: 14px; font-weight: 700; font-size: 13px; 
-    cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+    width: 100%; padding: 10px; background: #111; color: #fff; 
+    border: none; border-radius: 10px; font-weight: 700; font-size: 12px; 
+    cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
 }
 .sk-btn-primary:active { transform: scale(0.98); }
 
 .sk-btn-secondary { 
     background: #fff; color: #111; border: 1px solid #111; 
-    padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 11px; 
+    padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 11px; 
     cursor: pointer; transition: 0.2s; white-space: nowrap; 
 }
 .sk-btn-secondary:active { background: #f0f0f0; transform: scale(0.95); }
 
 .sk-btn-outline { 
-    width: 100%; padding: 14px; background: #fff; color: #111; 
-    border: 1px dashed #111; border-radius: 14px; font-weight: 700; font-size: 13px; 
+    width: 100%; padding: 10px; background: #fff; color: #111; 
+    border: 1px dashed #111; border-radius: 10px; font-weight: 700; font-size: 12px; 
     cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; 
 }
 .sk-btn-outline:active { background: #fafafa; transform: scale(0.98); }
 
-/* 精准输入区 */
+/* 精准输入区：缩小高度 */
 .sk-mini-input { 
     flex: 1; min-width: 0; background: #fff; border: 1px solid #ddd; 
-    padding: 8px; border-radius: 8px; text-align: center; 
-    font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 13px; outline: none; transition: 0.2s;
+    padding: 6px; border-radius: 6px; text-align: center; 
+    font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 12px; outline: none; transition: 0.2s;
 }
 .sk-mini-input:focus { border-color: #111; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-/* 表单行 */
+/* 表单行：压扁间距 */
 .sk-input-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #444; }
 .sk-input-row input { 
-    width: 65px; text-align: center; padding: 8px; border: 1px solid #ddd; 
-    border-radius: 8px; font-family: 'Montserrat'; font-weight: 700; background: #fff; outline: none; transition: 0.2s;
+    width: 60px; text-align: center; padding: 6px; border: 1px solid #ddd; 
+    border-radius: 6px; font-family: 'Montserrat'; font-weight: 700; background: #fff; outline: none; transition: 0.2s;
 }
 .sk-input-row input:focus { border-color: #111; }
 
-.sk-input-group { display: flex; flex-direction: column; gap: 8px; }
+/* 文本域：调小字号与基础高度 */
+.sk-input-group { display: flex; flex-direction: column; gap: 6px; }
 .sk-input-group textarea { 
-    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; 
-    background: #fff; font-size: 12px; resize: vertical; outline: none; line-height: 1.6; color: #333; transition: 0.2s;
+    width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; 
+    background: #fff; font-size: 12px; resize: vertical; outline: none; line-height: 1.5; color: #333; transition: 0.2s;
+    min-height: 50px;
 }
 .sk-input-group textarea:focus { border-color: #111; }
 
-/* 列表头部与容器 */
-.sk-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
-.sk-section-header span { font-size: 14px; font-weight: 800; color: #111; display: flex; align-items: center; gap: 8px; }
+/* 列表头部与容器：拉近距离 */
+.sk-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 2px; }
+.sk-section-header span { font-size: 13px; font-weight: 800; color: #111; display: flex; align-items: center; gap: 6px; }
 .sk-section-header span i { color: #888; }
 .sk-icon-btn { 
-    width: 30px; height: 30px; border-radius: 50%; background: #f0f0f0; color: #111; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; font-size: 12px;
+    width: 24px; height: 24px; border-radius: 50%; background: #f0f0f0; color: #111; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; font-size: 11px;
 }
 .sk-icon-btn:hover { background: #111; color: #fff; }
-.sk-list-container { display: flex; flex-direction: column; gap: 15px; }
+.sk-list-container { display: flex; flex-direction: column; gap: 10px; }
 
-/* 空状态 (兼容旧版代码直接调用) */
-.summary-empty-state { text-align: center; color: #999; font-size: 12px; padding: 40px 20px; background: #fafafa; border: 1px dashed #eee; border-radius: 16px; }
+/* 空状态：高度压缩 */
+.summary-empty-state { text-align: center; color: #999; font-size: 11px; padding: 30px 20px; background: #fafafa; border: 1px dashed #eee; border-radius: 12px; }
 
-/* 记忆生成的卡片 */
+/* 记忆生成的卡片：收紧白底外框与文本域高度 */
 .sk-memory-item { 
-    background: #fff; border-radius: 18px; padding: 18px; 
-    border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 6px 20px rgba(0,0,0,0.02); 
+    background: #fff; border-radius: 12px; padding: 12px; 
+    border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 15px rgba(0,0,0,0.02); 
     position: relative; transition: 0.3s; 
 }
-.sk-memory-item:focus-within { border-color: #111; box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+.sk-memory-item:focus-within { border-color: #111; box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
 
 .sk-memory-badge { 
     display: inline-block; background: #111; color: #fff; 
-    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; 
-    font-family: 'Montserrat', sans-serif; margin-bottom: 10px;
+    font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; 
+    font-family: 'Montserrat', sans-serif; margin-bottom: 6px;
 }
 .sk-memory-textarea { 
-    width: 100%; min-height: 100px; border: none; background: transparent; 
-    outline: none; resize: vertical; font-size: 13.5px; line-height: 1.6; color: #333; 
+    width: 100%; min-height: 60px; border: none; background: transparent; 
+    outline: none; resize: vertical; font-size: 12px; line-height: 1.5; color: #333; 
 }
 .sk-memory-actions { 
-    display: flex; justify-content: flex-end; gap: 12px; 
-    border-top: 1px solid #f5f5f5; padding-top: 12px; margin-top: 10px; 
+    display: flex; justify-content: flex-end; gap: 10px; 
+    border-top: 1px solid #f5f5f5; padding-top: 8px; margin-top: 8px; 
 }
-.sk-memory-actions i { color: #aaa; cursor: pointer; padding: 5px; font-size: 14px; transition: 0.2s; }
+.sk-memory-actions i { color: #aaa; cursor: pointer; padding: 4px; font-size: 13px; transition: 0.2s; }
 .sk-memory-actions i.fa-save:hover { color: #07c160; }
 .sk-memory-actions i.fa-trash:hover { color: #ff4d4f; }
+
+/* 强制缩减外层 HTML 自带的超大间距 (安全覆写机制) */
+#summaryPageView .chat-settings-page-content {
+    gap: 12px !important;
+    padding: 15px 15px 40px !important;
+}
 
 
 /* =========================================

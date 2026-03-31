@@ -1,14 +1,16 @@
 /**
- * app_transfer.js — 双向虚拟转账与资产联动系统
- * 依赖: app_pay.js (payData, savePayData), apps.js (friendsData, currentPersonaId)
+ * app_transfer.js — 双向虚拟转账与资产联动系统 v2.0
+ * 新增：韩系黑白灰风格卡片 · 群聊转账对象选择 · AI角色钱包 · JSON指令格式
+ * 依赖: app_pay.js (payData, savePayData), apps.js (friendsData, currentPersonaId, currentChatId, currentChatType)
  */
 
 window.TransferApp = (() => {
 
-  // ── 账单流水存储键 ──────────────────────────────
   const LEDGER_KEY = 'wc_transfer_ledger';
 
-  // ── 读取 / 写入账单 ─────────────────────────────
+  /* ══════════════════════════════════════════════
+     账单读写
+  ══════════════════════════════════════════════ */
   function getLedger() {
     try { return JSON.parse(localStorage.getItem(LEDGER_KEY) || '[]'); } catch { return []; }
   }
@@ -18,8 +20,16 @@ window.TransferApp = (() => {
     l.unshift({ ...entry, time: Date.now() });
     saveLedger(l);
   }
+  function updateLedgerEntry(id, status) {
+    const l = getLedger();
+    const idx = l.findIndex(e => e.id === id);
+    if (idx !== -1) { l[idx].status = status; l[idx].updatedAt = Date.now(); }
+    saveLedger(l);
+  }
 
-  // ── 用户余额操作（与 app_pay 共用 payData.balance） ──
+  /* ══════════════════════════════════════════════
+     用户余额（与 app_pay 共用 payData.balance）
+  ══════════════════════════════════════════════ */
   function getBalance() {
     return (typeof payData !== 'undefined' && payData.balance != null) ? Number(payData.balance) : 0;
   }
@@ -29,299 +39,454 @@ window.TransferApp = (() => {
     if (typeof savePayData === 'function') savePayData();
   }
 
-  // ── 获取当前人设信息 ────────────────────────────
-  function _getPersonaName() {
+  /* ══════════════════════════════════════════════
+     AI 角色钱包
+  ══════════════════════════════════════════════ */
+  function getAIBalance(chatId) {
     try {
-      if (typeof currentPersonaId !== 'undefined' && typeof friendsData !== 'undefined') {
-        const f = friendsData[currentPersonaId];
-        if (f) return f.remark || f.realName || 'AI';
-      }
-      if (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined') {
-        const p = personasMeta[currentPersonaId];
-        if (p) return p.name || p.realName || 'AI';
+      const f = (typeof friendsData !== 'undefined' && chatId) ? friendsData[chatId] : null;
+      if (f && f.bankBalance != null) return Number(f.bankBalance);
+      return 5000; // 默认虚拟余额
+    } catch { return 5000; }
+  }
+  function setAIBalance(chatId, v) {
+    try {
+      if (!chatId || typeof friendsData === 'undefined') return;
+      const f = friendsData[chatId];
+      if (!f) return;
+      f.bankBalance = Math.max(0, parseFloat(Number(v).toFixed(2)));
+      if (typeof saveFriendsData === 'function') saveFriendsData();
+    } catch {}
+  }
+  function addAITransaction(chatId, type, amount, memo) {
+    try {
+      if (!chatId || typeof friendsData === 'undefined') return;
+      const f = friendsData[chatId];
+      if (!f) return;
+      if (!Array.isArray(f.bankTransactions)) f.bankTransactions = [];
+      f.bankTransactions.unshift({ type, amount, memo: memo || '', time: Date.now() });
+      if (typeof saveFriendsData === 'function') saveFriendsData();
+    } catch {}
+  }
+
+  /* ══════════════════════════════════════════════
+     目标对象解析
+     - 单聊: currentChatId
+     - 群聊: 通过选人弹窗设定的 _groupTargetId
+  ══════════════════════════════════════════════ */
+  let _groupTargetId = null;
+
+  function _currentTargetId() {
+    // apps.js 里 currentChatType / currentChatId / currentPersonaId 均以 let 声明，
+    // let 不挂载到 window，必须直接按名称访问
+    try {
+      if (typeof currentChatType !== 'undefined' && currentChatType === 'group') {
+        return _groupTargetId;
       }
     } catch (e) {}
+
+    // 优先调用 apps.js 明确暴露的 getter
+    if (typeof window.getCurrentChatId === 'function') {
+      const id = window.getCurrentChatId();
+      if (id) return id;
+    }
+
+    // 直接读 let 全局变量（与 apps.js 同一执行环境）
+    try {
+      if (typeof currentChatId !== 'undefined' && currentChatId) return currentChatId;
+    } catch (e) {}
+
+    try {
+      if (typeof currentPersonaId !== 'undefined' && currentPersonaId) return currentPersonaId;
+    } catch (e) {}
+
+    // 最后兜底：从 DOM 上找当前激活的聊天 id
+    try {
+      const active = document.querySelector('.wc-chat-item.active, .chat-list-item.active, [data-chat-id].active');
+      if (active) return active.dataset.chatId || active.dataset.id || null;
+    } catch (e) {}
+    return null;
+  }
+
+  function _getPersonaName(chatId) {
+    const id = chatId || _currentTargetId()
+             || (typeof currentPersonaId !== 'undefined' ? currentPersonaId : null);
+    try {
+      if (typeof friendsData !== 'undefined' && id && friendsData[id]) {
+        const f = friendsData[id];
+        return f.remark || f.realName || 'AI';
+      }
+      if (typeof personasMeta !== 'undefined' && id && personasMeta[id]) {
+        return personasMeta[id].name || personasMeta[id].realName || 'AI';
+      }
+    } catch {}
     return 'AI';
   }
 
-  function _getPersonaAvatar() {
+  function _getPersonaAvatar(chatId) {
+    const id = chatId || _currentTargetId()
+             || (typeof currentPersonaId !== 'undefined' ? currentPersonaId : null);
     try {
-      if (typeof currentPersonaId !== 'undefined' && typeof friendsData !== 'undefined') {
-        const f = friendsData[currentPersonaId];
-        if (f && f.avatar) return f.avatar;
+      if (typeof friendsData !== 'undefined' && id && friendsData[id] && friendsData[id].avatar) {
+        return friendsData[id].avatar;
       }
-    } catch (e) {}
+    } catch {}
     return 'icon.png';
   }
 
-  function _getIntimacy() {
+  function _getIntimacy(chatId) {
+    const id = chatId || _currentTargetId()
+             || (typeof currentPersonaId !== 'undefined' ? currentPersonaId : null);
     try {
-      if (typeof currentPersonaId !== 'undefined' && typeof friendsData !== 'undefined') {
-        const f = friendsData[currentPersonaId];
-        if (f && f.intimacy != null) return Number(f.intimacy);
+      if (typeof friendsData !== 'undefined' && id && friendsData[id]) {
+        return Number(friendsData[id].intimacy || friendsData[id].affection || 0);
       }
-    } catch (e) {}
+    } catch {}
     return 0;
   }
 
-  // ── 生成唯一 ID ─────────────────────────────────
+  /* ── 生成唯一 ID ─────────────────────────────── */
   function uid() { return 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
 
-  // ── 持久化：写入聊天历史 ─────────────────────────
-  function _saveTransferToHistory(id, direction, amount, memo, status) {
+  /* ══════════════════════════════════════════════
+     持久化：写入 / 更新聊天历史
+  ══════════════════════════════════════════════ */
+  function _saveTransferToHistory(id, direction, amount, memo, status, targetId) {
     if (typeof saveMessageToHistory !== 'function') return;
-    const chatId = typeof window.getCurrentChatId === 'function' ? window.getCurrentChatId() : null;
+    const chatId = targetId
+                || (typeof window.getCurrentChatId === 'function' ? window.getCurrentChatId() : null)
+                || (typeof window.currentChatId !== 'undefined' ? window.currentChatId : null);
     if (!chatId) return;
     const safeMemo = (memo || '').replace(/\|/g, '\\|');
-    const tagText = `[WC_TRANSFER:${id}|${direction}|${Number(amount).toFixed(2)}|${safeMemo}|${status}]`;
-    const msgId = 'wc_tr_' + id;
-    const type = direction === 'user-to-ai' ? 'sent' : 'received';
-    saveMessageToHistory(chatId, { id: msgId, text: tagText, type, senderName: direction === 'user-to-ai' ? 'ME' : chatId });
+    const tagText  = `[WC_TRANSFER:${id}|${direction}|${Number(amount).toFixed(2)}|${safeMemo}|${status}]`;
+    const msgType  = direction === 'user-to-ai' ? 'sent' : 'received';
+    saveMessageToHistory(chatId, {
+      id: 'wc_tr_' + id,
+      text: tagText,
+      type: msgType,
+      senderName: direction === 'user-to-ai' ? 'ME' : chatId
+    });
   }
 
-  // ── 持久化：更新历史中转账状态 ───────────────────
   function _updateTransferHistoryStatus(id, status) {
-    if (typeof IDB === 'undefined' || typeof window.getCurrentChatId !== 'function' || typeof window.scopedChatKey !== 'function') return;
-    const chatId = window.getCurrentChatId();
-    if (!chatId) return;
-    const key = window.scopedChatKey(chatId);
-    IDB.get(key).then(history => {
-      if (!history) return;
+    if (typeof IDB === 'undefined') return;
+    const chatId = (typeof window.getCurrentChatId === 'function' ? window.getCurrentChatId() : null)
+                || (typeof window.currentChatId !== 'undefined' ? window.currentChatId : null);
+    if (!chatId || typeof window.scopedChatKey !== 'function') return;
+    IDB.get(window.scopedChatKey(chatId)).then(history => {
+      if (!Array.isArray(history)) return;
       const msgId = 'wc_tr_' + id;
       const idx = history.findIndex(m => m.id === msgId);
       if (idx !== -1) {
         history[idx].text = history[idx].text.replace(/\|(pending|accepted|rejected)\]$/, `|${status}]`);
-        IDB.set(key, history);
+        IDB.set(window.scopedChatKey(chatId), history);
       }
     }).catch(() => {});
   }
 
-  // ═══════════════════════════════════════════════
-  //  1. 打开转账弹窗（用户→AI 发起方向）
-  // ═══════════════════════════════════════════════
+  /* ══════════════════════════════════════════════
+     1. 打开转账弹窗入口
+  ══════════════════════════════════════════════ */
   function openTransferModal() {
-    if (document.getElementById('transfer-modal')) return;
-    const bal = getBalance();
-    const personaName = _getPersonaName();
+    // 群聊：先选择成员（currentChatType 是 let，不在 window 上，直接按名访问）
+    let _isGroup = false;
+    try { _isGroup = (typeof currentChatType !== 'undefined' && currentChatType === 'group'); } catch (e) {}
+    if (_isGroup) {
+      _openGroupTargetModal();
+      return;
+    }
+    _openAmountModal(_currentTargetId());
+  }
+
+  function closeTransferModal() {
+    document.getElementById('transfer-modal')?.remove();
+    document.getElementById('tr-group-target-modal')?.remove();
+  }
+
+  /* ── 群聊：选择转账对象弹窗 ─────────────────── */
+  // 暂存当前转账目标 ID（避免通过 onclick 字符串插值传参导致 ID 丢失）
+  let _pendingTargetId = null;
+
+  function _openGroupTargetModal() {
+    document.getElementById('tr-group-target-modal')?.remove();
+
+    // currentChatId 是 let 变量，不挂载到 window，直接按名访问
+    let groupId;
+    try { groupId = (typeof currentChatId !== 'undefined') ? currentChatId : null; } catch (e) { groupId = null; }
+    if (!groupId && typeof window.getCurrentChatId === 'function') groupId = window.getCurrentChatId();
+    const group   = (typeof groupsData !== 'undefined') ? groupsData[groupId] : null;
+    if (!group || !Array.isArray(group.members) || group.members.length === 0) {
+      _showToast('群里没有可转账的成员'); return;
+    }
+
+    const members = group.members.filter(id =>
+      typeof friendsData !== 'undefined' && friendsData[id]
+    );
+    if (members.length === 0) { _showToast('暂无可选成员'); return; }
+
+    const rows = members.map(id => {
+      const f    = friendsData[id];
+      const name = f.remark || f.realName || id;
+      const av   = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+      const sid  = id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return `<div class="tr-gtt-row" onclick="TransferApp.selectGroupTarget('${sid}')">
+        <img src="${_escAttr(av)}" class="tr-gtt-avatar">
+        <span class="tr-gtt-name">${_escHtml(name)}</span>
+        <i class="fas fa-chevron-right" style="color:#ccc;font-size:11px;margin-left:auto;"></i>
+      </div>`;
+    }).join('');
 
     const modal = document.createElement('div');
-    modal.id = 'transfer-modal';
+    modal.id    = 'tr-group-target-modal';
     modal.className = 'modal-overlay active';
-    modal.addEventListener('click', (e) => { if (e.target === modal) TransferApp.closeTransferModal(); });
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
     modal.innerHTML = `
-      <div class="modal-box" style="width:300px;padding:28px 24px 20px;border-radius:20px;position:relative;text-align:center;" onclick="event.stopPropagation()">
-        <div style="font-size:15px;font-weight:700;color:#222;margin-bottom:6px;">转账给 ${personaName}</div>
-        <div class="transfer-modal-balance">账户余额：<span>¥${bal.toFixed(2)}</span></div>
-        <div style="margin:20px 0 6px;">
-          <span style="font-size:28px;font-weight:300;color:#bbb;vertical-align:middle;">¥</span>
-          <input id="transfer-amount-input" type="number" min="0.01" max="${bal}" step="0.01" placeholder="0.00" inputmode="decimal" style="width:160px;display:inline-block;vertical-align:middle;">
+      <div class="modal-box" style="width:300px;border-radius:20px;overflow:hidden;padding:0;" onclick="event.stopPropagation()">
+        <div class="tr-modal-header">
+          选择转账对象
+          <i class="fas fa-times tr-modal-close" onclick="document.getElementById('tr-group-target-modal').remove()"></i>
         </div>
-        <div style="margin:12px 0;">
-          <input id="transfer-memo-input" type="text" maxlength="30" placeholder="备注（可选）"
-            style="width:100%;box-sizing:border-box;border:none;border-bottom:1px solid #eee;padding:6px 0;font-size:13px;color:#333;outline:none;text-align:center;background:transparent;">
+        <div style="max-height:320px;overflow-y:auto;padding:6px 0;">${rows}</div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  // 公开：供 onclick 调用
+  function selectGroupTarget(memberId) {
+    _groupTargetId = memberId;
+    document.getElementById('tr-group-target-modal')?.remove();
+    _openAmountModal(memberId);
+  }
+
+
+  /* ── 金额 + 备注弹窗 ────────────────────────── */
+  function _openAmountModal(targetId) {
+    document.getElementById('transfer-modal')?.remove();
+
+    // 解析目标 ID：优先使用传入的，其次从全局状态获取
+    const resolvedId = targetId || _currentTargetId();
+    if (!resolvedId) {
+      _showToast('请先打开一个聊天再发起转账');
+      return;
+    }
+
+    // 用模块级变量暂存，避免通过 onclick 字符串插值传参
+    _pendingTargetId = resolvedId;
+
+    const bal         = getBalance();
+    const personaName = _getPersonaName(resolvedId);
+    const avatarSrc   = _getPersonaAvatar(resolvedId);
+
+    const modal = document.createElement('div');
+    modal.id    = 'transfer-modal';
+    modal.className = 'modal-overlay active';
+    modal.addEventListener('click', e => { if (e.target === modal) closeTransferModal(); });
+
+    modal.innerHTML = `
+      <div class="tr-amount-box" onclick="event.stopPropagation()">
+        <div class="tr-am-header">
+          <img src="${_escAttr(avatarSrc)}" class="tr-am-avatar">
+          <div class="tr-am-name">转账给 ${_escHtml(personaName)}</div>
+          <div class="tr-am-balance">余额：<span>¥${bal.toFixed(2)}</span></div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:20px;">
-          <button onclick="TransferApp.closeTransferModal()" style="flex:1;padding:11px;border-radius:25px;border:1px solid #e0e0e0;background:#f5f5f5;font-size:13px;font-weight:600;color:#666;cursor:pointer;">取消</button>
-          <button onclick="TransferApp.confirmUserTransfer()" style="flex:2;padding:11px;border-radius:25px;border:none;background:linear-gradient(135deg,#fa9d3b,#f76b1c);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(247,107,28,0.35);">确认转账</button>
+        <div class="tr-am-row">
+          <span class="tr-am-cny">¥</span>
+          <input id="transfer-amount-input" type="number" min="0.01" max="${bal}"
+            step="0.01" placeholder="0.00" inputmode="decimal" class="tr-am-input">
+        </div>
+        <input id="transfer-memo-input" type="text" maxlength="30"
+          placeholder="备注（可选）" class="tr-am-memo">
+        <div class="tr-am-btns">
+          <button class="tr-am-btn cancel" onclick="TransferApp.closeTransferModal()">取消</button>
+          <button class="tr-am-btn confirm" onclick="TransferApp.confirmUserTransfer()">确认转账</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
     setTimeout(() => document.getElementById('transfer-amount-input')?.focus(), 100);
   }
 
-  function closeTransferModal() {
-    document.getElementById('transfer-modal')?.remove();
-  }
-
-  // ── 用户确认发起转账 ────────────────────────────
-  function confirmUserTransfer() {
-    const amtEl = document.getElementById('transfer-amount-input');
+  /* ══════════════════════════════════════════════
+     2. 用户确认发起转账
+  ══════════════════════════════════════════════ */
+  function confirmUserTransfer(targetId) {
+    const amtEl  = document.getElementById('transfer-amount-input');
     const memoEl = document.getElementById('transfer-memo-input');
-    const amt = parseFloat(amtEl?.value || '0');
-    const memo = (memoEl?.value || '').trim();
+    const amt    = parseFloat(amtEl?.value || '0');
+    const memo   = (memoEl?.value || '').trim();
 
-    if (!amt || amt < 0.01) { showToast('请输入有效金额'); return; }
-    if (amt > getBalance()) { showToast('余额不足'); return; }
+    if (!amt || amt < 0.01)  { _showToast('请输入有效金额'); return; }
+    if (amt > getBalance())  { _showToast('余额不足'); return; }
+
+    // 优先级：调用方传入 > 模块暂存 > 全局当前聊天 ID
+    const resolvedId = targetId || _pendingTargetId || _currentTargetId();
+    _pendingTargetId = null; // 使用后清空，防止残留
+    if (!resolvedId)         { _showToast('转账对象不明，请重新打开聊天后再试'); return; }
 
     closeTransferModal();
-
-    // 扣款
     setBalance(getBalance() - amt);
 
-    // 生成转账 ID
     const transferId = uid();
-
-    // 渲染"待处理"消息卡片（用户侧）
-    appendTransferBubble({
-      id: transferId,
-      direction: 'user-to-ai',
-      amount: amt,
-      memo,
-      status: 'pending',
-      sender: '我',
-    });
-
-    // 记录账单
-    addLedgerEntry({ id: transferId, from: '用户', to: _getPersonaName(), amount: amt, memo, status: 'pending' });
-
-    // 触发 AI 判定
-    triggerAIDecision(transferId, amt, memo);
+    appendTransferBubble({ id: transferId, direction: 'user-to-ai', amount: amt, memo, status: 'pending', targetId: resolvedId });
+    addLedgerEntry({ id: transferId, from: '用户', to: _getPersonaName(resolvedId), amount: amt, memo, status: 'pending' });
+    _triggerAIDecision(transferId, amt, memo, resolvedId);
   }
 
-  // ═══════════════════════════════════════════════
-  //  2. 渲染转账气泡卡片
-  // ═══════════════════════════════════════════════
+  /* ══════════════════════════════════════════════
+     3. 渲染转账卡片气泡（韩系黑白灰风格）
+        使用标准 chat-row 结构确保气泡完整显示
+  ══════════════════════════════════════════════ */
   function appendTransferBubble(data) {
-    const { id, direction, amount, memo, status } = data;
-    const isUserSide = direction === 'user-to-ai'; // true=右侧, false=左侧
+    const { id, direction, amount, memo, status, targetId } = data;
+    const isUserSide  = direction === 'user-to-ai';
+    const resolvedId  = targetId || _currentTargetId();
+    const personaName = _getPersonaName(resolvedId);
+    const avatarSrc   = _getPersonaAvatar(resolvedId);
 
-    const wrap = document.createElement('div');
-    wrap.className = `message-wrapper ${isUserSide ? 'user' : 'ai'}`;
-    wrap.dataset.transferId = id;
-    wrap.style.cssText = 'display:flex;align-items:flex-end;margin:8px 12px;gap:8px;' + (isUserSide ? 'flex-direction:row-reverse;' : '');
+    // 标准 chat-row 结构
+    const row = document.createElement('div');
+    row.className = `chat-row ${isUserSide ? 'sent' : 'received'}`;
+    row.dataset.transferId = id;
 
-    const avatarHtml = !isUserSide
-      ? `<img src="${_getPersonaAvatar()}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
-      : '';
+    const img = document.createElement('img');
+    img.className = 'chat-avatar-img';
+    img.src = isUserSide
+      ? ((typeof AVATAR_USER !== 'undefined') ? AVATAR_USER : 'icon.png')
+      : avatarSrc;
 
-    wrap.innerHTML = `
-      ${avatarHtml}
-      <div class="wc-transfer-card" id="card-${id}">
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'message-content-wrapper';
+
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble rich-bubble ${isUserSide ? 'sent' : 'received'}`;
+    // 移除默认气泡背景，让卡片样式接管
+    bubble.style.cssText = 'background:transparent!important;padding:0!important;box-shadow:none!important;border-radius:0!important;max-width:260px!important;overflow:visible!important;';
+    contentWrapper.style.cssText = 'overflow:visible!important;';
+
+    const titleText = isUserSide
+      ? `转账给 ${personaName}`
+      : `${personaName} 向你转账`;
+
+    bubble.innerHTML = `
+      <div class="wc-transfer-card" id="card-${id}" data-transfer-dir="${direction}">
         <div class="transfer-top">
-          <div class="transfer-icon-wrap">💸</div>
+          <div class="transfer-icon-wrap">
+            <i class="fas fa-paper-plane"></i>
+          </div>
           <div class="transfer-info">
-            <div class="transfer-title">${isUserSide ? '转账给 ' + _getPersonaName() : _getPersonaName() + ' 向你转账'}</div>
+            <div class="transfer-title">${_escHtml(titleText)}</div>
             <div class="transfer-amount">¥${Number(amount).toFixed(2)}</div>
-            ${memo ? `<div class="transfer-memo">${escHtml(memo)}</div>` : ''}
+            ${memo ? `<div class="transfer-memo">${_escHtml(memo)}</div>` : ''}
           </div>
         </div>
         <div class="transfer-divider"></div>
         <div class="transfer-action-area" id="action-${id}">
           ${renderActionArea(id, direction, status)}
         </div>
-        <div class="transfer-footer">微信转账 · 虚拟资产</div>
+        <div class="transfer-footer">虚拟转账 · 仅供娱乐</div>
       </div>`;
+
+    contentWrapper.appendChild(bubble);
+
+    if (isUserSide) {
+      row.appendChild(contentWrapper);
+      row.appendChild(img);
+    } else {
+      row.appendChild(img);
+      row.appendChild(contentWrapper);
+    }
 
     const chatMessages = document.getElementById('chatMessages');
     if (chatMessages) {
-      chatMessages.appendChild(wrap);
+      chatMessages.appendChild(row);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // 写入聊天历史，退出后重进也能复现
-    _saveTransferToHistory(id, direction, amount, memo, status);
-    return wrap;
+    _saveTransferToHistory(id, direction, amount, memo, status, resolvedId);
+    return row;
   }
 
+  /* ── 渲染操作区域 ───────────────────────────── */
   function renderActionArea(id, direction, status) {
     if (status === 'accepted') {
-      return `<span class="transfer-status accepted">✅ 已收款</span>`;
+      const label = direction === 'user-to-ai' ? '对方已收款' : '你已收款';
+      return `<span class="transfer-status accepted"><i class="fas fa-check-circle"></i> ${label}</span>`;
     }
     if (status === 'rejected') {
-      return `<span class="transfer-status rejected">↩ 已退回</span>`;
+      const label = direction === 'user-to-ai' ? '对方已拒收' : '你已拒收';
+      return `<span class="transfer-status rejected"><i class="fas fa-undo-alt"></i> ${label}</span>`;
     }
-    // pending
     if (direction === 'ai-to-user') {
       return `<div class="transfer-btn-row">
-        <button class="transfer-btn reject-btn" onclick="TransferApp.userRejectAITransfer('${id}')">拒收</button>
-        <button class="transfer-btn accept-btn" onclick="TransferApp.userAcceptAITransfer('${id}')">收款</button>
+        <button class="transfer-btn reject-btn" onclick="TransferApp.userRejectAITransfer('${id}')">残忍拒绝</button>
+        <button class="transfer-btn accept-btn" onclick="TransferApp.userAcceptAITransfer('${id}')">开心收下</button>
       </div>`;
     }
-    // user-to-ai pending: 等待 AI
-    return `<span class="transfer-status pending">⏳ 等待对方确认</span>`;
+    // user-to-ai pending
+    return `<span class="transfer-status pending"><i class="fas fa-clock"></i> 等待对方确认</span>`;
   }
 
+  /* ── 更新卡片状态（接受/拒绝后刷新 UI） ──────── */
   function updateCardStatus(id, status) {
     const actionEl = document.getElementById(`action-${id}`);
-    const card = document.getElementById(`card-${id}`);
+    const card     = document.getElementById(`card-${id}`);
     if (!actionEl) return;
-    // 先尝试从 card 的 data 属性获取 direction，兼容历史加载渲染的卡片
     const wrap = document.querySelector(`[data-transfer-id="${id}"]`);
-    const direction = card?.dataset.transferDir
-      || (wrap ? (wrap.classList.contains('user') ? 'user-to-ai' : 'ai-to-user') : 'user-to-ai');
+    const direction = (card && card.dataset.transferDir)
+      || (wrap ? (wrap.classList.contains('sent') ? 'user-to-ai' : 'ai-to-user') : 'user-to-ai');
     actionEl.innerHTML = renderActionArea(id, direction, status);
-    if (card) {
-      card.style.transition = 'box-shadow 0.3s';
-      card.style.boxShadow = status === 'accepted' ? '0 2px 16px rgba(7,193,96,0.2)' : status === 'rejected' ? '0 2px 16px rgba(0,0,0,0.05)' : '';
-    }
-    // 同步更新聊天历史里的状态
     _updateTransferHistoryStatus(id, status);
   }
 
-  // ═══════════════════════════════════════════════
-  //  3. AI 判定逻辑（用户→AI 转账）
-  // ═══════════════════════════════════════════════
-  async function triggerAIDecision(transferId, amount, memo) {
-    await delay(800);
+  /* ══════════════════════════════════════════════
+     4. AI 判定：用户→AI 转账
+  ══════════════════════════════════════════════ */
+  async function _triggerAIDecision(transferId, amount, memo, targetId) {
+    await _delay(800);
 
-    const sysPrompt = buildAIJudgePrompt(amount, memo);
+    const personaName = _getPersonaName(targetId);
+    const intimacy    = _getIntimacy(targetId);
+    const prompt = `[系统隐藏指令] 用户刚向你（${personaName}）发起了一笔 ¥${Number(amount).toFixed(2)} 的虚拟转账，备注："${memo || '无'}"。
+当前亲密度：${intimacy}/100。
+请根据你的人设和当前关系决定是否接收。
+接受请只回复: {"decision":"accepted","reason":"<一句话>"}
+拒绝请只回复: {"decision":"rejected","reason":"<一句话>"}
+只回复 JSON，不要其他内容。`;
 
     let decision = 'accepted';
     try {
-      const response = await callAIForDecision(sysPrompt);
-      decision = parseDecision(response);
-    } catch (e) {
-      console.warn('[Transfer] AI decision error:', e);
-    }
+      const resp = await _callAISilent(prompt);
+      decision   = _parseDecision(resp);
+    } catch (e) { console.warn('[Transfer] AI decision error:', e); }
 
-    finalizeUserToAITransfer(transferId, amount, memo, decision);
+    _finalizeUserToAITransfer(transferId, amount, memo, decision, targetId);
   }
 
-  function buildAIJudgePrompt(amount, memo) {
-    const personaName = _getPersonaName();
-    const intimacy = _getIntimacy();
-    return `[系统隐藏指令] 用户刚刚向你（${personaName}）发起了一笔 ¥${amount.toFixed(2)} 的虚拟转账，备注："${memo || '无'}"。
-
-当前亲密度：${intimacy}/100。
-
-请根据你的人设、与用户当前的关系以及这笔转账的合理性，决定是否接收。
-
-规则：
-- 若你判断应该接收（例如：情感合理、亲密度较高、用户有明确心意），请只回复 JSON: {"decision":"accepted","reason":"<一句话理由>"}
-- 若你判断应该拒绝（例如：人设不接受金钱、时机不对、金额异常），请只回复 JSON: {"decision":"rejected","reason":"<一句话理由>"}
-
-只回复 JSON，不要任何其他内容。`;
-  }
-
-  // 静默调用 AI（纯返回文本，绝不渲染气泡）
-  async function callAIForDecision(prompt) {
-    const SETTINGS_KEY = 'myCoolPhone_aiSettings';
-    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+  async function _callAISilent(prompt) {
+    const settingsJSON = localStorage.getItem('myCoolPhone_aiSettings');
     if (!settingsJSON) {
-      await delay(600);
-      return Math.random() > 0.2
+      await _delay(600);
+      return Math.random() > 0.25
         ? '{"decision":"accepted","reason":"心意已收到"}'
         : '{"decision":"rejected","reason":"不需要这些"}';
     }
-    const settings = JSON.parse(settingsJSON);
-    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
-    const apiUrl = baseUrl.endsWith('/v1')
-      ? `${baseUrl}/chat/completions`
-      : `${baseUrl}/v1/chat/completions`;
-
-    const res = await fetch(apiUrl, {
+    const s = JSON.parse(settingsJSON);
+    const base = (s.endpoint || '').replace(/\/$/, '');
+    const url  = base.endsWith('/v1') ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
+    const res  = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settings.apiKey}`
-      },
-      body: JSON.stringify({
-        model: settings.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 80
-      })
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s.apiKey}` },
+      body: JSON.stringify({ model: s.model, messages: [{ role: 'user', content: prompt }], temperature: 0.7, max_tokens: 80 })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     return (data?.choices?.[0]?.message?.content || '').trim();
   }
 
-  function parseDecision(text) {
+  function _parseDecision(text) {
     try {
-      const match = text.match(/\{[\s\S]*?\}/);
-      if (match) {
-        const obj = JSON.parse(match[0]);
+      const m = text.match(/\{[\s\S]*?\}/);
+      if (m) {
+        const obj = JSON.parse(m[0]);
         if (obj.decision === 'accepted' || obj.decision === 'rejected') return obj.decision;
       }
     } catch {}
@@ -330,136 +495,173 @@ window.TransferApp = (() => {
     return 'accepted';
   }
 
-  function finalizeUserToAITransfer(transferId, amount, memo, decision) {
+  function _finalizeUserToAITransfer(transferId, amount, memo, decision, targetId) {
     updateCardStatus(transferId, decision);
     updateLedgerEntry(transferId, decision);
 
-    if (decision === 'rejected') {
-      setBalance(getBalance() + amount);
-      showToast('转账已被退回，金额已返还');
+    if (decision === 'accepted') {
+      // AI 钱包入账
+      const aiBalance = getAIBalance(targetId);
+      setAIBalance(targetId, aiBalance + amount);
+      addAITransaction(targetId, 'income', amount, memo);
+      _showToast('对方已收款 ✅');
     } else {
-      showToast('对方已接收转账 ✅');
+      // 退款给用户
+      setBalance(getBalance() + amount);
+      _showToast('转账已被拒收，金额已退回');
     }
 
-    const followUpCtx = decision === 'accepted'
-      ? `[系统] 你刚刚接收了用户 ¥${amount.toFixed(2)} 的转账，备注："${memo || '无'}"。请用符合人设的方式表达感谢或回应，不超过40字。`
-      : `[系统] 你刚刚拒绝了用户 ¥${amount.toFixed(2)} 的转账并退回了金额，备注："${memo || '无'}"。请用符合人设的方式说明原因，不超过40字。`;
-
-    if (typeof window.sendHiddenAIMessage === 'function') {
-      window.sendHiddenAIMessage(followUpCtx);
-    } else if (typeof window.triggerAIFollowUp === 'function') {
-      window.triggerAIFollowUp(followUpCtx);
-    }
+    // 直接触发 AI 正式回应（不预设文字，完全由 API 生成）
+    const ctx = decision === 'accepted'
+      ? `[System: You just accepted the user's transfer of ¥${Number(amount).toFixed(2)}, memo: "${memo || 'none'}". Respond naturally in character.]`
+      : `[System: You just rejected the user's transfer of ¥${Number(amount).toFixed(2)} and returned it, memo: "${memo || 'none'}". Respond naturally in character.]`;
+    setTimeout(() => {
+      if (typeof window.sendHiddenAIMessage === 'function') window.sendHiddenAIMessage(ctx);
+    }, 600);
   }
 
-  // ═══════════════════════════════════════════════
-  //  4. AI 主动发起转账
-  //  由 apps.js 解析 AI 回复中的 [TRANSFER:金额:备注] 标签触发
-  // ═══════════════════════════════════════════════
-  function initiateAITransfer(amount, memo) {
+  /* ══════════════════════════════════════════════
+     5. AI 主动发起转账
+     AI 输出指令：[TRANSFER:88.00:备注]
+              或  {"type":"transfer","amount":100,"note":"备注"}
+  ══════════════════════════════════════════════ */
+  function initiateAITransfer(amount, memo, targetId) {
+    const resolvedId = targetId || _currentTargetId();
+    // AI 钱包扣款
+    const aiBalance = getAIBalance(resolvedId);
+    setAIBalance(resolvedId, Math.max(0, aiBalance - amount));
+    addAITransaction(resolvedId, 'expense', amount, memo);
+
     const transferId = uid();
-    appendTransferBubble({
-      id: transferId,
-      direction: 'ai-to-user',
-      amount,
-      memo: memo || '',
-      status: 'pending',
-      sender: _getPersonaName(),
-    });
-    addLedgerEntry({ id: transferId, from: _getPersonaName(), to: '用户', amount, memo: memo || '', status: 'pending' });
+    appendTransferBubble({ id: transferId, direction: 'ai-to-user', amount, memo: memo || '', status: 'pending', targetId: resolvedId });
+    addLedgerEntry({ id: transferId, from: _getPersonaName(resolvedId), to: '用户', amount, memo: memo || '', status: 'pending' });
     return transferId;
   }
 
-  // ── 用户接收 AI 转账 ────────────────────────────
+  /* ── 用户接收 AI 转账 ──────────────────────── */
   function userAcceptAITransfer(transferId) {
     const card = document.getElementById(`card-${transferId}`);
     if (!card) return;
     const amtText = card.querySelector('.transfer-amount')?.textContent || '0';
-    const amount = parseFloat(amtText.replace('¥', '')) || 0;
+    const amount  = parseFloat(amtText.replace('¥', '')) || 0;
 
     setBalance(getBalance() + amount);
     updateCardStatus(transferId, 'accepted');
     updateLedgerEntry(transferId, 'accepted');
-    showToast(`已收款 ¥${amount.toFixed(2)} ✅`);
+    _showToast(`已收款 ¥${amount.toFixed(2)} ✅`);
 
-    if (typeof window.sendHiddenAIMessage === 'function') {
-      window.sendHiddenAIMessage(`[系统] 用户接受了你转账的 ¥${amount.toFixed(2)}，请给出一句符合人设的简短回应（不超过20字）。`);
-    }
+    setTimeout(() => {
+      if (typeof window.sendHiddenAIMessage === 'function') {
+        window.sendHiddenAIMessage(`[System: The user just accepted your transfer of ¥${amount.toFixed(2)}. Respond naturally in character.]`);
+      }
+    }, 600);
   }
 
-  // ── 用户拒绝 AI 转账 ────────────────────────────
+  /* ── 用户拒收 AI 转账 ──────────────────────── */
   function userRejectAITransfer(transferId) {
+    const card    = document.getElementById(`card-${transferId}`);
+    const amtText = card?.querySelector('.transfer-amount')?.textContent || '0';
+    const amount  = parseFloat(amtText.replace('¥', '')) || 0;
+
     updateCardStatus(transferId, 'rejected');
     updateLedgerEntry(transferId, 'rejected');
-    showToast('已拒收');
 
-    const card = document.getElementById(`card-${transferId}`);
-    const amtText = card?.querySelector('.transfer-amount')?.textContent || '0';
-    const amount = parseFloat(amtText.replace('¥', '')) || 0;
-
-    if (typeof window.sendHiddenAIMessage === 'function') {
-      window.sendHiddenAIMessage(`[系统] 用户拒绝了你转账的 ¥${amount.toFixed(2)}，请给出一句符合人设的简短回应（不超过20字）。`);
+    // 退款给 AI
+    const resolvedId = _currentTargetId();
+    if (resolvedId && amount > 0) {
+      setAIBalance(resolvedId, getAIBalance(resolvedId) + amount);
+      addAITransaction(resolvedId, 'refund', amount, '用户拒收退款');
     }
+    _showToast('已拒收，金额退回给对方');
+
+    setTimeout(() => {
+      if (typeof window.sendHiddenAIMessage === 'function') {
+        window.sendHiddenAIMessage(`[System: The user just rejected your transfer of ¥${amount.toFixed(2)} and returned it to you. Respond naturally in character.]`);
+      }
+    }, 600);
   }
 
-  // ── 更新账单状态 ────────────────────────────────
-  function updateLedgerEntry(id, status) {
-    const l = getLedger();
-    const idx = l.findIndex(e => e.id === id);
-    if (idx !== -1) { l[idx].status = status; l[idx].updatedAt = Date.now(); }
-    saveLedger(l);
-  }
-
-  // ═══════════════════════════════════════════════
-  //  5. 解析 AI 回复中的转账标签
-  //  格式: [TRANSFER:88.00:生日快乐]
-  // ═══════════════════════════════════════════════
+  /* ══════════════════════════════════════════════
+     6. 解析 AI 回复中的转账指令
+     支持两种格式：
+       旧格式: [TRANSFER:88.00:生日快乐]
+       新格式: {"type":"transfer","amount":88,"note":"生日快乐"}
+               {"type":"transfer","amount":88,"note":"...","targetName":"角色B"}（群聊）
+  ══════════════════════════════════════════════ */
   function parseAndHandleAITransfer(text) {
-    const match = text.match(/\[TRANSFER:([\d.]+)(?::([^\]]*))?\]/);
-    if (!match) return text;
-    const amount = parseFloat(match[1]);
-    const memo = match[2] || '';
-    if (amount > 0) {
-      setTimeout(() => initiateAITransfer(amount, memo), 400);
+    let cleanText = text;
+
+    // ── 旧格式 ──
+    const tagMatch = cleanText.match(/\[TRANSFER:([\d.]+)(?::([^\]]*))?\]/);
+    if (tagMatch) {
+      const amount = parseFloat(tagMatch[1]);
+      const memo   = tagMatch[2] || '';
+      if (amount > 0) setTimeout(() => initiateAITransfer(amount, memo), 400);
+      cleanText = cleanText.replace(tagMatch[0], '').trim();
     }
-    return text.replace(match[0], '').trim();
+
+    // ── 新格式 JSON ──
+    const jsonMatches = cleanText.match(/\{"type"\s*:\s*"transfer"[^}]*\}/g);
+    if (jsonMatches) {
+      for (const raw of jsonMatches) {
+        try {
+          const cmd = JSON.parse(raw);
+          if (cmd.type !== 'transfer') continue;
+          cleanText = cleanText.replace(raw, '').trim();
+          const amount = parseFloat(cmd.amount || 0);
+          const note   = cmd.note || cmd.memo || '';
+          if (amount <= 0) continue;
+
+          // 群聊可以指定 targetName → 转换为 chatId
+          let tgtId = _currentTargetId();
+          if (cmd.targetName && typeof friendsData !== 'undefined') {
+            for (const [k, v] of Object.entries(friendsData)) {
+              if (v.realName === cmd.targetName || v.remark === cmd.targetName) { tgtId = k; break; }
+            }
+          }
+          setTimeout(() => initiateAITransfer(amount, note, tgtId), 400);
+        } catch {}
+      }
+    }
+
+    return cleanText;
   }
 
-  // ═══════════════════════════════════════════════
-  //  6. 账单流水弹窗
-  // ═══════════════════════════════════════════════
+  /* ══════════════════════════════════════════════
+     7. 账单流水弹窗
+  ══════════════════════════════════════════════ */
   function openLedger() {
-    if (document.getElementById('transfer-ledger-modal')) return;
-    const records = getLedger().slice(0, 50);
+    document.getElementById('transfer-ledger-modal')?.remove();
+    const records     = getLedger().slice(0, 50);
     const personaName = _getPersonaName();
 
     const rows = records.length === 0
       ? '<div style="text-align:center;color:#bbb;padding:30px 0;font-size:13px;">暂无转账记录</div>'
       : records.map(r => {
-        const date = new Date(r.time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-        const isOut = r.from === '用户';
-        const statusLabel = { pending: '待处理', accepted: '已完成', rejected: '已退回' }[r.status] || r.status;
-        const amtColor = isOut ? '#e74c3c' : '#07c160';
-        const sign = isOut ? '-' : '+';
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f5f5f5;">
-          <div>
-            <div style="font-size:12px;color:#999;">${date}</div>
-            <div style="font-size:13px;color:#333;margin-top:2px;">${isOut ? `转给 ${personaName}` : `${personaName} 转入`}${r.memo ? ` · ${r.memo}` : ''}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:15px;font-weight:700;color:${amtColor};">${sign}¥${Number(r.amount).toFixed(2)}</div>
-            <div style="font-size:11px;color:#bbb;margin-top:2px;">${statusLabel}</div>
-          </div>
-        </div>`;
-      }).join('');
+          const date = new Date(r.time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+          const isOut = r.from === '用户';
+          const statusLabel = { pending: '待处理', accepted: '已完成', rejected: '已退回' }[r.status] || r.status;
+          const amtColor = isOut ? '#e74c3c' : '#30d158';
+          const sign = isOut ? '-' : '+';
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f5f5f5;">
+            <div>
+              <div style="font-size:12px;color:#999;">${date}</div>
+              <div style="font-size:13px;color:#333;margin-top:2px;">${isOut ? `转给 ${personaName}` : `${personaName} 转入`}${r.memo ? ` · ${r.memo}` : ''}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:15px;font-weight:700;color:${amtColor};">${sign}¥${Number(r.amount).toFixed(2)}</div>
+              <div style="font-size:11px;color:#bbb;margin-top:2px;">${statusLabel}</div>
+            </div>
+          </div>`;
+        }).join('');
 
     const modal = document.createElement('div');
-    modal.id = 'transfer-ledger-modal';
+    modal.id    = 'transfer-ledger-modal';
     modal.className = 'modal-overlay active';
-    modal.addEventListener('click', (e) => { if (e.target === modal) TransferApp.closeLedger(); });
+    modal.addEventListener('click', e => { if (e.target === modal) closeLedger(); });
     modal.innerHTML = `
       <div class="modal-box" style="width:320px;max-height:70vh;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
-        <div style="padding:18px 18px 12px;font-size:15px;font-weight:700;color:#222;border-bottom:1px solid #f0f0f0;flex-shrink:0;">
+        <div style="padding:18px 18px 12px;font-size:15px;font-weight:700;color:#1a1a1a;border-bottom:1px solid #f0f0f0;flex-shrink:0;">
           转账记录
           <button onclick="TransferApp.closeLedger()" style="float:right;background:none;border:none;font-size:20px;color:#bbb;cursor:pointer;line-height:1;">×</button>
         </div>
@@ -472,10 +674,22 @@ window.TransferApp = (() => {
     document.getElementById('transfer-ledger-modal')?.remove();
   }
 
-  // ── 工具函数 ────────────────────────────────────
-  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function showToast(msg) {
+  /* ── 隐藏上下文入队（等用户点回复按钮时附带给AI）
+     注意：使用独立的 tr_action_context key，避免被查手机蝴蝶效应的
+     MISCHIEF 处理器错误消费并包裹进"偷看手机"的错误框架中。 */
+  function _enqueuePendingContext(ctx) {
+    try {
+      const pending = JSON.parse(localStorage.getItem('tr_action_context') || '[]');
+      pending.push(ctx);
+      localStorage.setItem('tr_action_context', JSON.stringify(pending));
+    } catch {}
+  }
+
+  /* ── 工具函数 ────────────────────────────────── */
+  function _delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function _escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function _escAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+  function _showToast(msg) {
     if (typeof window.showToast === 'function') { window.showToast(msg); return; }
     const t = document.createElement('div');
     t.textContent = msg;
@@ -484,10 +698,11 @@ window.TransferApp = (() => {
     setTimeout(() => t.remove(), 2000);
   }
 
-  // ── 公开 API ────────────────────────────────────
+  /* ── 公开 API ────────────────────────────────── */
   return {
     openTransferModal,
     closeTransferModal,
+    selectGroupTarget,
     confirmUserTransfer,
     userAcceptAITransfer,
     userRejectAITransfer,
@@ -497,9 +712,11 @@ window.TransferApp = (() => {
     closeLedger,
     getLedger,
     appendTransferBubble,
+    updateCardStatus,
+    getAIBalance,
   };
 
 })();
 
-// 全局快捷入口（供 plus 菜单按钮调用）
+/* ── 全局快捷入口 ────────────────────────────────── */
 window.openTransferModal = () => TransferApp.openTransferModal();

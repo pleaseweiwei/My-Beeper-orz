@@ -1,4 +1,21 @@
 /**
+ * iOS Safari 真实视口高度修复
+ * 100vh / 100dvh 在 iOS Safari 上含浏览器工具栏，导致内容偏上、底部空白。
+ * 用 window.innerHeight 设置 --vh，再用 calc(var(--vh) * 100) 替代 100vh。
+ */
+function setVh() {
+    document.documentElement.style.setProperty('--vh', window.innerHeight + 'px');
+}
+// 页面加载时立即执行一次
+setVh();
+// 横竖屏切换 / 地址栏收起展开时重新计算
+window.addEventListener('resize', setVh);
+window.addEventListener('orientationchange', function () {
+    // 延迟 100ms，等待浏览器完成布局再读取高度
+    setTimeout(setVh, 100);
+});
+
+/**
  * 更新时钟和日期
  */
 function updateClock() {

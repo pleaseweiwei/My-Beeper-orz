@@ -1,13 +1,49 @@
 ﻿// service-worker.js
-const CACHE_NAME = 'My-Beeper-v4'; // 每次重大更新后，把 v2 改成 v3, v4... 就能强制刷新
+const CACHE_NAME = 'My-Beeper-v7'; // 每次重大更新后递增版本号强制刷新
 const urlsToCache = [
-    './', 
-    './index.html', 
-    './css/style.css', 
-    './css/animations.css', 
-    './css/base.css', 
-    './css/modules.css', 
-    './css/overrides.css'
+    './',
+    './index.html',
+    './manifest.json',
+    './icon.png',
+    /* ── CSS ── */
+    './css/style.css',
+    './css/animations.css',
+    './css/base.css',
+    './css/modules.css',
+    './css/overrides.css',
+    './css/bubble.css',
+    './css/floatpet.css',
+    './css/galgame.css',
+    './css/music.css',
+    './css/novel.css',
+    './css/sms_phone.css',
+    './css/tracker.css',
+    './css/video_call.css',
+    /* ── JS Core ── */
+    './js/core.js',
+    './js/apps.js',
+    /* ── JS 功能模块 ── */
+    './js/app_floatpet.js',
+    './js/app_bubble.js',
+    './js/app_live.js',
+    './js/app_galgame.js',
+    './js/app_groupchat.js',
+    './js/app_imagegen.js',
+    './js/app_lovespace.js',
+    './js/app_map.js',
+    './js/app_memory.js',
+    './js/app_music.js',
+    './js/app_novel.js',
+    './js/app_pay.js',
+    './js/app_persona.js',
+    './js/app_pet.js',
+    './js/app_phone_call.js',
+    './js/app_sms.js',
+    './js/app_tracker.js',
+    './js/app_transfer.js',
+    './js/app_voice_call.js',
+    './js/app_worldbook.js',
+    './js/app_arcade.js'
 ];
 
 // 安装时缓存静态资源

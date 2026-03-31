@@ -1,15 +1,41 @@
 {
+  "id": "/",
   "name": "My Beeper",
   "short_name": "Beeper",
+  "description": "AI桌宠 · 悬浮手机伴侣，读取手机状态智能互动",
+  "lang": "zh-CN",
   "start_url": "./index.html",
-  "display": "standalone", 
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#000000",
+  "prefer_related_applications": false,
+  "categories": ["lifestyle", "entertainment", "social"],
   "icons": [
     {
       "src": "icon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

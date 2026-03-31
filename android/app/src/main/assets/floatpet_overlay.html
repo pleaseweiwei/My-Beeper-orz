@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>FloatPet Overlay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* ── Pet wrapper ── */
+  #pet-root {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  /* ── Avatar circle ── */
+  #avatar-wrap {
+    position: relative;
+    width: 90px; height: 90px;
+    cursor: pointer;
+  }
+
+  #avatar-img {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255,215,0,0.6);
+    box-shadow: 0 0 18px rgba(255,200,80,0.45);
+    transition: transform 0.2s;
+    display: block;
+  }
+  #avatar-img.scanning {
+    animation: petPulse 0.7s ease-in-out infinite alternate;
+  }
+
+  /* ── Scan rings ── */
+  .scan-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 2px solid rgba(255,200,80,0);
+    pointer-events: none;
+    transition: all 0.3s;
+  }
+  .scan-ring.r1 { width: 100px; height: 100px; }
+  .scan-ring.r2 { width: 118px; height: 118px; }
+  .scan-ring.active {
+    border-color: rgba(255,200,80,0.7);
+    animation: ringPulse 1.1s ease-out infinite;
+  }
+  .scan-ring.r2.active { animation-delay: 0.35s; }
+
+  /* ── Observe icon ── */
+  #obs-icon {
+    position: absolute;
+    top: -10px; right: -8px;
+    font-size: 18px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  #obs-icon.active { opacity: 1; animation: obsWiggle 0.6s ease-in-out infinite alternate; }
+
+  /* ── Live dot ── */
+  #live-dot {
+    position: absolute;
+    bottom: 4px; right: 6px;
+    width: 10px; height: 10px;
+    background: #4ade80;
+    border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.3);
+    box-shadow: 0 0 6px #4ade80;
+    animation: dotBlink 2.4s ease-in-out infinite;
+  }
+
+  /* ── Bubble ── */
+  #bubble {
+    position: absolute;
+    bottom: 104px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,252,235,0.97);
+    border: 1.5px solid rgba(255,200,80,0.6);
+    border-radius: 18px;
+    padding: 10px 16px;
+    max-width: 220px;
+    min-width: 80px;
+    font-size: 13px;
+    color: #1a1a1a;
+    line-height: 1.5;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    transform: translateX(-50%) translateY(8px);
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #bubble.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -9px; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(255,200,80,0.6);
+  }
+
+  /* ── Thinking dots ── */
+  .think-dots span {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #c89a20;
+    margin: 0 2px;
+    animation: dotDance 1.2s ease-in-out infinite;
+  }
+  .think-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .think-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Scan line ── */
+  #scan-line {
+    position: fixed;
+    top: -4px; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, rgba(255,200,80,0.9), transparent);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+  }
+  #scan-line.active {
+    opacity: 1;
+    animation: scanSweep 1.1s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+
+  /* ── Camera flash ── */
+  #flash {
+    position: fixed;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9998;
+  }
+  #flash.go {
+    animation: flashPop 0.45s ease-out forwards;
+  }
+
+  /* ── Animations ── */
+  @keyframes petPulse {
+    from { transform: scale(1);    box-shadow: 0 0 14px rgba(255,200,80,0.4); }
+    to   { transform: scale(1.06); box-shadow: 0 0 28px rgba(255,200,80,0.8); }
+  }
+  @keyframes ringPulse {
+    0%   { transform: translate(-50%,-50%) scale(1);   opacity: 0.8; }
+    100% { transform: translate(-50%,-50%) scale(1.35); opacity: 0; }
+  }
+  @keyframes obsWiggle {
+    from { transform: rotate(-12deg); }
+    to   { transform: rotate(12deg); }
+  }
+  @keyframes dotBlink {
+    0%,100% { opacity: 1; }
+    50%     { opacity: 0.3; }
+  }
+  @keyframes dotDance {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-5px); }
+  }
+  @keyframes scanSweep {
+    0%   { top: -4px;  opacity: 1; }
+    90%  { top: 100%;  opacity: 0.8; }
+    100% { top: 100%;  opacity: 0; }
+  }
+  @keyframes flashPop {
+    0%   { opacity: 0.7; }
+    100% { opacity: 0; }
+  }
+
+  /* ── Bob idle animation ── */
+  #avatar-wrap { animation: petBob 3.2s ease-in-out infinite; }
+  @keyframes petBob {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-6px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="scan-line"></div>
+<div id="flash"></div>
+
+<div id="pet-root">
+  <!-- Bubble -->
+  <div id="bubble"></div>
+
+  <!-- Avatar -->
+  <div id="avatar-wrap">
+    <div class="scan-ring r1" id="ring1"></div>
+    <div class="scan-ring r2" id="ring2"></div>
+    <span id="obs-icon">🔍</span>
+    <img id="avatar-img" src="icon.png" alt="pet"
+         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><text y=%2260%22 font-size=%2260%22>🐱</text></svg>'">
+    <div id="live-dot"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── Global refs ── */
+const $bubble   = document.getElementById('bubble');
+const $avatar   = document.getElementById('avatar-img');
+const $ring1    = document.getElementById('ring1');
+const $ring2    = document.getElementById('ring2');
+const $obsIcon  = document.getElementById('obs-icon');
+const $scanLine = document.getElementById('scan-line');
+const $flash    = document.getElementById('flash');
+
+const SCAN_ICONS = ['🔍','📸','👀','🔭','🕵️'];
+
+let _bubbleTimer = null;
+let _scanning    = false;
+
+/* ════════════════════════════════════════
+   AndroidBridge helpers (safe wrappers)
+   ════════════════════════════════════════ */
+function _bridge(fn, ...args) {
+  try {
+    if (window.AndroidBridge && typeof window.AndroidBridge[fn] === 'function') {
+      return window.AndroidBridge[fn](...args);
+    }
+  } catch(e) { console.warn('Bridge call failed:', fn, e); }
+  return null;
+}
+
+/* ════════════════════════════════════════
+   Show bubble
+   ════════════════════════════════════════ */
+function showBubble(text, ms) {
+  clearTimeout(_bubbleTimer);
+  $bubble.innerHTML = text;
+  $bubble.classList.add('show');
+  _bridge('vibrate');
+  _bubbleTimer = setTimeout(() => $bubble.classList.remove('show'), ms || 9000);
+}
+
+/* Thinking dots */
+function showThinking() {
+  $bubble.innerHTML =
+    '<span class="think-dots"><span></span><span></span><span></span></span>';
+  $bubble.classList.add('show');
+}
+
+/* ════════════════════════════════════════
+   Scan animation
+   ════════════════════════════════════════ */
+function petStartScan() {
+  if (_scanning) return;
+  _scanning = true;
+  /* Only show thinking bubble — no rings / scan line / flash */
+  showThinking();
+}
+
+function petStopScan() {
+  _scanning = false;
+}
+
+/* ════════════════════════════════════════
+   Expose globally for AndroidBridge calls
+   ════════════════════════════════════════ */
+window.petStartScan  = petStartScan;
+window.petStopScan   = petStopScan;
+window.showBubble    = function(text, ms) {
+  petStopScan();
+  showBubble(text, ms || 10000);
+};
+
+/* ════════════════════════════════════════
+   Double-tap on avatar → trigger scan
+   ════════════════════════════════════════ */
+let _tapCount = 0, _tapTimer = null;
+document.getElementById('avatar-wrap').addEventListener('click', () => {
+  _tapCount++;
+  if (_tapCount === 1) {
+    _tapTimer = setTimeout(() => { _tapCount = 0; }, 380);
+  } else if (_tapCount >= 2) {
+    clearTimeout(_tapTimer);
+    _tapCount = 0;
+    _bridge('triggerScan');
+    petStartScan();
+  }
+});
+
+/* ════════════════════════════════════════
+   Init: load avatar from bridge
+   ════════════════════════════════════════ */
+(function init() {
+  /* Expose interval to bridge queries */
+  const intv = _bridge('getIntervalMin');
+  if (intv !== null) {
+    console.log('FloatPet interval:', intv, 'min');
+  }
+})();
+</script>
+</body>
+</html>
