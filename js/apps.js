@@ -2053,12 +2053,14 @@ window.toggleChat = function() {
         const chatLayer = document.getElementById('chatLayer');
         chatLayer.classList.toggle('show');
         
-        // === 新增：退出聊天界面时立刻停止弹幕 ===
-        if (!chatLayer.classList.contains('show')) {
-            stopDanmakuLoop();
-            const dmLayer = document.getElementById('danmaku-layer');
-            if(dmLayer) dmLayer.innerHTML = '';
-        }
+          // === 退出聊天界面时：停止弹幕 + 清理多选栏 ===
+          if (!chatLayer.classList.contains('show')) {
+              stopDanmakuLoop();
+              const dmLayer = document.getElementById('danmaku-layer');
+              if(dmLayer) dmLayer.innerHTML = '';
+              // 退出聊天时强制退出多选模式，防止 wc-multi-select-bar 残留在底部
+              if (typeof exitMultiSelectMode === 'function') exitMultiSelectMode();
+          }
     }
 }
 

@@ -60,6 +60,7 @@
     <link rel="stylesheet" href="css/floatpet.css">
     <link rel="stylesheet" href="css/sms_phone.css">
     <link rel="stylesheet" href="css/nexus.css">
+    <link rel="stylesheet" href="css/favorites.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
@@ -459,8 +460,8 @@
             </div>
 
             <div class="wc-menu-group">
-                <div class="wc-menu-item" onclick="NexusApp.open()"><i class="fas fa-project-diagram menu-icon"></i> <span>Nexus 羁绊星图</span> <i class="fas fa-chevron-right arrow" style="font-size:10px; color:#ccc"></i></div>
-                <div class="wc-menu-item"><i class="fas fa-bookmark menu-icon"></i> <span>Collections</span> <i class="fas fa-chevron-right arrow" style="font-size:10px; color:#ccc"></i></div>
+                <div class="wc-menu-item" onclick="NexusApp.open()"><i class="fas fa-project-diagram menu-icon"></i> <span>Nexus</span> <i class="fas fa-chevron-right arrow" style="font-size:10px; color:#ccc"></i></div>
+                <div class="wc-menu-item" onclick="FavoritesApp.open()"><i class="fas fa-bookmark menu-icon"></i> <span>Collections</span> <i class="fas fa-chevron-right arrow" style="font-size:10px; color:#ccc"></i></div>
             </div>
             
             <div class="wc-menu-group">
@@ -3672,7 +3673,8 @@
 <script src="js/app_floatpet.js"></script>
 <script src="js/app_sms.js"></script>
 <script src="js/app_phone_call.js"></script>
-<script src="js/app_nexus.js"></script>
+    <script src="js/app_nexus.js"></script>
+    <script src="js/app_favorites.js"></script>
 <script>
 // Init Nexus on load
 document.addEventListener('DOMContentLoaded', function() {
@@ -4234,12 +4236,17 @@ function switchCsTab(id) {
 
 </div>
 
-<!-- === [修改] 多选操作底部栏 (增加删除按钮) === -->
+<!-- === [修改] 多选操作底部栏 (增加删除+收藏按钮) === -->
 <div id="wc-multi-select-bar" class="wc-multi-select-bar">
     <!-- 转发按钮 -->
     <div onclick="executeMultiForward()">
         <i class="fas fa-share-square"></i>
         <span>转发</span>
+    </div>
+    <!-- 收藏按钮 -->
+    <div class="fav-collect-btn" onclick="FavoritesApp.addFromChat()" style="color:#f59e0b;">
+        <i class="fas fa-bookmark" style="background:#fff8e1; color:#f59e0b;"></i>
+        <span>收藏</span>
     </div>
     <!-- 删除按钮 -->
     <div onclick="executeMultiDelete()" style="color: #ff4d4f;">
@@ -6721,6 +6728,60 @@ function switchCsTab(id) {
     <span id="flb-bg-opacity-val">60%</span>
   </div>
   <button class="flb-close-settings-btn" onclick="toggleFlbSettings(event)">关闭</button>
+</div>
+
+<!-- ============================================== -->
+<!-- 收藏夹 APP (Favorites)                         -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="favoritesApp">
+    <!-- 顶部栏 -->
+    <div class="fav-header">
+        <i class="fas fa-chevron-left fav-back" onclick="FavoritesApp.close()"></i>
+        <span class="fav-title">收藏夹</span>
+        <div id="fav-edit-btn" class="fav-edit-action" onclick="FavoritesApp.toggleEditMode()">编辑</div>
+    </div>
+
+    <!-- 搜索栏 -->
+    <div class="fav-search-wrap">
+        <div class="fav-search-bar">
+            <i class="fas fa-search fav-search-icon"></i>
+            <input type="text" id="fav-search-input" placeholder="搜索内容或作者名..."
+                   oninput="FavoritesApp.search(this.value)">
+            <i class="fas fa-times fav-search-clear" id="fav-search-clear"
+               onclick="FavoritesApp.clearSearch()"></i>
+        </div>
+    </div>
+
+    <!-- 收藏内容区 -->
+    <div class="fav-content" id="fav-content">
+        <!-- JS 动态渲染收藏卡片 -->
+    </div>
+
+    <!-- 底部编辑操作栏 -->
+    <div class="fav-edit-bar" id="fav-edit-bar" style="display:none;">
+        <button class="fav-delete-btn" id="fav-delete-btn"
+                onclick="FavoritesApp.confirmDelete()">删除 (0)</button>
+    </div>
+</div>
+
+<!-- 文字图解密弹窗 -->
+<div id="fav-imgtext-modal" class="modal-overlay" style="z-index:5500;"
+     onclick="if(event.target===this) this.classList.remove('active')">
+    <div class="modal-box" style="width:320px; border-radius:20px;">
+        <div class="modal-header">
+            <span>图片描述</span>
+            <i class="fas fa-times"
+               onclick="document.getElementById('fav-imgtext-modal').classList.remove('active')"></i>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+            <div id="fav-imgtext-content" class="fav-reveal-content"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-confirm"
+                    onclick="document.getElementById('fav-imgtext-modal').classList.remove('active')"
+                    style="width:100%;">关闭</button>
+        </div>
+    </div>
 </div>
 
 <!-- 更新通知弹框 -->
