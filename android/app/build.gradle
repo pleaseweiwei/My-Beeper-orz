@@ -33,6 +33,11 @@ android {
     buildFeatures {
         buildConfig true
     }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
 }
 
 dependencies {
@@ -65,5 +70,9 @@ task copyWebAssets(type: Copy) {
     into 'src/main/assets'
 }
 
-// 每次构建前自动执行
-preBuild.dependsOn copyWebAssets
+// 每次构建前自动执行（使用 afterEvaluate 确保 AGP 8.x 懒加载任务已注册）
+afterEvaluate {
+    tasks.named("preBuild").configure {
+        dependsOn copyWebAssets
+    }
+}

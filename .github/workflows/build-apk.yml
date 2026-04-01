@@ -21,26 +21,35 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      # 3. 安装 Gradle 8.4（不依赖 wrapper jar）
-      - name: Setup Gradle 8.4
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: "8.4"
+      # 3. 直接下载并安装 Gradle 8.4（不依赖 wrapper jar / setup-gradle action）
+      - name: Install Gradle 8.4
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d $HOME/gradle-home
+          echo "$HOME/gradle-home/gradle-8.4/bin" >> $GITHUB_PATH
 
-      # 4. 赋予 gradlew 执行权限（如果存在）
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew 2>/dev/null || true
+      # 4. 确保 Android SDK Platform 34 / Build-Tools 34.0.0 已安装
+      - name: Install Android SDK components
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null 2>&1 || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-34" \
+            "build-tools;34.0.0" >/dev/null 2>&1 || true
 
       # 5. 构建 Debug APK
       - name: Build Debug APK
         working-directory: android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          gradle assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            --no-configuration-cache
 
       # 6. 上传 APK 为可下载的 Artifact（保存 30 天）
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: FloatPet-Debug-${{ github.run_number }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
@@ -48,6 +57,7 @@ jobs:
 
       # 7. 打印 APK 信息
       - name: Show APK info
+        if: success()
         run: |
           echo "✅ APK 构建成功！"
           ls -lh android/app/build/outputs/apk/debug/app-debug.apk
