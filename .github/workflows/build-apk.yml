@@ -3,7 +3,7 @@ name: 📦 Build Android APK
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch:   # 允许在 GitHub 网页上手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,23 +21,16 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: gradle
 
-      # 3. 下载 Gradle 8.4 并加入 PATH
+      # 3. 下载并安装 Gradle 8.4
       - name: Install Gradle 8.4
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /opt/gradle
           echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
-          /opt/gradle/gradle-8.4/bin/gradle --version
 
-      # 4. 生成 local.properties
-      - name: Create local.properties
-        working-directory: android
-        run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          cat local.properties
-
-      # 5. 接受 Android SDK 许可证 & 安装所需组件
+      # 4. 接受 Android SDK 许可证 & 安装所需组件
       - name: Accept SDK licenses & install components
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
@@ -45,36 +38,31 @@ jobs:
             "platforms;android-34" \
             "build-tools;34.0.0"
 
-      # 6. 打印 SDK 环境信息（诊断用）
-      - name: Print SDK info
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          ls $ANDROID_HOME/build-tools/ || true
-          ls $ANDROID_HOME/platforms/ || true
-          gradle --version
+      # 5. 生成 local.properties
+      - name: Create local.properties
+        working-directory: android
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      # 7. 构建 Debug APK（直接使用已安装的 Gradle，无需 wrapper 下载）
+      # 6. 构建 Debug APK（直接用已安装的 Gradle，不用 wrapper）
       - name: Build Debug APK
         working-directory: android
         run: |
-          gradle assembleDebug \
+          /opt/gradle/gradle-8.4/bin/gradle assembleDebug \
             --no-daemon \
-            --stacktrace \
-            --info 2>&1 | tail -100
+            --stacktrace
 
-      # 8. 上传 APK 为可下载的 Artifact（保存 30 天）
+      # 7. 上传 APK（保存 30 天）
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
-        if: success()
         with:
           name: FloatPet-Debug-${{ github.run_number }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+          if-no-files-found: error
 
-      # 9. 打印 APK 信息
-      - name: Show APK info
-        if: success()
+      # 8. 完成提示
+      - name: Done
         run: |
-          echo "✅ APK 构建成功！"
+          echo "✅ APK 构建并上传完成！"
           ls -lh android/app/build/outputs/apk/debug/app-debug.apk
-          echo "👆 在 Actions 页面的 Artifacts 区域下载 APK"
+          echo "请在本次 Actions 运行页面的 Artifacts 区域下载 APK。"
