@@ -26,8 +26,22 @@ import java.util.ArrayList;
  *   1. 悬浮桌宠启停（FloatingWindowService）
  *   2. 原生 SpeechRecognizer 语音识别（WebView 不支持 webkitSpeechRecognition）
  *   3. 麦克风 / 摄像头运行时权限
+ *
+ * ── 热更新说明 ──────────────────────────────────────────────────────────────
+ * REMOTE_URL 指向 GitHub Pages，每次 git push 后内容自动部署。
+ * App 启动时：有网络 → 加载远程最新版；无网络 / 加载失败 → 回退到本地 assets。
+ * 只有改 Java 原生代码才需要重新安装 APK。
+ * ───────────────────────────────────────────────────────────────────────────
  */
 public class MainActivity extends AppCompatActivity {
+
+    /**
+     * 远程热更新地址（GitHub Pages）。
+     * 如果你的 GitHub Pages 地址不同，改这里即可；留空 "" 则始终用本地 assets。
+     * 格式示例：https://yourname.github.io/your-repo/
+     */
+    private static final String REMOTE_URL =
+            "https://pleaseweiwei.github.io/My-Beeper-orz/";
 
     private static final int REQ_OVERLAY      = 1001;
     private static final int REQ_MEDIA_PRJ    = 1002;
@@ -37,6 +51,9 @@ public class MainActivity extends AppCompatActivity {
     private WebView                _webView;
     private MediaProjectionManager _mpMgr;
     private SharedPreferences      _prefs;
+
+    /** 当前是否正在加载远程 URL（用于出错时回退本地）*/
+    private boolean _loadedFromRemote = false;
 
     // 原生语音识别
     private SpeechRecognizer _speechRecognizer;
@@ -104,11 +121,45 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 return false;
             }
+
+            /** 网络错误（DNS 失败、超时等）→ 回退本地 */
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest req,
+                                        WebResourceError err) {
+                if (req.isForMainFrame() && _loadedFromRemote) {
+                    _fallbackToLocal(view);
+                }
+            }
+
+            /** HTTP 4xx / 5xx → 回退本地 */
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest req,
+                                            WebResourceResponse resp) {
+                if (req.isForMainFrame() && _loadedFromRemote
+                        && resp.getStatusCode() >= 400) {
+                    _fallbackToLocal(view);
+                }
+            }
+
+            private void _fallbackToLocal(WebView view) {
+                _loadedFromRemote = false;
+                view.stopLoading();
+                view.loadUrl("file:///android_asset/index.html");
+                Toast.makeText(MainActivity.this,
+                        "离线模式：使用本地缓存版本", Toast.LENGTH_SHORT).show();
+            }
         });
 
         _webView.addJavascriptInterface(new AppBridge(), "AndroidBridge");
         setContentView(_webView);
-        _webView.loadUrl("file:///android_asset/index.html");
+
+        // ── 热更新：有网络时优先加载远程最新版 ──
+        if (!REMOTE_URL.isEmpty() && _isNetworkAvailable()) {
+            _loadedFromRemote = true;
+            _webView.loadUrl(REMOTE_URL);
+        } else {
+            _webView.loadUrl("file:///android_asset/index.html");
+        }
     }
 
     /* ════════════════════════════════════════
@@ -442,6 +493,24 @@ public class MainActivity extends AppCompatActivity {
             return s.replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("\n", "\\n").replace("\r", "\\r");
         }
+    }
+
+    /* ════════════════════════════════════════
+       网络检测
+       ════════════════════════════════════════ */
+
+    /** 检测是否有可用网络（Wi-Fi / 移动数据 / 以太网）*/
+    private boolean _isNetworkAvailable() {
+        android.net.ConnectivityManager cm =
+                (android.net.ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return false;
+        android.net.Network network = cm.getActiveNetwork();
+        if (network == null) return false;
+        android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+        return caps != null && (
+                caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+             || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
+             || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET));
     }
 
     /* ════════════════════════════════════════
