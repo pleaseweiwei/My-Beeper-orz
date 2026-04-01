@@ -22,46 +22,45 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. 下载并安装 Gradle 8.4 到固定路径
+      # 3. 下载 Gradle 8.4 并加入 PATH
       - name: Install Gradle 8.4
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /opt/gradle
+          echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
           /opt/gradle/gradle-8.4/bin/gradle --version
 
-      # 4. 生成 gradle-wrapper.jar（仓库中未提交该二进制文件）
-      - name: Generate Gradle Wrapper JAR
-        working-directory: android
-        run: |
-          /opt/gradle/gradle-8.4/bin/gradle wrapper \
-            --gradle-version=8.4 \
-            --distribution-type=bin
-          chmod +x gradlew
-
-      # 5. 生成 local.properties（被 .gitignore 排除，必须在 CI 中生成）
+      # 4. 生成 local.properties
       - name: Create local.properties
         working-directory: android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          echo "local.properties 内容：" && cat local.properties
+          cat local.properties
 
-      # 6. 接受 Android SDK 许可证 & 安装所需组件
+      # 5. 接受 Android SDK 许可证 & 安装所需组件
       - name: Accept SDK licenses & install components
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            --licenses 2>&1 | grep -E "^(Accept|All)" || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
             "platforms;android-34" \
             "build-tools;34.0.0"
 
-      # 7. 构建 Debug APK（使用 gradlew，由第 4 步生成的 jar 提供支持）
+      # 6. 打印 SDK 环境信息（诊断用）
+      - name: Print SDK info
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls $ANDROID_HOME/build-tools/ || true
+          ls $ANDROID_HOME/platforms/ || true
+          gradle --version
+
+      # 7. 构建 Debug APK（直接使用已安装的 Gradle，无需 wrapper 下载）
       - name: Build Debug APK
         working-directory: android
         run: |
-          ./gradlew assembleDebug \
+          gradle assembleDebug \
             --no-daemon \
             --stacktrace \
-            --no-configuration-cache
+            --info 2>&1 | tail -100
 
       # 8. 上传 APK 为可下载的 Artifact（保存 30 天）
       - name: Upload APK Artifact
