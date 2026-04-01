@@ -1,5 +1,5 @@
 ﻿// service-worker.js
-const CACHE_NAME = 'My-Beeper-v8'; // 每次重大更新后递增版本号强制刷新
+const CACHE_NAME = 'My-Beeper-v7'; // 每次重大更新后递增版本号强制刷新
 const urlsToCache = [
     './',
     './index.html',
@@ -19,8 +19,6 @@ const urlsToCache = [
     './css/sms_phone.css',
     './css/tracker.css',
     './css/video_call.css',
-    './css/nexus.css',
-    './css/favorites.css',
     /* ── JS Core ── */
     './js/core.js',
     './js/apps.js',
@@ -45,10 +43,7 @@ const urlsToCache = [
     './js/app_transfer.js',
     './js/app_voice_call.js',
     './js/app_worldbook.js',
-    './js/app_arcade.js',
-    './js/app_nexus.js',
-    './js/app_pat.js',
-    './js/app_favorites.js'
+    './js/app_arcade.js'
 ];
 
 // 安装时缓存静态资源

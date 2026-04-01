@@ -64,9 +64,7 @@
 │  ├─ novel.css              # 小说 App 专属样式
 │  ├─ galgame.css            # Gal 游戏模块专属样式
 │  ├─ sms_phone.css          # 短信 & 电话模块专属样式
-│  ├─ floatpet.css           # 悬浮宠物模块专属样式
-│  ├─ nexus.css              # Nexus 系统模块专属样式
-│  └─ favorites.css          # 收藏夹模块专属样式
+│  └─ floatpet.css           # 悬浮宠物模块专属样式
 └─ js/
    ├─ core.js                # 基础 UI 行为
    ├─ apps.js                # 主业务中枢：聊天/设置/好友/朋友圈/AI/摘要/线下模式等
@@ -90,10 +88,7 @@
    ├─ app_galgame.js         # Gal 游戏 / 视觉小说互动模块
    ├─ app_sms.js             # 短信 App 模拟模块
    ├─ app_phone_call.js      # 普通电话模拟模块
-   ├─ app_floatpet.js        # 悬浮宠物（FloatPet）模块
-   ├─ app_nexus.js           # Nexus 多维联系人系统模块 ⭐ 新增
-   ├─ app_pat.js             # 拍一拍互动模块 ⭐ 新增
-   └─ app_favorites.js       # 收藏夹模块 ⭐ 新增
+   └─ app_floatpet.js        # 悬浮宠物（FloatPet）模块
 ```
 
 ---
@@ -164,9 +159,6 @@
 <script src="js/app_novel.js"></script>
 <script src="js/app_imagegen.js"></script>
 <script src="js/app_floatpet.js"></script>
-<script src="js/app_nexus.js"></script>
-<script src="js/app_pat.js"></script>
-<script src="js/app_favorites.js"></script>
 ```
 
 ### 结论
@@ -708,70 +700,6 @@ AI 回复文本中可以嵌入以下格式触发自动生图：
 
 ---
 
-### `js/app_nexus.js` ⭐ 新增
-**作用：Nexus 多维联系人系统 — 角色关系网络 / 知识图谱 / 世界观连接器。**
-
-暴露为 `window.NexusApp`（IIFE 模块模式）。  
-关键 CSS：`css/nexus.css`  
-关键容器 ID：`nexusApp`（待确认）
-
-**已知特征：**
-- 可视化多个角色之间的关系网络
-- 支持从 `friendsData` 读取已有角色并建立关系图
-- 可能支持 AI 生成角色背景故事 / 关系描述
-
-**什么时候看：**
-- 改角色关系图谱 UI
-- 改 Nexus 数据结构（节点、边、关系类型）
-- 改 AI 生成关系描述的 prompt
-- 改 Nexus 与聊天主系统的联动逻辑
-
----
-
-### `js/app_pat.js` ⭐ 新增
-**作用：拍一拍互动系统 — 微信风格"拍一拍"消息 + AI 角色反应。**
-
-暴露为 `window.PatApp`（IIFE 模块模式）。  
-无专属 CSS 文件（样式内联或复用主样式）。
-
-**核心机制：**
-- 用户在聊天中触发"拍一拍"操作
-- AI 根据当前角色性格/好感度生成个性化的拍一拍回应文案
-- 解析 AI 回复中的拍一拍指令标签（`[PAT:`、`[PATME:`等）
-- `PatApp.parseAndHandleAIPat(text, chatId)` — 由 `apps.js` 在 AI 回复后调用
-
-**与 apps.js 的集成：**
-- `apps.js` 在 AI 回复处理链中调用 `PatApp.parseAndHandleAIPat(finalContent, currentChatId)`
-- 互动上下文通过 `tr_action_context`（localStorage）传递到下次 AI 回复
-
-**什么时候看：**
-- 改拍一拍触发 UI（聊天气泡长按菜单 / 专属按钮）
-- 改 AI 生成拍一拍回应的 prompt 逻辑
-- 改拍一拍指令格式（`[PAT:` 等标签）
-- 改拍一拍与好感度/角色性格的联动
-
----
-
-### `js/app_favorites.js` ⭐ 新增
-**作用：收藏夹模块 — 聊天消息收藏 / 快速访问 / 收藏内容管理。**
-
-暴露为 `window.FavoritesApp`（IIFE 模块模式，待确认）。  
-关键 CSS：`css/favorites.css`  
-关键容器 ID：`favoritesApp`（待确认）
-
-**已知特征：**
-- 收藏聊天消息、图片气泡、剧情片段
-- 分类管理收藏内容（可能按角色/类型分组）
-- 支持快速跳转回原始消息位置
-
-**什么时候看：**
-- 改收藏夹 UI（列表、卡片、分组）
-- 改收藏/取消收藏的交互逻辑
-- 改收藏内容的存储结构
-- 改从收藏夹快速发送内容到聊天的逻辑
-
----
-
 ## 5. 改功能时先看哪个文件
 
 ---
@@ -957,33 +885,6 @@ AI 回复文本中可以嵌入以下格式触发自动生图：
 
 ---
 
-### AA. Nexus 多维联系人系统 ⭐ 新增
-先看：`index.html`、`js/app_nexus.js`  
-搜索：`nexusApp`、`NexusApp`
-
-关键词：
-- `nexus.css` — 专属样式
-- `NexusApp.open()` — 打开 App
-- `friendsData` — 角色数据来源
-
----
-
-### BB. 拍一拍（PatApp） ⭐ 新增
-先看：`js/app_pat.js`（无专属容器，挂钩到聊天系统）  
-搜索：`PatApp`、`parseAndHandleAIPat`、`[PAT:`、`tr_action_context`
-
-关键词：
-- `PatApp.parseAndHandleAIPat(text, chatId)` — `apps.js` AI 回复后调用
-- `tr_action_context` — 互动上下文队列（localStorage）
-
----
-
-### CC. 收藏夹（FavoritesApp） ⭐ 新增
-先看：`index.html`、`js/app_favorites.js`  
-搜索：`favoritesApp`、`FavoritesApp`、`css/favorites.css`
-
----
-
 ## 6. `index.html` 中的重要 App 容器 ID
 
 | 功能 | 关键容器 ID |
@@ -1021,8 +922,6 @@ AI 回复文本中可以嵌入以下格式触发自动生图：
 | 短信 App | `smsApp`（待确认） |
 | 电话 App | `phoneCallApp`（待确认） |
 | 悬浮宠物 App | `floatPetApp`（待确认） |
-| Nexus 关系图谱 App | `nexusApp`（待确认） |
-| 收藏夹 App | `favoritesApp`（待确认） |
 | 图像生成测试弹窗 | `imagegen-test-modal` |
 | 图像全屏查看 | `imagegen-fullscreen-overlay` |
 
@@ -1045,8 +944,6 @@ AI 回复文本中可以嵌入以下格式触发自动生图：
 | `css/galgame.css` | Gal 游戏模块专属样式 |
 | `css/sms_phone.css` | 短信 & 电话模块共享样式 |
 | `css/floatpet.css` | 悬浮宠物专属样式 |
-| `css/nexus.css` | Nexus 系统专属样式 |
-| `css/favorites.css` | 收藏夹专属样式 |
 
 ### 改样式的建议
 - 改查手机界面 → 优先看 `css/tracker.css`（`.tr-*` 前缀）
@@ -1096,9 +993,6 @@ AI 回复文本中可以嵌入以下格式触发自动生图：
 - 短信 → `js/app_sms.js`
 - 电话 → `js/app_phone_call.js`
 - 悬浮宠物 → `js/app_floatpet.js`
-- Nexus 关系图谱 → `js/app_nexus.js`
-- 拍一拍互动 → `js/app_pat.js`
-- 收藏夹 → `js/app_favorites.js`
 - LIVE → `js/app_live.js`
 - 宠物 → `js/app_pet.js`
 - 钱包 → `js/app_pay.js`
@@ -1118,9 +1012,6 @@ AI 回复文本中可以嵌入以下格式触发自动生图：
 | `app_tracker.js` | 依赖 `apps.js` 的 `friendsData`、`IDB`、`scopedChatKey`、`triggerAIReplyForPendingContext`<br>依赖 `app_worldbook.js` 的 `worldBooks`<br>依赖 `app_persona.js` 的 `personasMeta`、`currentPersonaId`<br>写入 `tr_pending_context`（由 `apps.js` 的 `triggerAIReplyForPendingContext` 消费） |
 | `app_novel.js` | 依赖 `apps.js` 的 `friendsData`、`appendMessage`、`saveMessageToHistory`、`currentChatId`<br>依赖 `app_persona.js` 的 `personasMeta`、`currentPersonaId`<br>依赖 `app_worldbook.js` 的 `worldBooks` |
 | `app_imagegen.js` | 依赖 `apps.js` 的 `friendsData`、`currentChatId`、`appendMessage`、`saveMessageToHistory`、`IDB`、`scopedChatKey`<br>通过 `window.processImagegenFromAIReply` 被 `apps.js` 调用 |
-| `app_pat.js` | 依赖 `apps.js` 的 `friendsData`、`currentChatId`、`appendMessage`<br>通过 `PatApp.parseAndHandleAIPat` 被 `apps.js` 调用<br>读写 `tr_action_context`（localStorage）传递互动上下文 |
-| `app_nexus.js` | 依赖 `apps.js` 的 `friendsData`<br>依赖 `app_persona.js` 的 `personasMeta`、`currentPersonaId` |
-| `app_favorites.js` | 依赖 `apps.js` 的 `IDB`、`scopedChatKey`、`appendMessage`<br>可能依赖 `friendsData` 进行角色分组 |
 
 ---
 
@@ -1174,9 +1065,6 @@ AI 回复文本中可以嵌入以下格式触发自动生图：
    - js/app_sms.js            短信 App
    - js/app_phone_call.js     电话 App（UI模拟，与 app_voice_call.js 不同）
    - js/app_floatpet.js       悬浮宠物（含 Android 端 android/ 目录）
-   - js/app_nexus.js          Nexus 多维联系人关系图谱（NexusApp）
-   - js/app_pat.js            拍一拍互动（PatApp，挂钩聊天系统，无独立容器）
-   - js/app_favorites.js      收藏夹（FavoritesApp）
 6. 修改前先判断功能归属到哪个文件。
 7. 涉及界面时同时检查 index.html 和对应 JS 文件。
 8. 不要随便调整 script 加载顺序。
@@ -1203,4 +1091,4 @@ AI 回复文本中可以嵌入以下格式触发自动生图：
 
 ## 13. 一句话版本
 
-> **先看 `AI_CODEMAP.md` → 再判断是改 `index.html`、`js/apps.js`，还是某个 `js/app_xxx.js`。群聊必看 `app_groupchat.js`（覆写全局函数）；查手机改 `app_tracker.js`；小说改 `app_novel.js`；图像生成改 `app_imagegen.js`；拍一拍改 `app_pat.js`（无独立容器，挂钩聊天系统）；关系图谱改 `app_nexus.js`；收藏夹改 `app_favorites.js`。**
+> **先看 `AI_CODEMAP.md` → 再判断是改 `index.html`、`js/apps.js`，还是某个 `js/app_xxx.js`。群聊必看 `app_groupchat.js`（覆写全局函数）；查手机改 `app_tracker.js`；小说改 `app_novel.js`；图像生成改 `app_imagegen.js`（无独立容器，挂钩聊天系统）。**

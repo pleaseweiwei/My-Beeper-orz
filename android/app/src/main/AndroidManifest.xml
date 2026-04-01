@@ -4,11 +4,8 @@
 
     <!-- 悬浮窗核心权限 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- 前台服务 -->
+    <!-- 前台服务 / 截屏 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- 悬浮窗服务使用 dataSync 类型（Android 14 要求必须声明类型） -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <!-- ScreenshotActivity 备用 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <!-- Android 13+ 通知 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -23,8 +20,6 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- 开机自启（可选）-->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- App 内自动更新：下载并安装新 APK -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="true"
@@ -53,22 +48,11 @@
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
-        <!-- 悬浮窗服务：使用 dataSync 类型，不需要 MediaProjection token -->
+        <!-- 悬浮窗服务 -->
         <service
             android:name=".FloatingWindowService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
-        <!-- FileProvider：供 DownloadManager 下载的 APK 安装时提供 content:// URI -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_provider_paths" />
-        </provider>
+            android:foregroundServiceType="mediaProjection" />
 
         <!-- 开机自启广播 -->
         <receiver

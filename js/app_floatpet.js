@@ -11,9 +11,7 @@ const FloatPet = (function () {
     let $bubble, $msgList, $observeIcon;
     let $ring, $ring2, $dot;
     let $scanLine;
-    let $miniChat, $miniInput;
     let _flash = null;
-    let _miniChatOpen = false;
 
     /* ── IDB helpers (soft-depend on global IDB defined in apps.js) ── */
     function _idbSet(key, value) {
@@ -342,14 +340,6 @@ const FloatPet = (function () {
                 <div class="fp-bubble" id="fp-bubble">
                     <div id="fp-msg-list" class="fp-msg-list"></div>
                 </div>
-                <div class="fp-mini-chat" id="fp-mini-chat">
-                    <div class="fp-mini-chat-inner">
-                        <input class="fp-mini-input" id="fp-mini-input" type="text" placeholder="说点什么…" maxlength="80" />
-                        <button class="fp-mini-send" id="fp-mini-send">➤</button>
-                        <button class="fp-mini-close" id="fp-mini-close">✕</button>
-                    </div>
-                    <div class="fp-mini-char-hint" id="fp-mini-char-hint"></div>
-                </div>
                 <div class="fp-sprite-wrap" id="fp-sprite-wrap">
                     <div class="fp-observe-icon" id="fp-observe-icon">🔍</div>
                     <div class="fp-scan-ring"    id="fp-scan-ring"></div>
@@ -407,18 +397,6 @@ const FloatPet = (function () {
         $ring2         = document.getElementById('fp-scan-ring2');
         $dot           = document.getElementById('fp-live-dot');
         $scanLine      = document.getElementById('fp-scan-line');
-        $miniChat      = document.getElementById('fp-mini-chat');
-        $miniInput     = document.getElementById('fp-mini-input');
-
-        /* Bind mini chat buttons */
-        var btnMiniSend  = document.getElementById('fp-mini-send');
-        var btnMiniClose = document.getElementById('fp-mini-close');
-        if (btnMiniSend)  btnMiniSend.addEventListener('click', function (e) { e.stopPropagation(); _sendMiniMsg(); });
-        if (btnMiniClose) btnMiniClose.addEventListener('click', function (e) { e.stopPropagation(); _hideMiniChat(); });
-        if ($miniInput) {
-            $miniInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') _sendMiniMsg(); });
-            $miniInput.addEventListener('click', function (e) { e.stopPropagation(); });
-        }
 
         /* Bind permission overlay buttons */
         const btnDeny  = document.getElementById('fp-perm-deny');
@@ -832,71 +810,14 @@ const FloatPet = (function () {
                 if (_snapState.active) { _unsnap(); return; }
                 _tapCount++;
                 if (_tapCount === 1) {
-                    _tapTimer = setTimeout(function () {
-                        _tapCount = 0;
-                        // 单击：切换迷你聊天框
-                        if (_miniChatOpen) {
-                            _hideMiniChat();
-                        } else {
-                            _showMiniChat();
-                        }
-                    }, 320);
+                    _tapTimer = setTimeout(function () { _tapCount = 0; }, 350);
                 } else if (_tapCount >= 2) {
                     clearTimeout(_tapTimer);
                     _tapCount = 0;
-                    _hideMiniChat();
                     triggerObserve(true);
                 }
             });
         }
-    }
-
-    /* ════════════════════════════════════════
-       Mini Chat (单击桌宠弹出，直接与AI对话)
-       ════════════════════════════════════════ */
-    function _showMiniChat() {
-        if (!$miniChat || !$body) return;
-        _miniChatOpen = true;
-        // 定位：跟随气泡方向
-        var phone = document.querySelector('.phone');
-        var pw = phone ? phone.offsetWidth : 375;
-        var cx = _W.x + 36;
-        var isRight = cx > pw * 0.55;
-        $miniChat.classList.toggle('fp-mc-right', isRight);
-        // 更新角色名提示
-        var hint = document.getElementById('fp-mini-char-hint');
-        if (hint) {
-            var name = _getCharName(_cfg.charId);
-            hint.textContent = name ? '和 ' + name + ' 说话' : '';
-        }
-        $miniChat.classList.add('show');
-        setTimeout(function () {
-            if ($miniInput) $miniInput.focus();
-        }, 220);
-    }
-
-    function _hideMiniChat() {
-        if (!$miniChat) return;
-        _miniChatOpen = false;
-        $miniChat.classList.remove('show');
-        if ($miniInput) $miniInput.blur();
-    }
-
-    function _sendMiniMsg() {
-        if (!$miniInput) return;
-        var text = $miniInput.value.trim();
-        if (!text) return;
-        $miniInput.value = '';
-        _hideMiniChat();
-
-        // 显示思考气泡并调用AI（直接对话模式）
-        _showThinkingBubble();
-        var ctx = _buildContext();
-        _getRecentChatAsync(_cfg.charId).then(function (recentChat) {
-            _callAI(ctx, null, null, recentChat, text);
-        }).catch(function () {
-            _callAI(ctx, null, null, '', text);
-        });
     }
 
     /* ════════════════════════════════════════
@@ -974,10 +895,6 @@ const FloatPet = (function () {
         _walkStop();
         _clearMsgTimers();
         clearTimeout(_bubbleTimer);
-        /* ── 关闭 Android 系统悬浮窗 ── */
-        if (window.AndroidBridge) {
-            try { AndroidBridge.stopFloatingPet(); } catch (_e) {}
-        }
     }
 
     function _start() {
@@ -985,15 +902,6 @@ const FloatPet = (function () {
         _updateAppearance();
         _walkStart();
         _scheduleNext();
-        /* ── 同步启动 Android 系统悬浮窗，推送角色头像 ── */
-        if (window.AndroidBridge) {
-            try {
-                AndroidBridge.launchFloatingPet();
-                var _oAvatar = _getCharAvatar(_cfg.charId);
-                var _oName   = _getCharName(_cfg.charId);
-                AndroidBridge.updateOverlayAvatar(_oAvatar, _oName);
-            } catch (_e) {}
-        }
     }
 
     /* ════════════════════════════════════════
@@ -1069,10 +977,6 @@ const FloatPet = (function () {
         $msgList.appendChild(ti);
         _positionBubble();
         $bubble.classList.add('show');
-        /* ── 通知 Android 悬浮窗显示思考动画 ── */
-        if (window.AndroidBridge) {
-            try { AndroidBridge.sendOverlayThinking(); } catch (_e) {}
-        }
     }
 
     function _positionBubble() {
@@ -1337,7 +1241,7 @@ const FloatPet = (function () {
        好感度阶段 / 全量世界书关键词匹配 / 全量总结 / 关系日志 /
        时间感知 / 记忆互通 / STATUS块同步心声
        ════════════════════════════════════════ */
-    function _callAI(contextText, screenshotB64, done, recentChat, userMsg) {
+    function _callAI(contextText, screenshotB64, done, recentChat) {
         var apiKey = '', endpoint = '', model = '';
         try {
             var savedSettings = JSON.parse(localStorage.getItem('myCoolPhone_aiSettings') || '{}');
@@ -1405,86 +1309,6 @@ const FloatPet = (function () {
 
         // ── 内部异步函数：等记忆互通加载完后再发请求 ──
         function _buildAndSend(linkedCtx) {
-            /* ── 直接对话模式：用户通过迷你聊天框发来消息 ── */
-            if (userMsg) {
-                var chatSysArr = [
-                    'System Prompt: Online Chat Simulator\n'
-                    + 'Role Definition: You are a REAL user chatting with ' + myName + ' on a messaging app.\n\n'
-                    + '[Target Persona]\n'
-                    + 'Name: ' + charName + '\n'
-                    + 'Persona Description: ' + (persona || 'Helpful Assistant'),
-
-                    '[RELATIONSHIP STATE]\n'
-                    + 'Current affection toward the user: ' + currentAffection + '/100\n'
-                    + 'Current relationship stage: ' + affectionStage + '\n'
-                    + '- Let this affection stage naturally shape your underlying attitude, trust level, and interaction style.',
-
-                    wbCtx ? '[World Setting / Lorebook Data]:\n' + wbCtx : '',
-
-                    myInfo.persona
-                        ? '[USER IDENTITY]:\nName: ' + myName + '\n' + myInfo.persona.slice(0, 600)
-                        : '[USER IDENTITY]:\nName: ' + myName,
-
-                    summaryText ? '[PAST STORY SUMMARIES]:\n' + summaryText : '',
-                    relationshipText ? '[OUR RELATIONSHIP HISTORY]:\n' + relationshipText : '',
-                    recentChat ? '[最近的聊天记录]:\n' + recentChat : '',
-                    situationalCtx ? '[SITUATIONAL AWARENESS]:\n' + situationalCtx : '',
-                    linkedCtx || '',
-
-                    '[SYSTEM INSTRUCTION]\n'
-                    + 'After your reply, append this block at the VERY END:\n'
-                    + '[STATUS_START]\n'
-                    + 'AffectionDelta: (integer only, from -2 to 2)\n'
-                    + 'Action: (current action, short)\n'
-                    + 'Location: (current location)\n'
-                    + 'Weather: (current weather)\n'
-                    + 'BGM: (one fitting song)\n'
-                    + 'Kaomoji: (one matching kaomoji)\n'
-                    + '[STATUS_END]',
-
-                    '【格式要求】STATUS块之前：以你的性格和语气，像发微信那样分2~3条极短消息回复，每条单独一行，每条15~25字，禁止Markdown，直接回复，不要开场白。'
-                ].filter(Boolean).join('\n\n');
-
-                var chatUserContent = [{ type: 'text', text: userMsg }];
-                if ((endpoint || '').includes('generativelanguage.googleapis.com')) {
-                    _callGemini(apiKey, model, chatSysArr, userMsg, null, done, userMsg);
-                    return;
-                }
-                var base2 = (endpoint || '').replace(/\/+$/, '');
-                var url2  = base2.endsWith('/v1') ? base2 + '/chat/completions' : base2 + '/v1/chat/completions';
-                fetch(url2, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-                    body: JSON.stringify({
-                        model: model, max_tokens: 400, temperature: 0.85,
-                        messages: [
-                            { role: 'system', content: chatSysArr },
-                            { role: 'user',   content: chatUserContent }
-                        ]
-                    })
-                })
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    var rawReply = '';
-                    try { rawReply = data.choices[0].message.content.trim(); } catch (_) {}
-                    var statusRegex = /\[STATUS_START\]([\s\S]*?)\[STATUS_END\]/i;
-                    var statusMatch = rawReply.match(statusRegex);
-                    if (statusMatch) {
-                        try { if (typeof parseAndApplyMindStateBlock === 'function') parseAndApplyMindStateBlock(charId, statusMatch[1]); } catch (_) {}
-                        rawReply = rawReply.replace(statusRegex, '').trim();
-                    }
-                    rawReply = rawReply.replace(/\[DANMAKU_START\][\s\S]*/i, '').trim();
-                    rawReply = rawReply.replace(/\[STATUS_START\][\s\S]*/i, '').trim();
-                    _showBubble(rawReply, 10000);
-                    if (done) done();
-                })
-                .catch(function () {
-                    _showBubble('...', 4000);
-                    if (done) done();
-                });
-                return;
-            }
-
             /* ── 与 sendMessageToAI 对齐的完整 system prompt ── */
             var sysArr = [
                 // ① 角色身份（最高优先级，与主聊天一致）
@@ -1638,12 +1462,11 @@ const FloatPet = (function () {
         });
     }
 
-    function _callGemini(apiKey, model, sysArr, ctxText, b64, done, userMsg) {
+    function _callGemini(apiKey, model, sysArr, ctxText, b64, done) {
         var mdl  = (model || 'gemini-1.5-flash').replace('models/', '');
         var url  = 'https://generativelanguage.googleapis.com/v1beta/models/'
                    + mdl + ':generateContent?key=' + apiKey;
-        var fullPrompt = (Array.isArray(sysArr) ? sysArr.join('\n\n') : sysArr)
-                   + '\n\n' + (userMsg ? userMsg : '屏幕情报：' + ctxText);
+        var fullPrompt = (Array.isArray(sysArr) ? sysArr.join('\n\n') : sysArr) + '\n\n屏幕情报：' + ctxText;
         var parts = [{ text: fullPrompt }];
         if (b64) parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } });
         fetch(url, {
@@ -1686,13 +1509,6 @@ const FloatPet = (function () {
         if (!$bubble || !$msgList) return;
         _clearMsgTimers();
         clearTimeout(_bubbleTimer);
-        /* ── 将第一句推送给 Android 悬浮窗气泡 ── */
-        if (window.AndroidBridge && text) {
-            try {
-                var _oFirst = _splitSentences(text)[0] || text;
-                AndroidBridge.sendOverlayBubble(_oFirst.slice(0, 80));
-            } catch (_e) {}
-        }
 
         var segs = _splitSentences(text);
         console.log('[FloatPet] segs(' + segs.length + '):', JSON.stringify(segs));

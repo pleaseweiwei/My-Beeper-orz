@@ -1,10 +1,10 @@
 package com.beeper.floatpet;
 
 import android.Manifest;
-import android.app.AlertDialog;
-import android.app.DownloadManager;
+import android.app.Activity;
 import android.content.*;
 import android.content.pm.PackageManager;
+import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.*;
 import android.provider.Settings;
@@ -15,13 +15,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 
-import org.json.JSONObject;
-
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 
 /**
@@ -29,7 +23,7 @@ import java.util.ArrayList;
  * ─────────────
  * 全屏 WebView 加载完整的 index.html。
  * 通过 AndroidBridge 提供：
- *   1. 悬浮桌宠启停（FloatingWindowService）+ 角色头像/气泡同步
+ *   1. 悬浮桌宠启停（FloatingWindowService）
  *   2. 原生 SpeechRecognizer 语音识别（WebView 不支持 webkitSpeechRecognition）
  *   3. 麦克风 / 摄像头运行时权限
  *
@@ -44,22 +38,22 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 远程热更新地址（GitHub Pages）。
      * 如果你的 GitHub Pages 地址不同，改这里即可；留空 "" 则始终用本地 assets。
+     * 格式示例：https://yourname.github.io/your-repo/
      */
     private static final String REMOTE_URL =
             "https://pleaseweiwei.github.io/My-Beeper-orz/";
 
     private static final int REQ_OVERLAY      = 1001;
+    private static final int REQ_MEDIA_PRJ    = 1002;
     private static final int REQ_NOTIFICATION = 1003;
     private static final int REQ_AUDIO_CAMERA = 1004;
 
-    private WebView           _webView;
-    private SharedPreferences _prefs;
+    private WebView                _webView;
+    private MediaProjectionManager _mpMgr;
+    private SharedPreferences      _prefs;
 
     /** 当前是否正在加载远程 URL（用于出错时回退本地）*/
     private boolean _loadedFromRemote = false;
-
-    /** 标记是否正在等待悬浮窗权限返回（部分 ROM 不触发 onActivityResult，在 onResume 兜底）*/
-    private boolean _waitingForOverlay = false;
 
     // 原生语音识别
     private SpeechRecognizer _speechRecognizer;
@@ -68,11 +62,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         _prefs = getSharedPreferences("floatpet_prefs", Context.MODE_PRIVATE);
+        _mpMgr = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+
         _setupWebView();
         _requestRuntimePermissions();
-        // 启动 3 秒后静默检测更新，不影响启动体验
-        new Handler(Looper.getMainLooper()).postDelayed(this::_checkForUpdate, 3000);
     }
 
     /* ════════════════════════════════════════
@@ -95,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
         ws.setGeolocationEnabled(true);
 
         _webView.setWebChromeClient(new WebChromeClient() {
+            // 自动授权 WebRTC 麦克风 / 摄像头请求
             @Override
             public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
@@ -126,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
 
+            /** 网络错误（DNS 失败、超时等）→ 回退本地 */
             @Override
             public void onReceivedError(WebView view, WebResourceRequest req,
                                         WebResourceError err) {
@@ -134,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
+            /** HTTP 4xx / 5xx → 回退本地 */
             @Override
             public void onReceivedHttpError(WebView view, WebResourceRequest req,
                                             WebResourceResponse resp) {
@@ -155,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
         _webView.addJavascriptInterface(new AppBridge(), "AndroidBridge");
         setContentView(_webView);
 
+        // ── 热更新：有网络时优先加载远程最新版 ──
         if (!REMOTE_URL.isEmpty() && _isNetworkAvailable()) {
             _loadedFromRemote = true;
             _webView.loadUrl(REMOTE_URL);
@@ -173,11 +172,16 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 注入 SpeechRecognition Polyfill
+     * ─────────────────────────────────
+     * Android WebView 不支持 webkitSpeechRecognition，
+     * 这里用 Android 原生 SpeechRecognizer 替换，
+     * API 完全兼容原有 JS 代码（onresult / onend / continuous 等）。
      */
     private void _injectSpeechPolyfill() {
         final String js =
             "(function(){\n"
           + "  if(!window.AndroidBridge) return;\n"
+          // 如果浏览器已原生支持就不替换（不太可能，但安全起见）
           + "  if(window._nativeSRReady) return;\n"
           + "  window._nativeSRReady = true;\n"
           + "\n"
@@ -206,12 +210,14 @@ public class MainActivity extends AppCompatActivity {
           + "    AndroidBridge.stopSpeechRecognition();\n"
           + "  };\n"
           + "\n"
+          // 回调：中间结果 / 最终结果
           + "  window.__srOnResult=function(text,isFinal){\n"
           + "    var sr=window.__activeSR;\n"
           + "    if(!sr||!sr.onresult) return;\n"
           + "    var alt={transcript:text,confidence:0.9};\n"
           + "    var res=[alt];\n"
           + "    res.isFinal=!!isFinal;\n"
+          // 让 res[0] 可迭代（原生 SpeechRecognitionResult 是可迭代的）
           + "    res[Symbol.iterator]=function*(){yield alt;};\n"
           + "    var ev={resultIndex:0,results:[res]};\n"
           + "    ev.results[Symbol.iterator]=function*(){yield res;};\n"
@@ -257,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
           +            "font-size:22px;z-index:2147483647;"
           +            "cursor:pointer;transition:transform .15s,box-shadow .15s;"
           +            "user-select:none;-webkit-user-select:none;';\n"
-          + "  b.textContent='\\uD83D\\uDC3E';\n"
+          + "  b.textContent='\\uD83D\\uDC3E';\n"    // 🐾
           + "  b.ontouchstart=function(){this.style.transform='scale(0.88)';};\n"
           + "  b.ontouchend=function(){this.style.transform='';this._tap();};\n"
           + "  b.onclick=function(){this._tap();};\n"
@@ -298,19 +304,18 @@ public class MainActivity extends AppCompatActivity {
        ════════════════════════════════════════ */
     private class AppBridge {
 
-        /* ── 悬浮桌宠启停 ── */
+        /* ── 悬浮桌宠 ── */
 
         @JavascriptInterface
         public void launchFloatingPet() {
             runOnUiThread(() -> {
                 if (!Settings.canDrawOverlays(MainActivity.this)) {
-                    _waitingForOverlay = true;
                     startActivityForResult(
                         new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                                 Uri.parse("package:" + getPackageName())),
                         REQ_OVERLAY);
                 } else {
-                    _startFloatingService();
+                    _requestMediaProjection();
                 }
             });
         }
@@ -330,48 +335,6 @@ public class MainActivity extends AppCompatActivity {
             return _prefs.getBoolean("service_running", false);
         }
 
-        /* ── 角色头像 / 气泡同步（app_floatpet.js 调用）── */
-
-        /**
-         * 更新悬浮窗中显示的角色头像和名字。
-         * 由 app_floatpet.js 在启动桌宠时调用。
-         */
-        @JavascriptInterface
-        public void updateOverlayAvatar(String avatarUrl, String charName) {
-            if (!_prefs.getBoolean("service_running", false)) return;
-            final Intent i = new Intent(MainActivity.this, FloatingWindowService.class)
-                    .setAction(FloatingWindowService.ACTION_UPDATE_AVATAR)
-                    .putExtra(FloatingWindowService.EXTRA_AVATAR_URL,  avatarUrl  != null ? avatarUrl  : "")
-                    .putExtra(FloatingWindowService.EXTRA_CHAR_NAME,   charName   != null ? charName   : "");
-            startService(i);
-        }
-
-        /**
-         * 将 AI 生成的气泡文字推送到系统悬浮窗。
-         * 由 app_floatpet.js 的 _showBubble() 调用。
-         */
-        @JavascriptInterface
-        public void sendOverlayBubble(String text) {
-            if (!_prefs.getBoolean("service_running", false)) return;
-            final Intent i = new Intent(MainActivity.this, FloatingWindowService.class)
-                    .setAction(FloatingWindowService.ACTION_SHOW_BUBBLE)
-                    .putExtra(FloatingWindowService.EXTRA_BUBBLE_TEXT, text != null ? text : "");
-            startService(i);
-        }
-
-        /**
-         * 让系统悬浮窗显示「思考中」动画。
-         * 由 app_floatpet.js 的 _showThinkingBubble() 调用。
-         */
-        @JavascriptInterface
-        public void sendOverlayThinking() {
-            if (!_prefs.getBoolean("service_running", false)) return;
-            startService(new Intent(MainActivity.this, FloatingWindowService.class)
-                    .setAction(FloatingWindowService.ACTION_SHOW_THINKING));
-        }
-
-        /* ── AI 设置存储（供服务关闭后重启时恢复）── */
-
         @JavascriptInterface
         public void saveAiSettings(String apiKey, String endpoint,
                                    String model, String persona, int intervalMin) {
@@ -383,12 +346,9 @@ public class MainActivity extends AppCompatActivity {
                     .putString("persona",      persona)
                     .putInt("interval_min",    intervalMin)
                     .apply();
-            // 如果服务运行中，同步 persona 设置
-            if (_prefs.getBoolean("service_running", false)) {
-                startService(new Intent(MainActivity.this, FloatingWindowService.class)
-                        .setAction(FloatingWindowService.ACTION_SET_PERSONA)
-                        .putExtra(FloatingWindowService.EXTRA_PERSONA, persona));
-            }
+            startService(new Intent(MainActivity.this, FloatingWindowService.class)
+                    .setAction(FloatingWindowService.ACTION_SET_PERSONA)
+                    .putExtra(FloatingWindowService.EXTRA_PERSONA, persona));
         }
 
         @JavascriptInterface
@@ -405,17 +365,22 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void triggerPetScan() {
-            if (_prefs.getBoolean("service_running", false)) {
+            runOnUiThread(() ->
                 startService(new Intent(MainActivity.this, FloatingWindowService.class)
-                        .setAction(FloatingWindowService.ACTION_TRIGGER_SCAN));
-            }
+                        .setAction(FloatingWindowService.ACTION_TRIGGER_SCAN)));
         }
 
         /* ── 原生语音识别（替代 webkitSpeechRecognition）── */
 
+        /**
+         * JS 调用：开始录音识别
+         * @param lang        语言代码，如 "zh-CN"
+         * @param interimRes  是否需要中间结果（1=是，0=否）
+         */
         @JavascriptInterface
         public void startSpeechRecognition(final String lang, final int interimRes) {
             runOnUiThread(() -> {
+                // 确保有麦克风权限
                 if (ContextCompat.checkSelfPermission(MainActivity.this,
                         Manifest.permission.RECORD_AUDIO)
                         != PackageManager.PERMISSION_GRANTED) {
@@ -424,6 +389,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
+                // 销毁旧识别器
                 if (_speechRecognizer != null) {
                     _speechRecognizer.destroy();
                     _speechRecognizer = null;
@@ -487,6 +453,7 @@ public class MainActivity extends AppCompatActivity {
                         (lang == null || lang.isEmpty()) ? "zh-CN" : lang);
                 intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, _srInterim);
                 intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+                // 允许较长的静音段，配合长按逻辑
                 intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L);
                 intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L);
 
@@ -499,6 +466,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        /** JS 调用：停止录音（让识别器把当前片段结果返回） */
         @JavascriptInterface
         public void stopSpeechRecognition() {
             runOnUiThread(() -> {
@@ -508,7 +476,9 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        // 工具：推送识别结果给 JS
         private void _fireSrResult(String text, boolean isFinal) {
+            // 转义单引号，防止 JS 注入
             final String safe = text.replace("\\", "\\\\")
                                     .replace("'", "\\'")
                                     .replace("\n", " ");
@@ -517,6 +487,7 @@ public class MainActivity extends AppCompatActivity {
                     null));
         }
 
+        // 工具：JSON 字符串转义
         private String _esc(String s) {
             if (s == null) return "";
             return s.replace("\\", "\\\\").replace("\"", "\\\"")
@@ -525,34 +496,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /* ════════════════════════════════════════
-       启动悬浮服务（无需 MediaProjection）
-       ════════════════════════════════════════ */
-    private void _startFloatingService() {
-        final Intent svc = new Intent(this, FloatingWindowService.class)
-                .setAction(FloatingWindowService.ACTION_START)
-                .putExtra(FloatingWindowService.EXTRA_API_KEY,
-                        _prefs.getString("api_key", ""))
-                .putExtra(FloatingWindowService.EXTRA_API_ENDPOINT,
-                        _prefs.getString("api_endpoint", "https://api.openai.com/v1"))
-                .putExtra(FloatingWindowService.EXTRA_MODEL,
-                        _prefs.getString("model", "gpt-4o"))
-                .putExtra(FloatingWindowService.EXTRA_PERSONA,
-                        _prefs.getString("persona", ""))
-                .putExtra(FloatingWindowService.EXTRA_CHAR_NAME,
-                        _prefs.getString("char_name", ""))
-                .putExtra(FloatingWindowService.EXTRA_AVATAR_URL,
-                        _prefs.getString("avatar_url", ""))
-                .putExtra(FloatingWindowService.EXTRA_INTERVAL_MIN,
-                        _prefs.getInt("interval_min", 10));
-        startForegroundService(svc);
-        _prefs.edit().putBoolean("service_running", true).apply();
-        _setButtonActive(true);
-        Toast.makeText(this, "🐾 桌宠已启动！可切换到其他 App", Toast.LENGTH_SHORT).show();
-    }
-
-    /* ════════════════════════════════════════
        网络检测
        ════════════════════════════════════════ */
+
+    /** 检测是否有可用网络（Wi-Fi / 移动数据 / 以太网）*/
     private boolean _isNetworkAvailable() {
         android.net.ConnectivityManager cm =
                 (android.net.ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -569,6 +516,8 @@ public class MainActivity extends AppCompatActivity {
     /* ════════════════════════════════════════
        权限流程
        ════════════════════════════════════════ */
+
+    /** 一次性请求麦克风 + 摄像头 */
     private void _requestRuntimePermissions() {
         final java.util.List<String> needed = new java.util.ArrayList<>();
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
@@ -590,157 +539,58 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void _requestMediaProjection() {
+        startActivityForResult(_mpMgr.createScreenCaptureIntent(), REQ_MEDIA_PRJ);
+    }
+
+    private void _startFloatingService(int resultCode, Intent data) {
+        final Intent svc = new Intent(this, FloatingWindowService.class)
+                .setAction(FloatingWindowService.ACTION_START)
+                .putExtra(FloatingWindowService.EXTRA_API_KEY,
+                        _prefs.getString("api_key", ""))
+                .putExtra(FloatingWindowService.EXTRA_API_ENDPOINT,
+                        _prefs.getString("api_endpoint", "https://api.openai.com/v1"))
+                .putExtra(FloatingWindowService.EXTRA_MODEL,
+                        _prefs.getString("model", "gpt-4o"))
+                .putExtra(FloatingWindowService.EXTRA_PERSONA,
+                        _prefs.getString("persona", ""))
+                .putExtra(FloatingWindowService.EXTRA_INTERVAL_MIN,
+                        _prefs.getInt("interval_min", 10));
+        if (data != null) {
+            svc.putExtra(FloatingWindowService.EXTRA_PROJECTION_CODE, resultCode);
+            svc.putExtra(FloatingWindowService.EXTRA_PROJECTION_DATA, data);
+        }
+        startForegroundService(svc);
+        _prefs.edit().putBoolean("service_running", true).apply();
+        _setButtonActive(true);
+        Toast.makeText(this, "🐾 桌宠已启动！可切换到其他 App", Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         if (req == REQ_OVERLAY) {
-            _waitingForOverlay = false;
-            // 部分设备权限生效有短暂延迟，延迟 500ms 再检查
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (Settings.canDrawOverlays(MainActivity.this)) {
-                    _startFloatingService();
-                } else {
-                    Toast.makeText(MainActivity.this,
-                            "需要「显示在其他应用上层」权限", Toast.LENGTH_LONG).show();
-                }
-            }, 500);
+            if (Settings.canDrawOverlays(this)) {
+                _requestMediaProjection();
+            } else {
+                Toast.makeText(this, "需要「显示在其他应用上层」权限", Toast.LENGTH_LONG).show();
+            }
+        } else if (req == REQ_MEDIA_PRJ) {
+            if (res == Activity.RESULT_OK && data != null) {
+                _startFloatingService(res, data);
+            } else {
+                _startFloatingService(-1, null);
+                Toast.makeText(this, "桌宠已启动（无截屏权限，仅文本吐槽）", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int req, String[] perms, int[] grants) {
         super.onRequestPermissionsResult(req, perms, grants);
+        // 权限授予后重新注入 polyfill（确保 SR 可用）
         if (req == REQ_AUDIO_CAMERA && _webView != null) {
             _webView.postDelayed(this::_injectSpeechPolyfill, 500);
-        }
-    }
-
-    /* ════════════════════════════════════════
-       App 内自动更新
-       ════════════════════════════════════════ */
-
-    /**
-     * 在子线程中拉取 version.json，与当前 versionCode 对比，
-     * 有新版本则在主线程弹确认对话框。
-     */
-    private void _checkForUpdate() {
-        if (!_isNetworkAvailable()) return;
-        new Thread(() -> {
-            try {
-                final String versionUrl =
-                    "https://raw.githubusercontent.com/ljb0621/bono1122/main/version.json";
-                HttpURLConnection conn =
-                    (HttpURLConnection) new URL(versionUrl).openConnection();
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(8000);
-                conn.setRequestProperty("Cache-Control", "no-cache");
-
-                BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), "UTF-8"));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) sb.append(line);
-                br.close();
-                conn.disconnect();
-
-                JSONObject json  = new JSONObject(sb.toString());
-                int latestCode   = json.getInt("versionCode");
-                String latestName = json.optString("versionName", "新版本");
-                String apkUrl    = json.getString("apkUrl");
-                String notes     = json.optString("notes", "");
-
-                int currentCode  = BuildConfig.VERSION_CODE;
-                if (latestCode > currentCode) {
-                    runOnUiThread(() ->
-                        _showUpdateDialog(latestName, notes, apkUrl));
-                }
-            } catch (Exception e) {
-                // 静默失败，不影响正常使用
-            }
-        }).start();
-    }
-
-    private void _showUpdateDialog(String version, String notes, String apkUrl) {
-        String msg = "发现新版本 " + version + "\n\n"
-            + (notes.isEmpty() ? "包含最新功能与修复。" : notes)
-            + "\n\n是否立即下载并更新？";
-        new AlertDialog.Builder(this)
-            .setTitle("🎉 发现新版本")
-            .setMessage(msg)
-            .setCancelable(true)
-            .setPositiveButton("立即更新", (d, w) -> _downloadAndInstall(apkUrl))
-            .setNegativeButton("下次再说", null)
-            .show();
-    }
-
-    /**
-     * 使用系统 DownloadManager 后台下载 APK，
-     * 下载完成后通过广播触发安装界面。
-     */
-    private void _downloadAndInstall(String apkUrl) {
-        try {
-            // 清理旧的安装包
-            File dest = new File(getExternalFilesDir(null), "update.apk");
-            if (dest.exists()) dest.delete();
-
-            DownloadManager.Request req =
-                new DownloadManager.Request(Uri.parse(apkUrl));
-            req.setTitle("Beeper 正在更新...");
-            req.setDescription("新版本 APK 下载中，完成后点击安装");
-            req.setNotificationVisibility(
-                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            req.setDestinationInExternalFilesDir(this, null, "update.apk");
-            req.setMimeType("application/vnd.android.package-archive");
-            req.addRequestHeader("Cache-Control", "no-cache");
-
-            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-            long downloadId = dm.enqueue(req);
-
-            // 注册一次性广播，下载完成后触发安装
-            BroadcastReceiver receiver = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context ctx, Intent intent) {
-                    long id = intent.getLongExtra(
-                        DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                    if (id == downloadId) {
-                        try { unregisterReceiver(this); } catch (Exception ignore) {}
-                        _installApk();
-                    }
-                }
-            };
-            registerReceiver(receiver,
-                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
-
-            Toast.makeText(this,
-                "⬇️ 正在后台下载新版本，下载完成会提示安装",
-                Toast.LENGTH_LONG).show();
-        } catch (Exception e) {
-            Toast.makeText(this,
-                "下载失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
-
-    /** 用 FileProvider 提供 content URI，启动系统安装界面 */
-    private void _installApk() {
-        try {
-            File apkFile = new File(getExternalFilesDir(null), "update.apk");
-            if (!apkFile.exists()) {
-                runOnUiThread(() -> Toast.makeText(this,
-                    "安装文件未找到，请重试", Toast.LENGTH_SHORT).show());
-                return;
-            }
-            Uri apkUri = FileProvider.getUriForFile(
-                this, getPackageName() + ".fileprovider", apkFile);
-
-            Intent install = new Intent(Intent.ACTION_VIEW);
-            install.setDataAndType(apkUri,
-                "application/vnd.android.package-archive");
-            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(install);
-        } catch (Exception e) {
-            runOnUiThread(() -> Toast.makeText(this,
-                "请在通知栏点击安装", Toast.LENGTH_LONG).show());
         }
     }
 
@@ -761,19 +611,6 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (_webView != null) {
             _webView.postDelayed(this::_injectBridges, 300);
-        }
-        // 部分国产 ROM（MIUI / ColorOS 等）从系统设置返回时不触发 onActivityResult，
-        // 在 onResume 里兜底处理悬浮窗权限
-        if (_waitingForOverlay) {
-            _waitingForOverlay = false;
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (Settings.canDrawOverlays(MainActivity.this)) {
-                    _startFloatingService();
-                } else {
-                    Toast.makeText(MainActivity.this,
-                            "需要「显示在其他应用上层」权限", Toast.LENGTH_LONG).show();
-                }
-            }, 500);
         }
     }
 
