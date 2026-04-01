@@ -445,8 +445,8 @@ public class FloatingWindowService extends Service {
         return "你是一个悬浮在手机屏幕上的桌宠。\n"
                 + (_persona == null || _persona.isEmpty() ? "" : "你的人设：" + _persona + "\n")
                 + "性格活泼，言简意赅。\n"
-                + "你刚刚"偷看"了主人的手机屏幕，根据看到的信息，说一句符合你性格的简短吐槽或评论（15~45字，不加引号，直接说）。\n"
-                + "不要说"我看到了"这类开场白，直接切入评论。禁止生成Markdown格式。";
+                + "你刚刚\"偷看\"了主人的手机屏幕，根据看到的信息，说一句符合你性格的简短吐槽或评论（15~45字，不加引号，直接说）。\n"
+                + "不要说\"我看到了\"这类开场白，直接切入评论。禁止生成Markdown格式。";
     }
 
     private String _callOpenAI(String sysPrompt, String ctx, String b64) throws Exception {
