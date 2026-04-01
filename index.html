@@ -48,6 +48,7 @@
     </script>
     
     <!-- 本地样式表 -->
+    <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/video_call.css">
@@ -61,6 +62,7 @@
     <link rel="stylesheet" href="css/sms_phone.css">
     <link rel="stylesheet" href="css/nexus.css">
     <link rel="stylesheet" href="css/favorites.css">
+    <link rel="stylesheet" href="css/overrides.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
@@ -170,7 +172,7 @@
             <div class="app-cell" data-app-id="api" onclick="toggleSettings()"><div class="icon-box"><i class="fas fa-link"></i></div><span class="app-label">API</span></div>
             <div class="app-cell" data-app-id="theme" onclick="toggleSettings('theme')"><div class="icon-box"><i class="fas fa-magic"></i></div><span class="app-label">Theme</span></div>
            <div class="app-cell" data-app-id="lovespace" onclick="openLoveSpaceApp()"><div class="icon-box"><i class="fas fa-heart" style="color:#e91e63;"></i></div><span class="app-label">Love Space</span></div>
-            <div class="app-cell" data-app-id="worldbook"><div class="icon-box"><i class="fas fa-globe-asia"></i></div><span class="app-label">WorldBook</span></div>
+            <div class="app-cell" data-app-id="worldbook" onclick="openWorldBookApp()"><div class="icon-box"><i class="fas fa-globe-asia"></i></div><span class="app-label">WorldBook</span></div>
             <div class="app-cell" data-app-id="presets" onclick="openPresetsApp()"><div class="icon-box"><i class="fas fa-sliders-h"></i></div><span class="app-label">Presets</span></div>
           <div class="app-cell" data-app-id="game" onclick="openGameApp()">
     <div class="icon-box">
