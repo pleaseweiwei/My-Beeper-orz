@@ -1,0 +1,477 @@
+/* ============================================
+   SMS + PHONE CALL — 韩系黑白灰 ins风
+   ============================================ */
+
+/* ─── SMS App ─── */
+#smsApp {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  z-index: 900;
+}
+.sms-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 12px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  min-height: 56px;
+}
+.sms-header-title { font-size: 18px; font-weight: 800; color: #111; letter-spacing: -0.5px; }
+.sms-header-icons { display: flex; gap: 18px; color: #555; font-size: 17px; }
+.sms-header-icons i { cursor: pointer; }
+
+.sms-list { flex: 1; overflow-y: auto; background: #f7f7f7; }
+
+.sms-conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 20px;
+  background: #fff;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.sms-conversation-item:active { background: #f9f9f9; }
+
+.sms-conv-avatar {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: #1c1c1e; color: #fff;
+  font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; letter-spacing: -0.5px;
+  font-family: 'Montserrat', sans-serif;
+}
+.sms-conv-avatar.system     { background: #48484a; font-size: 11px; }
+.sms-conv-avatar.unknown    { background: #636366; }
+.sms-conv-avatar.blocked    { background: #c0392b; }
+
+.sms-conv-info  { flex: 1; min-width: 0; }
+.sms-conv-name  { font-size: 14px; font-weight: 700; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sms-conv-preview { font-size: 12px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; line-height: 1.4; }
+.sms-conv-meta  { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.sms-conv-time  { font-size: 11px; color: #bbb; font-weight: 500; white-space: nowrap; }
+.sms-unread-badge {
+  min-width: 18px; height: 18px;
+  background: #1c1c1e; color: #fff;
+  border-radius: 9px; font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; padding: 0 5px;
+}
+.sms-section-label {
+  padding: 12px 20px 6px; font-size: 11px; font-weight: 700;
+  color: #888; letter-spacing: 1px; text-transform: uppercase; background: #f7f7f7;
+}
+
+/* Thread view */
+.sms-thread-view {
+  position: absolute; inset: 0; background: #fff; z-index: 20;
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.sms-thread-view.open { transform: translateX(0); }
+
+.sms-thread-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; background: #fff;
+  border-bottom: 1px solid #f0f0f0; flex-shrink: 0; min-height: 56px;
+}
+.sms-thread-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #1c1c1e; color: #fff; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  font-family: 'Montserrat', sans-serif;
+}
+.sms-thread-avatar.system  { background: #48484a; font-size: 10px; }
+.sms-thread-avatar.unknown { background: #636366; }
+.sms-thread-avatar.blocked { background: #c0392b; }
+.sms-thread-info { flex: 1; min-width: 0; }
+.sms-thread-name   { font-size: 15px; font-weight: 700; color: #111; }
+.sms-thread-number { font-size: 11px; color: #aaa; margin-top: 2px; }
+
+.sms-messages {
+  flex: 1; overflow-y: auto; padding: 14px 12px;
+  background: #f7f7f7; display: flex; flex-direction: column; gap: 10px;
+}
+.sms-msg-row { display: flex; flex-direction: column; max-width: 82%; }
+.sms-msg-row.sent     { align-self: flex-end;   align-items: flex-end; }
+.sms-msg-row.received { align-self: flex-start; align-items: flex-start; }
+
+.sms-bubble {
+  padding: 10px 14px; border-radius: 18px;
+  font-size: 13.5px; line-height: 1.55; word-break: break-word;
+}
+.sms-msg-row.sent .sms-bubble     { background: #1c1c1e; color: #fff; border-bottom-right-radius: 4px; }
+.sms-msg-row.received .sms-bubble { background: #fff; color: #111; border: 1px solid #ececec; border-bottom-left-radius: 4px; }
+.sms-msg-row.system-msg .sms-bubble { background: #f2f2f7; color: #555; border: 1px solid #e5e5ea; font-size: 12.5px; }
+
+.sms-msg-time { font-size: 10px; color: #bbb; margin-top: 4px; padding: 0 4px; }
+
+.sms-timestamp-divider {
+  text-align: center; font-size: 11px; color: #bbb; margin: 6px 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.sms-timestamp-divider::before,
+.sms-timestamp-divider::after { content: ''; flex: 1; height: 1px; background: #e5e5e5; }
+
+.sms-highlight-code {
+  background: #1c1c1e; color: #fff;
+  padding: 2px 7px; border-radius: 7px;
+  font-weight: 800; font-family: 'Montserrat', monospace;
+  letter-spacing: 2px; font-size: 14px;
+  display: inline-block; margin: 0 2px;
+}
+.sms-highlight-link { color: #007aff; text-decoration: underline; cursor: pointer; word-break: break-all; }
+
+.sms-loading {
+  display: flex; gap: 5px; padding: 12px 16px;
+  background: #fff; border-radius: 18px; border-bottom-left-radius: 4px;
+  border: 1px solid #ececec; width: fit-content;
+}
+.sms-loading span {
+  width: 6px; height: 6px; background: #bbb; border-radius: 50%;
+  animation: smsLoadingBounce 1.2s ease-in-out infinite;
+}
+.sms-loading span:nth-child(2) { animation-delay: 0.2s; }
+.sms-loading span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes smsLoadingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30%            { transform: translateY(-7px); opacity: 1; }
+}
+
+.sms-input-area {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px 14px; background: #fff;
+  border-top: 1px solid #f0f0f0; flex-shrink: 0;
+}
+.sms-input-area input {
+  flex: 1; border: 1.5px solid #ececec; background: #f7f7f7;
+  border-radius: 22px; padding: 10px 16px; font-size: 13.5px;
+  outline: none; font-family: inherit; color: #333; transition: border-color 0.2s;
+}
+.sms-input-area input:focus { border-color: #c8c8cc; background: #fff; }
+.sms-input-area input::placeholder { color: #bbb; }
+
+.sms-send-btn {
+  width: 38px; height: 38px; background: #1c1c1e; color: #fff;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; font-size: 14px; transition: transform 0.15s;
+}
+.sms-send-btn:active { transform: scale(0.9); }
+
+/* ─── SMS Notification Toast ─── */
+.sms-notif-toast {
+  position: absolute;
+  top: 46px; left: 8px; right: 8px;
+  background: rgba(242,242,247,0.96);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.13);
+  z-index: 9999;
+  transform: translateY(-90px);
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  cursor: pointer;
+  pointer-events: none;
+  opacity: 0;
+}
+.sms-notif-toast.show {
+  transform: translateY(0);
+  pointer-events: auto;
+  opacity: 1;
+}
+.sms-notif-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: #1c1c1e; color: #fff;
+  font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; letter-spacing: -0.3px; text-align: center; line-height: 1.2;
+}
+.sms-notif-content { flex: 1; min-width: 0; }
+.sms-notif-sender  { font-size: 12px; font-weight: 700; color: #111; }
+.sms-notif-preview { font-size: 11.5px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+
+/* ─────────────────────────────────────────────
+   § PHONE APP (Call History)
+───────────────────────────────────────────── */
+#phoneApp {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  z-index: 900;
+}
+.phone-app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 12px; background: #fff;
+  border-bottom: 1px solid #f0f0f0; flex-shrink: 0; min-height: 56px;
+}
+.phone-app-title { font-size: 18px; font-weight: 800; color: #111; letter-spacing: -0.5px; }
+
+.phone-call-records { flex: 1; overflow-y: auto; background: #f7f7f7; }
+.phone-record-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 20px; background: #fff;
+  border-bottom: 1px solid #f5f5f5; cursor: pointer;
+  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.phone-record-item:active { background: #f9f9f9; }
+.phone-record-avatar {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: #1c1c1e; color: #fff; font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-family: 'Montserrat', sans-serif;
+}
+.phone-record-info { flex: 1; min-width: 0; }
+.phone-record-name { font-size: 14px; font-weight: 700; color: #111; }
+.phone-record-meta { font-size: 11px; color: #999; margin-top: 3px; }
+.phone-record-duration { font-size: 12px; color: #bbb; font-family: 'Montserrat', monospace; }
+
+/* Call transcript detail page */
+.phone-transcript-page {
+  position: absolute; inset: 0; background: #fff; z-index: 30;
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.phone-transcript-page.open { transform: translateX(0); }
+
+/* ─────────────────────────────────────────────
+   § INCOMING PHONE CALL OVERLAY
+───────────────────────────────────────────── */
+.phone-incoming-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+  z-index: 9500;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  padding: 55px 30px 50px;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+.phone-incoming-overlay.active { transform: translateY(0); }
+
+.phone-incoming-avatar-ring {
+  width: 104px; height: 104px; border-radius: 50%; position: relative; margin-top: 10px;
+}
+.phone-incoming-avatar-ring img {
+  width: 104px; height: 104px; border-radius: 50%;
+  object-fit: cover; border: 3px solid rgba(255,255,255,0.18);
+}
+.phone-incoming-avatar-initials {
+  width: 104px; height: 104px; border-radius: 50%;
+  background: #333; display: flex; align-items: center; justify-content: center;
+  font-size: 36px; font-weight: 800; color: #fff;
+  border: 3px solid rgba(255,255,255,0.18);
+  font-family: 'Montserrat', sans-serif;
+}
+.phone-incoming-avatar-ring::before,
+.phone-incoming-avatar-ring::after {
+  content: ''; position: absolute; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.13);
+  animation: phoneRingPulse 2.2s ease-out infinite;
+}
+.phone-incoming-avatar-ring::before { inset: -14px; animation-delay: 0s; }
+.phone-incoming-avatar-ring::after  { inset: -28px; animation-delay: 0.6s; }
+
+@keyframes phoneRingPulse {
+  0%   { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.22); }
+}
+
+.phone-incoming-name     { font-size: 26px; font-weight: 800; color: #fff; margin-top: 22px; letter-spacing: -0.5px; }
+.phone-incoming-number   { font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 6px; letter-spacing: 1px; }
+.phone-incoming-subtitle { font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 4px; }
+
+.phone-incoming-actions  { display: flex; justify-content: space-around; width: 100%; margin-top: auto; align-items: center; }
+.phone-incoming-btn {
+  width: 68px; height: 68px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; cursor: pointer; transition: transform 0.15s;
+}
+.phone-incoming-btn:active { transform: scale(0.88); }
+.phone-incoming-btn.reject  { background: #ff3b30; color: #fff; }
+.phone-incoming-btn.accept  { background: #30d158; color: #fff; animation: phoneAcceptPulse 1.6s ease-in-out infinite; }
+.phone-incoming-btn.message { background: rgba(255,255,255,0.1); color: #fff; font-size: 18px; }
+
+@keyframes phoneAcceptPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(48,209,88,0.45); }
+  50%       { box-shadow: 0 0 0 14px rgba(48,209,88,0); }
+}
+
+.phone-incoming-label {
+  font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 8px;
+  text-align: center; font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────
+   § ACTIVE PHONE CALL VIEW
+───────────────────────────────────────────── */
+.phone-call-view {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, #0d0d0d 0%, #1c1c1e 100%);
+  z-index: 9400;
+  display: flex; flex-direction: column; align-items: center;
+  transform: translateY(100%);
+  transition: transform 0.36s cubic-bezier(0.4,0,0.2,1);
+}
+.phone-call-view.active { transform: translateY(0); }
+
+.phone-call-top {
+  width: 100%; padding: 48px 30px 24px;
+  display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
+}
+.phone-call-avatar {
+  width: 80px; height: 80px; border-radius: 50%;
+  object-fit: cover; border: 2px solid rgba(255,255,255,0.1); margin-bottom: 14px;
+}
+.phone-call-avatar-initials {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: #2c2c2e; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: rgba(255,255,255,0.85);
+  margin-bottom: 14px; font-family: 'Montserrat', sans-serif;
+  border: 2px solid rgba(255,255,255,0.08);
+}
+.phone-call-name   { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+.phone-call-status { font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 6px; letter-spacing: 1px; }
+.phone-call-timer  { font-size: 15px; color: rgba(255,255,255,0.6); font-family: 'Montserrat', monospace; margin-top: 5px; font-weight: 600; }
+
+/* Waveform area */
+.phone-waveform-container {
+  flex: 1; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; padding: 0 20px; overflow: hidden; min-height: 0;
+}
+.phone-sfx-tag {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px; padding: 5px 16px;
+  font-size: 11px; color: rgba(255,255,255,0.5);
+  letter-spacing: 0.8px; font-weight: 600; white-space: nowrap;
+  animation: sfxFadeIn 0.3s ease;
+}
+@keyframes sfxFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.phone-waveform {
+  display: flex; align-items: center; justify-content: center; gap: 4px; height: 60px;
+}
+.phone-waveform .bar {
+  width: 3px; background: rgba(255,255,255,0.75); border-radius: 3px;
+  animation: phoneWaveBar 1.2s ease-in-out infinite;
+}
+.phone-waveform.idle .bar { animation: none !important; height: 4px !important; opacity: 0.25; }
+.phone-waveform .bar:nth-child(1) { animation-delay: 0.0s; }
+.phone-waveform .bar:nth-child(2) { animation-delay: 0.1s; }
+.phone-waveform .bar:nth-child(3) { animation-delay: 0.2s; }
+.phone-waveform .bar:nth-child(4) { animation-delay: 0.3s; }
+.phone-waveform .bar:nth-child(5) { animation-delay: 0.4s; }
+.phone-waveform .bar:nth-child(6) { animation-delay: 0.3s; }
+.phone-waveform .bar:nth-child(7) { animation-delay: 0.2s; }
+.phone-waveform .bar:nth-child(8) { animation-delay: 0.1s; }
+.phone-waveform .bar:nth-child(9) { animation-delay: 0.0s; }
+@keyframes phoneWaveBar {
+  0%, 100% { height: 6px; opacity: 0.4; }
+  50%       { height: 42px; opacity: 1; }
+}
+
+/* Transcript in call */
+.phone-call-transcript {
+  width: 100%; padding: 0 14px; max-height: 170px;
+  overflow-y: auto; display: flex; flex-direction: column; gap: 7px; margin-top: 10px;
+}
+.phone-call-transcript::-webkit-scrollbar { display: none; }
+.phone-transcript-line {
+  font-size: 13px; line-height: 1.55;
+  padding: 8px 13px; border-radius: 12px;
+  max-width: 85%; word-break: break-word;
+}
+.phone-transcript-line.ai {
+  background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8);
+  align-self: flex-start; border-bottom-left-radius: 4px;
+}
+.phone-transcript-line.user {
+  background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.92);
+  align-self: flex-end; border-bottom-right-radius: 4px; text-align: right;
+}
+
+/* Controls grid */
+.phone-controls {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 20px 10px; padding: 20px 30px 16px; width: 100%; flex-shrink: 0;
+}
+.phone-ctrl-item {
+  display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer;
+}
+.phone-ctrl-btn {
+  width: 58px; height: 58px; border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 21px; color: #fff; transition: all 0.2s;
+}
+.phone-ctrl-btn.active { background: rgba(255,255,255,0.88); color: #111; }
+.phone-ctrl-btn.end    { background: #ff3b30; font-size: 22px; }
+.phone-ctrl-btn:active { transform: scale(0.88); }
+.phone-ctrl-label {
+  font-size: 11px; color: rgba(255,255,255,0.4);
+  font-weight: 600; letter-spacing: 0.3px;
+}
+
+/* Input area */
+.phone-input-area {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px 26px; width: 100%; flex-shrink: 0;
+}
+.phone-input-area input {
+  flex: 1; background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 22px;
+  padding: 11px 16px; font-size: 13px; color: #fff; outline: none; font-family: inherit;
+  transition: border-color 0.2s;
+}
+.phone-input-area input:focus   { border-color: rgba(255,255,255,0.28); }
+.phone-input-area input::placeholder { color: rgba(255,255,255,0.28); }
+.phone-input-send {
+  width: 40px; height: 40px; background: rgba(255,255,255,0.12); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+}
+.phone-input-send:active { transform: scale(0.9); background: rgba(255,255,255,0.22); }
+
+/* ─────────────────────────────────────────────
+   § 修复：深色来电/通话遮罩在隐藏时漏出黑色细条
+   translate(100%) 后顶边仍可见，加 visibility 彻底隐藏
+───────────────────────────────────────────── */
+.phone-incoming-overlay:not(.active) {
+  visibility: hidden;
+  transition: transform 0.4s cubic-bezier(0.4,0,0.2,1),
+              visibility 0s linear 0.4s;
+}
+.phone-call-view:not(.active) {
+  visibility: hidden;
+  transition: transform 0.36s cubic-bezier(0.4,0,0.2,1),
+              visibility 0s linear 0.36s;
+}
+
+/* 同理，SMS 线程视图：不活跃时不渲染（背景 #fff 问题不大，但统一处理更稳） */
+.sms-thread-view:not(.open) {
+  visibility: hidden;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1),
+              visibility 0s linear 0.3s;
+}
+
+/* ─── Notification dot on dock icon ─── */
+.dock-notif-dot {
+  position: absolute; top: -2px; right: -2px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ff3b30; border: 1.5px solid #f7f7f7;
+  pointer-events: none;
+}

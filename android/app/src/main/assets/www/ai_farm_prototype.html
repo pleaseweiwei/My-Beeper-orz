@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 禁用缩放，适配移动端全屏 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI 同居伴侣 - 星露谷物语风</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background-color: #2c3e50; font-family: 'PingFang SC', sans-serif;
+            overflow: hidden; touch-action: none;
+        }
+
+        /* 游戏画布容器 */
+        #game-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #87ceeb; /* 天空底色 */
+        }
+        canvas {
+            display: block;
+        }
+
+        /* 顶部 UI：时间、天气、金币 */
+        .top-hud {
+            position: absolute; top: env(safe-area-inset-top, 20px); left: 20px; right: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            pointer-events: none; z-index: 10;
+        }
+        .hud-card {
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(5px);
+            padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;
+            pointer-events: auto;
+        }
+
+        /* 左下角：虚拟摇杆 */
+        .joystick-zone {
+            position: absolute; bottom: 40px; left: 40px;
+            width: 120px; height: 120px;
+            background: rgba(255,255,255,0.2); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10;
+        }
+        .joystick-knob {
+            width: 50px; height: 50px;
+            background: rgba(255,255,255,0.8); border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            position: absolute; pointer-events: none; transition: 0.1s;
+        }
+
+        /* 右下角：交互大按钮 */
+        .action-btn {
+            position: absolute; bottom: 50px; right: 40px;
+            width: 80px; height: 80px;
+            background: rgba(255,255,255,0.9); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 30px; color: #e74c3c; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 10; transition: transform 0.1s;
+        }
+        .action-btn:active { transform: scale(0.9); }
+
+        /* 左侧中间：手机/聊天按钮 */
+        .chat-toggle-btn {
+            position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+            width: 50px; height: 50px; background: rgba(255,255,255,0.9);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 20px; color: #3498db; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        .chat-badge {
+            position: absolute; top: -5px; right: -5px;
+            background: #e74c3c; color: white; font-size: 10px;
+            width: 18px; height: 18px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* 聊天面板 */
+        .chat-panel {
+            position: absolute; top: 0; left: -100%; width: 80%; max-width: 350px; height: 100%;
+            background: #f5f6fa; box-shadow: 5px 0 20px rgba(0,0,0,0.2);
+            z-index: 100; transition: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex; flex-direction: column;
+        }
+        .chat-panel.open { left: 0; }
+        .chat-header {
+            padding: 20px; background: #fff; font-weight: bold; font-size: 18px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #eee; padding-top: env(safe-area-inset-top, 20px);
+        }
+        .chat-history {
+            flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px;
+        }
+        .chat-bubble {
+            max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4;
+        }
+        .chat-bubble.ai { background: #fff; border-bottom-left-radius: 2px; align-self: flex-start; }
+        .chat-bubble.me { background: #3498db; color: #fff; border-bottom-right-radius: 2px; align-self: flex-end; }
+        .chat-input-area {
+            padding: 15px; background: #fff; border-top: 1px solid #eee; display: flex; gap: 10px;
+            padding-bottom: env(safe-area-inset-bottom, 15px);
+        }
+        .chat-input {
+            flex: 1; border: none; background: #f0f2f5; border-radius: 20px; padding: 10px 15px;
+            outline: none; font-size: 14px;
+        }
+        .chat-send {
+            width: 40px; height: 40px; border: none; border-radius: 50%; background: #3498db;
+            color: #fff; display: flex; justify-content: center; align-items: center; font-size: 16px;
+        }
+
+        /* 建造/装修模式底部栏 */
+        .build-bar {
+            position: absolute; bottom: -100px; left: 0; width: 100%; height: 90px;
+            background: rgba(255,255,255,0.95); box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            z-index: 20; display: flex; align-items: center; padding: 0 20px; gap: 15px;
+            overflow-x: auto; transition: 0.3s; padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .build-bar.open { bottom: 0; }
+        .build-item {
+            width: 60px; height: 60px; background: #f0f2f5; border-radius: 12px;
+            flex-shrink: 0; display: flex; justify-content: center; align-items: center;
+            font-size: 24px; border: 2px solid transparent; transition: 0.2s;
+        }
+        .build-item.selected { border-color: #2ecc71; background: #e8f8f5; }
+        
+        .build-toggle-btn {
+            position: absolute; right: 20px; top: 80px;
+            width: 40px; height: 40px; background: rgba(255,255,255,0.9);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            color: #2ecc71; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10;
+        }
+
+        /* AI 纯代码气泡 */
+        .world-bubble {
+            position: absolute; padding: 6px 12px; background: #fff;
+            border-radius: 12px; font-size: 12px; font-weight: bold; color: #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); pointer-events: none;
+            transform: translate(-50%, -100%); margin-top: -15px;
+            opacity: 0; transition: opacity 0.2s; z-index: 5;
+            white-space: nowrap; text-align: center;
+        }
+        .world-bubble::after {
+            content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+            border-width: 5px 5px 0; border-style: solid; border-color: #fff transparent transparent;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- 实体渲染上的气泡 -->
+    <div id="ai-bubble" class="world-bubble">Zzz...</div>
+    <div id="me-bubble" class="world-bubble"></div>
+</div>
+
+<!-- 顶部 UI -->
+<div class="top-hud">
+    <div class="hud-card">
+        <i class="fas fa-sun" style="color: #f1c40f;"></i>
+        <span id="time-display">Day 1 - 08:00 AM</span>
+    </div>
+    <div class="hud-card">
+        <i class="fas fa-coins" style="color: #f39c12;"></i>
+        <span id="money-display">500</span>
+    </div>
+</div>
+
+<!-- 建造开关 -->
+<div class="build-toggle-btn" onclick="toggleBuildMode()">
+    <i class="fas fa-hammer"></i>
+</div>
+
+<!-- 聊天入口 -->
+<div class="chat-toggle-btn" onclick="toggleChat()">
+    <i class="fas fa-comment-dots"></i>
+    <div class="chat-badge" id="chat-badge" style="display: none;">1</div>
+</div>
+
+<!-- 建造栏 -->
+<div class="build-bar" id="build-bar">
+    <div class="build-item selected" onclick="selectFurn(this, 'bed')">🛏️</div>
+    <div class="build-item" onclick="selectFurn(this, 'table')">🪑</div>
+    <div class="build-item" onclick="selectFurn(this, 'plant')">🪴</div>
+    <div class="build-item" onclick="selectFurn(this, 'rug')">🟩</div>
+    <div class="build-item" onclick="selectFurn(this, 'chest')">🧰</div>
+</div>
+
+<!-- 聊天面板 -->
+<div class="chat-panel" id="chat-panel">
+    <div class="chat-header">
+        <span><i class="fas fa-robot"></i> 伴侣 (AI)</span>
+        <i class="fas fa-times" onclick="toggleChat()" style="color: #999; font-size: 20px;"></i>
+    </div>
+    <div class="chat-history" id="chat-history">
+        <div class="chat-bubble ai">早啊，今天天气不错，要一起去种地吗？</div>
+    </div>
+    <div class="chat-input-area">
+        <input type="text" id="chat-input" class="chat-input" placeholder="和 TA 聊天 / 安排任务...">
+        <button class="chat-send" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<!-- 摇杆 -->
+<div class="joystick-zone" id="joystick-zone">
+    <div class="joystick-knob" id="joystick-knob"></div>
+</div>
+
+<!-- 动作大按钮 -->
+<div class="action-btn" id="action-btn" onclick="performAction()">
+    <i class="fas fa-seedling" id="action-icon"></i>
+</div>
+
+<script>
+    // ==========================================
+    // 引擎基础设置
+    // ==========================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let cw = window.innerWidth;
+    let ch = window.innerHeight;
+    canvas.width = cw;
+    canvas.height = ch;
+
+    // 监听屏幕大小变化
+    window.addEventListener('resize', () => {
+        cw = window.innerWidth;
+        ch = window.innerHeight;
+        canvas.width = cw;
+        canvas.height = ch;
+    });
+
+    // 游戏状态
+    let gameState = {
+        time: 8 * 60, // 8:00 AM (in minutes)
+        money: 500,
+        buildMode: false,
+        selectedFurn: 'bed',
+        camera: { x: 0, y: 0 }
+    };
+
+    // 地图设置 (2000x2000 农场)
+    const mapSize = 2000;
+    
+    // ==========================================
+    // 实体数据 (玩家, AI, 家具, 农田)
+    // ==========================================
+    const player = {
+        type: 'player', x: 1000, y: 1000, radius: 15,
+        speed: 5, dir: 'down', walkTimer: 0,
+        skin: '#ffccaa', hairColor: '#5c3a21', shirt: '#3498db', pants: '#34495e', hairStyle: 0
+    };
+
+    const aiPartner = {
+        type: 'ai', x: 1050, y: 1020, radius: 15,
+        speed: 3, dir: 'down', walkTimer: 0,
+        skin: '#ffccaa', hairColor: '#e74c3c', shirt: '#e74c3c', pants: '#ecf0f1', hairStyle: 1,
+        state: 'idle', // idle, moving, working, sleeping
+        target: null, // {x, y}
+        actionTimer: 0
+    };
+
+    let mapObjects = [
+        // 预设建筑：农舍
+        { id: 'house', type: 'house', x: 1000, y: 800, width: 160, height: 120 },
+        // 农田预设
+        { id: 'farm1', type: 'soil', x: 1200, y: 1000, w: 40, h: 40, state: 'empty' },
+        { id: 'farm2', type: 'soil', x: 1240, y: 1000, w: 40, h: 40, state: 'empty' },
+        { id: 'farm3', type: 'soil', x: 1200, y: 1040, w: 40, h: 40, state: 'planted', progress: 0.5 },
+        { id: 'farm4', type: 'soil', x: 1240, y: 1040, w: 40, h: 40, state: 'ready' }
+    ];
+
+    let furnitureList = [];
+
+    // ==========================================
+    // 渲染函数 (纯代码绘制)
+    // ==========================================
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+            this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r);
+            this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r);
+            this.arcTo(x, y, x + w, y, r); return this;
+        };
+    }
+
+    function drawHouse(x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        // 阴影
+        ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(-85, -10, 170, 30);
+        // 主体
+        ctx.fillStyle = '#fdf5e6'; ctx.fillRect(-80, -90, 160, 90);
+        ctx.fillStyle = '#eedcba'; for(let i=-80; i<0; i+=20) ctx.fillRect(-80, i, 160, 2);
+        // 门
+        ctx.fillStyle = '#8b4513'; ctx.fillRect(-20, -45, 40, 45);
+        ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(10, -25, 3, 0, Math.PI*2); ctx.fill();
+        // 窗户
+        ctx.fillStyle = '#87ceeb'; ctx.fillRect(-65, -60, 30, 35); ctx.fillRect(35, -60, 30, 35);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+        ctx.strokeRect(-65, -60, 30, 35); ctx.strokeRect(35, -60, 30, 35);
+        // 屋顶
+        ctx.fillStyle = '#cd5c5c';
+        ctx.beginPath(); ctx.moveTo(-95, -90); ctx.lineTo(-60, -140); ctx.lineTo(60, -140); ctx.lineTo(95, -90); ctx.fill();
+        ctx.restore();
+    }
+
+    function drawSoil(obj) {
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        ctx.fillStyle = '#8b5a2b';
+        ctx.fillRect(-obj.w/2, -obj.h/2, obj.w, obj.h);
+        ctx.strokeStyle = '#6b4226'; ctx.lineWidth = 2;
+        ctx.strokeRect(-obj.w/2, -obj.h/2, obj.w, obj.h);
+        
+        if (obj.state === 'planted' || obj.state === 'ready') {
+            ctx.fillStyle = obj.state === 'ready' ? '#e74c3c' : '#2ecc71'; // 番茄
+            let size = obj.state === 'ready' ? 12 : 6;
+            ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    function drawCharacter(p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        
+        // 呼吸和走路动画
+        let isMoving = (p.walkTimer > 0);
+        let bobbing = isMoving ? Math.abs(Math.sin(p.walkTimer)) * 3 : Math.abs(Math.sin(Date.now()*0.003))*1.5;
+        let swing = isMoving ? Math.sin(p.walkTimer) * 8 : 0;
+        
+        // 阴影
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath(); ctx.ellipse(0, 10, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
+        
+        ctx.translate(0, -bobbing);
+        let leftLegY = swing, rightLegY = -swing;
+        
+        // 腿
+        ctx.strokeStyle = p.pants; ctx.lineWidth = 6; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-5, 8 + leftLegY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(5, 8 + rightLegY); ctx.stroke();
+
+        // 身体
+        ctx.fillStyle = p.pants; ctx.beginPath(); ctx.roundRect(-9, -4, 18, 8, 3); ctx.fill();
+        ctx.fillStyle = p.shirt; ctx.beginPath(); ctx.roundRect(-8, -12, 16, 10, 3); ctx.fill();
+        
+        // 手臂
+        ctx.strokeStyle = p.skin;
+        if(p.dir !== 'left') { ctx.beginPath(); ctx.moveTo(10, -8); ctx.lineTo(10, rightLegY); ctx.stroke(); }
+        if(p.dir !== 'right') { ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(-10, leftLegY); ctx.stroke(); }
+
+        // 头
+        ctx.fillStyle = p.skin;
+        ctx.beginPath(); ctx.roundRect(-14, -34, 28, 24, 10); ctx.fill();
+
+        // 头发
+        ctx.fillStyle = p.hairColor;
+        if (p.dir === 'up') {
+            ctx.beginPath(); ctx.roundRect(-15, -35, 30, 26, 10); ctx.fill();
+        } else {
+            ctx.beginPath(); ctx.arc(0, -28, 15, Math.PI, 0); ctx.fill();
+            if(p.hairStyle===0) ctx.fillRect(-15, -28, 30, 6); // 短刘海
+            else if(p.hairStyle===1) { ctx.fillRect(-15,-28,10,10); ctx.fillRect(5,-28,10,10); } // 侧分
+        }
+
+        // 眼睛
+        if (p.dir !== 'up') {
+            let e1 = -5, e2 = 5;
+            if (p.dir === 'left') { e1 = -8; e2 = null; }
+            if (p.dir === 'right') { e1 = null; e2 = 8; }
+            ctx.fillStyle = '#222';
+            if (p.state === 'sleeping') {
+                if(e1 !== null) { ctx.beginPath(); ctx.moveTo(e1-3, -18); ctx.lineTo(e1+3, -18); ctx.lineWidth=2; ctx.stroke(); }
+                if(e2 !== null) { ctx.beginPath(); ctx.moveTo(e2-3, -18); ctx.lineTo(e2+3, -18); ctx.lineWidth=2; ctx.stroke(); }
+            } else {
+                if(e1 !== null) { ctx.beginPath(); ctx.arc(e1, -18, 2, 0, Math.PI*2); ctx.fill(); }
+                if(e2 !== null) { ctx.beginPath(); ctx.arc(e2, -18, 2, 0, Math.PI*2); ctx.fill(); }
+            }
+        }
+        ctx.restore();
+    }
+
+    function drawFurn(f) {
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(-f.w/2, -f.h/2 + 5, f.w, f.h); // 简单阴影
+        
+        ctx.fillStyle = '#e74c3c';
+        if (f.type === 'bed') ctx.fillStyle = '#e74c3c';
+        if (f.type === 'table') ctx.fillStyle = '#8b4513';
+        if (f.type === 'plant') ctx.fillStyle = '#2ecc71';
+        if (f.type === 'rug') ctx.fillStyle = '#9b59b6';
+        if (f.type === 'chest') ctx.fillStyle = '#d35400';
+        
+        if (f.type === 'plant') {
+            ctx.beginPath(); ctx.arc(0, 0, f.w/2, 0, Math.PI*2); ctx.fill();
+        } else {
+            ctx.fillRect(-f.w/2, -f.h/2, f.w, f.h);
+        }
+        
+        // 建造模式网格
+        if (gameState.buildMode) {
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+            ctx.strokeRect(-f.w/2, -f.h/2, f.w, f.h);
+        }
+        ctx.restore();
+    }
+
+    // ==========================================
+    // 虚拟摇杆控制
+    // ==========================================
+    let joyActive = false;
+    let joyOrigin = { x: 0, y: 0 };
+    let joyDelta = { x: 0, y: 0 };
+    const joyZone = document.getElementById('joystick-zone');
+    const joyKnob = document.getElementById('joystick-knob');
+
+    joyZone.addEventListener('touchstart', e => {
+        joyActive = true;
+        let rect = joyZone.getBoundingClientRect();
+        joyOrigin = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+        updateJoystick(e.touches[0]);
+    }, {passive: false});
+
+    joyZone.addEventListener('touchmove', e => {
+        if(!joyActive) return;
+        updateJoystick(e.touches[0]);
+        e.preventDefault();
+    }, {passive: false});
+
+    joyZone.addEventListener('touchend', () => {
+        joyActive = false;
+        joyDelta = { x: 0, y: 0 };
+        joyKnob.style.transform = `translate(0px, 0px)`;
+    });
+
+    function updateJoystick(touch) {
+        let dx = touch.clientX - joyOrigin.x;
+        let dy = touch.clientY - joyOrigin.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        let maxDist = 40;
+        
+        if (dist > maxDist) {
+            dx = (dx / dist) * maxDist;
+            dy = (dy / dist) * maxDist;
+        }
+        joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+        
+        // 归一化输入
+        joyDelta.x = dx / maxDist;
+        joyDelta.y = dy / maxDist;
+    }
+
+    // ==========================================
+    // 逻辑更新
+    // ==========================================
+    function update() {
+        // 玩家移动
+        if (joyActive && !gameState.buildMode) {
+            player.x += joyDelta.x * player.speed;
+            player.y += joyDelta.y * player.speed;
+            player.walkTimer += 0.2;
+            
+            if (Math.abs(joyDelta.x) > Math.abs(joyDelta.y)) {
+                player.dir = joyDelta.x > 0 ? 'right' : 'left';
+            } else {
+                player.dir = joyDelta.y > 0 ? 'down' : 'up';
+            }
+        } else {
+            player.walkTimer = 0;
+        }
+
+        // 边界限制
+        player.x = Math.max(20, Math.min(mapSize - 20, player.x));
+        player.y = Math.max(40, Math.min(mapSize - 20, player.y));
+
+        // AI 伴侣逻辑 (Agentic Behavior)
+        updateAI();
+
+        // 相机跟随
+        gameState.camera.x = player.x - cw / 2;
+        gameState.camera.y = player.y - ch / 2;
+
+        // 更新 UI 气泡位置
+        updateBubbles();
+
+        // 时间流逝
+        gameState.time += 0.05;
+        if (gameState.time > 24 * 60) gameState.time = 0;
+        let hours = Math.floor(gameState.time / 60);
+        let mins = Math.floor(gameState.time % 60);
+        let ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        document.getElementById('time-display').innerText = `Day 1 - ${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')} ${ampm}`;
+        
+        // 更新交互按钮状态
+        checkInteractions();
+    }
+
+    function updateAI() {
+        // 简单状态机
+        if (aiPartner.actionTimer > 0) {
+            aiPartner.actionTimer--;
+            return;
+        }
+
+        // 模拟 API 返回决策
+        if (aiPartner.state === 'idle') {
+            if (Math.random() < 0.02) {
+                // 决定去农田
+                aiPartner.state = 'moving';
+                aiPartner.target = { x: 1220, y: 1020 };
+                showBubble('ai-bubble', "我去看看番茄熟了没~");
+            } else if (Math.random() < 0.02) {
+                // 决定找玩家
+                aiPartner.state = 'moving';
+                aiPartner.target = { x: player.x + (Math.random()-0.5)*100, y: player.y + (Math.random()-0.5)*100 };
+                showBubble('ai-bubble', "你在干嘛呢？");
+            }
+        }
+
+        // 移动逻辑
+        if (aiPartner.state === 'moving' && aiPartner.target) {
+            let dx = aiPartner.target.x - aiPartner.x;
+            let dy = aiPartner.target.y - aiPartner.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist < aiPartner.speed) {
+                aiPartner.x = aiPartner.target.x;
+                aiPartner.y = aiPartner.target.y;
+                aiPartner.state = 'idle';
+                aiPartner.walkTimer = 0;
+                aiPartner.actionTimer = 60 * 2; // 停顿2秒
+            } else {
+                aiPartner.x += (dx/dist) * aiPartner.speed;
+                aiPartner.y += (dy/dist) * aiPartner.speed;
+                aiPartner.walkTimer += 0.15;
+                if (Math.abs(dx) > Math.abs(dy)) aiPartner.dir = dx > 0 ? 'right' : 'left';
+                else aiPartner.dir = dy > 0 ? 'down' : 'up';
+            }
+        }
+    }
+
+    // 气泡控制
+    let aiBubbleTimer = 0;
+    function showBubble(id, text) {
+        let el = document.getElementById(id);
+        el.innerText = text;
+        el.style.opacity = 1;
+        if(id === 'ai-bubble') {
+            clearTimeout(aiBubbleTimer);
+            aiBubbleTimer = setTimeout(() => { el.style.opacity = 0; }, 4000);
+        }
+    }
+
+    function updateBubbles() {
+        let aiEl = document.getElementById('ai-bubble');
+        if(aiEl.style.opacity > 0) {
+            aiEl.style.left = (aiPartner.x - gameState.camera.x) + 'px';
+            aiEl.style.top = (aiPartner.y - gameState.camera.y - 45) + 'px';
+        }
+        let meEl = document.getElementById('me-bubble');
+        if(meEl.style.opacity > 0) {
+            meEl.style.left = (player.x - gameState.camera.x) + 'px';
+            meEl.style.top = (player.y - gameState.camera.y - 45) + 'px';
+        }
+    }
+
+    // 交互检测
+    let currentInteractObj = null;
+    function checkInteractions() {
+        let btn = document.getElementById('action-btn');
+        let icon = document.getElementById('action-icon');
+        
+        currentInteractObj = null;
+        
+        // 检测农田
+        for(let obj of mapObjects) {
+            if (obj.type === 'soil') {
+                let dist = Math.hypot(player.x - obj.x, player.y - obj.y);
+                if (dist < 50) {
+                    currentInteractObj = obj;
+                    btn.style.transform = 'scale(1)';
+                    if(obj.state === 'empty') { icon.className = 'fas fa-seedling'; icon.style.color = '#2ecc71'; }
+                    else if(obj.state === 'planted') { icon.className = 'fas fa-tint'; icon.style.color = '#3498db'; }
+                    else if(obj.state === 'ready') { icon.className = 'fas fa-hand-paper'; icon.style.color = '#e74c3c'; }
+                    return;
+                }
+            }
+        }
+        
+        // 检测 AI
+        let distAI = Math.hypot(player.x - aiPartner.x, player.y - aiPartner.y);
+        if (distAI < 60) {
+            currentInteractObj = aiPartner;
+            btn.style.transform = 'scale(1)';
+            icon.className = 'fas fa-heart'; icon.style.color = '#e74c3c';
+            return;
+        }
+
+        btn.style.transform = 'scale(0)'; // 隐藏
+    }
+
+    function performAction() {
+        if (!currentInteractObj) return;
+        
+        if (currentInteractObj.type === 'soil') {
+            if (currentInteractObj.state === 'empty') {
+                currentInteractObj.state = 'planted';
+                currentInteractObj.progress = 0;
+            } else if (currentInteractObj.state === 'planted') {
+                currentInteractObj.progress += 0.5;
+                if(currentInteractObj.progress >= 1) currentInteractObj.state = 'ready';
+            } else if (currentInteractObj.state === 'ready') {
+                currentInteractObj.state = 'empty';
+                gameState.money += 50;
+                document.getElementById('money-display').innerText = gameState.money;
+                showBubble('me-bubble', "收获了！+50金币");
+                setTimeout(() => document.getElementById('me-bubble').style.opacity = 0, 2000);
+                
+                // 触发 AI 注意力
+                simulateAiResponse("哇，你种的番茄看起来好好吃！");
+            }
+        } else if (currentInteractObj.type === 'ai') {
+            toggleChat();
+        }
+    }
+
+    // ==========================================
+    // 建造/装修模式
+    // ==========================================
+    function toggleBuildMode() {
+        gameState.buildMode = !gameState.buildMode;
+        document.getElementById('build-bar').classList.toggle('open');
+        document.getElementById('joystick-zone').style.display = gameState.buildMode ? 'none' : 'flex';
+        
+        if(gameState.buildMode) {
+            showBubble('me-bubble', "进入装修模式 (拖拽屏幕放置)");
+            setTimeout(() => document.getElementById('me-bubble').style.opacity = 0, 2000);
+        }
+    }
+
+    function selectFurn(el, type) {
+        document.querySelectorAll('.build-item').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        gameState.selectedFurn = type;
+    }
+
+    // 屏幕点击放置家具
+    canvas.addEventListener('pointerdown', e => {
+        if (!gameState.buildMode) return;
+        let worldX = e.clientX + gameState.camera.x;
+        let worldY = e.clientY + gameState.camera.y;
+        
+        let w = 40, h = 40;
+        if(gameState.selectedFurn === 'bed') { w=60; h=100; }
+        if(gameState.selectedFurn === 'table') { w=80; h=60; }
+        
+        furnitureList.push({
+            type: gameState.selectedFurn,
+            x: worldX, y: worldY,
+            w: w, h: h
+        });
+        
+        gameState.money -= 100;
+        document.getElementById('money-display').innerText = gameState.money;
+
+        // 通知 AI
+        simulateAiResponse(`你买了新的${gameState.selectedFurn}？太棒了！`);
+    });
+
+    // ==========================================
+    // 聊天系统 (模拟大模型API)
+    // ==========================================
+    function toggleChat() {
+        document.getElementById('chat-panel').classList.toggle('open');
+        document.getElementById('chat-badge').style.display = 'none';
+    }
+
+    function sendChat() {
+        let input = document.getElementById('chat-input');
+        let text = input.value.trim();
+        if(!text) return;
+        
+        // 渲染自己说的话
+        addChatBubble(text, 'me');
+        showBubble('me-bubble', text);
+        setTimeout(() => document.getElementById('me-bubble').style.opacity = 0, 3000);
+        input.value = '';
+
+        // 模拟 API 请求延迟
+        setTimeout(() => {
+            let aiReply = "好呀！听你的~";
+            if(text.includes("浇水") || text.includes("种地")) {
+                aiReply = "好的！我这就去后院看看！";
+                aiPartner.state = 'moving';
+                aiPartner.target = { x: 1200, y: 1000 };
+            }
+            simulateAiResponse(aiReply);
+        }, 1000);
+    }
+
+    function simulateAiResponse(text) {
+        addChatBubble(text, 'ai');
+        showBubble('ai-bubble', text);
+        if(!document.getElementById('chat-panel').classList.contains('open')){
+            document.getElementById('chat-badge').style.display = 'flex';
+        }
+    }
+
+    function addChatBubble(text, sender) {
+        let history = document.getElementById('chat-history');
+        let div = document.createElement('div');
+        div.className = `chat-bubble ${sender}`;
+        div.innerText = text;
+        history.appendChild(div);
+        history.scrollTop = history.scrollHeight;
+    }
+
+    // ==========================================
+    // 渲染循环
+    // ==========================================
+    function draw() {
+        ctx.clearRect(0, 0, cw, ch);
+        
+        ctx.save();
+        ctx.translate(-gameState.camera.x, -gameState.camera.y);
+
+        // 绘制草地底纹
+        ctx.fillStyle = '#79c05e';
+        ctx.fillRect(0, 0, mapSize, mapSize);
+
+        // 深度排序渲染 (Y-Sorting)
+        let renderList = [...mapObjects, ...furnitureList, player, aiPartner];
+        renderList.sort((a, b) => a.y - b.y);
+
+        for (let obj of renderList) {
+            if (obj.type === 'house') drawHouse(obj.x, obj.y);
+            else if (obj.type === 'soil') drawSoil(obj);
+            else if (obj.type === 'player') drawCharacter(player);
+            else if (obj.type === 'ai') drawCharacter(aiPartner);
+            else drawFurn(obj); // 家具
+        }
+
+        ctx.restore();
+    }
+
+    function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    // 启动
+    loop();
+
+</script>
+</body>
+</html>
