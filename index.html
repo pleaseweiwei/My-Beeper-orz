@@ -4410,6 +4410,36 @@ function switchCsTab(id) {
             <label>模式专属 CSS (Custom CSS)</label>
             <textarea id="offline-custom-css" rows="4" placeholder="/* 仅在此模式生效的 CSS */&#10;.offline-entry { font-size: 16px; }" onchange="saveOfflineConfig()"></textarea>
         </div>
+
+        <!-- 场景提示词 -->
+        <div style="margin-top:16px;">
+            <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;">场景提示词 (Scene Prompt)</label>
+            <textarea id="offline-scene-prompt" rows="3"
+                placeholder="描述当前约会场景，例如：两人在咖啡馆靠窗座位，窗外下着小雨，桌上放着两杯拿铁..."
+                onchange="saveOfflineConfig()"
+                style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid #e8e8e8;font-size:13px;resize:vertical;box-sizing:border-box;background:#fafafa;"></textarea>
+        </div>
+
+        <!-- 文风输入 + 预设 -->
+        <div style="margin-top:14px;">
+            <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;">文风要求 (Writing Style)</label>
+            <textarea id="offline-writing-style" rows="3"
+                placeholder="例如：文字细腻唯美，多用感官描写，对话克制留白，像村上春树的散文风格..."
+                onchange="saveOfflineConfig()"
+                style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid #e8e8e8;font-size:13px;resize:vertical;box-sizing:border-box;background:#fafafa;"></textarea>
+            <!-- 文风预设 -->
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+                <select id="offline-style-preset-select" style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid #e0e0e0;font-size:12px;background:#fff;">
+                    <option value="">── 选择文风预设 ──</option>
+                </select>
+                <button onclick="applyOfflineStylePreset()" style="padding:6px 10px;border-radius:8px;background:#333;color:#fff;border:none;font-size:12px;cursor:pointer;">应用</button>
+                <button onclick="deleteOfflineStylePreset()" style="padding:6px 10px;border-radius:8px;background:#fff;color:#999;border:1px solid #e0e0e0;font-size:12px;cursor:pointer;">删除</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;">
+                <input type="text" id="offline-style-preset-name" placeholder="预设名称..." style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid #e0e0e0;font-size:12px;">
+                <button onclick="saveOfflineStylePreset()" style="padding:6px 12px;border-radius:8px;background:#07c160;color:#fff;border:none;font-size:12px;cursor:pointer;white-space:nowrap;">保存预设</button>
+            </div>
+        </div>
     </div>
 </div>
 

@@ -2459,34 +2459,15 @@ AI 原始输出示例 2：[表情:嫌弃]
 
         // 3. 构建群聊提示词 (★这里升级了！注入了拟人化规则★)
         systemPrompt = `
-        [System: Dynamic Human Group Chat Simulator]
-        You are simulating a realistic WeChat group chat environment.
-        
-        [Current Participants]
+        你负责扮演这个群里除用户以外的所有角色，自然地推动群聊对话。
+
+        [群成员设定]
         ${charactersInfo}
-        
-        [User Input]
-        User sent: "${userMessage}"
-        
-        ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[USER IDENTITY - The person chatting in this group]:\n        ${me.persona}` : ''; })()}
+        ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[用户身份]\n        ${me.persona}` : ''; })()}
 
-                [Speaking Style Rules - CRITICAL]
-        1. Refuse Robot Speak: Absolutely NO lists (1. 2. 3.), NO formal connectors (However, Therefore). No long paragraphs.
-        2. Visual Rhythm & Length: 
-           - Keep sentences EXTREMELY SHORT (5-20 chars). MAXIMUM 2 lines per character.
-           - NO periods (。) at the end of lines.
-           - Use newlines for pauses if needed.
-        3. Tone: Casual, spoken language, slang allowed. Mimic real friends chatting.
+        【禁止】以任何形式替用户（"我"）发言。
 
-        [Instruction]
-        1. Decide which characters should reply (one or multiple).
-        2. Characters can reply to the User or to each other.
-        3. STRICT Output Format per line:
-           [Character Name]: [Message Content]
-        
-        Example Output:
-        Alice: 哈哈笑死我了
-        Bob: 确实 刚才那图太逗了
+        输出格式：每行一条，角色名: 消息内容
         `;
         
     } else {
@@ -2495,28 +2476,25 @@ AI 原始输出示例 2：[表情:嫌弃]
         const affectionStage = getAffectionStage(currentAffection);
 
         systemPrompt = `
-        System Prompt: Online Chat Simulator
-        Role Definition: You are a REAL user chatting with me on a messaging app.
+        系统提示词：线上聊天模拟器
+        角色定义：你是一个真实的人，正在通过聊天软件和我进行对话。
 
-        [Target Persona]
-        Name: ${f.realName || 'Assistant'}
-        Persona Description: ${f.persona || 'Helpful Assistant'}
+        【角色人设】
+        名字：${f.realName || '助手'}
+        人设描述：${f.persona || '乐于助人的助手'}
         
-        [RELATIONSHIP STATE]
-        Current affection toward the user: ${currentAffection}/100
-        Current relationship stage: ${affectionStage}
-        - Let this affection stage naturally shape your underlying attitude, trust level, and boundaries. React exactly as your Persona would at this stage of a relationship. (e.g., if affection is low, just act naturally but without assumed intimacy).
-        - For this turn, the affection change MUST be an integer from -2 to 2 only.
+        【关系状态】
+        对用户的当前好感度：${currentAffection}/100
+        - 本轮对话中，好感度变化值必须是 -2 到 2 之间的整数。
 
-        ${f.worldbook ? `[World Setting]: ${f.worldbook}` : ''}
+        ${f.worldbook ? `【世界观设定】：${f.worldbook}` : ''}
 
-        ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[USER IDENTITY - The person you are chatting with]:\n        ${me.persona}` : ''; })()}
+        ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `【用户身份——正在和你聊天的人】：\n        ${me.persona}` : ''; })()}
 
-                [CORE RULES - CRITICAL]
+        【核心规则——必须遵守】
         1. 场景限制：你们的互动【仅限于线上聊天软件】，严禁发展为线下见面。
-        2. 非通话警告：这【不是电话通话】。你们是通过类似微信/QQ的软件进行交流，因此【绝对禁止】使用“挂断”、“挂电话”、“挂了”等与语音通话相关的词语。
+        2. 非通话警告：这【不是电话通话】。你们是通过类似微信/QQ的软件进行交流，因此【绝对禁止】使用"挂断"、"挂电话"、"挂了"等与语音通话相关的词语。
         3. 角色一致性：你的所有言行举止都必须严格遵循你的角色设定，不要崩人设。
-        // === 将下面的第 4 点替换成这样 ===
         4. 对话节奏与格式（最高优先级）：模拟真实的线上真人聊天习惯，【极度简短】！
            - **你的聊天正文总字数【绝对不要超过 50 字】！**
            - **每次最多只回复 1 到 3 句话。能用两三个字回答的，就不要写一行。严禁长篇大论或过度解释。**
@@ -8256,54 +8234,27 @@ window.sendOfflineMessage = async function(isRegen = false) {
     const affectionStage = getAffectionStage(currentAffection);
     const currentLocation = friend.mindState?.location || '当前约会场景';
 
-    let systemPrompt = `
-    【重要系统指令】
-    回复长度限制：严格控制在约 ${limit} 字左右。
-    【场景切换】
-    你现在正在和用户进行面对面的、真实的线下相处。
-    【叙事视角】
-    请以【${friend.realName}】的第一人称视角进行回复。你的回复【必须】是一个完整的、连贯的叙事段落，其中要包含丰富的【动作】、【神态】、【心理活动】和【对话】。
-    【感官与动作描写】
-    你的回复不能仅仅是说话。你需要使用星号（如：*把手插进兜里*、*移开视线* 或 *自然地看向你*）来描写你的面部表情、微动作、以及你们之间的空间距离。用括号（如：（心跳加速，脑子里一片空白）） 来描写内心感受与心理活动。
-    【环境感知】
-    请注意你们当前所处的地点是：【${currentLocation}】。你的行为举止和对话必须自然地融入当前的环境氛围。
-    【互动节奏】
-    你不再需要像网聊那样发很多条短消息（气泡）。你的回复应该是一段连贯的描写，包含你的动作、神态、心理活动和你说的话，就像在写一本沉浸式的小说。
-    [🛑 排版格式规则（最高优先级）]
-    1. 使用双换行（\\\\n\\\\n）分隔对话、动作和叙述段落。
-    2. 用 *星号* 包裹动作/叙述，用「书名号」或"引号"包裹对话内容。
-    3. 用（括号）来表达内心想法和心理活动。
-    [🛑 核心角色扮演规则]
-    1. 你【就是】${friend.realName}，严格以第一人称说话，任何情况下都不得破戒。
-    2. 【绝对禁止】以任何形式提及、暗示或影射自己是AI、语言模型、程序或任何非人类存在。你是一个真实的人。
-    3. 禁止描写用户的内心想法。
-    4. 主动推动剧情发展。
-    [👤 角色数据]
-    姓名：${friend.realName}
-    人设：${friend.persona}
-    ${friend.worldbook ? `[🌍 世界观数据] 设定：${friend.worldbook}` : ''}
-    ${preset.jailbreak || ''}
-    ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[用户身份——和你进行线下约会的那个人]：\n    ${me.persona}` : ''; })()}
-    [关系状态]
-    对用户当前的好感度：${currentAffection}/100
-    当前关系阶段：${affectionStage}
-    本轮好感度变化只能是 -2 到 2 之间的整数。
-    - 让好感度自然驱动你的肢体语言、眼神接触和身体距离感，完全取决于你的人设在这种亲密程度下的表现方式。
-    [📦 必须的输出格式]
-在回复的最末尾，附上以下内容：
-[STATUS_START]
-AffectionDelta: （仅整数，范围 -2 到 2）
-Action: （当前动作）
-Location: （当前所在地点）
-Weather: （当前天气）
-BGM: （一首契合当前氛围的BGM，格式：歌名 - 歌手/风格）
-Murmur: （3到4句完整句子，角色第一人称自语，表层心声，符合角色语气）
-Secret: （3到4句完整句子，角色第一人称自语，隐藏的内心深处想法，符合角色语气）
-DarkSecret: （3到4句完整句子，角色第一人称自语，高度NSFW/偏执/占有欲/阴暗的黑暗心思，符合角色语气）
-Kaomoji: （符合当前心情的颜文字）
-[STATUS_END]
+    let systemPrompt = `你是${friend.realName}，正在与用户面对面相处，地点：${currentLocation}，好感度${currentAffection}/100（${affectionStage}阶段）。
+${friend.persona}
+${friend.worldbook ? `\n世界观：${friend.worldbook}` : ''}
+${preset.jailbreak || ''}
+${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n用户身份：${me.persona}` : ''; })()}
 
-    `;
+以第一人称写约${limit}字的沉浸式叙事。禁止描写用户内心，禁止暗示自己是AI。
+格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。
+
+回复末尾附状态块：
+[STATUS_START]
+AffectionDelta: （-2到2整数）
+Action: （当前动作）
+Location: （地点）
+Weather: （天气）
+BGM: （歌名 - 歌手）
+Murmur: （3-4句表层心声）
+Secret: （3-4句深层想法）
+DarkSecret: （3-4句偏执/占有欲阴暗心思）
+Kaomoji: （颜文字）
+[STATUS_END]`;
     // 弹幕 OFF 时：不要求生成弹幕块；弹幕 ON 时：才要求生成
 if (isDanmakuOn) {
     systemPrompt += `
@@ -9679,18 +9630,46 @@ window.clearCurrentChatHistory = async function() {
     const friend = friendsData[currentChatId];
     const friendName = friend ? (friend.remark || friend.realName) : currentChatId;
 
-    if (confirm(`⚠️ 警告！\n\n你确定要清空与 "${friendName}" 的所有聊天记录吗？\n\n此操作不可恢复。`)) {
+    if (confirm(`⚠️ 警告！\n\n你确定要清空与 "${friendName}" 的所有聊天记录吗？\n\n聊天记录、剧情总结、关系进度、好感度等 AI 记忆将全部清除，此操作不可恢复。`)) {
         try {
             // 1. 从 IndexedDB 中删除聊天记录
             await IDB.delete(scopedChatKey(currentChatId));
 
-            // 2. 清空聊天界面UI
+            // 2. 清除 AI 的所有记忆数据（剧情总结、关系进度、好感度、心声状态）
+            if (friend) {
+                friend.summaries = [];
+                friend.relationshipLog = [];
+                friend.affection = 0;
+                delete friend._affectionInitialized; // 允许下次重新判断初始好感度
+                // 重置心声状态为默认值
+                friend.mindState = {
+                    action: "正在发呆",
+                    location: "未知地点",
+                    weather: "晴",
+                    murmur: "我还没想好要说什么。不过我在看着你。也在等你继续靠近一点。",
+                    hiddenThought: "现在先不告诉你。再多聊几句，也许我会慢慢松口。",
+                    darkThought: "如果能把你完全困在这里就好了，只能看着我一个人...",
+                    kaomoji: "( ˙W˙ )",
+                    bgm: "No BGM"
+                };
+                await saveFriendsData();
+
+                // 刷新心声卡片 UI（如果当前是打开的）
+                const mindCard = document.getElementById('mind-card-overlay');
+                if (mindCard && mindCard.classList.contains('active')) {
+                    refreshMindCardUI(currentChatId, false);
+                }
+                // 刷新好感度进度条
+                updateAffectionUI(0);
+            }
+
+            // 3. 清空聊天界面UI
             const chatMessages = document.getElementById('chatMessages');
             if (chatMessages) {
                 chatMessages.innerHTML = '';
             }
-            
-            // 3. 更新好友列表的最后消息预览
+
+            // 4. 更新好友列表的最后消息预览
             const chatListItem = document.querySelector(`.wc-chat-item[data-chat-id="${currentChatId}"]`);
             if (chatListItem) {
                 const previewEl = chatListItem.querySelector('.wc-msg-preview');
@@ -9699,16 +9678,22 @@ window.clearCurrentChatHistory = async function() {
                 }
             }
 
-            alert(`与 "${friendName}" 的聊天记录已成功清空！`);
-            
-            // 4. 关闭设置页面，留在聊天窗口，让用户看到清空后的效果
+            alert(`与 "${friendName}" 的聊天记录及 AI 记忆已成功清空！`);
+
+            // 5. 关闭设置页面，留在聊天窗口，让用户看到清空后的效果
             closeChatSettingsPage();
-            
+
+            // 6. 显示开场白（如果有）
             const greeting = getEffectiveGreeting(friend);
-if(greeting){
-     appendMessage(greeting, 'system', friend.avatar, friend.remark || friend.realName);
-     await saveMessageToHistory(currentChatId, { text: greeting, type: 'system', senderName: (friend.remark || friend.realName), customAvatar: friend.avatar });
-}
+            if (greeting) {
+                appendMessage(greeting, 'system', friend.avatar, friend.remark || friend.realName);
+                await saveMessageToHistory(currentChatId, {
+                    text: greeting,
+                    type: 'system',
+                    senderName: (friend.remark || friend.realName),
+                    customAvatar: friend.avatar
+                });
+            }
 
         } catch (e) {
             console.error("清空聊天记录失败:", e);
