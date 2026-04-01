@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">小手机</string>
+    <string name="channel_name">桌宠悬浮窗</string>
+    <string name="channel_desc">保持桌宠悬浮在所有 App 上层</string>
+</resources>

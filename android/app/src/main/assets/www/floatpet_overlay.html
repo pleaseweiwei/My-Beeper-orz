@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>FloatPet Overlay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* 整个悬浮窗容器 */
+  #overlay {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    position: relative;
+  }
+
+  /* 气泡对话框 */
+  #bubble {
+    background: rgba(255,255,255,0.92);
+    border: 2px solid #ff9ab5;
+    border-radius: 16px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #333;
+    max-width: 90%;
+    text-align: center;
+    margin-bottom: 6px;
+    box-shadow: 0 2px 8px rgba(255,100,150,0.3);
+    display: none;
+    word-break: break-all;
+    line-height: 1.4;
+    position: relative;
+  }
+  #bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #ff9ab5;
+  }
+
+  /* 桌宠主体 */
+  #pet-container {
+    position: relative;
+    width: 100px;
+    height: 120px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* 桌宠 canvas（或 emoji 显示） */
+  #pet-emoji {
+    font-size: 72px;
+    line-height: 1;
+    text-align: center;
+    width: 100%;
+    display: block;
+    filter: drop-shadow(0 4px 8px rgba(255,100,150,0.4));
+    transition: transform 0.15s ease;
+    animation: idle-bob 3s ease-in-out infinite;
+  }
+  #pet-emoji.touched {
+    transform: scale(0.85) rotate(-5deg);
+    animation: none;
+  }
+
+  /* 底部控制栏 */
+  #controls {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ctrl-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    background: rgba(255,255,255,0.85);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ctrl-btn:active { transform: scale(0.88); }
+
+  /* 心心特效 */
+  .heart-fx {
+    position: absolute;
+    font-size: 18px;
+    pointer-events: none;
+    animation: float-up 1s ease-out forwards;
+  }
+
+  /* 动画 */
+  @keyframes idle-bob {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+  @keyframes float-up {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-50px) scale(1.4); }
+  }
+</style>
+</head>
+<body>
+<div id="overlay">
+  <!-- 气泡 -->
+  <div id="bubble" id="bubble-text"></div>
+
+  <!-- 桌宠 -->
+  <div id="pet-container">
+    <div id="controls">
+      <!-- 打开主 App -->
+      <button class="ctrl-btn" onclick="openApp()" title="打开">📱</button>
+      <!-- 关闭悬浮窗 -->
+      <button class="ctrl-btn" onclick="closeOverlay()" title="关闭">✕</button>
+    </div>
+    <span id="pet-emoji">🐱</span>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── 从 SharedPreferences 读取桌宠状态 ──────────────────────
+function getPref(key, def) {
+  try {
+    const v = window.OverlayBridge && window.OverlayBridge.getSharedPref(key);
+    return (v !== undefined && v !== null && v !== '') ? v : def;
+  } catch(e) { return def; }
+}
+function setPref(key, value) {
+  try { window.OverlayBridge && window.OverlayBridge.setSharedPref(key, String(value)); }
+  catch(e) {}
+}
+
+// ── 桌宠表情池 ───────────────────────────────────────────
+const EMOJIS = ['🐱','🐰','🦊','🐻','🐼','🐨','🐸','🐙'];
+const BUBBLE_TEXTS = [
+  '主人，想我了吗 ❤',
+  '今天也要加油哦～',
+  '摸摸我嘛 (◕ᴗ◕✿)',
+  '点我进去玩吧！',
+  '陪你一整天 🌸',
+  '呜呜好想被抱抱',
+  '主人要记得喝水！',
+  '今天天气怎么样呀',
+];
+
+let bubbleTimer = null;
+
+function init() {
+  // 读取保存的表情
+  const savedEmoji = getPref('pet_emoji', '🐱');
+  const idx = EMOJIS.indexOf(savedEmoji);
+  document.getElementById('pet-emoji').textContent = (idx >= 0 ? savedEmoji : '🐱');
+
+  // 定时显示随机气泡
+  scheduleNextBubble();
+}
+
+function scheduleNextBubble() {
+  clearTimeout(bubbleTimer);
+  const delay = 8000 + Math.random() * 12000; // 8~20 秒
+  bubbleTimer = setTimeout(() => {
+    showBubble(BUBBLE_TEXTS[Math.floor(Math.random() * BUBBLE_TEXTS.length)]);
+    scheduleNextBubble();
+  }, delay);
+}
+
+function showBubble(text) {
+  const el = document.getElementById('bubble');
+  el.textContent = text;
+  el.style.display = 'block';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+// ── 点击桌宠 ────────────────────────────────────────────
+document.getElementById('pet-container').addEventListener('click', function(e) {
+  // 如果点到控制按钮则不处理
+  if (e.target.classList.contains('ctrl-btn')) return;
+
+  const pet = document.getElementById('pet-emoji');
+  pet.classList.add('touched');
+  setTimeout(() => pet.classList.remove('touched'), 300);
+
+  // 生成爱心特效
+  spawnHeart(e.clientX, e.clientY);
+
+  // 随机说话
+  showBubble(BUBBLE_TEXTS[Math.floor(Math.random() * BUBBLE_TEXTS.length)]);
+});
+
+function spawnHeart(x, y) {
+  const h = document.createElement('div');
+  h.className = 'heart-fx';
+  h.textContent = ['❤','💕','✨','💖'][Math.floor(Math.random()*4)];
+  h.style.left = (x - 10) + 'px';
+  h.style.top  = (y - 20) + 'px';
+  document.body.appendChild(h);
+  setTimeout(() => h.remove(), 1000);
+}
+
+// ── 控制按钮 ────────────────────────────────────────────
+function openApp() {
+  try { window.OverlayBridge && window.OverlayBridge.openMainApp(); }
+  catch(e) { console.log('openMainApp error', e); }
+}
+
+function closeOverlay() {
+  try { window.OverlayBridge && window.OverlayBridge.stopService(); }
+  catch(e) { console.log('stopService error', e); }
+}
+
+// ── 启动 ────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
