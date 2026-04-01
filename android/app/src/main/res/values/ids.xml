@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Used in FloatingWindowService to store the drag touch listener as a view tag -->
-    <item name="tag_touch_listener" type="id"/>
-</resources>
