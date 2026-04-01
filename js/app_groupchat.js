@@ -65,7 +65,7 @@ function restoreGroupListUI() {
         if (document.querySelector(`.wc-chat-item[data-chat-id="${groupId}"]`)) return;
 
         const members = group.members || [];
-        const avatarUrl = generateGroupAvatar(groupId, group.name, members);
+        const avatarUrl = group.avatar || group.customAvatar || generateGroupAvatar(groupId, group.name, members);
         const previewMsg = group.lastMessage || '群聊已创建';
         addChatListEntry(groupId, group.name, previewMsg, avatarUrl, 'group');
     });
@@ -2522,6 +2522,18 @@ window.saveGroupSettings = async function () {
         if (titleEl) {
             const memberCount = (group.members || []).length + 1;
             titleEl.innerHTML = `${group.name}<small style="font-size:9px; color:#aaa; font-weight:400; margin-left:4px;">${memberCount}人</small>`;
+        }
+    }
+
+    // 全局更新聊天列表中的群名称和头像（无论是否当前在看此群）
+    const listItem = document.querySelector(`.wc-chat-item[data-chat-id="${groupId}"]`);
+    if (listItem) {
+        const nameEl = listItem.querySelector('.wc-name');
+        if (nameEl) nameEl.textContent = group.name;
+        const newAvatarUrl = group.avatar || group.customAvatar || '';
+        if (newAvatarUrl) {
+            const avatarImg = listItem.querySelector('.wc-avatar img');
+            if (avatarImg) avatarImg.src = newAvatarUrl;
         }
     }
 

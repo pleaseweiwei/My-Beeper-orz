@@ -328,7 +328,7 @@ const NexusApp = (() => {
       // Node Action Ring Menu
       '<div id="nexus-action-ring" class="nexus-action-ring">',
         '<button class="nexus-ring-btn ring-chat" data-action="chat"><i class="fas fa-comment"></i></button>',
-        '<button class="nexus-ring-btn ring-moments" data-action="moments"><i class="fas fa-images"></i></button>',
+        '<button class="nexus-ring-btn ring-moments" data-action="link"><i class="fas fa-link"></i></button>',
         '<button class="nexus-ring-btn ring-edit" data-action="edit"><i class="fas fa-pen"></i></button>',
         '<button class="nexus-ring-btn ring-delete" data-action="delete"><i class="fas fa-scissors"></i></button>',
       '</div>',
@@ -503,7 +503,9 @@ const NexusApp = (() => {
       if (window.openChatDetail) window.openChatDetail(chatId);
     });
     $('np-link-btn') && $('np-link-btn').addEventListener('click', function() {
-      closeProfileSheet(); startLinking(selectedNodeId);
+      const nodeIdToLink = selectedNodeId; // ★ 必须在 closeProfileSheet 之前捕获，否则 selectedNodeId 会被置为 null
+      closeProfileSheet();
+      startLinking(nodeIdToLink);
     });
     $('np-tag-btn') && $('np-tag-btn').addEventListener('click', function() {
       const node = nodes.find(function(n) { return n.id === selectedNodeId; });
@@ -945,9 +947,8 @@ const NexusApp = (() => {
         if (window.openChatDetail) window.openChatDetail(chatId);
         else showToast('即将跳转私聊...');
         break;
-      case 'moments':
-        if (window.openMoments) window.openMoments(nodeId);
-        else showToast('朋友圈功能');
+      case 'link':
+        startLinking(nodeId);
         break;
       case 'edit':
         openProfileSheet(nodeId);
