@@ -2,6 +2,7 @@ package com.beeper.floatpet;
 
 import android.app.*;
 import android.content.*;
+import android.content.pm.ServiceInfo;
 import android.graphics.*;
 import android.os.*;
 import android.util.DisplayMetrics;
@@ -96,7 +97,13 @@ public class FloatingWindowService extends Service {
         _prefs = getSharedPreferences("floatpet_prefs", Context.MODE_PRIVATE);
         _loadPrefs();
         _createNotificationChannel();
-        startForeground(NOTIF_ID, _buildNotification());
+        // Android 10+ 必须指定 foregroundServiceType，否则在 targetSdk 34 上会抛 SecurityException
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIF_ID, _buildNotification(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        } else {
+            startForeground(NOTIF_ID, _buildNotification());
+        }
         _initDisplayMetrics();
     }
 

@@ -50,6 +50,9 @@ public class MainActivity extends AppCompatActivity {
     /** 当前是否正在加载远程 URL（用于出错时回退本地）*/
     private boolean _loadedFromRemote = false;
 
+    /** 标记是否正在等待悬浮窗权限返回（部分 ROM 不触发 onActivityResult，在 onResume 兜底）*/
+    private boolean _waitingForOverlay = false;
+
     // 原生语音识别
     private SpeechRecognizer _speechRecognizer;
     private boolean          _srInterim = true;
@@ -291,6 +294,7 @@ public class MainActivity extends AppCompatActivity {
         public void launchFloatingPet() {
             runOnUiThread(() -> {
                 if (!Settings.canDrawOverlays(MainActivity.this)) {
+                    _waitingForOverlay = true;
                     startActivityForResult(
                         new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                                 Uri.parse("package:" + getPackageName())),
@@ -580,11 +584,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         if (req == REQ_OVERLAY) {
-            if (Settings.canDrawOverlays(this)) {
-                _startFloatingService();
-            } else {
-                Toast.makeText(this, "需要「显示在其他应用上层」权限", Toast.LENGTH_LONG).show();
-            }
+            _waitingForOverlay = false;
+            // 部分设备权限生效有短暂延迟，延迟 500ms 再检查
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (Settings.canDrawOverlays(MainActivity.this)) {
+                    _startFloatingService();
+                } else {
+                    Toast.makeText(MainActivity.this,
+                            "需要「显示在其他应用上层」权限", Toast.LENGTH_LONG).show();
+                }
+            }, 500);
         }
     }
 
@@ -613,6 +622,19 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (_webView != null) {
             _webView.postDelayed(this::_injectBridges, 300);
+        }
+        // 部分国产 ROM（MIUI / ColorOS 等）从系统设置返回时不触发 onActivityResult，
+        // 在 onResume 里兜底处理悬浮窗权限
+        if (_waitingForOverlay) {
+            _waitingForOverlay = false;
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (Settings.canDrawOverlays(MainActivity.this)) {
+                    _startFloatingService();
+                } else {
+                    Toast.makeText(MainActivity.this,
+                            "需要「显示在其他应用上层」权限", Toast.LENGTH_LONG).show();
+                }
+            }, 500);
         }
     }
 
