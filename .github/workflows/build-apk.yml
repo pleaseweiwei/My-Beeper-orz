@@ -43,15 +43,37 @@ jobs:
         working-directory: android
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      # 6. 构建 Debug APK（直接用已安装的 Gradle，不用 wrapper）
+      # 6. 构建 Debug APK，完整日志保存到文件
       - name: Build Debug APK
         working-directory: android
         run: |
+          set -o pipefail
           /opt/gradle/gradle-8.4/bin/gradle assembleDebug \
             --no-daemon \
-            --stacktrace
+            --stacktrace 2>&1 | tee /tmp/gradle-build.log
 
-      # 7. 上传 APK（保存 30 天）
+      # 7. 构建失败时把关键错误提取为 Annotation（无需登录即可看到）
+      - name: Show build errors
+        if: failure()
+        run: |
+          echo "=== GRADLE BUILD ERRORS ==="
+          grep -E "(error:|Error:|FAILURE|Exception|> Task)" /tmp/gradle-build.log | head -60 || true
+          echo ""
+          echo "=== LAST 80 LINES ==="
+          tail -80 /tmp/gradle-build.log || true
+          echo ""
+          echo "::error::$(grep -E 'error:|Error:' /tmp/gradle-build.log | head -5 | tr '\n' ' ')"
+
+      # 8. 无论成功失败都上传完整 Gradle 日志
+      - name: Upload Gradle log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-log-${{ github.run_number }}
+          path: /tmp/gradle-build.log
+          retention-days: 7
+
+      # 9. 上传 APK（保存 30 天）
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -60,9 +82,8 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # 8. 完成提示
+      # 10. 完成提示
       - name: Done
         run: |
           echo "✅ APK 构建并上传完成！"
           ls -lh android/app/build/outputs/apk/debug/app-debug.apk
-          echo "请在本次 Actions 运行页面的 Artifacts 区域下载 APK。"
