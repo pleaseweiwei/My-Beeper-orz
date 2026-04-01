@@ -926,7 +926,7 @@ window.saveImagegenSettingsUI = function() {
     if (offlineEngine) settings.offlineAutoImageEngine = offlineEngine.value;
 
     saveImagegenSettings(settings);
-    if (typeof showToast === 'function') showToast('✅ 图像生成设置已保存');
+    if (typeof showToast === 'function') showToast('✅ 设置已保存');
 };
 
 window.toggleNaiCustomProxy = function(val) {

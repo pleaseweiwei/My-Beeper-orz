@@ -315,6 +315,37 @@ const FloatPet = (function () {
     const SCAN_ICONS = ['🔍', '📸', '👀', '🔭'];
 
     /* ════════════════════════════════════════
+       Android Native Bridge helpers
+       当运行在 APK 的 WebView 中时，window.AndroidBridge 由
+       MainActivity.java 注入，可直接调用原生接口。
+       ════════════════════════════════════════ */
+    function _isAndroid() {
+        return !!(window.AndroidBridge && typeof window.AndroidBridge.getPlatform === 'function');
+    }
+    function _androidStartOverlay() {
+        try {
+            if (_isAndroid()) {
+                if (window.AndroidBridge.canDrawOverlays()) {
+                    window.AndroidBridge.startFloatPet();
+                } else {
+                    // 跳转系统设置申请悬浮窗权限
+                    window.AndroidBridge.requestOverlayPermission();
+                    // 设置回调，权限授予后自动启动
+                    window._onOverlayPermResult = function (granted) {
+                        window._onOverlayPermResult = null;
+                        if (granted) window.AndroidBridge.startFloatPet();
+                    };
+                }
+            }
+        } catch (e) { console.warn('[FloatPet] androidStartOverlay error', e); }
+    }
+    function _androidStopOverlay() {
+        try {
+            if (_isAndroid()) window.AndroidBridge.stopFloatPet();
+        } catch (e) {}
+    }
+
+    /* ════════════════════════════════════════
        Init
        ════════════════════════════════════════ */
     function init() {
@@ -459,6 +490,7 @@ const FloatPet = (function () {
         if (tog) tog.checked = false;
         _toggleBox(false);
         _hide();
+        _androidStopOverlay();   // 同时停止原生悬浮窗（如已启动）
     }
 
     function _onPermAllow() {
@@ -480,6 +512,8 @@ const FloatPet = (function () {
         setTimeout(function () {
             _hidePermOverlay();
             _start();
+            // 在 Android APK 内同时启动真正的系统级悬浮窗服务
+            _androidStartOverlay();
         }, 2000);
     }
 
@@ -1811,9 +1845,11 @@ const FloatPet = (function () {
                 _showPermOverlay();
             } else {
                 _start();
+                _androidStartOverlay();   // APK：同步启动原生系统悬浮窗
             }
         } else {
             _hide();
+            _androidStopOverlay();        // APK：同步停止原生系统悬浮窗
         }
     }
 

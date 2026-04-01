@@ -8240,8 +8240,9 @@ ${friend.worldbook ? `\n世界观：${friend.worldbook}` : ''}
 ${preset.jailbreak || ''}
 ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n用户身份：${me.persona}` : ''; })()}
 
-以第一人称写约${limit}字的沉浸式叙事。禁止描写用户内心，禁止暗示自己是AI。
+以第一人称写沉浸式叙事。禁止描写用户内心，禁止暗示自己是AI。
 格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。
+你的正文回复（不含状态块、弹幕块、选项块）必须控制在 ${limit} 字左右。
 
 回复末尾附状态块：
 [STATUS_START]
@@ -8303,7 +8304,7 @@ if (isDanmakuOn) {
             { role: "user", content: `[History]:\n${historyContext}\n\n[User Input]: ${text}` }
         ], 
         temperature: parseFloat(settings.temperature || 0.8),
-        max_tokens: Math.max(limit * 3 + 600, 1500) 
+        max_tokens: Math.max(Math.ceil(limit * 2.5) + 700, 700)
     };
 
     if (offlineConfig.streamingEnabled) {
