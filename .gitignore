@@ -1,3 +1,15 @@
 node_modules/
 .DS_Store
 *.log
+
+# Android 构建输出（不提交到 git）
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/app/src/main/assets/js/
+android/app/src/main/assets/css/
+android/app/src/main/assets/index.html
+android/app/src/main/assets/manifest.json
+android/app/src/main/assets/service-worker.js
+android/app/src/main/assets/icon.png

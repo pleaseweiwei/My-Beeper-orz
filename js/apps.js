@@ -2344,6 +2344,8 @@ async function sendMessageToAI(userMessage) {
         currentAiController.abort();
     }
     currentAiController = new AbortController();
+    // 【竞态修复】立即捕获当前聊天对象 ID，防止异步 fetch 期间用户切换联系人导致回复串台
+    const targetChatId = currentChatId;
 
     const chatMessages = document.getElementById('chatMessages');
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
@@ -2367,7 +2369,7 @@ async function sendMessageToAI(userMessage) {
     let systemPrompt = "";
     
     // 获取当前聊天对象的详细设置 (从 friendsData 获取)
-    let f = friendsData[currentChatId] || {};
+    let f = friendsData[targetChatId] || {};
     let chatSettings = f.chatSettings || {}; // 获取可能存在的设置
         // --- 【新增】预处理 userMessage 中的表情包和语音 ---
     if (typeof userMessage === 'string') {
@@ -3019,38 +3021,38 @@ if (statusMatch) {
     };
 
     // 安全防护：若聊天对象在 AI 请求期间被删除，直接跳过状态更新
-    if (!friendsData[currentChatId]) {
+    if (!friendsData[targetChatId]) {
         rawReply = rawReply.replace(statusRegex, '').trim();
     } else {
-    if (!friendsData[currentChatId].mindState) friendsData[currentChatId].mindState = {};
-    if (typeof friendsData[currentChatId].affection !== 'number') friendsData[currentChatId].affection = 0;
+    if (!friendsData[targetChatId].mindState) friendsData[targetChatId].mindState = {};
+    if (typeof friendsData[targetChatId].affection !== 'number') friendsData[targetChatId].affection = 0;
 
     const deltaRaw = parseInt(readStatusValue('AffectionDelta') || '0', 10);
     const delta = Math.max(-2, Math.min(2, isNaN(deltaRaw) ? 0 : deltaRaw));
 
-    friendsData[currentChatId].affection = Math.max(
+    friendsData[targetChatId].affection = Math.max(
         0,
-        Math.min(100, friendsData[currentChatId].affection + delta)
+        Math.min(100, friendsData[targetChatId].affection + delta)
     );
 
-    friendsData[currentChatId].mindState.action = readStatusValue('Action') || friendsData[currentChatId].mindState.action || '正在发呆';
-    friendsData[currentChatId].mindState.location = readStatusValue('Location') || friendsData[currentChatId].mindState.location || '未知地点';
-    friendsData[currentChatId].mindState.weather = readStatusValue('Weather') || friendsData[currentChatId].mindState.weather || '晴';
-    friendsData[currentChatId].mindState.bgm = readStatusValue('BGM') || friendsData[currentChatId].mindState.bgm || 'No BGM';
-    friendsData[currentChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[currentChatId].mindState.murmur || '...';
-    friendsData[currentChatId].mindState.hiddenThought = readStatusValue('Secret') || friendsData[currentChatId].mindState.hiddenThought || '...';
-    friendsData[currentChatId].mindState.darkThought = readStatusValue('DarkSecret') || friendsData[currentChatId].mindState.darkThought || '...';
-    friendsData[currentChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[currentChatId].mindState.kaomoji || '( ˙W˙ )';
+    friendsData[targetChatId].mindState.action = readStatusValue('Action') || friendsData[targetChatId].mindState.action || '正在发呆';
+    friendsData[targetChatId].mindState.location = readStatusValue('Location') || friendsData[targetChatId].mindState.location || '未知地点';
+    friendsData[targetChatId].mindState.weather = readStatusValue('Weather') || friendsData[targetChatId].mindState.weather || '晴';
+    friendsData[targetChatId].mindState.bgm = readStatusValue('BGM') || friendsData[targetChatId].mindState.bgm || 'No BGM';
+    friendsData[targetChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[targetChatId].mindState.murmur || '...';
+    friendsData[targetChatId].mindState.hiddenThought = readStatusValue('Secret') || friendsData[targetChatId].mindState.hiddenThought || '...';
+    friendsData[targetChatId].mindState.darkThought = readStatusValue('DarkSecret') || friendsData[targetChatId].mindState.darkThought || '...';
+    friendsData[targetChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[targetChatId].mindState.kaomoji || '( ˙W˙ )';
 
     saveFriendsData();
 
     // 统一通过 refreshMindCardUI 刷新心声卡片（头像、昵称、跑马灯动画等一并同步）
-    refreshMindCardUI(currentChatId, false);
+    refreshMindCardUI(targetChatId, false);
 
     // 更新首页音乐组件（refreshMindCardUI 不含此部分）
     const homeTitle = document.getElementById('home-music-title');
     const homeArtist = document.getElementById('home-music-artist');
-    const bgmText = friendsData[currentChatId].mindState.bgm || 'No BGM';
+    const bgmText = friendsData[targetChatId].mindState.bgm || 'No BGM';
 
     if (bgmText.includes(' - ')) {
         const parts = bgmText.split(' - ');
@@ -3190,7 +3192,8 @@ if (isTranslationEnabled) {
 
 
              // 5. 分段发送逻辑 (Segmented Sending) - 修改版
-            const currentName = currentChatId;
+            // 【竞态修复】使用函数开头捕获的 targetChatId，而非此时可能已变更的 currentChatId
+            const currentName = targetChatId;
             // 【修复】优先使用好友数据里的头像，没有才用随机的
 let avatarUrl = friendsData[currentName]?.avatar;
 if (!avatarUrl) {

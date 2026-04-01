@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FloatPet</string>
+    <string name="notification_channel_name">桌宠悬浮服务</string>
+    <string name="notification_channel_desc">保持桌宠悬浮在所有 App 上层</string>
+</resources>

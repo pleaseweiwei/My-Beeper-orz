@@ -1,136 +1,113 @@
-# 🐾 FloatPet · Android 原生悬浮桌宠
+# FloatPet Android — 一体化 APK 构建指南
 
-> 桌宠悬浮在所有 App 上层，定时截屏后发送给 AI Vision 模型，用你设定的人设 Prompt 生成吐槽台词，显示在气泡里。
+将整个「小手机」Web App 打包成 Android 原生 APK，**同时内置悬浮桌宠**。
+装一个 APK，搞定所有功能。
 
 ---
 
-## 项目结构
+## 架构说明
 
 ```
-android/
-├── app/
-│   ├── build.gradle                          ← Gradle 构建配置
-│   └── src/main/
-│       ├── AndroidManifest.xml               ← 权限声明 + 组件注册
-│       ├── assets/
-│       │   └── floatpet_overlay.html         ← 悬浮窗 WebView UI（桌宠皮肤）
-│       └── java/com/beeper/floatpet/
-│           ├── MainActivity.java             ← 设置中心 Activity
-│           ├── FloatingWindowService.java    ← 核心悬浮窗 + AI 服务
-│           ├── ScreenshotActivity.java       ← 透明 Activity，触发截屏授权
-│           └── BootReceiver.java             ← 开机自启
+┌─────────────────────────────────────────────┐
+│  FloatPet APK（一个安装包）                   │
+│                                              │
+│  ┌─────────────────────────────┐             │
+│  │  MainActivity               │             │
+│  │  全屏 WebView                │             │
+│  │  加载 index.html             │  ← 原来所有  │
+│  │  （聊天/语音/视频通话/…）      │    Web功能   │
+│  └─────────────────────────────┘             │
+│                           ▲                  │
+│            点击右下角 🐾 按钮                 │
+│                           ▼                  │
+│  ┌─────────────────────────────┐             │
+│  │  FloatingWindowService      │  ← 悬浮桌宠  │
+│  │  TYPE_APPLICATION_OVERLAY   │    浮于所有  │
+│  │  → 可浮在微信/抖音/桌面上    │    App 上层  │
+│  └─────────────────────────────┘             │
+└─────────────────────────────────────────────┘
 ```
 
----
-
-## 核心技术原理
-
-| 功能 | 技术实现 |
-|------|----------|
-| 悬浮在所有 App 上层 | `SYSTEM_ALERT_WINDOW` 权限 + `TYPE_APPLICATION_OVERLAY` 窗口 |
-| 截取当前屏幕 | `MediaProjection` API → `VirtualDisplay` → `ImageReader` → JPEG Base64 |
-| AI 视觉分析 | 截图 + 上下文文本 → OpenAI Vision / Claude / Gemini API |
-| 桌宠 UI | `WebView` 加载 `floatpet_overlay.html`，原生 CSS 动画 |
-| 定时触发 | `Handler.postDelayed()`，支持固定间隔或随机模式 |
-| 双击触发 | `GestureDetector.onDoubleTap()` + JS Bridge |
-| 拖动移位 | `WindowManager.updateViewLayout()` |
-| 开机自启 | `RECEIVE_BOOT_COMPLETED` + `BootReceiver` |
+**构建时**，Gradle 自动将项目根目录的 `index.html`、`js/`、`css/` 全部打包进 APK。
 
 ---
 
-## 快速开始
+## 功能特性
 
-### 1. 环境要求
+| 功能 | 说明 |
+|------|------|
+| 📱 完整 Web App | 聊天、语音、视频通话、所有原有功能照常使用 |
+| 🐾 悬浮桌宠 | 右下角 🐾 按钮一键启停，浮于任意 App 上层 |
+| 🎤 语音输入 | Web Speech API，长按麦克风识别发送 |
+| 📸 截屏分析 | 桌宠可实时截屏交给 AI 分析当前屏幕 |
+| 🤖 AI 吐槽 | 支持 OpenAI / Gemini / 任意兼容接口 |
+| 🔁 开机自启 | 重启后自动恢复桌宠 |
 
-- **Android Studio** Hedgehog (2023.1.1) 或更新
-- **JDK 11+**
-- **Android SDK** API 34（`compileSdk`），最低支持 API 23（Android 6.0）
+---
 
-### 2. 克隆并打开项目
+## 构建前提
+
+| 工具 | 版本要求 |
+|------|---------|
+| Android Studio | Hedgehog 2023.1.1+ 或 Iguana 2023.2.1+ |
+| JDK | 17（Android Studio 自带） |
+| Android SDK | API 34（compileSdk）、API 26+（minSdk） |
+| Gradle | 8.4（wrapper 自动下载） |
+| AGP | 8.2.0 |
+
+---
+
+## 构建步骤
+
+### 方法一：Android Studio（推荐）
+
+1. 打开 Android Studio → **File > Open** → 选择 `android/` 目录
+2. 等待 Gradle Sync 完成
+3. **Gradle 会自动将根目录的 `index.html`、`js/`、`css/` 复制进 APK**（`copyWebAssets` 任务）
+4. 连接手机（开发者选项 + USB 调试）或直接 **Build APK(s)**
+5. APK 路径：`android/app/build/outputs/apk/debug/app-debug.apk`
+
+### 方法二：命令行
 
 ```bash
-# 在项目根目录执行
 cd android
-# 用 Android Studio 打开 android/ 目录，或：
-./gradlew assembleDebug
+gradlew.bat assembleDebug        # Windows
+# ./gradlew assembleDebug        # macOS / Linux
 ```
-
-### 3. 配置 API Key
-
-在 `MainActivity` 的设置界面填写：
-
-| 字段 | 说明 | 示例 |
-|------|------|------|
-| **API Key** | 你的 AI 服务 API Key | `sk-...` |
-| **API Endpoint** | OpenAI 兼容端点（留空用官方）| `https://api.openai.com/v1` |
-| **模型** | 支持视觉的模型 | `gpt-4o` / `gemini-1.5-flash` / `claude-3-5-sonnet` |
-| **人设 Prompt** | 桌宠的性格设定（选填）| `你是一只傲娇猫娘…` |
-| **回复间隔** | 0 = 随机（3~15分钟），1~60 = 固定分钟 | `10` |
-
-> **支持的 AI 服务：**
-> - OpenAI（`gpt-4o`, `gpt-4o-mini`）
-> - Anthropic Claude（通过兼容端点）
-> - Google Gemini（`gemini-1.5-flash`, `gemini-pro-vision`）
-> - 任何 OpenAI 兼容的本地/云端端点
-
-### 4. 授权流程
-
-启用开关后，App 会依次引导你完成两项授权：
-
-```
-① 系统弹窗：「允许 FloatPet 显示在其他应用上层」
-   → 跳转到系统设置页，打开开关后返回
-
-② 系统弹窗：「FloatPet 要开始录制您的屏幕」
-   → 点击「立即开始」授权截屏
-   （若拒绝，桌宠仍可运行，但仅使用时间/电量等文本上下文）
-```
-
-### 5. 使用方式
-
-| 操作 | 效果 |
-|------|------|
-| 启用开关 | 桌宠出现，悬浮在屏幕上 |
-| 拖动桌宠 | 自由移动位置（自动保存） |
-| **双击桌宠** | 立即触发一次 AI 截屏 + 吐槽 |
-| 点击通知栏「关闭桌宠」| 停止服务 |
-| 间隔计时到 | 自动截屏 → AI → 气泡弹出 |
 
 ---
 
-## 自定义桌宠皮肤
+## 安装后使用流程
 
-编辑 `app/src/main/assets/floatpet_overlay.html`：
-
-- 替换 `<img id="avatar-img">` 的 `src` 为你的图片 URL 或 base64
-- 修改 CSS 动画（`petBob`、`petPulse`、`ringPulse`）
-- 嵌入 GIF：将 `<img>` 替换为 GIF 路径
-- 嵌入 Live2D：在 HTML 中加载 Live2D Cubism SDK
+1. 安装 APK，打开 **FloatPet**
+2. App 内全屏运行完整的手机模拟界面（和浏览器里一模一样）
+3. **右下角 🐾 按钮** → 首次点击依次授权：
+   - ① 系统弹窗：**「显示在其他应用上层」** → 开启后返回
+   - ② 系统弹窗：**「截屏权限」** → 点击「立即开始」（可拒绝，拒绝后桌宠仍可运行）
+4. 桌宠启动成功，🐾 按钮变为**金色**
+5. **切换到微信/抖音/任意 App**，桌宠仍然悬浮显示
+6. 再次点击 🐾（回到 App 后）→ 关闭桌宠
 
 ---
 
-## 数据流图
+## AI 设置（桌宠用）
 
-```
-定时器到期 / 双击
-       ↓
-FloatingWindowService.triggerScan()
-       ↓
-WebView.evaluateJavascript("petStartScan()")  ← 扫描动画
-       ↓
-MediaProjection → VirtualDisplay → ImageReader
-       ↓
-Bitmap → JPEG → Base64
-       ↓
-buildContext()  ← 时间 + 电量 + 已保存的使用统计
-       ↓
-HTTP POST → AI Vision API
-       ↓
-AI 返回台词文本
-       ↓
-showBubble(text)  ← 气泡显示 + 震动反馈
-       ↓
-rescheduleTimer()  ← 下一次计划
+桌宠的 AI 设置与网页内的 AI 设置共享 `SharedPreferences`。
+在 App 内的设置页填写 API Key 后，桌宠自动读取，**无需重复配置**。
+
+如需用代码设置（从 JS 调用桥接）：
+
+```javascript
+// 在网页内 JS 调用（App 内 WebView 有此 Bridge，浏览器无）
+if (window.AndroidBridge) {
+    AndroidBridge.saveAiSettings(
+        "sk-xxx",                         // API Key
+        "https://api.openai.com/v1",      // Endpoint
+        "gpt-4o",                         // Model
+        "你是一只傲娇猫娘",               // 人设 Prompt
+        10                                // 吐槽间隔（分钟）
+    );
+}
 ```
 
 ---
@@ -139,53 +116,39 @@ rescheduleTimer()  ← 下一次计划
 
 | 权限 | 用途 |
 |------|------|
-| `SYSTEM_ALERT_WINDOW` | 悬浮窗核心权限，允许在所有 App 上层显示 |
-| `FOREGROUND_SERVICE` | 保持服务在后台持续运行 |
-| `FOREGROUND_SERVICE_MEDIA_PROJECTION` | Android 14+ 要求声明截屏前台服务类型 |
-| `POST_NOTIFICATIONS` | Android 13+ 显示前台服务通知 |
-| `INTERNET` | 调用 AI API |
-| `VIBRATE` | 气泡弹出时震动反馈 |
-| `RECEIVE_BOOT_COMPLETED` | 开机自启（可在系统设置中关闭） |
-
-> `MediaProjection` 截屏授权是**运行时弹窗**，不在 AndroidManifest 声明，每次重启后需重新授权。
-
----
-
-## 构建发布版 APK
-
-```bash
-cd android
-./gradlew assembleRelease
-# APK 输出路径：app/build/outputs/apk/release/app-release.apk
-```
-
-> 发布前需要在 `build.gradle` 配置签名：
-> ```groovy
-> android {
->   signingConfigs {
->     release {
->       storeFile file("your-keystore.jks")
->       storePassword "..."
->       keyAlias "..."
->       keyPassword "..."
->     }
->   }
-> }
-> ```
+| `SYSTEM_ALERT_WINDOW` | 悬浮窗核心权限 |
+| `FOREGROUND_SERVICE` | 前台服务保活 |
+| `FOREGROUND_SERVICE_MEDIA_PROJECTION` | MediaProjection 截屏 |
+| `POST_NOTIFICATIONS` | Android 13+ 前台通知 |
+| `INTERNET` | AI API + 网页所有网络功能 |
+| `RECORD_AUDIO` | 语音输入（Web Speech API） |
+| `CAMERA` | 视频通话 |
+| `VIBRATE` | 触摸震动 |
+| `RECEIVE_BOOT_COMPLETED` | 开机自启 |
 
 ---
 
-## 与 Web 版（index.html）的关系
+## 常见问题
 
-Web 版（`js/app_floatpet.js`）和 Android 原生版共享相同的**设计语言**和**AI 交互逻辑**：
+**Q: 构建后 App 里是空白页？**
+A: 确认 `copyWebAssets` 任务执行成功。可在 Android Studio 的 Gradle 面板中手动运行 `app > Tasks > other > copyWebAssets`，然后再 Build。
 
-| 特性 | Web 版 | Android 原生版 |
-|------|--------|----------------|
-| 悬浮层级 | phone 容器内 z-index | 系统级 `TYPE_APPLICATION_OVERLAY` |
-| 截屏 | `html2canvas` 截取 WebView | `MediaProjection` 截取真实屏幕 |
-| AI 调用 | 浏览器 `fetch` | `HttpURLConnection`（子线程） |
-| 桌宠 UI | 直接 DOM | Android WebView 加载 HTML |
-| 定时器 | `setTimeout` | `Handler.postDelayed` |
-| 配置存储 | `localStorage` | `SharedPreferences` |
+**Q: 桌宠消失了？**
+A: 小米/华为/OPPO 等厂商会后台杀进程。设置 → 应用管理 → FloatPet → 电量/后台 → 设为"无限制"。
 
-Web 版 `floatpet_overlay.html` 资产可以直接移植到 Android 版使用，只需调用 `window.AndroidBridge` 代替直接 API 调用。
+**Q: 语音识别没有反应？**
+A: Web Speech API 在某些 Android WebView 版本上需要联网（使用 Google 语音服务）。确保手机有网络，或使用文字输入。
+
+**Q: AI 设置在哪里填？**
+A: 直接在 App 内的「设置」界面（就是原来网页里的设置），填写后桌宠自动读取，不需要单独配置。
+
+---
+
+## 技术细节
+
+- **WebView 加载**：`file:///android_asset/index.html`（本地资源，无需服务器）
+- **JS Bridge**：`window.AndroidBridge`（仅在 APK 内 WebView 有效，浏览器打开无此对象）
+- **桌宠皮肤**：`floatpet_overlay.html`（独立于主界面，轻量 WebView）
+- **设置同步**：`SharedPreferences("floatpet_prefs")` 在 MainActivity 和 FloatingWindowService 间共享
+- **最低 SDK**：API 26（Android 8.0）
+- **目标 SDK**：API 34（Android 14）

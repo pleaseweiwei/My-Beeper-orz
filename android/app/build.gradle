@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.beeper.floatpet"
-        minSdk 23          // Android 6.0 (SYSTEM_ALERT_WINDOW 最低要求)
+        minSdk 26
         targetSdk 34
         versionCode 1
         versionName "1.0.0"
@@ -30,7 +30,6 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
 
-    // Allow cleartext for custom/self-hosted API endpoints
     buildFeatures {
         buildConfig true
     }
@@ -41,9 +40,30 @@ dependencies {
     implementation 'androidx.core:core:1.13.1'
     implementation 'com.google.android.material:material:1.12.0'
 
-    // JSON parsing (org.json is included in Android SDK, no extra dep needed)
-    // WebView is part of AOSP — no extra dep needed
-
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }
+
+/* ──────────────────────────────────────────────────────
+   自动把项目根目录的网页文件复制进 assets/
+   这样 WebView 就能加载完整的 index.html
+   ────────────────────────────────────────────────────── */
+def webRoot = project.file('../../')   // android/app/../../  →  小手机/
+
+task copyWebAssets(type: Copy) {
+    from webRoot
+    include 'index.html'
+    include 'manifest.json'
+    include 'service-worker.js'
+    include 'icon.png'
+    include 'js/**'
+    include 'css/**'
+    // 排除 android 目录本身，避免递归
+    exclude 'android/**'
+    exclude '.git/**'
+    exclude 'node_modules/**'
+    into 'src/main/assets'
+}
+
+// 每次构建前自动执行
+preBuild.dependsOn copyWebAssets

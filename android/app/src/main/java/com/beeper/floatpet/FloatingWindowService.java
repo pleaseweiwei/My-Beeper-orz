@@ -2,7 +2,6 @@ package com.beeper.floatpet;
 
 import android.app.*;
 import android.content.*;
-import android.content.res.Configuration;
 import android.graphics.*;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -14,7 +13,6 @@ import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.*;
-import android.view.animation.*;
 import android.webkit.*;
 import android.widget.*;
 
@@ -40,10 +38,9 @@ import java.util.concurrent.*;
  */
 public class FloatingWindowService extends Service {
 
-    private static final String TAG              = "FloatPetService";
-    private static final String CHANNEL_ID       = "floatpet_channel";
-    private static final int    NOTIF_ID         = 1001;
-    private static final int    VIRTUAL_DISP_DPI = 1;
+    private static final String TAG        = "FloatPetService";
+    private static final String CHANNEL_ID = "floatpet_channel";
+    private static final int    NOTIF_ID   = 1001;
 
     /* ── Intent action constants ── */
     public static final String ACTION_START          = "com.beeper.floatpet.START";
@@ -62,35 +59,35 @@ public class FloatingWindowService extends Service {
     public static final String EXTRA_PROJECTION_CODE = "projection_code";
 
     /* ── UI Views ── */
-    private WindowManager    _wm;
-    private View             _floatRoot;
-    private WebView          _petWebView;
-    private TextView         _bubbleText;
-    private View             _bubbleWrap;
-    private ImageView        _scanRing;
+    private WindowManager _wm;
+    private View          _floatRoot;
+    private WebView       _petWebView;
+    private TextView      _bubbleText;
+    private View          _bubbleWrap;
 
     /* ── State ── */
-    private int     _intervalMin   = 10;
-    private String  _persona       = "";
-    private String  _apiKey        = "";
-    private String  _apiEndpoint   = "https://api.openai.com/v1";
-    private String  _model         = "gpt-4o";
-    private boolean _scanning      = false;
-
-    /* ── Drag ── */
-    private int _dragStartX, _dragStartY;
-    private int _viewStartX, _viewStartY;
+    private int     _intervalMin = 10;
+    private String  _persona     = "";
+    private String  _apiKey      = "";
+    private String  _apiEndpoint = "https://api.openai.com/v1";
+    private String  _model       = "gpt-4o";
+    private boolean _scanning    = false;
 
     /* ── Timer ── */
-    private final Handler        _mainHandler = new Handler(Looper.getMainLooper());
-    private       Runnable       _timerRunnable;
-    private final ScheduledExecutorService _exec = Executors.newSingleThreadScheduledExecutor();
+    private final Handler  _mainHandler   = new Handler(Looper.getMainLooper());
+    private       Runnable _timerRunnable = null;
+
+    /* ── Bubble hide runnable (kept to allow cancellation) ── */
+    private Runnable _bubbleHideRunnable = null;
+
+    /* ── Background executor ── */
+    private final ExecutorService _exec = Executors.newSingleThreadExecutor();
 
     /* ── MediaProjection ── */
     private MediaProjectionManager _mpMgr;
-    private MediaProjection        _mediaProjection;
-    private VirtualDisplay         _virtualDisplay;
-    private ImageReader            _imageReader;
+    private MediaProjection         _mediaProjection;
+    private VirtualDisplay          _virtualDisplay;
+    private ImageReader             _imageReader;
     private int _screenWidth, _screenHeight, _screenDensity;
 
     /* ── SharedPrefs ── */
@@ -114,11 +111,14 @@ public class FloatingWindowService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) return START_STICKY;
         final String action = intent.getAction();
-        if (action == null) action_start(intent);
-        else switch (action) {
-            case ACTION_START:       action_start(intent);       break;
-            case ACTION_STOP:        action_stop();               break;
-            case ACTION_TRIGGER_SCAN:triggerScan(true);          break;
+        if (action == null) {
+            action_start(intent);
+            return START_STICKY;
+        }
+        switch (action) {
+            case ACTION_START:        action_start(intent);              break;
+            case ACTION_STOP:         action_stop();                     break;
+            case ACTION_TRIGGER_SCAN: triggerScan(true);                 break;
             case ACTION_SET_INTERVAL:
                 _intervalMin = intent.getIntExtra(EXTRA_INTERVAL_MIN, 10);
                 _prefs.edit().putInt("interval_min", _intervalMin).apply();
@@ -132,8 +132,8 @@ public class FloatingWindowService extends Service {
                 }
                 break;
             case ACTION_SET_PERSONA:
-                _persona = intent.getStringExtra(EXTRA_PERSONA) != null
-                        ? intent.getStringExtra(EXTRA_PERSONA) : _persona;
+                final String p = intent.getStringExtra(EXTRA_PERSONA);
+                if (p != null) _persona = p;
                 _savePrefs();
                 break;
         }
@@ -141,19 +141,13 @@ public class FloatingWindowService extends Service {
     }
 
     private void action_start(Intent intent) {
-        /* Retrieve API settings from intent (may be set by MainActivity) */
-        if (intent.hasExtra(EXTRA_API_KEY))
-            _apiKey      = intent.getStringExtra(EXTRA_API_KEY);
-        if (intent.hasExtra(EXTRA_API_ENDPOINT))
-            _apiEndpoint = intent.getStringExtra(EXTRA_API_ENDPOINT);
-        if (intent.hasExtra(EXTRA_MODEL))
-            _model       = intent.getStringExtra(EXTRA_MODEL);
-        if (intent.hasExtra(EXTRA_PERSONA))
-            _persona     = intent.getStringExtra(EXTRA_PERSONA);
-        if (intent.hasExtra(EXTRA_INTERVAL_MIN))
-            _intervalMin = intent.getIntExtra(EXTRA_INTERVAL_MIN, 10);
+        if (intent.hasExtra(EXTRA_API_KEY))      _apiKey      = intent.getStringExtra(EXTRA_API_KEY);
+        if (intent.hasExtra(EXTRA_API_ENDPOINT)) _apiEndpoint = intent.getStringExtra(EXTRA_API_ENDPOINT);
+        if (intent.hasExtra(EXTRA_MODEL))        _model       = intent.getStringExtra(EXTRA_MODEL);
+        if (intent.hasExtra(EXTRA_PERSONA))      _persona     = intent.getStringExtra(EXTRA_PERSONA);
+        if (intent.hasExtra(EXTRA_INTERVAL_MIN)) _intervalMin = intent.getIntExtra(EXTRA_INTERVAL_MIN, 10);
 
-        /* MediaProjection token (set by ScreenshotActivity) */
+        /* MediaProjection token (provided by ScreenshotActivity / MainActivity) */
         if (intent.hasExtra(EXTRA_PROJECTION_DATA)) {
             final int    code = intent.getIntExtra(EXTRA_PROJECTION_CODE, -1);
             final Intent data = intent.getParcelableExtra(EXTRA_PROJECTION_DATA);
@@ -192,48 +186,30 @@ public class FloatingWindowService extends Service {
     private void _buildFloatWindow() {
         _wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
 
-        final int TYPE = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                : WindowManager.LayoutParams.TYPE_PHONE;
-
         final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                280, 320,
-                TYPE,
+                dpToPx(140), dpToPx(160),
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
-
-        /* Restore last position */
         params.x = _prefs.getInt("float_x", 40);
         params.y = _prefs.getInt("float_y", 200);
 
-        /* Inflate from XML or build programmatically */
         _floatRoot = _buildFloatView();
-
         _wm.addView(_floatRoot, params);
 
-        /* Drag listener */
-        _floatRoot.setOnTouchListener(new FloatTouchListener(params));
-
-        /* Double-tap to trigger scan */
-        final GestureDetector gd = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
-            @Override
-            public boolean onDoubleTap(MotionEvent e) {
-                triggerScan(true);
-                return true;
-            }
-        });
-        _floatRoot.setOnTouchListener((v, ev) -> {
-            gd.onTouchEvent(ev);
-            return _floatRoot.getTag(R.id.tag_touch_listener) != null
-                    && ((View.OnTouchListener) _floatRoot.getTag(R.id.tag_touch_listener))
-                    .onTouch(v, ev);
-        });
-
-        /* Store drag listener in tag so double-tap GD can coexist */
-        FloatTouchListener ftl = new FloatTouchListener(params);
-        _floatRoot.setTag(R.id.tag_touch_listener, ftl);
+        /* Combined drag + double-tap listener */
+        final GestureDetector gd = new GestureDetector(this,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onDoubleTap(MotionEvent e) {
+                        triggerScan(true);
+                        return true;
+                    }
+                });
+        final FloatTouchListener ftl = new FloatTouchListener(params);
         _floatRoot.setOnTouchListener((v, ev) -> {
             gd.onTouchEvent(ev);
             return ftl.onTouch(v, ev);
@@ -241,14 +217,12 @@ public class FloatingWindowService extends Service {
     }
 
     private View _buildFloatView() {
-        /* Root: transparent frame */
-        FrameLayout root = new FrameLayout(this);
+        final FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.TRANSPARENT);
-        root.setLayoutParams(new FrameLayout.LayoutParams(280, 320));
 
-        /* WebView: renders floatpet_overlay.html (桌宠 UI) */
+        /* WebView — renders floatpet_overlay.html */
         _petWebView = new WebView(this);
-        WebSettings ws = _petWebView.getSettings();
+        final WebSettings ws = _petWebView.getSettings();
         ws.setJavaScriptEnabled(true);
         ws.setDomStorageEnabled(true);
         ws.setAllowFileAccess(true);
@@ -257,31 +231,31 @@ public class FloatingWindowService extends Service {
         _petWebView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         _petWebView.loadUrl("file:///android_asset/floatpet_overlay.html");
 
-        FrameLayout.LayoutParams wvParams =
-                new FrameLayout.LayoutParams(280, 280);
-        wvParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        root.addView(_petWebView, wvParams);
+        final FrameLayout.LayoutParams wvLp =
+                new FrameLayout.LayoutParams(dpToPx(140), dpToPx(140));
+        wvLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        root.addView(_petWebView, wvLp);
 
-        /* Bubble TextView (above pet) */
+        /* Bubble */
         _bubbleWrap = new FrameLayout(this);
         _bubbleWrap.setVisibility(View.GONE);
         _bubbleWrap.setBackground(_makeBubbleDrawable());
 
         _bubbleText = new TextView(this);
         _bubbleText.setTextColor(Color.parseColor("#1a1a1a"));
-        _bubbleText.setTextSize(12.5f);
-        _bubbleText.setPadding(20, 14, 20, 14);
-        _bubbleText.setMaxWidth(240);
-
+        _bubbleText.setTextSize(12f);
+        _bubbleText.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+        _bubbleText.setMaxWidth(dpToPx(200));
+        _bubbleText.setLineSpacing(0, 1.3f);
         ((FrameLayout) _bubbleWrap).addView(_bubbleText);
 
-        FrameLayout.LayoutParams bwParams =
+        final FrameLayout.LayoutParams bwLp =
                 new FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.WRAP_CONTENT,
                         FrameLayout.LayoutParams.WRAP_CONTENT);
-        bwParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        bwParams.topMargin = 4;
-        root.addView(_bubbleWrap, bwParams);
+        bwLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        bwLp.topMargin = dpToPx(4);
+        root.addView(_bubbleWrap, bwLp);
 
         return root;
     }
@@ -289,7 +263,10 @@ public class FloatingWindowService extends Service {
     private void _destroyFloatWindow() {
         if (_floatRoot != null && _wm != null) {
             try { _wm.removeView(_floatRoot); } catch (Exception ignored) {}
-            _floatRoot = null;
+            _floatRoot   = null;
+            _petWebView  = null;
+            _bubbleWrap  = null;
+            _bubbleText  = null;
         }
     }
 
@@ -299,8 +276,8 @@ public class FloatingWindowService extends Service {
     private void _rescheduleTimer() {
         _cancelTimer();
         final long delayMs = (_intervalMin == 0)
-                ? (long) ((3 + Math.random() * 12) * 60 * 1000)
-                : (long) _intervalMin * 60 * 1000L;
+                ? (long) ((3 + Math.random() * 12) * 60_000)
+                : (long) _intervalMin * 60_000L;
         _timerRunnable = () -> triggerScan(false);
         _mainHandler.postDelayed(_timerRunnable, delayMs);
         Log.d(TAG, "Next scan in " + delayMs / 1000 + "s");
@@ -314,12 +291,12 @@ public class FloatingWindowService extends Service {
     }
 
     /* ════════════════════════════════════════
-       Screen Capture (MediaProjection)
+       Screen Capture
        ════════════════════════════════════════ */
     private void triggerScan(boolean manual) {
         if (_scanning) return;
         _scanning = true;
-        showBubble("…", 3000);
+        showBubble("…", 5000);
         _playScanAnim();
 
         if (_mediaProjection != null) {
@@ -328,109 +305,102 @@ public class FloatingWindowService extends Service {
                 _mainHandler.post(() -> _callAI(_buildContext(), b64, manual));
             });
         } else {
-            /* No MediaProjection: call AI with context text only */
             _callAI(_buildContext(), null, manual);
         }
     }
 
     private String _captureScreenshot() {
+        ImageReader reader = null;
+        VirtualDisplay vd  = null;
         try {
-            _imageReader = ImageReader.newInstance(
-                    _screenWidth, _screenHeight,
-                    PixelFormat.RGBA_8888, 2);
-
-            _virtualDisplay = _mediaProjection.createVirtualDisplay(
-                    "FloatPetCapture",
-                    _screenWidth, _screenHeight, _screenDensity,
+            reader = ImageReader.newInstance(
+                    _screenWidth, _screenHeight, PixelFormat.RGBA_8888, 2);
+            vd = _mediaProjection.createVirtualDisplay(
+                    "FloatPetCapture", _screenWidth, _screenHeight, _screenDensity,
                     DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                    _imageReader.getSurface(), null, null);
+                    reader.getSurface(), null, null);
 
-            Thread.sleep(400); /* wait for frame */
+            Thread.sleep(400);
 
-            final Image image = _imageReader.acquireLatestImage();
+            final Image image = reader.acquireLatestImage();
             if (image == null) return null;
 
-            final Image.Plane[] planes = image.getPlanes();
-            final ByteBuffer buf       = planes[0].getBuffer();
-            final int rowStride        = planes[0].getRowStride();
-            final int pixelStride      = planes[0].getPixelStride();
-            final int rowPadding       = rowStride - pixelStride * _screenWidth;
+            try {
+                final Image.Plane[] planes    = image.getPlanes();
+                final ByteBuffer    buf        = planes[0].getBuffer();
+                final int           rowStride  = planes[0].getRowStride();
+                final int           pixelStride= planes[0].getPixelStride();
+                final int           rowPadding = rowStride - pixelStride * _screenWidth;
 
-            Bitmap bitmap = Bitmap.createBitmap(
-                    _screenWidth + rowPadding / pixelStride,
-                    _screenHeight, Bitmap.Config.ARGB_8888);
-            bitmap.copyPixelsFromBuffer(buf);
-            image.close();
+                Bitmap bitmap = Bitmap.createBitmap(
+                        _screenWidth + rowPadding / pixelStride,
+                        _screenHeight, Bitmap.Config.ARGB_8888);
+                bitmap.copyPixelsFromBuffer(buf);
 
-            /* Scale down to ~40% for API efficiency */
-            Bitmap scaled = Bitmap.createScaledBitmap(
-                    bitmap,
-                    (int) (_screenWidth  * 0.4),
-                    (int) (_screenHeight * 0.4),
-                    true);
-            bitmap.recycle();
+                Bitmap scaled = Bitmap.createScaledBitmap(
+                        bitmap,
+                        (int) (_screenWidth  * 0.4f),
+                        (int) (_screenHeight * 0.4f),
+                        true);
+                bitmap.recycle();
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            scaled.compress(Bitmap.CompressFormat.JPEG, 65, baos);
-            scaled.recycle();
-
-            _releaseVirtualDisplay();
-            return Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-
+                final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                scaled.compress(Bitmap.CompressFormat.JPEG, 65, baos);
+                scaled.recycle();
+                return Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+            } finally {
+                image.close();
+            }
         } catch (Exception e) {
             Log.e(TAG, "Screenshot failed", e);
-            _releaseVirtualDisplay();
             return null;
+        } finally {
+            if (vd     != null) { vd.release();    }
+            if (reader != null) { reader.close();   }
         }
     }
 
-    private void _releaseVirtualDisplay() {
-        if (_virtualDisplay != null) { _virtualDisplay.release(); _virtualDisplay = null; }
-        if (_imageReader   != null) { _imageReader.close();       _imageReader   = null; }
-    }
-
     private void _releaseProjection() {
-        _releaseVirtualDisplay();
-        if (_mediaProjection != null) { _mediaProjection.stop(); _mediaProjection = null; }
+        if (_virtualDisplay  != null) { _virtualDisplay.release();  _virtualDisplay  = null; }
+        if (_imageReader     != null) { _imageReader.close();        _imageReader     = null; }
+        if (_mediaProjection != null) { _mediaProjection.stop();     _mediaProjection = null; }
     }
 
     /* ════════════════════════════════════════
-       Context Builder
+       Context builder
        ════════════════════════════════════════ */
     private String _buildContext() {
         final List<String> parts = new ArrayList<>();
 
-        /* Time */
         final Calendar cal = Calendar.getInstance();
         final int h = cal.get(Calendar.HOUR_OF_DAY);
         final int m = cal.get(Calendar.MINUTE);
-        String timeLabel = "白天";
+        String timeLabel;
         if      (h >= 23 || h < 4)  timeLabel = "深夜";
         else if (h >= 22)            timeLabel = "夜深了";
         else if (h >= 20)            timeLabel = "晚上";
         else if (h >= 18)            timeLabel = "傍晚";
         else if (h < 6)              timeLabel = "凌晨";
         else if (h < 8)              timeLabel = "清晨";
+        else                         timeLabel = "白天";
         parts.add("现在" + timeLabel + h + "点" + (m > 0 ? m + "分" : ""));
 
-        /* Battery */
-        final IntentFilter ifilter  = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        final Intent batteryStatus  = registerReceiver(null, ifilter);
-        if (batteryStatus != null) {
-            final int level  = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-            final int scale  = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-            final int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+        final IntentFilter ifilter     = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        final Intent       battStatus  = registerReceiver(null, ifilter);
+        if (battStatus != null) {
+            final int level   = battStatus.getIntExtra(BatteryManager.EXTRA_LEVEL,  -1);
+            final int scale   = battStatus.getIntExtra(BatteryManager.EXTRA_SCALE,  -1);
+            final int status  = battStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
             if (level >= 0 && scale > 0) {
-                final int pct = (int) (level * 100f / scale);
-                final boolean charging = (status == BatteryManager.BATTERY_STATUS_CHARGING
+                final int pct      = (int) (level * 100f / scale);
+                final boolean chg  = (status == BatteryManager.BATTERY_STATUS_CHARGING
                         || status == BatteryManager.BATTERY_STATUS_FULL);
-                if (charging) parts.add("充电中" + pct + "%");
+                if (chg)         parts.add("充电中" + pct + "%");
                 else if (pct <= 15) parts.add("电量低" + pct + "%快没电了");
-                else parts.add("电量" + pct + "%");
+                else             parts.add("电量" + pct + "%");
             }
         }
 
-        /* Saved prefs context (app usage stats, session, etc.) */
         final String savedCtx = _prefs.getString("runtime_ctx", "");
         if (!savedCtx.isEmpty()) parts.add(savedCtx);
 
@@ -438,32 +408,33 @@ public class FloatingWindowService extends Service {
     }
 
     /* ════════════════════════════════════════
-       AI API Call  (OpenAI-compatible + Gemini)
+       AI API call
        ════════════════════════════════════════ */
     private void _callAI(String context, String screenshotB64, boolean manual) {
-        if (_apiKey.isEmpty()) {
-            showBubble("请在设置里填写 API Key ><", 7000);
+        if (_apiKey == null || _apiKey.isEmpty()) {
+            showBubble("请在设置里填写 API Key ><", 8000);
             _scanning = false;
             if (!manual) _rescheduleTimer();
             return;
         }
 
-        final String systemPrompt = _buildSystemPrompt(context);
-        final boolean isGemini    = _apiEndpoint.contains("generativelanguage.googleapis.com");
+        final String  sysPrompt = _buildSystemPrompt(context);
+        final boolean isGemini  = _apiEndpoint != null
+                && _apiEndpoint.contains("generativelanguage.googleapis.com");
 
         _exec.submit(() -> {
             String reply = "";
             try {
                 reply = isGemini
-                        ? _callGemini(systemPrompt, context, screenshotB64)
-                        : _callOpenAI(systemPrompt, context, screenshotB64);
+                        ? _callGemini(sysPrompt, context, screenshotB64)
+                        : _callOpenAI(sysPrompt, context, screenshotB64);
             } catch (Exception e) {
                 reply = "网络出了点问题，稍后再试 ><";
                 Log.e(TAG, "AI call failed", e);
             }
             final String finalReply = reply;
             _mainHandler.post(() -> {
-                showBubble(finalReply, 10000);
+                showBubble(finalReply, 12000);
                 _scanning = false;
                 if (!manual) _rescheduleTimer();
             });
@@ -471,10 +442,9 @@ public class FloatingWindowService extends Service {
     }
 
     private String _buildSystemPrompt(String context) {
-        final String moodNote = "性格活泼，言简意赅";
         return "你是一个悬浮在手机屏幕上的桌宠。\n"
-                + (_persona.isEmpty() ? "" : "你的人设：" + _persona + "\n")
-                + moodNote + "。\n"
+                + (_persona == null || _persona.isEmpty() ? "" : "你的人设：" + _persona + "\n")
+                + "性格活泼，言简意赅。\n"
                 + "你刚刚"偷看"了主人的手机屏幕，根据看到的信息，说一句符合你性格的简短吐槽或评论（15~45字，不加引号，直接说）。\n"
                 + "不要说"我看到了"这类开场白，直接切入评论。禁止生成Markdown格式。";
     }
@@ -484,7 +454,6 @@ public class FloatingWindowService extends Service {
         final String url  = base.endsWith("/chat/completions")
                 ? base : base + "/chat/completions";
 
-        /* Build messages JSON */
         final JSONArray userContent = new JSONArray();
         userContent.put(new JSONObject().put("type", "text").put("text", "屏幕情报：" + ctx));
         if (b64 != null && !b64.isEmpty()) {
@@ -535,48 +504,66 @@ public class FloatingWindowService extends Service {
     }
 
     private String _httpPost(String urlStr, String jsonBody, String authHeader) throws Exception {
-        final URL url = new URL(urlStr);
-        final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        if (authHeader != null) conn.setRequestProperty("Authorization", authHeader);
-        conn.setDoOutput(true);
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(30000);
+        final HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
+        try {
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            if (authHeader != null) conn.setRequestProperty("Authorization", authHeader);
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(15_000);
+            conn.setReadTimeout(30_000);
 
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(jsonBody.getBytes("utf-8"));
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(jsonBody.getBytes("UTF-8"));
+            }
+
+            final int code = conn.getResponseCode();
+            final InputStream is = (code < 400) ? conn.getInputStream() : conn.getErrorStream();
+            final StringBuilder sb = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"))) {
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+            }
+            if (code >= 400) {
+                Log.e(TAG, "API error " + code + ": " + sb);
+                throw new IOException("HTTP " + code + ": " + sb.toString().substring(0, Math.min(200, sb.length())));
+            }
+            return sb.toString();
+        } finally {
+            conn.disconnect();
         }
-
-        final InputStream is = conn.getResponseCode() < 400
-                ? conn.getInputStream() : conn.getErrorStream();
-        final BufferedReader br = new BufferedReader(new InputStreamReader(is, "utf-8"));
-        final StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = br.readLine()) != null) sb.append(line);
-        return sb.toString();
     }
 
     /* ════════════════════════════════════════
        Bubble UI
        ════════════════════════════════════════ */
-    public void showBubble(String text, int durationMs) {
+    public void showBubble(final String text, final int durationMs) {
         _mainHandler.post(() -> {
             if (_bubbleText == null || _bubbleWrap == null) return;
             _bubbleText.setText(text);
+            _bubbleWrap.setAlpha(1f);
             _bubbleWrap.setVisibility(View.VISIBLE);
-            _bubbleWrap.animate().alpha(1f).setDuration(200).start();
-            _mainHandler.removeCallbacksAndMessages("bubble_hide");
-            _mainHandler.postDelayed(() ->
+
+            /* Cancel any pending hide */
+            if (_bubbleHideRunnable != null) {
+                _mainHandler.removeCallbacks(_bubbleHideRunnable);
+            }
+            _bubbleHideRunnable = () -> {
+                if (_bubbleWrap != null) {
                     _bubbleWrap.animate().alpha(0f).setDuration(300)
-                            .withEndAction(() -> _bubbleWrap.setVisibility(View.GONE)).start(),
-                    durationMs);
+                            .withEndAction(() -> {
+                                if (_bubbleWrap != null) _bubbleWrap.setVisibility(View.GONE);
+                            }).start();
+                }
+            };
+            _mainHandler.postDelayed(_bubbleHideRunnable, durationMs);
         });
     }
 
     private void _playScanAnim() {
         if (_petWebView != null) {
-            _petWebView.evaluateJavascript("if(window.petStartScan)petStartScan();", null);
+            _mainHandler.post(() ->
+                _petWebView.evaluateJavascript("if(window.petStartScan)petStartScan();", null));
         }
     }
 
@@ -584,19 +571,17 @@ public class FloatingWindowService extends Service {
        Notification
        ════════════════════════════════════════ */
     private void _createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            final NotificationChannel ch = new NotificationChannel(
-                    CHANNEL_ID, "桌宠悬浮服务", NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription("保持桌宠悬浮在所有 App 上层");
-            ch.setShowBadge(false);
-            ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE))
-                    .createNotificationChannel(ch);
-        }
+        final NotificationChannel ch = new NotificationChannel(
+                CHANNEL_ID, "桌宠悬浮服务", NotificationManager.IMPORTANCE_LOW);
+        ch.setDescription("保持桌宠悬浮在所有 App 上层");
+        ch.setShowBadge(false);
+        ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE))
+                .createNotificationChannel(ch);
     }
 
     private Notification _buildNotification() {
-        final Intent stopIntent = new Intent(this, FloatingWindowService.class);
-        stopIntent.setAction(ACTION_STOP);
+        final Intent stopIntent = new Intent(this, FloatingWindowService.class)
+                .setAction(ACTION_STOP);
         final PendingIntent stopPi = PendingIntent.getService(
                 this, 0, stopIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -609,10 +594,11 @@ public class FloatingWindowService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("🐾 桌宠悬浮中")
                 .setContentText("悬浮在所有 App 上层 · 双击桌宠可手动触发 AI 吐槽")
-                .setSmallIcon(android.R.drawable.star_on)
+                .setSmallIcon(android.R.drawable.btn_star_big_on)
                 .setContentIntent(openPi)
-                .addAction(android.R.drawable.ic_delete, "关闭桌宠", stopPi)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "关闭桌宠", stopPi)
                 .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build();
     }
 
@@ -628,17 +614,21 @@ public class FloatingWindowService extends Service {
         _screenDensity = dm.densityDpi;
     }
 
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
     private android.graphics.drawable.Drawable _makeBubbleDrawable() {
         final android.graphics.drawable.GradientDrawable gd =
                 new android.graphics.drawable.GradientDrawable();
         gd.setColor(Color.parseColor("#FFFFFAEE"));
-        gd.setCornerRadius(24f);
+        gd.setCornerRadius(dpToPx(14));
         gd.setStroke(2, Color.parseColor("#FFE0A0"));
         return gd;
     }
 
     private void _loadPrefs() {
-        _intervalMin = _prefs.getInt("interval_min", 10);
+        _intervalMin = _prefs.getInt("interval_min",    10);
         _apiKey      = _prefs.getString("api_key",      "");
         _apiEndpoint = _prefs.getString("api_endpoint", "https://api.openai.com/v1");
         _model       = _prefs.getString("model",        "gpt-4o");
@@ -647,11 +637,11 @@ public class FloatingWindowService extends Service {
 
     private void _savePrefs() {
         _prefs.edit()
-                .putInt("interval_min",  _intervalMin)
-                .putString("api_key",      _apiKey)
-                .putString("api_endpoint", _apiEndpoint)
-                .putString("model",        _model)
-                .putString("persona",      _persona)
+                .putInt("interval_min",     _intervalMin)
+                .putString("api_key",       _apiKey)
+                .putString("api_endpoint",  _apiEndpoint)
+                .putString("model",         _model)
+                .putString("persona",       _persona)
                 .apply();
     }
 
@@ -660,7 +650,7 @@ public class FloatingWindowService extends Service {
        ════════════════════════════════════════ */
     private class FloatTouchListener implements View.OnTouchListener {
         private final WindowManager.LayoutParams params;
-        private int  initX, initY;
+        private int   initX, initY;
         private float initTouchX, initTouchY;
         private boolean moved;
 
@@ -670,13 +660,13 @@ public class FloatingWindowService extends Service {
         public boolean onTouch(View v, MotionEvent ev) {
             switch (ev.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    initX      = params.x;       initY      = params.y;
-                    initTouchX = ev.getRawX();   initTouchY = ev.getRawY();
+                    initX      = params.x;      initY      = params.y;
+                    initTouchX = ev.getRawX();  initTouchY = ev.getRawY();
                     moved = false;
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    final int dx = (int)(ev.getRawX() - initTouchX);
-                    final int dy = (int)(ev.getRawY() - initTouchY);
+                    final int dx = (int) (ev.getRawX() - initTouchX);
+                    final int dy = (int) (ev.getRawY() - initTouchY);
                     if (Math.abs(dx) + Math.abs(dy) > 8) moved = true;
                     if (moved) {
                         params.x = initX + dx;
@@ -719,13 +709,13 @@ public class FloatingWindowService extends Service {
         }
 
         @JavascriptInterface
-        public String getPersona() { return _persona; }
+        public String getPersona() { return _persona != null ? _persona : ""; }
 
         @JavascriptInterface
-        public String getApiKey() { return _apiKey; }
+        public String getApiKey() { return _apiKey != null ? _apiKey : ""; }
 
         @JavascriptInterface
-        public String getModel() { return _model; }
+        public String getModel() { return _model != null ? _model : "gpt-4o"; }
 
         @JavascriptInterface
         public int getIntervalMin() { return _intervalMin; }
@@ -733,17 +723,17 @@ public class FloatingWindowService extends Service {
         @JavascriptInterface
         public void vibrate() {
             final Vibrator vib = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-            if (vib != null) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                    vib.vibrate(VibrationEffect.createWaveform(new long[]{0, 15, 25, 15}, -1));
-                else
-                    vib.vibrate(new long[]{0, 15, 25, 15}, -1);
+            if (vib == null) return;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vib.vibrate(VibrationEffect.createWaveform(new long[]{0, 15, 25, 15}, -1));
+            } else {
+                vib.vibrate(new long[]{0, 15, 25, 15}, -1);
             }
         }
 
         @JavascriptInterface
         public void saveRuntimeCtx(String ctx) {
-            _prefs.edit().putString("runtime_ctx", ctx).apply();
+            if (ctx != null) _prefs.edit().putString("runtime_ctx", ctx).apply();
         }
     }
 }
