@@ -294,29 +294,51 @@ window.showBubble    = function(text, ms) {
 };
 
 /* ════════════════════════════════════════
-   Double-tap on avatar → trigger scan
+   setAvatar  — 由 FloatingWindowService 调用，同步角色头像
+   ════════════════════════════════════════ */
+window.setAvatar = function(url, name) {
+  if (url && $avatar) {
+    $avatar.src = url;
+    $avatar.onerror = function() {
+      this.src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><text y='60' font-size='60'>🐱</text></svg>";
+      this.onerror = null;
+    };
+  }
+  if (name) {
+    document.title = name + ' · 桌宠';
+  }
+};
+
+/* ════════════════════════════════════════
+   Tap handler:
+     单击 → 打开主 App（openApp）
+     双击 → 手动触发 AI 说话（triggerScan）
    ════════════════════════════════════════ */
 let _tapCount = 0, _tapTimer = null;
 document.getElementById('avatar-wrap').addEventListener('click', () => {
   _tapCount++;
   if (_tapCount === 1) {
-    _tapTimer = setTimeout(() => { _tapCount = 0; }, 380);
+    _tapTimer = setTimeout(() => {
+      _tapCount = 0;
+      /* 单击 → 回到主 App */
+      _bridge('openApp');
+    }, 360);
   } else if (_tapCount >= 2) {
     clearTimeout(_tapTimer);
     _tapCount = 0;
+    /* 双击 → 触发 AI */
     _bridge('triggerScan');
     petStartScan();
   }
 });
 
 /* ════════════════════════════════════════
-   Init: load avatar from bridge
+   Init
    ════════════════════════════════════════ */
 (function init() {
-  /* Expose interval to bridge queries */
   const intv = _bridge('getIntervalMin');
   if (intv !== null) {
-    console.log('FloatPet interval:', intv, 'min');
+    console.log('FloatPet overlay ready, interval:', intv, 'min');
   }
 })();
 </script>

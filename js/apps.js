@@ -2129,11 +2129,14 @@ window.featureAddAIPersona = function() {
 }
 
 // 4. 功能三：导入酒馆角色卡
-// 触发文件选择
+// 注意：index.html 中的菜单项已改为 <label for="tavern-card-input">，直接触发文件选择框
+// 此函数保留为备用入口（如从其他地方调用）
 window.featureImportCard = function() {
-    toggleWeChatMenu();
+    // 先关闭菜单，再触发文件选择
+    const menu = document.getElementById('wc-plus-menu');
+    if (menu) menu.classList.remove('active');
     const fileInput = document.getElementById('tavern-card-input');
-    if(fileInput) fileInput.click(); // 模拟点击隐藏的文件框
+    if (fileInput) fileInput.click();
 }
 
 
@@ -7323,9 +7326,12 @@ ${mesExample}
     rebuildContactsList();
     restoreFriendListUI();
 
-    // 6. 反馈
-    toggleWeChatMenu();
-    alert(`PNG 角色 "${charName}" 导入成功！`);
+    // 6. 反馈（不再调用 toggleWeChatMenu，菜单已由 label 关闭；提示不区分 PNG/JSON）
+    if (typeof showToast === 'function') {
+        showToast(`<i class="fas fa-check" style="color:#07c160;"></i> 角色「${charName}」导入成功！`);
+    } else {
+        alert(`角色「${charName}」导入成功！`);
+    }
     openChatDetail(finalId);
 }
 
