@@ -1,6 +1,8 @@
 package com.beeper.floatpet;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.app.DownloadManager;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -13,7 +15,13 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
+import org.json.JSONObject;
+
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 
 /**
@@ -63,6 +71,8 @@ public class MainActivity extends AppCompatActivity {
         _prefs = getSharedPreferences("floatpet_prefs", Context.MODE_PRIVATE);
         _setupWebView();
         _requestRuntimePermissions();
+        // 启动 3 秒后静默检测更新，不影响启动体验
+        new Handler(Looper.getMainLooper()).postDelayed(this::_checkForUpdate, 3000);
     }
 
     /* ════════════════════════════════════════
@@ -602,6 +612,135 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(req, perms, grants);
         if (req == REQ_AUDIO_CAMERA && _webView != null) {
             _webView.postDelayed(this::_injectSpeechPolyfill, 500);
+        }
+    }
+
+    /* ════════════════════════════════════════
+       App 内自动更新
+       ════════════════════════════════════════ */
+
+    /**
+     * 在子线程中拉取 version.json，与当前 versionCode 对比，
+     * 有新版本则在主线程弹确认对话框。
+     */
+    private void _checkForUpdate() {
+        if (!_isNetworkAvailable()) return;
+        new Thread(() -> {
+            try {
+                final String versionUrl =
+                    "https://raw.githubusercontent.com/ljb0621/bono1122/main/version.json";
+                HttpURLConnection conn =
+                    (HttpURLConnection) new URL(versionUrl).openConnection();
+                conn.setConnectTimeout(8000);
+                conn.setReadTimeout(8000);
+                conn.setRequestProperty("Cache-Control", "no-cache");
+
+                BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+                br.close();
+                conn.disconnect();
+
+                JSONObject json  = new JSONObject(sb.toString());
+                int latestCode   = json.getInt("versionCode");
+                String latestName = json.optString("versionName", "新版本");
+                String apkUrl    = json.getString("apkUrl");
+                String notes     = json.optString("notes", "");
+
+                int currentCode  = BuildConfig.VERSION_CODE;
+                if (latestCode > currentCode) {
+                    runOnUiThread(() ->
+                        _showUpdateDialog(latestName, notes, apkUrl));
+                }
+            } catch (Exception e) {
+                // 静默失败，不影响正常使用
+            }
+        }).start();
+    }
+
+    private void _showUpdateDialog(String version, String notes, String apkUrl) {
+        String msg = "发现新版本 " + version + "\n\n"
+            + (notes.isEmpty() ? "包含最新功能与修复。" : notes)
+            + "\n\n是否立即下载并更新？";
+        new AlertDialog.Builder(this)
+            .setTitle("🎉 发现新版本")
+            .setMessage(msg)
+            .setCancelable(true)
+            .setPositiveButton("立即更新", (d, w) -> _downloadAndInstall(apkUrl))
+            .setNegativeButton("下次再说", null)
+            .show();
+    }
+
+    /**
+     * 使用系统 DownloadManager 后台下载 APK，
+     * 下载完成后通过广播触发安装界面。
+     */
+    private void _downloadAndInstall(String apkUrl) {
+        try {
+            // 清理旧的安装包
+            File dest = new File(getExternalFilesDir(null), "update.apk");
+            if (dest.exists()) dest.delete();
+
+            DownloadManager.Request req =
+                new DownloadManager.Request(Uri.parse(apkUrl));
+            req.setTitle("Beeper 正在更新...");
+            req.setDescription("新版本 APK 下载中，完成后点击安装");
+            req.setNotificationVisibility(
+                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            req.setDestinationInExternalFilesDir(this, null, "update.apk");
+            req.setMimeType("application/vnd.android.package-archive");
+            req.addRequestHeader("Cache-Control", "no-cache");
+
+            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            long downloadId = dm.enqueue(req);
+
+            // 注册一次性广播，下载完成后触发安装
+            BroadcastReceiver receiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context ctx, Intent intent) {
+                    long id = intent.getLongExtra(
+                        DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                    if (id == downloadId) {
+                        try { unregisterReceiver(this); } catch (Exception ignore) {}
+                        _installApk();
+                    }
+                }
+            };
+            registerReceiver(receiver,
+                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+
+            Toast.makeText(this,
+                "⬇️ 正在后台下载新版本，下载完成会提示安装",
+                Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(this,
+                "下载失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** 用 FileProvider 提供 content URI，启动系统安装界面 */
+    private void _installApk() {
+        try {
+            File apkFile = new File(getExternalFilesDir(null), "update.apk");
+            if (!apkFile.exists()) {
+                runOnUiThread(() -> Toast.makeText(this,
+                    "安装文件未找到，请重试", Toast.LENGTH_SHORT).show());
+                return;
+            }
+            Uri apkUri = FileProvider.getUriForFile(
+                this, getPackageName() + ".fileprovider", apkFile);
+
+            Intent install = new Intent(Intent.ACTION_VIEW);
+            install.setDataAndType(apkUri,
+                "application/vnd.android.package-archive");
+            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(install);
+        } catch (Exception e) {
+            runOnUiThread(() -> Toast.makeText(this,
+                "请在通知栏点击安装", Toast.LENGTH_LONG).show());
         }
     }
 

@@ -3,7 +3,12 @@ name: 📦 Build Android APK
 on:
   push:
     branches: [ main, master ]
+    paths-ignore:
+      - 'version.json'   # 防止更新 version.json 后触发无限循环
   workflow_dispatch:
+
+permissions:
+  contents: write   # 创建 Release + 推送 version.json 都需要写权限
 
 jobs:
   build:
@@ -11,9 +16,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 检出代码
+      # 1. 检出代码（带 token 以便后续推送）
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       # 2. 配置 JDK 17
       - name: Set up JDK 17
@@ -43,16 +51,19 @@ jobs:
         working-directory: android
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      # 6. 构建 Debug APK，完整日志保存到文件
+      # 6. 构建 Debug APK，versionCode = github.run_number
       - name: Build Debug APK
         working-directory: android
         run: |
           set -o pipefail
           /opt/gradle/gradle-8.4/bin/gradle assembleDebug \
             --no-daemon \
-            --stacktrace 2>&1 | tee /tmp/gradle-build.log
+            --stacktrace \
+            -PversionCode=${{ github.run_number }} \
+            -PversionName="1.0.${{ github.run_number }}" \
+            2>&1 | tee /tmp/gradle-build.log
 
-      # 7. 构建失败时把关键错误提取为 Annotation（无需登录即可看到）
+      # 7. 构建失败时输出关键错误
       - name: Show build errors
         if: failure()
         run: |
@@ -61,7 +72,6 @@ jobs:
           echo ""
           echo "=== LAST 80 LINES ==="
           tail -80 /tmp/gradle-build.log || true
-          echo ""
           echo "::error::$(grep -E 'error:|Error:' /tmp/gradle-build.log | head -5 | tr '\n' ' ')"
 
       # 8. 无论成功失败都上传完整 Gradle 日志
@@ -73,7 +83,7 @@ jobs:
           path: /tmp/gradle-build.log
           retention-days: 7
 
-      # 9. 上传 APK（保存 30 天）
+      # 9. 上传 APK 为 Artifact（保留 30 天）
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -82,8 +92,40 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # 10. 完成提示
+      # 10. 创建 GitHub Release 并附带 APK（用于 App 内自动更新下载）
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "build-${{ github.run_number }}"
+          name: "Build #${{ github.run_number }}"
+          body: |
+            自动构建版本 #${{ github.run_number }}
+            versionCode: ${{ github.run_number }}
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 11. 更新仓库根目录的 version.json（App 启动时检查此文件判断是否需要更新）
+      - name: Update version.json
+        run: |
+          cat > version.json << 'JSONEOF'
+          {
+            "versionCode": ${{ github.run_number }},
+            "versionName": "1.0.${{ github.run_number }}",
+            "apkUrl": "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk",
+            "notes": "构建 #${{ github.run_number }}，包含最新功能与修复"
+          }
+          JSONEOF
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git diff --staged --quiet || git commit -m "chore: update version.json to build #${{ github.run_number }} [skip ci]"
+          git push
+
+      # 12. 完成提示
       - name: Done
         run: |
           echo "✅ APK 构建并上传完成！"
+          echo "📦 Release: https://github.com/${{ github.repository }}/releases/latest"
           ls -lh android/app/build/outputs/apk/debug/app-debug.apk
