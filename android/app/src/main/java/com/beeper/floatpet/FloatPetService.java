@@ -265,9 +265,8 @@ public class FloatPetService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("桌宠运行中 🐾")
             .setContentText("悬浮在所有应用上层 · 点击返回")
-            .setSmallIcon(android.R.drawable.ic_menu_compass)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(openPI)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "停止桌宠", stopPI)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build();

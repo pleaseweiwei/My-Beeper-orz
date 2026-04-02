@@ -337,32 +337,68 @@ const FloatPet = (function () {
             window.AndroidBridge.saveString('pet_style', _cfg.style || 'avatar');
             window.AndroidBridge.saveString('pet_emoji', _cfg.emoji || '🐱');
 
-            /* ── 角色头像 URL（data URI 限 150 KB，超出则不存） ── */
+            /* ── 角色头像 URL（data URI 大图先压缩到 80×80 JPEG 再存） ── */
             var avatarUrl = _getCharAvatar(charId);
-            if (avatarUrl && avatarUrl.length < 150000) {
-                window.AndroidBridge.saveString('pet_avatar_url', avatarUrl);
-            } else {
-                window.AndroidBridge.saveString('pet_avatar_url', '');
+            function _saveAvatarToPrefs(url) {
+                if (!url) { window.AndroidBridge.saveString('pet_avatar_url', ''); return; }
+                if (!url.startsWith('data:') || url.length < 200000) {
+                    window.AndroidBridge.saveString('pet_avatar_url', url);
+                    return;
+                }
+                // 大图：用 canvas 压缩为 80×80 JPEG 0.82
+                try {
+                    var tmpImg = new Image();
+                    tmpImg.onload = function () {
+                        try {
+                            var cv = document.createElement('canvas');
+                            cv.width = 80; cv.height = 80;
+                            cv.getContext('2d').drawImage(tmpImg, 0, 0, 80, 80);
+                            var compressed = cv.toDataURL('image/jpeg', 0.82);
+                            window.AndroidBridge.saveString('pet_avatar_url', compressed);
+                        } catch (_) { window.AndroidBridge.saveString('pet_avatar_url', ''); }
+                    };
+                    tmpImg.onerror = function () { window.AndroidBridge.saveString('pet_avatar_url', ''); };
+                    tmpImg.src = url;
+                } catch (_) { window.AndroidBridge.saveString('pet_avatar_url', ''); }
             }
+            _saveAvatarToPrefs(avatarUrl);
 
-            /* ── GIF URL（同样限大小，data URI 超限则清空） ── */
+            /* ── GIF URL（plain URL 直存；data URI ≤400KB 直存，超限清空） ── */
             var gifSrc = _cfg.gifUrl || '';
             if (gifSrc && !gifSrc.startsWith('data:')) {
                 window.AndroidBridge.saveString('pet_gif_url', gifSrc);
-            } else if (gifSrc && gifSrc.length < 150000) {
+            } else if (gifSrc && gifSrc.length < 400000) {
                 window.AndroidBridge.saveString('pet_gif_url', gifSrc);
             } else {
                 window.AndroidBridge.saveString('pet_gif_url', '');
             }
 
-            /* ── Custom URL ── */
+            /* ── Custom URL（同上） ── */
             var customSrc = _cfg.customUrl || '';
             if (customSrc && !customSrc.startsWith('data:')) {
                 window.AndroidBridge.saveString('pet_custom_url', customSrc);
-            } else if (customSrc && customSrc.length < 150000) {
+            } else if (customSrc && customSrc.length < 400000) {
                 window.AndroidBridge.saveString('pet_custom_url', customSrc);
             } else {
-                window.AndroidBridge.saveString('pet_custom_url', '');
+                // 超限：压缩后存
+                if (customSrc && customSrc.startsWith('data:image')) {
+                    try {
+                        var tmpImg2 = new Image();
+                        tmpImg2.onload = function () {
+                            try {
+                                var cv2 = document.createElement('canvas');
+                                cv2.width = 100; cv2.height = 100;
+                                cv2.getContext('2d').drawImage(tmpImg2, 0, 0, 100, 100);
+                                var compressed2 = cv2.toDataURL('image/jpeg', 0.80);
+                                window.AndroidBridge.saveString('pet_custom_url', compressed2);
+                            } catch (_) { window.AndroidBridge.saveString('pet_custom_url', ''); }
+                        };
+                        tmpImg2.onerror = function () { window.AndroidBridge.saveString('pet_custom_url', ''); };
+                        tmpImg2.src = customSrc;
+                    } catch (_) { window.AndroidBridge.saveString('pet_custom_url', ''); }
+                } else {
+                    window.AndroidBridge.saveString('pet_custom_url', '');
+                }
             }
 
             /* ── AI 设置（API Key / endpoint / model） ── */
@@ -401,6 +437,38 @@ const FloatPet = (function () {
                 }).join('\n').slice(0, 800);
             }
             window.AndroidBridge.saveString('pet_summaries', summaryText);
+
+            /* ── 近期聊天记录（异步从 IDB 读取，最多 12 条） ── */
+            (function() {
+                try {
+                    var idbKey = (typeof scopedChatKey === 'function') ? scopedChatKey(charId) : ('chat_history__' + charId);
+                    _idbGet(idbKey).then(function(hist) {
+                        var recentText = '';
+                        if (hist && hist.length > 0) {
+                            var last12 = hist.filter(function(m) {
+                                return m && m.text && m.type !== 'system' &&
+                                       !/^\[System/.test(m.text) && !/^\[STATUS_/.test(m.text);
+                            }).slice(-12);
+                            var charNameStr = _getCharName(charId) || 'AI';
+                            var myNameStr = (typeof _getMyPersonaInfo === 'function') ? (_getMyPersonaInfo().name || '我') : '我';
+                            recentText = last12.map(function(m) {
+                                var who = (m.type === 'received') ? charNameStr : myNameStr;
+                                var txt = (m.text || '').replace(/\[STATUS_START\][\s\S]*?\[STATUS_END\]/gi, '').replace(/\[DANMAKU_START\][\s\S]*/gi, '').trim().slice(0, 120);
+                                return who + ': ' + txt;
+                            }).join('\n');
+                        }
+                        if (window.AndroidBridge && window.AndroidBridge.saveString) {
+                            window.AndroidBridge.saveString('pet_recent_chat', recentText.slice(0, 1200));
+                        }
+                    }).catch(function() {
+                        if (window.AndroidBridge && window.AndroidBridge.saveString) {
+                            window.AndroidBridge.saveString('pet_recent_chat', '');
+                        }
+                    });
+                } catch (e) {
+                    try { window.AndroidBridge.saveString('pet_recent_chat', ''); } catch (_) {}
+                }
+            }());
 
             /* ── 发送间隔（分钟，0 = 随机） ── */
             window.AndroidBridge.saveString('pet_interval', String(_cfg.intervalMin || 10));

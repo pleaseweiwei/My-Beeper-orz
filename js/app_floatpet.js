@@ -323,10 +323,156 @@ const FloatPet = (function () {
         return !!(window.AndroidBridge && typeof window.AndroidBridge.getPlatform === 'function');
     }
     function _saveOverlayConfig() {
-        // 仅保存 pet_emoji 供 overlay WebView 读取（OverlayBridge 使用 beeper_prefs 与此共享）
+        /* 将桌宠所需的全部数据写入 beeper_prefs SharedPreferences，
+           供 floatpet_overlay.html 通过 OverlayBridge.getSharedPref() 读取。
+           两处使用同一个 "beeper_prefs" 存储，AndroidBridge ↔ OverlayBridge 完全共享。 */
         try {
             if (!_isAndroid()) return;
+            var charId = _cfg.charId;
+            var f      = (typeof friendsData !== 'undefined' && charId && friendsData[charId])
+                         ? friendsData[charId] : {};
+            var myInfo = _getMyPersonaInfo();
+
+            /* ── 基础样式 ── */
+            window.AndroidBridge.saveString('pet_style', _cfg.style || 'avatar');
             window.AndroidBridge.saveString('pet_emoji', _cfg.emoji || '🐱');
+
+            /* ── 角色头像 URL（data URI 大图先压缩到 80×80 JPEG 再存） ── */
+            var avatarUrl = _getCharAvatar(charId);
+            function _saveAvatarToPrefs(url) {
+                if (!url) { window.AndroidBridge.saveString('pet_avatar_url', ''); return; }
+                if (!url.startsWith('data:') || url.length < 200000) {
+                    window.AndroidBridge.saveString('pet_avatar_url', url);
+                    return;
+                }
+                // 大图：用 canvas 压缩为 80×80 JPEG 0.82
+                try {
+                    var tmpImg = new Image();
+                    tmpImg.onload = function () {
+                        try {
+                            var cv = document.createElement('canvas');
+                            cv.width = 80; cv.height = 80;
+                            cv.getContext('2d').drawImage(tmpImg, 0, 0, 80, 80);
+                            var compressed = cv.toDataURL('image/jpeg', 0.82);
+                            window.AndroidBridge.saveString('pet_avatar_url', compressed);
+                        } catch (_) { window.AndroidBridge.saveString('pet_avatar_url', ''); }
+                    };
+                    tmpImg.onerror = function () { window.AndroidBridge.saveString('pet_avatar_url', ''); };
+                    tmpImg.src = url;
+                } catch (_) { window.AndroidBridge.saveString('pet_avatar_url', ''); }
+            }
+            _saveAvatarToPrefs(avatarUrl);
+
+            /* ── GIF URL（plain URL 直存；data URI ≤400KB 直存，超限清空） ── */
+            var gifSrc = _cfg.gifUrl || '';
+            if (gifSrc && !gifSrc.startsWith('data:')) {
+                window.AndroidBridge.saveString('pet_gif_url', gifSrc);
+            } else if (gifSrc && gifSrc.length < 400000) {
+                window.AndroidBridge.saveString('pet_gif_url', gifSrc);
+            } else {
+                window.AndroidBridge.saveString('pet_gif_url', '');
+            }
+
+            /* ── Custom URL（同上） ── */
+            var customSrc = _cfg.customUrl || '';
+            if (customSrc && !customSrc.startsWith('data:')) {
+                window.AndroidBridge.saveString('pet_custom_url', customSrc);
+            } else if (customSrc && customSrc.length < 400000) {
+                window.AndroidBridge.saveString('pet_custom_url', customSrc);
+            } else {
+                // 超限：压缩后存
+                if (customSrc && customSrc.startsWith('data:image')) {
+                    try {
+                        var tmpImg2 = new Image();
+                        tmpImg2.onload = function () {
+                            try {
+                                var cv2 = document.createElement('canvas');
+                                cv2.width = 100; cv2.height = 100;
+                                cv2.getContext('2d').drawImage(tmpImg2, 0, 0, 100, 100);
+                                var compressed2 = cv2.toDataURL('image/jpeg', 0.80);
+                                window.AndroidBridge.saveString('pet_custom_url', compressed2);
+                            } catch (_) { window.AndroidBridge.saveString('pet_custom_url', ''); }
+                        };
+                        tmpImg2.onerror = function () { window.AndroidBridge.saveString('pet_custom_url', ''); };
+                        tmpImg2.src = customSrc;
+                    } catch (_) { window.AndroidBridge.saveString('pet_custom_url', ''); }
+                } else {
+                    window.AndroidBridge.saveString('pet_custom_url', '');
+                }
+            }
+
+            /* ── AI 设置（API Key / endpoint / model） ── */
+            try {
+                var aiSets = JSON.parse(localStorage.getItem('myCoolPhone_aiSettings') || '{}');
+                window.AndroidBridge.saveString('pet_api_key',      aiSets.apiKey   || '');
+                window.AndroidBridge.saveString('pet_api_endpoint', aiSets.endpoint || '');
+                window.AndroidBridge.saveString('pet_api_model',    aiSets.model    || '');
+            } catch (_) {}
+
+            /* ── 角色基本信息 ── */
+            window.AndroidBridge.saveString('pet_char_name',    _getCharName(charId));
+            window.AndroidBridge.saveString('pet_char_persona', (f.persona || '').slice(0, 1200));
+            window.AndroidBridge.saveString('pet_affection',    String(f.affection || 0));
+
+            /* ── 好感阶段关系日志（最近3条，供 overlay 还原关系历史） ── */
+            var relLog = '';
+            if (f.relationshipLog && f.relationshipLog.length > 0) {
+                relLog = f.relationshipLog.slice(-3).map(function (r) { return '- ' + r.text; }).join('\n').slice(0, 400);
+            }
+            window.AndroidBridge.saveString('pet_relation_log', relLog);
+
+            /* ── 世界书（全量关键词匹配，截断到 1500 字） ── */
+            var wbCtx = _getWorldbookContext(charId);
+            window.AndroidBridge.saveString('pet_worldbook', wbCtx.slice(0, 1500));
+
+            /* ── 我的人设 ── */
+            window.AndroidBridge.saveString('pet_my_name',    myInfo.name    || '主人');
+            window.AndroidBridge.saveString('pet_my_persona', (myInfo.persona || '').slice(0, 600));
+
+            /* ── 剧情总结（最近3段） ── */
+            var summaryText = '';
+            if (f.summaries && f.summaries.length > 0) {
+                summaryText = f.summaries.slice(-3).map(function (s) {
+                    return '- ' + s.text;
+                }).join('\n').slice(0, 800);
+            }
+            window.AndroidBridge.saveString('pet_summaries', summaryText);
+
+            /* ── 近期聊天记录（异步从 IDB 读取，最多 12 条） ── */
+            (function() {
+                try {
+                    var idbKey = (typeof scopedChatKey === 'function') ? scopedChatKey(charId) : ('chat_history__' + charId);
+                    _idbGet(idbKey).then(function(hist) {
+                        var recentText = '';
+                        if (hist && hist.length > 0) {
+                            var last12 = hist.filter(function(m) {
+                                return m && m.text && m.type !== 'system' &&
+                                       !/^\[System/.test(m.text) && !/^\[STATUS_/.test(m.text);
+                            }).slice(-12);
+                            var charNameStr = _getCharName(charId) || 'AI';
+                            var myNameStr = (typeof _getMyPersonaInfo === 'function') ? (_getMyPersonaInfo().name || '我') : '我';
+                            recentText = last12.map(function(m) {
+                                var who = (m.type === 'received') ? charNameStr : myNameStr;
+                                var txt = (m.text || '').replace(/\[STATUS_START\][\s\S]*?\[STATUS_END\]/gi, '').replace(/\[DANMAKU_START\][\s\S]*/gi, '').trim().slice(0, 120);
+                                return who + ': ' + txt;
+                            }).join('\n');
+                        }
+                        if (window.AndroidBridge && window.AndroidBridge.saveString) {
+                            window.AndroidBridge.saveString('pet_recent_chat', recentText.slice(0, 1200));
+                        }
+                    }).catch(function() {
+                        if (window.AndroidBridge && window.AndroidBridge.saveString) {
+                            window.AndroidBridge.saveString('pet_recent_chat', '');
+                        }
+                    });
+                } catch (e) {
+                    try { window.AndroidBridge.saveString('pet_recent_chat', ''); } catch (_) {}
+                }
+            }());
+
+            /* ── 发送间隔（分钟，0 = 随机） ── */
+            window.AndroidBridge.saveString('pet_interval', String(_cfg.intervalMin || 10));
+
         } catch (e) { console.warn('[FloatPet] saveOverlayConfig error', e); }
     }
 
@@ -2037,6 +2183,9 @@ const FloatPet = (function () {
             });
         }
         _saveCfg();
+        /* 每次设置变更时同步更新 Android overlay 的 SharedPreferences，
+           确保 overlay 下次触发时使用最新的形象与人设数据 */
+        if (_cfg.enabled) _saveOverlayConfig();
     }
 
     /* ════════════════════════════════════════
