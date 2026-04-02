@@ -29,20 +29,21 @@
 
   /* 气泡对话框 */
   #bubble {
-    background: rgba(255,255,255,0.92);
+    background: rgba(255,255,255,0.95);
     border: 2px solid #ff9ab5;
-    border-radius: 16px;
-    padding: 8px 12px;
+    border-radius: 18px;
+    padding: 9px 13px;
     font-size: 12px;
     color: #333;
-    max-width: 90%;
+    max-width: 96%;
     text-align: center;
     margin-bottom: 6px;
-    box-shadow: 0 2px 8px rgba(255,100,150,0.3);
+    box-shadow: 0 3px 12px rgba(255,100,150,0.28);
     display: none;
     word-break: break-all;
-    line-height: 1.4;
+    line-height: 1.55;
     position: relative;
+    font-weight: 500;
   }
   #bubble::after {
     content: '';
@@ -54,188 +55,545 @@
     border-top-color: #ff9ab5;
   }
 
+  /* 思考中的跳动点 */
+  .thinking-dots {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    padding: 2px 0;
+  }
+  .thinking-dots span {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ffb3c6;
+    animation: dot-bounce 1.1s ease-in-out infinite;
+  }
+  .thinking-dots span:nth-child(1) { animation-delay: 0s; }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.18s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes dot-bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40%           { transform: scale(1.25); opacity: 1; }
+  }
+
   /* 桌宠主体 */
   #pet-container {
     position: relative;
     width: 100px;
-    height: 120px;
+    height: 100px;
     cursor: pointer;
     flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* 桌宠 canvas（或 emoji 显示） */
-  #pet-emoji {
-    font-size: 72px;
-    line-height: 1;
-    text-align: center;
+  /* 显示区域（根据样式动态填充） */
+  #pet-display {
     width: 100%;
-    display: block;
-    filter: drop-shadow(0 4px 8px rgba(255,100,150,0.4));
-    transition: transform 0.15s ease;
-    animation: idle-bob 3s ease-in-out infinite;
-  }
-  #pet-emoji.touched {
-    transform: scale(0.85) rotate(-5deg);
-    animation: none;
-  }
-
-  /* 底部控制栏 */
-  #controls {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .ctrl-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: none;
-    font-size: 13px;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    background: rgba(255,255,255,0.85);
-    -webkit-tap-highlight-color: transparent;
   }
-  .ctrl-btn:active { transform: scale(0.88); }
+
+  /* Emoji 风格 */
+  .pet-emoji {
+    font-size: 72px;
+    line-height: 1;
+    display: block;
+    text-align: center;
+    filter: drop-shadow(0 4px 8px rgba(255,100,150,0.4));
+    animation: idle-bob 3s ease-in-out infinite;
+    transition: transform 0.15s ease;
+  }
+  .pet-emoji.touched {
+    transform: scale(0.82) rotate(-8deg);
+    animation: none;
+    filter: drop-shadow(0 2px 4px rgba(255,100,150,0.3));
+  }
+
+  /* 头像图片风格（圆形） */
+  .pet-img {
+    width: 88px;
+    height: 88px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid rgba(255,154,181,0.6);
+    filter: drop-shadow(0 4px 10px rgba(255,100,150,0.45));
+    animation: idle-bob 3s ease-in-out infinite;
+    transition: transform 0.15s ease;
+    display: block;
+  }
+  .pet-img.touched {
+    transform: scale(0.82) rotate(-8deg);
+    animation: none;
+  }
+
+  /* GIF 风格（保持原始比例，不裁圆） */
+  .pet-gif {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.18));
+    animation: idle-bob 3s ease-in-out infinite;
+    transition: transform 0.15s ease;
+    display: block;
+  }
+  .pet-gif.touched {
+    transform: scale(0.82) rotate(-8deg);
+    animation: none;
+  }
 
   /* 心心特效 */
   .heart-fx {
-    position: absolute;
-    font-size: 18px;
+    position: fixed;
+    font-size: 20px;
     pointer-events: none;
     animation: float-up 1s ease-out forwards;
+    z-index: 999;
   }
 
   /* 动画 */
   @keyframes idle-bob {
-    0%,100% { transform: translateY(0); }
-    50%      { transform: translateY(-6px); }
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-7px); }
   }
   @keyframes float-up {
     0%   { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-50px) scale(1.4); }
+    100% { opacity: 0; transform: translateY(-55px) scale(1.5); }
+  }
+  @keyframes bubble-in {
+    from { opacity: 0; transform: scale(0.88) translateY(6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
   }
 </style>
 </head>
 <body>
 <div id="overlay">
   <!-- 气泡 -->
-  <div id="bubble" id="bubble-text"></div>
+  <div id="bubble"></div>
 
-  <!-- 桌宠 -->
+  <!-- 桌宠（无控制按钮） -->
   <div id="pet-container">
-    <div id="controls">
-      <!-- 打开主 App -->
-      <button class="ctrl-btn" onclick="openApp()" title="打开">📱</button>
-      <!-- 关闭悬浮窗 -->
-      <button class="ctrl-btn" onclick="closeOverlay()" title="关闭">✕</button>
-    </div>
-    <span id="pet-emoji">🐱</span>
+    <div id="pet-display"></div>
   </div>
 </div>
 
 <script>
 'use strict';
 
-// ── 从 SharedPreferences 读取桌宠状态 ──────────────────────
+/* ════════════════════════════════════════════
+   SharedPreferences 桥接
+   OverlayBridge 与 AndroidBridge 共用 "beeper_prefs"，
+   主 App 通过 AndroidBridge.saveString() 写入的数据
+   可以在这里直接通过 OverlayBridge.getSharedPref() 读出。
+   ════════════════════════════════════════════ */
 function getPref(key, def) {
   try {
-    const v = window.OverlayBridge && window.OverlayBridge.getSharedPref(key);
-    return (v !== undefined && v !== null && v !== '') ? v : def;
-  } catch(e) { return def; }
-}
-function setPref(key, value) {
-  try { window.OverlayBridge && window.OverlayBridge.setSharedPref(key, String(value)); }
-  catch(e) {}
+    var v = window.OverlayBridge && window.OverlayBridge.getSharedPref(key);
+    return (v !== undefined && v !== null && v !== '') ? v : (def !== undefined ? def : '');
+  } catch (e) { return (def !== undefined ? def : ''); }
 }
 
-// ── 桌宠表情池 ───────────────────────────────────────────
-const EMOJIS = ['🐱','🐰','🦊','🐻','🐼','🐨','🐸','🐙'];
-const BUBBLE_TEXTS = [
+/* ════════════════════════════════════════════
+   备用文案（API 未配置或请求失败时使用）
+   ════════════════════════════════════════════ */
+var FALLBACK_TEXTS = [
   '主人，想我了吗 ❤',
   '今天也要加油哦～',
   '摸摸我嘛 (◕ᴗ◕✿)',
-  '点我进去玩吧！',
   '陪你一整天 🌸',
-  '呜呜好想被抱抱',
-  '主人要记得喝水！',
-  '今天天气怎么样呀',
+  '呜呜好想被抱抱~',
+  '主人记得喝水！',
+  '要注意休息哦 (ˊᗜˋ)',
+  '我在这里陪你呢 ✨',
 ];
 
-let bubbleTimer = null;
+/* ════════════════════════════════════════════
+   状态变量
+   ════════════════════════════════════════════ */
+var bubbleTimer  = null;   // 定时触发下一次 AI
+var isThinking   = false;  // 是否正在等待 AI 响应
+var bubbleHideT  = null;   // 气泡自动隐藏定时器
 
+/* ════════════════════════════════════════════
+   初始化
+   ════════════════════════════════════════════ */
 function init() {
-  // 读取保存的表情（main app 会在启动 overlay 前通过 AndroidBridge.saveString 写入 pet_emoji）
-  const savedEmoji = getPref('pet_emoji', '');
-  if (savedEmoji) {
-    document.getElementById('pet-emoji').textContent = savedEmoji;
+  updatePetDisplay();
+  // 启动后稍等片刻再触发第一次 AI（让 overlay 先完整加载）
+  setTimeout(function() { triggerAI(false); }, 3000);
+}
+
+/* ════════════════════════════════════════════
+   根据保存的样式更新桌宠显示
+   支持 avatar / custom / gif / emoji，其余样式降级为 emoji
+   ════════════════════════════════════════════ */
+function updatePetDisplay() {
+  var style     = getPref('pet_style', 'avatar');
+  var avatarUrl = getPref('pet_avatar_url', '');
+  var gifUrl    = getPref('pet_gif_url', '');
+  var customUrl = getPref('pet_custom_url', '');
+  var emoji     = getPref('pet_emoji', '') || '🐱';
+
+  var container = document.getElementById('pet-display');
+  container.innerHTML = '';
+
+  if (style === 'emoji') {
+    /* ── Emoji 模式 ── */
+    var span = document.createElement('span');
+    span.className = 'pet-emoji';
+    span.textContent = emoji;
+    container.appendChild(span);
+
+  } else if (style === 'gif' && gifUrl) {
+    /* ── 动态 GIF 模式 ── */
+    var img = document.createElement('img');
+    img.className = 'pet-gif';
+    img.src = gifUrl;
+    img.onerror = function() {
+      container.innerHTML = '<span class="pet-emoji">' + emoji + '</span>';
+    };
+    container.appendChild(img);
+
+  } else if (style === 'custom' && customUrl) {
+    /* ── 自定义图片模式 ── */
+    var img = document.createElement('img');
+    img.className = 'pet-img';
+    img.src = customUrl;
+    img.onerror = function() {
+      container.innerHTML = '<span class="pet-emoji">' + emoji + '</span>';
+    };
+    container.appendChild(img);
+
+  } else if ((style === 'avatar' || style === 'custom') && avatarUrl) {
+    /* ── 角色头像模式（默认） ── */
+    var img = document.createElement('img');
+    img.className = 'pet-img';
+    img.src = avatarUrl;
+    img.onerror = function() {
+      container.innerHTML = '<span class="pet-emoji">' + emoji + '</span>';
+    };
+    container.appendChild(img);
+
+  } else {
+    /* ── 兜底：emoji ── */
+    var span = document.createElement('span');
+    span.className = 'pet-emoji';
+    span.textContent = emoji;
+    container.appendChild(span);
+  }
+}
+
+/* ════════════════════════════════════════════
+   定时调度下一次 AI 触发
+   读取 pet_interval（分钟），0 或空 = 随机 8~15 分钟
+   ════════════════════════════════════════════ */
+function scheduleNext() {
+  clearTimeout(bubbleTimer);
+  var min = parseInt(getPref('pet_interval', '10')) || 0;
+  var ms  = min > 0
+    ? min * 60 * 1000
+    : (8 + Math.random() * 7) * 60 * 1000;  // 8~15 分钟随机
+  bubbleTimer = setTimeout(function() { triggerAI(false); }, ms);
+}
+
+/* ════════════════════════════════════════════
+   触发一次 AI 对话
+   manual: true = 用户点击触发，false = 定时自动触发
+   ════════════════════════════════════════════ */
+function triggerAI(manual) {
+  if (isThinking) return;
+  isThinking = true;
+  showThinking();
+  callAI(function(text) {
+    isThinking = false;
+    showBubble(text || FALLBACK_TEXTS[Math.floor(Math.random() * FALLBACK_TEXTS.length)]);
+    if (!manual) scheduleNext();
+  });
+}
+
+/* ════════════════════════════════════════════
+   气泡：显示思考中（跳动点）
+   ════════════════════════════════════════════ */
+function showThinking() {
+  var el = document.getElementById('bubble');
+  el.innerHTML = '<span class="thinking-dots"><span></span><span></span><span></span></span>';
+  el.style.animation = 'bubble-in 0.28s ease forwards';
+  el.style.display = 'block';
+}
+
+/* ════════════════════════════════════════════
+   气泡：逐句串行显示 AI 回复
+   ════════════════════════════════════════════ */
+function showBubble(text) {
+  var el = document.getElementById('bubble');
+  clearTimeout(bubbleHideT);
+
+  var segs = splitText(text);
+  var idx  = 0;
+
+  function showNext() {
+    if (idx >= segs.length) {
+      bubbleHideT = setTimeout(function() { el.style.display = 'none'; }, 600);
+      return;
+    }
+    el.textContent = segs[idx];
+    el.style.animation = '';
+    void el.offsetWidth; // reflow
+    el.style.animation = 'bubble-in 0.28s ease forwards';
+    el.style.display = 'block';
+    idx++;
+
+    // 停留时长按字数，最短 3s，最长 7s
+    var stayMs = Math.max(3000, Math.min(7000, segs[idx - 1].length * 160));
+    clearTimeout(bubbleHideT);
+    bubbleHideT = setTimeout(function() {
+      el.style.display = 'none';
+      if (idx < segs.length) {
+        setTimeout(showNext, 280);
+      }
+    }, stayMs);
+  }
+  showNext();
+}
+
+/* ════════════════════════════════════════════
+   分句：换行优先，其次句末标点，其次原文
+   ════════════════════════════════════════════ */
+function splitText(text) {
+  if (!text) return [''];
+
+  // ① 换行拆分（AI 用换行分句时最准）
+  var lines = text.split(/\n+/).map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 1; });
+  if (lines.length >= 2 && lines.length <= 5) return lines;
+
+  var t = text.replace(/\n+/g, ' ').trim();
+  if (t.length <= 18) return [t];
+
+  // ② 句末标点拆分
+  var parts = [];
+  var rem = t;
+  var reEnd = /^(.+?[。！？!?…～~]+)\s*/;
+  while (rem.length > 0) {
+    var m = rem.match(reEnd);
+    if (m && m[0].length > 0) { parts.push(m[1].trim()); rem = rem.slice(m[0].length); }
+    else { if (rem.trim()) parts.push(rem.trim()); break; }
+  }
+  parts = parts.filter(function(s) { return s.length > 0; });
+  if (parts.length >= 2 && parts.length <= 4) return parts;
+
+  return [t];
+}
+
+/* ════════════════════════════════════════════
+   AI API 调用
+   读取主 App 写入 beeper_prefs 的全量数据，
+   构建与主聊天对齐的 system prompt，发起 fetch 请求
+   ════════════════════════════════════════════ */
+function callAI(callback) {
+  var apiKey   = getPref('pet_api_key', '');
+  var endpoint = getPref('pet_api_endpoint', '');
+  var model    = getPref('pet_api_model', '');
+
+  // 没有 API Key → 直接用备用文案
+  if (!apiKey) {
+    callback(FALLBACK_TEXTS[Math.floor(Math.random() * FALLBACK_TEXTS.length)]);
+    return;
   }
 
-  // 定时显示随机气泡
-  scheduleNextBubble();
+  // ── 读取角色及用户数据 ──────────────────────────────
+  var charName   = getPref('pet_char_name',    'AI')   || 'AI';
+  var persona    = getPref('pet_char_persona',  '');
+  var worldbook  = getPref('pet_worldbook',     '');
+  var myName     = getPref('pet_my_name',       '主人') || '主人';
+  var myPersona  = getPref('pet_my_persona',    '');
+  var affection  = parseInt(getPref('pet_affection', '50')) || 50;
+  var summaries  = getPref('pet_summaries',     '');
+  var relLog     = getPref('pet_relation_log',  '');
+
+  // ── 好感阶段 ─────────────────────────────────────────
+  var stage;
+  if      (affection < 20) stage = '疏离';
+  else if (affection < 40) stage = '熟悉';
+  else if (affection < 60) stage = '亲近';
+  else if (affection < 80) stage = '偏爱';
+  else                     stage = '上头';
+
+  // ── 时间感知 ─────────────────────────────────────────
+  var now       = new Date();
+  var h         = now.getHours();
+  var min       = now.getMinutes();
+  var timeLabel;
+  if      (h >= 23 || h < 4) timeLabel = '深夜';
+  else if (h >= 22)           timeLabel = '夜深了';
+  else if (h >= 20)           timeLabel = '晚上';
+  else if (h >= 18)           timeLabel = '傍晚';
+  else if (h >= 12)           timeLabel = '下午';
+  else if (h < 6)             timeLabel = '凌晨';
+  else if (h < 8)             timeLabel = '清晨';
+  else                        timeLabel = '白天';
+  var timeStr = timeLabel + h + '点' + (min > 0 ? min + '分' : '');
+
+  var isLateNight = (h >= 22 || h < 5);
+  var isEarlyAM   = (h >= 0 && h < 5);
+
+  // ── 组装 system prompt（与主聊天 _callAI 对齐）────────
+  var sections = [
+    // ① 角色人设
+    'System Prompt: Online Chat Simulator\n'
+    + 'Role Definition: You are a REAL user chatting with ' + myName + ' on a messaging app.\n\n'
+    + '[Target Persona]\n'
+    + 'Name: ' + charName + '\n'
+    + 'Persona Description: ' + (persona || 'Helpful Assistant'),
+
+    // ② 好感度与关系阶段
+    '[RELATIONSHIP STATE]\n'
+    + 'Current affection: ' + affection + '/100\n'
+    + 'Current relationship stage: ' + stage + '\n'
+    + '- Let this affection stage naturally shape your underlying attitude, trust level, and interaction style.\n'
+    + '- React exactly as your Persona would at this stage of a relationship.',
+
+    // ③ 世界设定
+    worldbook
+      ? '[World Setting / Lorebook Data]:\n' + worldbook
+      : '',
+
+    // ④ 用户身份（我的人设）
+    myPersona
+      ? '[USER IDENTITY - The person you are chatting with]:\nName: ' + myName + '\n' + myPersona
+      : '[USER IDENTITY]:\nName: ' + myName,
+
+    // ⑤ 剧情总结
+    summaries
+      ? '[PAST STORY SUMMARIES]:\n' + summaries
+      : '',
+
+    // ⑥ 关系日志
+    relLog
+      ? '[OUR RELATIONSHIP HISTORY]:\n' + relLog
+      : '',
+
+    // ⑦ 桌宠专属情景
+    '[当前情景 - Android 系统桌宠模式]\n'
+    + '你以桌宠形式通过 Android 系统悬浮窗悬浮在 ' + myName + ' 的手机屏幕上方，\n'
+    + '偷偷观察 TA 正在用手机做什么。现在' + timeStr + '。\n'
+    + '完全以你自己的性格（' + stage + '阶段）、语气和说话习惯自然地冒出来，\n'
+    + '就像突然拍拍 ' + myName + ' 肩膀开口说话，不是在汇报，是在真实互动。\n'
+    + '你说的每一句话都必须符合你的人设，绝对不能变成通用助手。',
+
+    // ⑧ 特殊时机
+    isEarlyAM
+      ? '🌙 现在是凌晨，' + myName + ' 还没睡，可以带着担心或撒娇催睡的语气。'
+      : (isLateNight ? '🌙 夜深了，可以顺带催 ' + myName + ' 早点睡（用你自己的方式）。' : ''),
+
+    // ⑨ 格式要求（微信风格，短消息，逐行分句）
+    '【格式要求】用你自己的说话风格，像发微信那样分 2~3 条极短消息说出来，'
+    + '每条单独一行，每条控制在 15~25 字以内，'
+    + '禁止 Markdown 格式，不要开场白，直接说。'
+  ].filter(Boolean).join('\n\n');
+
+  var userMsg = '现在是' + timeStr + '，来偷偷说点什么给主人听吧。';
+
+  var base = (endpoint || '').replace(/\/+$/, '');
+
+  // ── Gemini 路由 ────────────────────────────────────────
+  if (base.includes('generativelanguage.googleapis.com')) {
+    callGemini(apiKey, model, sections, userMsg, callback);
+    return;
+  }
+
+  // ── OpenAI 兼容接口 ────────────────────────────────────
+  var url = base.endsWith('/v1')
+    ? base + '/chat/completions'
+    : base + '/v1/chat/completions';
+
+  fetch(url, {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model:       model,
+      max_tokens:  280,
+      temperature: 0.85,
+      messages: [
+        { role: 'system', content: sections },
+        { role: 'user',   content: userMsg  }
+      ]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var text = '';
+    try { text = data.choices[0].message.content.trim(); } catch(_) {}
+    // 去掉 STATUS 块残留（如果 AI 额外输出了）
+    text = text.replace(/\[STATUS_START\][\s\S]*?\[STATUS_END\]/gi, '').trim();
+    text = text.replace(/\[DANMAKU_START\][\s\S]*/gi, '').trim();
+    callback(text || FALLBACK_TEXTS[Math.floor(Math.random() * FALLBACK_TEXTS.length)]);
+  })
+  .catch(function() {
+    callback(FALLBACK_TEXTS[Math.floor(Math.random() * FALLBACK_TEXTS.length)]);
+  });
 }
 
-function scheduleNextBubble() {
-  clearTimeout(bubbleTimer);
-  const delay = 8000 + Math.random() * 12000; // 8~20 秒
-  bubbleTimer = setTimeout(() => {
-    showBubble(BUBBLE_TEXTS[Math.floor(Math.random() * BUBBLE_TEXTS.length)]);
-    scheduleNextBubble();
-  }, delay);
+/* ── Gemini 专用调用 ─────────────────────────────────────── */
+function callGemini(apiKey, model, sysPrompt, userMsg, callback) {
+  var mdl = (model || 'gemini-1.5-flash').replace('models/', '');
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+          + mdl + ':generateContent?key=' + apiKey;
+  var fullPrompt = sysPrompt + '\n\n' + userMsg;
+  fetch(url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    var text = '';
+    try { text = d.candidates[0].content.parts[0].text.trim(); } catch(_) {}
+    text = text.replace(/\[STATUS_START\][\s\S]*?\[STATUS_END\]/gi, '').trim();
+    text = text.replace(/\[DANMAKU_START\][\s\S]*/gi, '').trim();
+    callback(text || FALLBACK_TEXTS[Math.floor(Math.random() * FALLBACK_TEXTS.length)]);
+  })
+  .catch(function() {
+    callback(FALLBACK_TEXTS[Math.floor(Math.random() * FALLBACK_TEXTS.length)]);
+  });
 }
 
-function showBubble(text) {
-  const el = document.getElementById('bubble');
-  el.textContent = text;
-  el.style.display = 'block';
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 3500);
-}
-
-// ── 点击桌宠 ────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   点击桌宠：立即触发 AI + 爱心特效
+   ════════════════════════════════════════════ */
 document.getElementById('pet-container').addEventListener('click', function(e) {
-  // 如果点到控制按钮则不处理
-  if (e.target.classList.contains('ctrl-btn')) return;
+  // 触摸反馈动画
+  var petEl = document.querySelector('#pet-display .pet-emoji, #pet-display .pet-img, #pet-display .pet-gif');
+  if (petEl) {
+    petEl.classList.add('touched');
+    setTimeout(function() { petEl.classList.remove('touched'); }, 320);
+  }
 
-  const pet = document.getElementById('pet-emoji');
-  pet.classList.add('touched');
-  setTimeout(() => pet.classList.remove('touched'), 300);
-
-  // 生成爱心特效
+  // 爱心特效
   spawnHeart(e.clientX, e.clientY);
 
-  // 随机说话
-  showBubble(BUBBLE_TEXTS[Math.floor(Math.random() * BUBBLE_TEXTS.length)]);
+  // 触发 AI
+  triggerAI(true);
 });
 
 function spawnHeart(x, y) {
-  const h = document.createElement('div');
-  h.className = 'heart-fx';
-  h.textContent = ['❤','💕','✨','💖'][Math.floor(Math.random()*4)];
-  h.style.left = (x - 10) + 'px';
-  h.style.top  = (y - 20) + 'px';
-  document.body.appendChild(h);
-  setTimeout(() => h.remove(), 1000);
+  var el = document.createElement('div');
+  el.className = 'heart-fx';
+  el.textContent = ['❤','💕','✨','💖','🩷'][Math.floor(Math.random() * 5)];
+  el.style.left  = (x - 12) + 'px';
+  el.style.top   = (y - 24) + 'px';
+  document.body.appendChild(el);
+  setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 1100);
 }
 
-// ── 控制按钮 ────────────────────────────────────────────
-function openApp() {
-  try { window.OverlayBridge && window.OverlayBridge.openMainApp(); }
-  catch(e) { console.log('openMainApp error', e); }
-}
-
-function closeOverlay() {
-  try { window.OverlayBridge && window.OverlayBridge.stopService(); }
-  catch(e) { console.log('stopService error', e); }
-}
-
-// ── 启动 ────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   启动
+   ════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
