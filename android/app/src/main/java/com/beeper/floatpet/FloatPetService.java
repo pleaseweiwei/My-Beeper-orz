@@ -116,8 +116,8 @@ public class FloatPetService extends Service {
             WebView.setWebContentsDebuggingEnabled(true);
         }
 
-        // 加载独立悬浮页面（与主 App 共享 file:// localStorage）
-        overlayWebView.loadUrl("file:///android_asset/www/floatpet_overlay.html");
+        // 加载独立悬浮页面（优先 OTA 目录，与主 App 共享 file:// localStorage）
+        overlayWebView.loadUrl(getOverlayUrl());
 
         // FIX: 触摸拖动处理
         // ACTION_DOWN 返回 true 以独占整个触摸序列，确保 MOVE 事件能正确触发拖动。
@@ -161,6 +161,19 @@ public class FloatPetService extends Service {
         });
 
         windowManager.addView(overlayWebView, layoutParams);
+    }
+
+    /**
+     * 优先从 OTA 目录加载 floatpet_overlay.html，
+     * OTA 不存在时回退到 APK 内置 assets。
+     * 这样 floatpet_overlay.html 改动可以走 OTA，无需重装 APK。
+     */
+    private String getOverlayUrl() {
+        java.io.File otaFile = new java.io.File(getFilesDir(), "www_ota/floatpet_overlay.html");
+        if (otaFile.exists()) {
+            return "file://" + otaFile.getAbsolutePath();
+        }
+        return "file:///android_asset/www/floatpet_overlay.html";
     }
 
     /* ════════════════════════════════════════
