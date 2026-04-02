@@ -20,10 +20,12 @@ for %%F in ("%SRC%*.html") do (
 )
 
 :: ── 2. 复制核心资源文件 ───────────────────────────────────
-echo [2/6] 复制核心资源（icon / manifest / service-worker）...
+echo [2/6] 复制核心资源（icon / manifest / service-worker / version）...
 if exist "%SRC%icon.png"          copy /Y "%SRC%icon.png"          "%DST%icon.png"          >nul
 if exist "%SRC%manifest.json"     copy /Y "%SRC%manifest.json"     "%DST%manifest.json"     >nul
 if exist "%SRC%service-worker.js" copy /Y "%SRC%service-worker.js" "%DST%service-worker.js" >nul
+if exist "%SRC%version.json"      copy /Y "%SRC%version.json"      "%DST%version.json"      >nul
+if exist "%SRC%version.txt"       copy /Y "%SRC%version.txt"       "%DST%version.txt"       >nul
 
 :: ── 3. 复制所有 CSS ───────────────────────────────────────
 echo [3/6] 复制 css\...
