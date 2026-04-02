@@ -2065,3 +2065,55 @@ input[type="range"] { accent-color: #2b2b2b; }
     flex-shrink: 0;
     overflow: visible !important;
 }
+
+/* =========================================
+   [APK Fix] 聊天页面顶部安全区域适配
+   解决前置摄像头/刘海遮挡聊天头部的问题
+   chat-view 是 z-index:200 的全屏覆盖层，
+   需要自行处理安全区域内边距
+   ========================================= */
+/* 安全区域顶部内边距：min 48px 确保打孔/刘海摄像头不遮挡 */
+.chat-view .chat-header,
+.settings-view .settings-header,
+.chat-header,
+.settings-header {
+    padding-top: max(48px, env(safe-area-inset-top)) !important;
+    box-sizing: border-box !important;
+}
+
+/* 聊天设置页头部同样需要安全区域适配 */
+.chat-settings-page-header {
+    padding-top: max(48px, env(safe-area-inset-top)) !important;
+    box-sizing: border-box !important;
+}
+
+/* 线下模式、地图等全屏页头部适配 */
+.offline-header,
+.map-header {
+    padding-top: max(48px, env(safe-area-inset-top)) !important;
+    box-sizing: border-box !important;
+}
+
+/* APK端：.phone 整体向下偏移，让内容避开系统状态栏+摄像头 */
+@media (max-width: 900px) {
+    /* 消息列表顶部安全区适配（避免刘海/打孔遮挡） */
+    .wechat-app-view .wc-top-bar,
+    .wc-top-bar {
+        padding-top: max(48px, env(safe-area-inset-top)) !important;
+        box-sizing: border-box !important;
+    }
+    /* 聊天消息列表本身留出顶部间距 */
+    #chatMessages {
+        padding-top: 8px !important;
+    }
+    /* 情侣空间/LIVE/追踪等全屏页头部 */
+    .love-space-header,
+    .live-header,
+    .tracker-header,
+    .galgame-header,
+    .novel-header,
+    .music-header {
+        padding-top: max(48px, env(safe-area-inset-top)) !important;
+        box-sizing: border-box !important;
+    }
+}

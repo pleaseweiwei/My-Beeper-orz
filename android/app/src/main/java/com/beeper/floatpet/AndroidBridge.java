@@ -72,12 +72,22 @@ public class AndroidBridge {
         mPrefs.edit().putBoolean("float_pet_enabled", true).apply();
 
         mActivity.runOnUiThread(() -> {
-            Intent intent = new Intent(mActivity, FloatPetService.class);
-            intent.setAction(FloatPetService.ACTION_START);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                mActivity.startForegroundService(intent);
-            } else {
-                mActivity.startService(intent);
+            try {
+                Intent intent = new Intent(mActivity, FloatPetService.class);
+                intent.setAction(FloatPetService.ACTION_START);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mActivity.startForegroundService(intent);
+                } else {
+                    mActivity.startService(intent);
+                }
+                // 提示用户：悬浮窗服务已启动，需要按 Home 键才能看到系统级效果
+                android.widget.Toast.makeText(mActivity,
+                    "🐾 悬浮桌宠服务已启动！\n现在按 Home 键退出 App，桌宠将悬浮在桌面上方",
+                    android.widget.Toast.LENGTH_LONG).show();
+            } catch (Exception e) {
+                android.widget.Toast.makeText(mActivity,
+                    "❌ 服务启动失败：" + e.getMessage(),
+                    android.widget.Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -100,7 +110,7 @@ public class AndroidBridge {
     // ─────────────────────────────────────────────────────────────
     @JavascriptInterface
     public boolean isFloatPetRunning() {
-        return FloatPetService.isRunning();
+        return FloatPetService.isRunning;
     }
 
     // ─────────────────────────────────────────────────────────────

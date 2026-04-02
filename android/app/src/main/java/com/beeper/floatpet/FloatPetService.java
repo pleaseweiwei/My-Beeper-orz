@@ -87,7 +87,9 @@ public class FloatPetService extends Service {
         );
         layoutParams.gravity = Gravity.TOP | Gravity.START;
         layoutParams.x = 20;
-        layoutParams.y = 200;
+        // FIX: 初始 Y 设为屏幕高度的 1/3，避免被前置摄像头遮挡
+        int screenH = getResources().getDisplayMetrics().heightPixels;
+        layoutParams.y = screenH / 3;
 
         // 创建 overlay 专用 WebView
         overlayWebView = new WebView(this);
@@ -117,14 +119,16 @@ public class FloatPetService extends Service {
         // 加载独立悬浮页面（与主 App 共享 file:// localStorage）
         overlayWebView.loadUrl("file:///android_asset/www/floatpet_overlay.html");
 
-        // 触摸拖动处理（FLAG_NOT_FOCUSABLE 让 WebView 点击仍可传递）
+        // FIX: 触摸拖动处理
+        // ACTION_DOWN 返回 true 以独占整个触摸序列，确保 MOVE 事件能正确触发拖动。
+        // 短按（未拖动）则在 ACTION_UP 时调用 performClick() 模拟点击传给 WebView。
         overlayWebView.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     lastRawX = (int) event.getRawX();
                     lastRawY = (int) event.getRawY();
                     isDragging = false;
-                    return false; // 先传给 WebView
+                    return true; // 独占触摸序列，保证后续 MOVE 事件能触发
 
                 case MotionEvent.ACTION_MOVE:
                     int dx = (int) event.getRawX() - lastRawX;
@@ -140,15 +144,18 @@ public class FloatPetService extends Service {
                         try {
                             windowManager.updateViewLayout(overlayWebView, layoutParams);
                         } catch (Exception ignored) {}
-                        return true; // 拖动时不传给 WebView
+                        return true;
                     }
-                    return false;
+                    return true;
 
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    boolean wasDragging = isDragging;
+                    if (!isDragging) {
+                        // 短按未拖动 → 模拟点击传给 WebView
+                        v.performClick();
+                    }
                     isDragging = false;
-                    return wasDragging; // 拖动结束不触发点击
+                    return true;
             }
             return false;
         });
@@ -194,17 +201,21 @@ public class FloatPetService extends Service {
             stopSelf();
         }
 
-        /** 从 SharedPreferences 读取数据（与 AndroidBridge 共享存储） */
+        /**
+         * 从 SharedPreferences 读取数据
+         * FIX: 改用 beeper_prefs，与 AndroidBridge（主 WebView）共享同一存储，
+         * 这样主 App 通过 AndroidBridge.saveString 写入的数据，overlay 这里可以直接读到。
+         */
         @JavascriptInterface
         public String getSharedPref(String key) {
-            SharedPreferences prefs = ctx.getSharedPreferences("FloatPetPrefs", Context.MODE_PRIVATE);
+            SharedPreferences prefs = ctx.getSharedPreferences("beeper_prefs", Context.MODE_PRIVATE);
             return prefs.getString(key, "");
         }
 
         /** 保存数据到 SharedPreferences */
         @JavascriptInterface
         public void setSharedPref(String key, String value) {
-            SharedPreferences prefs = ctx.getSharedPreferences("FloatPetPrefs", Context.MODE_PRIVATE);
+            SharedPreferences prefs = ctx.getSharedPreferences("beeper_prefs", Context.MODE_PRIVATE);
             prefs.edit().putString(key, value).apply();
         }
     }

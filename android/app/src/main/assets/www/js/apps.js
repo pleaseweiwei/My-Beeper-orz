@@ -5672,18 +5672,47 @@ let currentEditMode = ''; // 'img' (找子元素img), 'bg' (改背景), 'self' (
 window.triggerChangeImage = function(el, mode) {
     currentEditEl = el;
     currentEditMode = mode;
-    
-    // 询问是用 URL 还是上传
-    const choice = confirm("点击 [确定] 上传本地图片\n点击 [取消] 输入网络图片 URL");
-    
-    if (choice) {
-        // 上传模式：触发隐藏的 input
-        document.getElementById('global-img-changer').click();
-    } else {
-        // URL 模式
-        const url = prompt("请输入图片 URL 地址:");
-        if (url) applyImage(url);
+
+    // Android WebView 中 confirm() 会打断用户手势链导致文件选择器无法弹出
+    // 改用自定义底部面板，按钮的直接 click 事件保留手势上下文
+    let sheet = document.getElementById('_img_action_sheet');
+    if (!sheet) {
+        sheet = document.createElement('div');
+        sheet.id = '_img_action_sheet';
+        sheet.style.cssText = [
+            'position:fixed;bottom:0;left:0;right:0;z-index:999999',
+            'background:#fff;border-radius:18px 18px 0 0',
+            'padding:20px 16px 32px;box-shadow:0 -4px 24px rgba(0,0,0,0.18)',
+            'display:none;'
+        ].join(';');
+        sheet.innerHTML =
+            '<div style="text-align:center;font-weight:700;font-size:16px;color:#222;margin-bottom:16px;">更换图片</div>' +
+            '<button id="_img_upload_btn" style="display:block;width:100%;margin:0 0 10px;padding:15px;background:#f5f5f7;border:none;border-radius:14px;font-size:15px;font-weight:600;color:#333;cursor:pointer;">📁 上传本地图片</button>' +
+            '<button id="_img_url_btn"    style="display:block;width:100%;margin:0 0 10px;padding:15px;background:#f5f5f7;border:none;border-radius:14px;font-size:15px;font-weight:600;color:#333;cursor:pointer;">🔗 输入图片链接</button>' +
+            '<button id="_img_cancel_btn" style="display:block;width:100%;padding:15px;background:transparent;border:none;border-radius:14px;font-size:15px;color:#999;cursor:pointer;">取消</button>';
+        document.body.appendChild(sheet);
+
+        // 上传按钮：直接在 click 事件中触发文件选择，保持手势链
+        document.getElementById('_img_upload_btn').addEventListener('click', function() {
+            sheet.style.display = 'none';
+            document.getElementById('global-img-changer').click();
+        });
+        // URL 按钮
+        document.getElementById('_img_url_btn').addEventListener('click', function() {
+            sheet.style.display = 'none';
+            const url = prompt('请输入图片 URL 地址:');
+            if (url && url.trim()) applyImage(url.trim());
+        });
+        // 取消按钮
+        document.getElementById('_img_cancel_btn').addEventListener('click', function() {
+            sheet.style.display = 'none';
+        });
+        // 点击背景关闭
+        sheet.addEventListener('click', function(e) {
+            if (e.target === sheet) sheet.style.display = 'none';
+        });
     }
+    sheet.style.display = 'block';
 };
 
 // 2. 处理文件上传

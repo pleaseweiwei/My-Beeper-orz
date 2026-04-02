@@ -78,10 +78,15 @@
         </activity>
 
         <!-- ── 悬浮窗前台服务 ── -->
+        <!-- Android 14+ (targetSdk>=34) 要求 specialUse 类型必须声明 property 子元素 -->
         <service
             android:name=".FloatPetService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="overlay" />
+        </service>
 
         <!-- ── FileProvider（Android 7+ 拍照/文件选择需要） ── -->
         <provider

@@ -9,5 +9,7 @@
         <item name="android:navigationBarColor">@android:color/black</item>
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
+        <!-- 允许内容延伸到刘海/打孔摄像头区域，配合 env(safe-area-inset-top) 使用 -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

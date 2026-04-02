@@ -322,10 +322,19 @@ const FloatPet = (function () {
     function _isAndroid() {
         return !!(window.AndroidBridge && typeof window.AndroidBridge.getPlatform === 'function');
     }
+    function _saveOverlayConfig() {
+        // 仅保存 pet_emoji 供 overlay WebView 读取（OverlayBridge 使用 beeper_prefs 与此共享）
+        try {
+            if (!_isAndroid()) return;
+            window.AndroidBridge.saveString('pet_emoji', _cfg.emoji || '🐱');
+        } catch (e) { console.warn('[FloatPet] saveOverlayConfig error', e); }
+    }
+
     function _androidStartOverlay() {
         try {
             if (_isAndroid()) {
                 if (window.AndroidBridge.canDrawOverlays()) {
+                    _saveOverlayConfig();
                     window.AndroidBridge.startFloatPet();
                 } else {
                     // 跳转系统设置申请悬浮窗权限
@@ -333,7 +342,10 @@ const FloatPet = (function () {
                     // 设置回调，权限授予后自动启动
                     window._onOverlayPermResult = function (granted) {
                         window._onOverlayPermResult = null;
-                        if (granted) window.AndroidBridge.startFloatPet();
+                        if (granted) {
+                            _saveOverlayConfig();
+                            window.AndroidBridge.startFloatPet();
+                        }
                     };
                 }
             }
@@ -398,11 +410,11 @@ const FloatPet = (function () {
                 <div class="fp-perm-desc">
                     启用后，桌宠将悬浮在所有 App 之上，就像安卓的
                     <strong>SYSTEM_ALERT_WINDOW</strong> 权限一样。
-                    它会偷瞄你的屏幕，然后用 AI 吐槽你。
+                    它会偷瞄你的屏幕，然后完全以 TA 的人设性格和语气来回应你。
                 </div>
                 <div class="fp-perm-warn-row">
                     <i>⚠️</i>
-                    该权限允许桌宠截取屏幕快照并通过视觉 AI 分析你的使用行为，以生成沙雕评论。
+                    该权限允许桌宠截取屏幕快照并通过视觉 AI 分析你的使用行为，以角色人设的口吻与你互动。
                 </div>
                 <div class="fp-perm-btns">
                     <button class="fp-perm-btn-deny" id="fp-perm-deny">拒绝</button>
@@ -458,11 +470,11 @@ const FloatPet = (function () {
                 <div class="fp-perm-desc">
                     启用后，桌宠将悬浮在所有 App 之上，就像安卓的
                     <strong>SYSTEM_ALERT_WINDOW</strong> 权限一样。
-                    它会偷瞄你的屏幕，然后用 AI 吐槽你。
+                    它会偷瞄你的屏幕，然后完全以 TA 的人设性格和语气来回应你。
                 </div>
                 <div class="fp-perm-warn-row">
                     <i>⚠️</i>
-                    该权限允许桌宠截取屏幕快照并通过视觉 AI 分析你的使用行为，以生成沙雕评论。
+                    该权限允许桌宠截取屏幕快照并通过视觉 AI 分析你的使用行为，以角色人设的口吻与你互动。
                 </div>
                 <div class="fp-perm-btns">
                     <button class="fp-perm-btn-deny"  id="fp-perm-deny">拒绝</button>
@@ -490,7 +502,6 @@ const FloatPet = (function () {
         if (tog) tog.checked = false;
         _toggleBox(false);
         _hide();
-        _androidStopOverlay();   // 同时停止原生悬浮窗（如已启动）
     }
 
     function _onPermAllow() {
@@ -511,9 +522,13 @@ const FloatPet = (function () {
         _saveCfg();
         setTimeout(function () {
             _hidePermOverlay();
-            _start();
-            // 在 Android APK 内同时启动真正的系统级悬浮窗服务
-            _androidStartOverlay();
+            if (_isAndroid()) {
+                /* APK 模式：启动原生悬浮窗 Service，不另起 in-app 桌宠 */
+                _androidStartOverlay();
+            } else {
+                /* Web/PWA 模式：在手机 DOM 内显示桌宠 */
+                _start();
+            }
         }, 2000);
     }
 
@@ -881,19 +896,44 @@ const FloatPet = (function () {
             } catch (_) {}
         }
 
-        /* 3. Recover large data-URI fields from IDB, then start */
+        /* 3. Recover large data-URI fields from IDB, then start
+              IDB may not be ready at DOMContentLoaded on Android; retry once after 1.5s */
         var cid = _cfg.charId;
-        var p   = cid ? _idbGet('fp_img_' + cid) : Promise.resolve(undefined);
-        p.then(function (imgData) {
+        function _applyImgDataAndStart(imgData) {
             if (imgData && cid) {
                 if (imgData.customUrl)   _cfg.customUrl   = imgData.customUrl;
                 if (imgData.gifUrl)      _cfg.gifUrl      = imgData.gifUrl;
                 if (imgData.live2dUrl)   _cfg.live2dUrl   = imgData.live2dUrl;
                 if (imgData.webviewHtml) _cfg.webviewHtml = imgData.webviewHtml;
             }
-            if (_cfg.enabled && _cfg.charId) _start();
-            else _hide();
-        });
+            if (_cfg.enabled && _cfg.charId) {
+                if (_isAndroid()) {
+                    /* APK模式：只启动原生悬浮窗服务，不在WebView内显示桌宠，
+                       防止出现"应用内小人 + 原生悬浮窗"双重叠加的情况 */
+                    _androidStartOverlay();
+                } else {
+                    _start();
+                }
+            } else {
+                _hide();
+            }
+        }
+        var p = cid ? _idbGet('fp_img_' + cid) : Promise.resolve(undefined);
+        p.then(function (imgData) {
+            if (imgData) {
+                /* Got data immediately */
+                _applyImgDataAndStart(imgData);
+            } else if (_cfg.enabled && cid) {
+                /* IDB might not be initialised yet on Android; retry after 1.5 s */
+                setTimeout(function () {
+                    _idbGet('fp_img_' + cid).then(function (retryData) {
+                        _applyImgDataAndStart(retryData);
+                    }).catch(function () { _applyImgDataAndStart(undefined); });
+                }, 1500);
+            } else {
+                _applyImgDataAndStart(undefined);
+            }
+        }).catch(function () { _applyImgDataAndStart(undefined); });
     }
 
     function _saveCfg() {
@@ -1844,12 +1884,17 @@ const FloatPet = (function () {
             if (!_cfg.permGranted) {
                 _showPermOverlay();
             } else {
-                _start();
-                _androidStartOverlay();   // APK：同步启动原生系统悬浮窗
+                if (_isAndroid()) {
+                    _androidStartOverlay();
+                } else {
+                    _start();
+                }
             }
         } else {
+            if (_isAndroid()) {
+                _androidStopOverlay();
+            }
             _hide();
-            _androidStopOverlay();        // APK：同步停止原生系统悬浮窗
         }
     }
 

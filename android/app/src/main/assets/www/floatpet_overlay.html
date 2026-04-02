@@ -171,10 +171,11 @@ const BUBBLE_TEXTS = [
 let bubbleTimer = null;
 
 function init() {
-  // 读取保存的表情
-  const savedEmoji = getPref('pet_emoji', '🐱');
-  const idx = EMOJIS.indexOf(savedEmoji);
-  document.getElementById('pet-emoji').textContent = (idx >= 0 ? savedEmoji : '🐱');
+  // 读取保存的表情（main app 会在启动 overlay 前通过 AndroidBridge.saveString 写入 pet_emoji）
+  const savedEmoji = getPref('pet_emoji', '');
+  if (savedEmoji) {
+    document.getElementById('pet-emoji').textContent = savedEmoji;
+  }
 
   // 定时显示随机气泡
   scheduleNextBubble();
