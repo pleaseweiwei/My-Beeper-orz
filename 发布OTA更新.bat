@@ -26,11 +26,18 @@ echo [2/4] 写入版本号 %NEWVER% 到 assets...
 echo %NEWVER%> android\app\src\main\assets\www\version.txt
 echo.
 
-REM ── 4. 打包 web_update.zip ───────────────────────────────────
+REM ── 4. 打包 web_update.zip (使用 Python 递归压缩，避免 PowerShell Compress-Archive 不递归子目录的 bug) ───────────────────────────
 echo [3/4] 打包 web_update.zip...
 if exist web_update.zip del /f web_update.zip
-powershell -NoProfile -Command ^
-  "Compress-Archive -Path 'android\app\src\main\assets\www\*' -DestinationPath 'web_update.zip' -Force"
+
+REM 用 Node.js 递归打包（跨平台，无需第三方依赖）
+node make_zip.js
+if errorlevel 1 (
+    echo [ERROR] Node.js 打包失败，请确保 node 已安装！
+    pause
+    exit /b 1
+)
+
 for %%s in (web_update.zip) do (
   set /a SIZE_MB=%%~zs / 1048576
 )
