@@ -47,10 +47,17 @@ const urlsToCache = [
 ];
 
 // 安装时缓存静态资源
+// 注意：Android WebView 中资源为 file:// 协议，fetch 无法处理，
+// 缓存失败是预期行为，catch 掉避免 SW 安装失败。
 self.addEventListener('install', event => {
     self.skipWaiting(); // 强制立即接管控制权
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+        caches.open(CACHE_NAME).then(cache => {
+            return cache.addAll(urlsToCache).catch(err => {
+                // file:// 环境下 cache.addAll 会失败，这是正常的，忽略此错误
+                console.warn('SW: cache.addAll skipped (file:// context):', err);
+            });
+        })
     );
 });
 
@@ -75,7 +82,17 @@ self.addEventListener('activate', event => {
 });
 
 // 请求时：网络优先 (Network First)，网络失败才读取缓存
+// 注意：file:// 协议（Android WebView本地资源）不能被 fetch() 处理，
+// 必须直接 return 让 WebView 原生文件系统处理，否则所有 CSS/JS 加载失败导致排版消失。
 self.addEventListener('fetch', event => {
+    const url = event.request.url;
+
+    // ★ 关键修复：跳过 file:// 协议，让 WebView 原生处理本地文件资源
+    if (url.startsWith('file://')) return;
+
+    // 只缓存 http/https 请求
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return;
+
     event.respondWith(
         fetch(event.request)
             .then(response => {
