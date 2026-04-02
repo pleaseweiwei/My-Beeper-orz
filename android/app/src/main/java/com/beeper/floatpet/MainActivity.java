@@ -101,13 +101,31 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 决定加载哪个 index.html：
-     *   - filesDir/www_ota/index.html 存在 → 加载 OTA 版本
-     *   - 否则 → 加载内置 assets/www/index.html
+     *   - OTA 版本号 > 内置版本号 → 加载 OTA 版本
+     *   - 否则（内置版本 >= OTA 版本，或无 OTA）→ 清除旧 OTA，加载内置版本
+     *
+     * 修复说明：
+     *   原逻辑只要 www_ota/index.html 存在就直接加载 OTA，完全不比较版本号。
+     *   这会导致以下问题：
+     *     1. 安装修复了排版 bug 的新 APK 后，旧 OTA 目录仍然存在，
+     *        App 优先加载有问题的旧 OTA，导致排版消失。
+     *     2. OTA 版本与内置版本相同时也走 OTA，但 OTA 包可能与内置资源
+     *        不完全一致，产生样式异常。
+     *   修复方案：仅当 OTA 版本号严格大于内置版本号时才加载 OTA；
+     *   否则后台异步删除旧 OTA 目录，确保下次也走内置版本。
      */
     private String getStartUrl() {
         File otaIndex = new File(getFilesDir(), OTA_DIR + "/index.html");
         if (otaIndex.exists()) {
-            return "file://" + otaIndex.getAbsolutePath();
+            int otaVer     = getOtaVersion();
+            int bundledVer = getBundledVersion();
+            if (otaVer > bundledVer) {
+                // OTA 确实比内置新，才加载 OTA
+                return "file://" + otaIndex.getAbsolutePath();
+            }
+            // 内置版本已追上或超过 OTA（通常是安装了新 APK），
+            // 在后台异步清除过时的 OTA 目录，下次启动彻底走内置路径。
+            new Thread(() -> deleteRecursive(new File(getFilesDir(), OTA_DIR))).start();
         }
         return "file:///android_asset/www/index.html";
     }
