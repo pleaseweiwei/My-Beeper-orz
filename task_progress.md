@@ -1,0 +1,5 @@
+- [ ] Read `js/desktop_sort.js` to understand the current long-press and edit mode logic.
+- [ ] Find where app icon click events are handled (maybe in `js/desktop_sort.js` or `js/core.js`/`js/apps.js`).
+- [ ] Add `isLongPressTriggered` flag to intercept the subsequent click/touchend after a long press.
+- [ ] Add global click interception in edit mode, ensuring "-" and "+" buttons still work.
+- [ ] Test/Review the changes to ensure correctness.

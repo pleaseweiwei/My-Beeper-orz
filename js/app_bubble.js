@@ -939,6 +939,7 @@ function bbRenderPublicPosts(aiId) {
 function bbRenderPostCard(aiId, post) {
     const avatar = bbGetAiAvatar(aiId);
     const name = bbGetAiName(aiId);
+    // 使用消息的实际发送时间而不是当前时间
     const timeStr = new Date(post.time).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
     const flipTag = post.flipped ? `<span class="bb-flip-tag">🎉 TA 翻牌了！</span>` : '';
     const flipReply = post.flipReply ? `<div class="bb-flip-reply">↩ "${post.flipReply}"</div>` : '';
@@ -1467,7 +1468,8 @@ function bbRenderCreatorHistory(aiId) {
     const posts = d.publicPosts || [];
     if (!posts.length) { container.innerHTML = '<div class="bb-empty-hint"><div style="font-size:12px;">尚未发布任何动态</div></div>'; return; }
     posts.slice(0, 10).forEach(post => {
-        const timeStr = new Date(post.time).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        // 使用真实发信息时间
+        const timeStr = new Date(post.time).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
         container.insertAdjacentHTML('beforeend', `
         <div class="bb-history-post" onclick="bbIdolViewHistoryFans('${aiId}', '${post.id}')" style="cursor:pointer; border:1px solid #f0f0f0; padding:12px; border-radius:12px; margin-bottom:10px; background:#fff; transition:0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
             <div style="font-size:13px;color:#333;margin-bottom:8px;">${post.content}</div>

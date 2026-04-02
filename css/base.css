@@ -30,7 +30,10 @@ body {
 
 .phone {
     width: 375px;
-    height: 812px;
+    height: 100vh; /* Changed from 812px to 100vh */
+    max-height: 812px; /* Added max-height to retain original size on larger screens */
+    aspect-ratio: 9 / 19.5; /* Keep iPhone aspect ratio, but let it scale */
+    max-width: 100vw;
     background-color: var(--bg-color);
     background-image: var(--phone-bg-image);
     background-size: cover;

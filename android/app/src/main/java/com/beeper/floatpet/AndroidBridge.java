@@ -5,9 +5,15 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.provider.Settings;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
+
+import java.util.ArrayList;
 
 /**
  * JS → 原生桥接层
@@ -207,5 +213,91 @@ public class AndroidBridge {
     // ─────────────────────────────────────────────────────────────
     public void evalJs(String js) {
         mActivity.runJs(js);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  原生语音识别（Android SpeechRecognizer，免费无需 API Key）
+    //  JS 调用：window.AndroidBridge.startNativeSpeechRecognition('window.__nativeSpeechCb')
+    //  识别完成后自动回调：window.__nativeSpeechCb('识别结果文字')
+    // ─────────────────────────────────────────────────────────────
+    private SpeechRecognizer mSpeechRecognizer = null;
+
+    @JavascriptInterface
+    public void startNativeSpeechRecognition(final String jsCallback) {
+        mActivity.runOnUiThread(() -> {
+            try {
+                // 销毁旧实例防止冲突
+                if (mSpeechRecognizer != null) {
+                    try { mSpeechRecognizer.destroy(); } catch (Exception ignored) {}
+                    mSpeechRecognizer = null;
+                }
+
+                if (!SpeechRecognizer.isRecognitionAvailable(mActivity)) {
+                    // 设备不支持语音识别（无 Google 服务）
+                    fireCallback(jsCallback, "");
+                    return;
+                }
+
+                mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(mActivity);
+                mSpeechRecognizer.setRecognitionListener(new RecognitionListener() {
+                    @Override public void onReadyForSpeech(Bundle params) {}
+                    @Override public void onBeginningOfSpeech() {}
+                    @Override public void onRmsChanged(float rmsdB) {}
+                    @Override public void onBufferReceived(byte[] buffer) {}
+                    @Override public void onEndOfSpeech() {}
+
+                    @Override
+                    public void onError(int error) {
+                        fireCallback(jsCallback, "");
+                    }
+
+                    @Override
+                    public void onResults(Bundle results) {
+                        ArrayList<String> matches = results.getStringArrayList(
+                                SpeechRecognizer.RESULTS_RECOGNITION);
+                        String text = (matches != null && !matches.isEmpty()) ? matches.get(0) : "";
+                        fireCallback(jsCallback, text);
+                    }
+
+                    @Override public void onPartialResults(Bundle partialResults) {}
+                    @Override public void onEvent(int eventType, Bundle params) {}
+                });
+
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN");
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "zh-CN");
+                intent.putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false);
+                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+                // 允许离线识别（部分设备支持）
+                intent.putExtra("android.speech.extra.PREFER_OFFLINE", true);
+
+                mSpeechRecognizer.startListening(intent);
+
+            } catch (Exception e) {
+                fireCallback(jsCallback, "");
+            }
+        });
+    }
+
+    /** 停止监听，触发 onResults 回调 */
+    @JavascriptInterface
+    public void stopNativeSpeechRecognition() {
+        mActivity.runOnUiThread(() -> {
+            if (mSpeechRecognizer != null) {
+                try { mSpeechRecognizer.stopListening(); } catch (Exception ignored) {}
+            }
+        });
+    }
+
+    /** 安全地把识别结果回传给 JS */
+    private void fireCallback(String jsCallback, String text) {
+        // 转义单引号和反斜杠，防止 JS 注入崩溃
+        String safe = text.replace("\\", "\\\\")
+                          .replace("'", "\\'")
+                          .replace("\n", "\\n")
+                          .replace("\r", "");
+        evalJs(jsCallback + "('" + safe + "')");
     }
 }

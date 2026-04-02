@@ -167,15 +167,14 @@ const SMSApp = (() => {
     if (!msgs.length) {
       msgArea.innerHTML = `<div style="text-align:center;color:#ccc;font-size:12px;padding:30px;">暂无消息</div>`;
     } else {
-      let lastDate = null;
+      let lastTimestamp = 0;
       let html = '';
       msgs.forEach(msg => {
-        const d = new Date(msg.timestamp);
-        const dateStr = d.toDateString();
-        if (dateStr !== lastDate) {
-          lastDate = dateStr;
+        // 如果是第一条消息，或与上一条消息间隔超过5分钟(300000ms)，插入时间分隔块
+        if (!lastTimestamp || (msg.timestamp - lastTimestamp > 300000)) {
           html += `<div class="sms-timestamp-divider">${_fmtDateTime(msg.timestamp)}</div>`;
         }
+        lastTimestamp = msg.timestamp;
         const isSystem = (msg.type === 'received' && conv.type === 'system');
         const rowCls = msg.type === 'sent' ? 'sent' : `received${isSystem ? ' system-msg' : ''}`;
         const bubbleContent = _highlightContent(msg.text);
@@ -573,10 +572,30 @@ ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
   }
 
   function _fmtDateTime(ts) {
+    if (!ts) return '';
     const d = new Date(ts), now = new Date();
-    if (d.toDateString() === now.toDateString())
-      return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
-    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    const hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    let period, displayHour;
+    if (hours >= 0 && hours < 6) { period = '凌晨'; displayHour = hours === 0 ? 12 : hours; }
+    else if (hours >= 6 && hours < 12) { period = '上午'; displayHour = hours; }
+    else if (hours === 12) { period = '中午'; displayHour = 12; }
+    else if (hours >= 13 && hours < 18) { period = '下午'; displayHour = hours - 12; }
+    else { period = '晚上'; displayHour = hours - 12; }
+    const timeStr = `${period} ${displayHour}:${minutes}`;
+
+    if (d.toDateString() === now.toDateString()) return timeStr;
+    const yd = new Date(now); yd.setDate(yd.getDate() - 1);
+    if (d.toDateString() === yd.toDateString()) return `昨天 ${timeStr}`;
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMsgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayDiff = Math.floor((startOfToday - startOfMsgDay) / 86400000);
+    if (dayDiff < 7 && dayDiff >= 2) {
+      const dayNames = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+      return `${dayNames[d.getDay()]} ${timeStr}`;
+    }
+    if (d.getFullYear() !== now.getFullYear()) return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${timeStr}`;
+    return `${d.getMonth()+1}月${d.getDate()}日 ${timeStr}`;
   }
 
   function _genFakeNumber() {

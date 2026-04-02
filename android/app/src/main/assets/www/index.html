@@ -63,6 +63,7 @@
     <link rel="stylesheet" href="css/nexus.css">
     <link rel="stylesheet" href="css/favorites.css">
     <link rel="stylesheet" href="css/overrides.css">
+    <link rel="stylesheet" href="css/desktop_sort.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
@@ -345,6 +346,112 @@
 
 
   
+        <!-- 小组件库面板 -->
+        <div id="widget-library">
+            <div class="k-modal-header" style="border-bottom: none; padding-top: 15px;">
+                <i class="fas fa-chevron-down" onclick="closeWidgetLibrary()" style="font-size: 18px; cursor: pointer;"></i>
+                <span style="font-size: 16px; font-weight: 700;">添加小组件</span>
+                <div style="width: 20px;"></div>
+            </div>
+            <div style="display: flex; padding: 0 16px; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0;">
+                <button class="wl-tab active" onclick="switchWidgetCategory('system', this)">系统</button>
+                <button class="wl-tab" onclick="switchWidgetCategory('aesthetic', this)">极简</button>
+                <button class="wl-tab" onclick="switchWidgetCategory('media', this)">多媒体</button>
+                <button class="wl-tab" onclick="switchWidgetCategory('tool', this)">工具</button>
+            </div>
+            
+            <div style="flex:1; overflow-y:auto;">
+                <!-- 极简 (Aesthetic) -->
+                <div id="wl-content-aesthetic" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('k-dday', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fff; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+                            <div style="font-size:8px; color:#666; letter-spacing:1px; margin-bottom:4px; font-weight:300;">OUR DAYS</div>
+                            <div style="font-size:24px; color:#222; font-family:'Times New Roman', serif; font-style:italic;">100</div>
+                        </div>
+                        <div class="wl-info">纪念日 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-quote', 'widget-4x2')">
+                        <div class="wl-preview" style="height: 100px; background: #fdfdfd; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); padding: 10px;">
+                            <div style="font-size:12px; color:#222; font-family:'Times New Roman', serif; font-style:italic; text-align:center;">"Love yourself first."</div>
+                        </div>
+                        <div class="wl-info">极简语录 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-calendar', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fff; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+                            <div style="font-size:10px; color:#222; font-weight:600; letter-spacing:1px;">OCT</div>
+                            <div style="font-size:28px; color:#222; font-weight:300; margin:2px 0; line-height:1;">24</div>
+                        </div>
+                        <div class="wl-info">艺术日历 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-shortcuts', 'widget-4x1')">
+                        <div class="wl-preview" style="height: 50px; background: #fff; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; justify-content:space-around; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); padding: 0 20px;">
+                            <div style="width:24px; height:24px; border-radius:50%; background:#f5f5f5; display:flex; justify-content:center; align-items:center; color:#222; font-size:10px;"><i class="fas fa-comment"></i></div>
+                            <div style="width:24px; height:24px; border-radius:50%; background:#f5f5f5; display:flex; justify-content:center; align-items:center; color:#222; font-size:10px;"><i class="fas fa-music"></i></div>
+                            <div style="width:24px; height:24px; border-radius:50%; background:#f5f5f5; display:flex; justify-content:center; align-items:center; color:#222; font-size:10px;"><i class="fas fa-camera"></i></div>
+                            <div style="width:24px; height:24px; border-radius:50%; background:#f5f5f5; display:flex; justify-content:center; align-items:center; color:#222; font-size:10px;"><i class="fas fa-heart"></i></div>
+                        </div>
+                        <div class="wl-info">快捷指令 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×1</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-mood', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: url('https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?q=80&w=200&auto=format&fit=crop&grayscale'); background-size: cover; border: 1px solid #f5f5f5; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); position:relative;">
+                            <div style="position:absolute; bottom:8px; left:8px; font-size:8px; color:#fff; letter-spacing:1px; font-weight:300;">MOOD</div>
+                        </div>
+                        <div class="wl-info">情绪画框 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+                </div>
+
+                <!-- 系统 -->
+                <div id="wl-content-system" class="wc-body-container" style="padding: 0 16px;">
+                    <div class="wl-item" onclick="addWidget('weather', 'widget-4x2')">
+                        <div class="wl-preview" style="height: 100px; background: linear-gradient(135deg, #74ebd5, #9face6); border-radius: 16px; color: #fff; align-items: center; font-size: 24px; font-weight: 700;">
+                            <i class="fas fa-cloud-sun"></i> 24°C
+                        </div>
+                        <div class="wl-info">天气 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('clock', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fff; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.05); align-items: center; border: 4px solid #111;">
+                            <i class="far fa-clock" style="font-size: 32px; color: #111;"></i>
+                        </div>
+                        <div class="wl-info">大时钟 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+                </div>
+                
+                <!-- 多媒体 -->
+                <div id="wl-content-media" class="wc-body-container" style="padding: 0 16px; display: none;">
+                     <div class="wl-item" onclick="addWidget('music', 'widget-4x2')">
+                        <div class="wl-preview" style="height: 100px; background: #111; border-radius: 16px; color: #fff; display: flex; align-items: center; padding: 0 20px;">
+                            <div style="width: 60px; height: 60px; border-radius: 50%; background: #333; margin-right: 15px;"></div>
+                            <div>
+                                <div style="font-weight: 700; font-size: 16px;">Now Playing</div>
+                                <div style="font-size: 12px; color: #aaa; margin-top: 4px;">Artist Name</div>
+                            </div>
+                        </div>
+                        <div class="wl-info">音乐播放器卡片 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('photo', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: url('https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop'); background-size: cover; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                        </div>
+                        <div class="wl-info">照片相框 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+                </div>
+                
+                <!-- 工具 -->
+                 <div id="wl-content-tool" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('search', 'widget-4x1')">
+                        <div class="wl-preview" style="height: 50px; background: #f0f0f0; border-radius: 25px; color: #888; align-items: center; justify-content: flex-start; padding: 0 20px;">
+                            <i class="fas fa-search" style="margin-right: 10px;"></i> 搜索...
+                        </div>
+                        <div class="wl-info">搜索栏 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×1</span></div>
+                    </div>
+                     <div class="wl-item" onclick="addWidget('shortcut', 'widget-1x1')">
+                        <div class="wl-preview" style="height: 60px; width: 60px; margin: 0 auto; background: #ffebee; border-radius: 16px; color: #ff6b6b; align-items: center; font-size: 24px;">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div class="wl-info">快捷按钮 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">1×1</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
            <!-- Dock Bar -->
         <div class="dock-bar">
@@ -1408,6 +1515,31 @@
                     <textarea id="cs-moment-freq-prompt" rows="3"
                               placeholder="例如：发一条关于今天心情的朋友圈"
                               style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:12px;resize:vertical;margin-top:4px;"></textarea>
+                </div>
+            </div>
+
+            <div class="cs-label">OFFLINE MESSAGES</div>
+            <div class="cs-white-card">
+                <div class="cs-row">
+                    <div style="flex:1;">
+                        <div class="cs-row-label">离线消息生成</div>
+                        <div class="cs-row-sub">打开APP时自动生成TA的消息（离得越久消息越多）</div>
+                    </div>
+                    <label class="switch" style="margin:0;flex-shrink:0;">
+                        <input type="checkbox" id="cs-offline-msg-enabled"
+                               onchange="setSoftDisplay(document.getElementById('cs-offline-msg-box'), this.checked, 'block')">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="cs-col" id="cs-offline-msg-box" style="display:none;">
+                    <div class="cs-field-title">触发间隔（小时）</div>
+                    <input type="number" id="cs-offline-msg-interval" placeholder="2" value="2" min="0.5" step="0.5"
+                           style="font-size:20px;font-weight:800;color:#222;">
+                    <div style="font-size:11px;color:#bbb;margin-top:2px;">每次打开APP时，若距上次生成超过此时长则自动触发</div>
+                    <div class="cs-field-title" style="margin-top:12px;">每批最多消息条数</div>
+                    <input type="number" id="cs-offline-msg-count" placeholder="10" value="10" min="1" max="20"
+                           style="font-size:20px;font-weight:800;color:#222;">
+                    <div style="font-size:11px;color:#bbb;margin-top:2px;">离开时间越长，AI会自动发更多条（最多此数值）</div>
                 </div>
             </div>
 
@@ -3652,6 +3784,7 @@
     <script src="js/app_imagegen.js"></script>
     <script src="js/apps.js"></script>
     <script src="js/app_worldbook.js"></script>
+    <script src="js/app_offline_msg.js"></script>
     <script src="js/app_bubble.js?v=4"></script>
 
 
@@ -3671,12 +3804,14 @@
 <script src="js/app_galgame.js"></script>
 <script src="js/app_tracker.js"></script>
 <script src="js/app_novel.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="js/app_floatpet.js"></script>
 <script src="js/app_sms.js"></script>
 <script src="js/app_phone_call.js"></script>
     <script src="js/app_nexus.js"></script>
     <script src="js/app_favorites.js"></script>
+    <script src="js/desktop_sort.js"></script>
 <script>
 // Init Nexus on load
 document.addEventListener('DOMContentLoaded', function() {
@@ -3967,7 +4102,7 @@ function switchCsTab(id) {
     </div>
 
     <!-- 废纸篓 -->
-    <div class="tr-app-view" id="tr-app-trash">
+  <div class="tr-app-view" id="tr-app-trash">
       <div class="tr-app-header">
         <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
         <div class="tr-app-title-block">
@@ -3979,6 +4114,7 @@ function switchCsTab(id) {
     </div>
 
   </div><!-- /tr-view-desktop -->
+
 
 </div><!-- /trackerApp -->
 

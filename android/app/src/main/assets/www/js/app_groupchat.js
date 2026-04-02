@@ -1621,13 +1621,25 @@ window.closeGroupVideoCall = async function () {
    重写 appendMessage 以支持群聊特殊卡片
    ========================================= */
 const _origAppendMessage = window.appendMessage;
-window.appendMessage = function (text, type, customAvatar, senderName, translation, msgId) {
+window.appendMessage = function (text, type, customAvatar, senderName, translation, msgId, timestamp) {
     // 检查红包 TAG
     if (typeof text === 'string' && text.startsWith('[RED_PACKET:')) {
         const html = renderRedPacketBubble(text);
         if (html) {
-            // 临时方式：创建气泡
             const chatMessages = document.getElementById('chatMessages');
+
+            // ★ 5 分钟时间气泡判断（与 appendMessage 一致）
+            (function() {
+                const _msgTs = (timestamp && timestamp > 0) ? timestamp : Date.now();
+                if (_msgTs - _lastChatMsgTimestamp >= 5 * 60 * 1000) {
+                    const _tb = document.createElement('div');
+                    _tb.className = 'chat-time-divider';
+                    _tb.innerHTML = `<span>${_formatChatTime(_msgTs)}</span>`;
+                    chatMessages.appendChild(_tb);
+                }
+                _lastChatMsgTimestamp = _msgTs;
+            })();
+
             const uniqueId = msgId || ('msg_' + Date.now());
             const row = document.createElement('div');
             row.className = `chat-row ${type}`;
@@ -1666,6 +1678,19 @@ window.appendMessage = function (text, type, customAvatar, senderName, translati
         if (match) {
             const voteId = match[1];
             const chatMessages = document.getElementById('chatMessages');
+
+            // ★ 5 分钟时间气泡判断（与 appendMessage 一致）
+            (function() {
+                const _msgTs = (timestamp && timestamp > 0) ? timestamp : Date.now();
+                if (_msgTs - _lastChatMsgTimestamp >= 5 * 60 * 1000) {
+                    const _tb = document.createElement('div');
+                    _tb.className = 'chat-time-divider';
+                    _tb.innerHTML = `<span>${_formatChatTime(_msgTs)}</span>`;
+                    chatMessages.appendChild(_tb);
+                }
+                _lastChatMsgTimestamp = _msgTs;
+            })();
+
             const uniqueId = msgId || ('msg_' + Date.now());
             const row = document.createElement('div');
             row.className = `chat-row ${type}`;
@@ -1698,8 +1723,8 @@ window.appendMessage = function (text, type, customAvatar, senderName, translati
         }
     }
 
-    // 普通消息走原来的逻辑
-    return _origAppendMessage(text, type, customAvatar, senderName, translation, msgId);
+    // 普通消息走原来的逻辑（传递 timestamp 参数）
+    return _origAppendMessage(text, type, customAvatar, senderName, translation, msgId, timestamp);
 };
 
 /* =========================================

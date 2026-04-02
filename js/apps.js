@@ -83,6 +83,57 @@ function getAffectionStage(score) {
     return "上头";
 }
 
+// ─── 微信风格时间气泡辅助函数 ──────────────────────────────────────────────
+let _lastChatMsgTimestamp = 0; // 记录上一条渲染消息的时间戳
+
+function _formatChatTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+
+    // ── 微信风格时间部分：上午/下午/晚上 + 12小时制 ──
+    const hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    let period, displayHour;
+    if (hours >= 0 && hours < 6) {
+        period = '凌晨'; displayHour = hours === 0 ? 12 : hours;
+    } else if (hours >= 6 && hours < 12) {
+        period = '上午'; displayHour = hours === 0 ? 12 : hours;
+    } else if (hours === 12) {
+        period = '中午'; displayHour = 12;
+    } else if (hours >= 13 && hours < 18) {
+        period = '下午'; displayHour = hours - 12;
+    } else {
+        period = '晚上'; displayHour = hours - 12;
+    }
+    const timeStr = `${period} ${displayHour}:${minutes}`;
+
+    // ── 日期部分 ──
+    const isToday = d.toDateString() === now.toDateString();
+    if (isToday) return timeStr;
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) return `昨天 ${timeStr}`;
+
+    // 一周内（用"星期X"而非"周X"）
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMsgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayDiff = Math.floor((startOfToday - startOfMsgDay) / 86400000);
+    if (dayDiff < 7 && dayDiff >= 2) {
+        const dayNames = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+        return `${dayNames[d.getDay()]} ${timeStr}`;
+    }
+
+    // 跨年
+    if (d.getFullYear() !== now.getFullYear()) {
+        return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${timeStr}`;
+    }
+
+    // 同年但更早（超过一周）
+    return `${d.getMonth()+1}月${d.getDate()}日 ${timeStr}`;
+}
+
 function ensureFriendMindFields(friend, friendId = 'AI') {
     if (!friend) return;
 
@@ -567,6 +618,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 【新增】初始化全局红点 UI
     updateMomentsUnreadUI();
     updateDockUnreadDot();
+
+    // ── 离线批量消息：APP 打开时检查所有好友，若到期则一次性生成 ──
+    // 延迟 2 秒，等 IndexedDB 和 friendsData 完全就绪后再触发
+    if (typeof checkAndGenerateOfflineMsgsOnAppOpen === 'function') {
+        setTimeout(checkAndGenerateOfflineMsgsOnAppOpen, 2000);
+    }
 
 
 
@@ -1973,7 +2030,10 @@ window.openChatDetail = async function(name) {
     applySingleChatVisualSettings(name);
 
     const chatMessages = document.getElementById('chatMessages');
-    chatMessages.innerHTML = ''; 
+    chatMessages.innerHTML = '';
+
+    // 重置时间气泡计时器，每次进入聊天都从零开始
+    _lastChatMsgTimestamp = 0;
 
     const history = await loadChatHistory(name);
 
@@ -1986,10 +2046,17 @@ window.openChatDetail = async function(name) {
         }
 
         history.forEach(msg => {
-            if (msg.isOffline) return; 
+            if (msg.isOffline) {
+                // 离线消息不渲染，但仍需更新时间戳以保证后续消息的5分钟间隔判断正确
+                if (msg.timestamp && msg.timestamp > 0) _lastChatMsgTimestamp = msg.timestamp;
+                return;
+            }
 
             // 【核心修复】渲染撤回消息状态
             if (msg.isRevoked) {
+                // 撤回消息也需要更新时间戳，防止下一条消息的5分钟间隔判断失准
+                if (msg.timestamp && msg.timestamp > 0) _lastChatMsgTimestamp = msg.timestamp;
+
                 const systemTip = document.createElement('div');
                 systemTip.className = 'msg-system-revoke';
                 const escapedText = (msg.originalText || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
@@ -2008,8 +2075,8 @@ window.openChatDetail = async function(name) {
                 displayAvatar = currentRealAvatar;
             }
             
-            // 【核心修复】必须传入 msg.id 才能保证与数据库挂钩
-            appendMessage(msg.text, msg.type, displayAvatar, msg.senderName, msg.translation, msg.id);
+            // 【核心修复】必须传入 msg.id 才能保证与数据库挂钩，同时传入 msg.timestamp 让时间气泡显示正确时间
+            appendMessage(msg.text, msg.type, displayAvatar, msg.senderName, msg.translation, msg.id, msg.timestamp);
         });
         setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 100);
 
@@ -3805,6 +3872,18 @@ window.openChatSettingsPage = function() {
         if (momentFreqBox) setSoftDisplay(momentFreqBox, momentFreqEl.checked, 'block');
     }
 
+    // --- [离线消息] 设置回填 ---
+    const omEnabledEl = document.getElementById('cs-offline-msg-enabled');
+    if (omEnabledEl) {
+        omEnabledEl.checked = settings.offlineMsgEnabled || false;
+        const omBox = document.getElementById('cs-offline-msg-box');
+        if (omBox) omBox.style.display = settings.offlineMsgEnabled ? 'block' : 'none';
+    }
+    const omIntervalEl = document.getElementById('cs-offline-msg-interval');
+    if (omIntervalEl) omIntervalEl.value = settings.offlineMsgInterval !== undefined ? settings.offlineMsgInterval : 2;
+    const omCountEl = document.getElementById('cs-offline-msg-count');
+    if (omCountEl) omCountEl.value = settings.offlineMsgCount !== undefined ? settings.offlineMsgCount : 10;
+
     // 最后显示页面 (滑入动画)
     page.classList.add('show');
 
@@ -4197,6 +4276,14 @@ window.saveChatSettings = async function() {
         friend.chatSettings.momentFreqTime = mfTimeEl ? (parseInt(mfTimeEl.value) || 60) : 60;
         friend.chatSettings.momentFreqPrompt = mfPromptEl ? mfPromptEl.value.trim() : '';
     }
+
+    // [离线消息] 设置保存
+    const omEnabledSaveEl = document.getElementById('cs-offline-msg-enabled');
+    friend.chatSettings.offlineMsgEnabled = omEnabledSaveEl ? omEnabledSaveEl.checked : false;
+    const omIntervalSaveEl = document.getElementById('cs-offline-msg-interval');
+    friend.chatSettings.offlineMsgInterval = omIntervalSaveEl ? (parseFloat(omIntervalSaveEl.value) || 2) : 2;
+    const omCountSaveEl = document.getElementById('cs-offline-msg-count');
+    friend.chatSettings.offlineMsgCount = omCountSaveEl ? (parseInt(omCountSaveEl.value) || 10) : 10;
 
     // 恢复记忆引擎持久字段（lastChatTime 不受保存操作影响）
     if (_prevLastChatTime) friend.chatSettings.lastChatTime = _prevLastChatTime;
@@ -4662,17 +4749,30 @@ function sendRichMessage(htmlContent, typeClass, hiddenTextForAI) {
     // 第二步：稍微延迟 150 毫秒，等面板动画平稳后，再把消息塞进屏幕
     setTimeout(() => {
         const chatMessages = document.getElementById('chatMessages');
+
+        // ★ 5 分钟时间气泡判断（与 appendMessage 保持一致）
+        (function() {
+            const _msgTs = Date.now();
+            if (_msgTs - _lastChatMsgTimestamp >= 5 * 60 * 1000) {
+                const _tb = document.createElement('div');
+                _tb.className = 'chat-time-divider';
+                _tb.innerHTML = `<span>${_formatChatTime(_msgTs)}</span>`;
+                chatMessages.appendChild(_tb);
+            }
+            _lastChatMsgTimestamp = _msgTs;
+        })();
+
         const row = document.createElement('div');
         row.className = 'chat-row sent';
-        
+
         const avatar = document.createElement('img');
         avatar.className = 'chat-avatar-img';
-        avatar.src = AVATAR_USER; 
-        
+        avatar.src = AVATAR_USER;
+
         const bubble = document.createElement('div');
         bubble.className = `message-bubble rich-bubble ${typeClass}`;
         bubble.innerHTML = htmlContent;
-        
+
         row.appendChild(bubble);
         row.appendChild(avatar);
         chatMessages.appendChild(row);
@@ -5076,7 +5176,7 @@ window.closeGalgameApp = function() {
    [核心修改] appendMessage 
    包含：右键菜单、多选框、以及你原有的所有富媒体/翻译逻辑
    ========================================= */
-window.appendMessage = function(text, type, customAvatar = null, senderName = null, translation = null, msgId = null) {
+window.appendMessage = function(text, type, customAvatar = null, senderName = null, translation = null, msgId = null, timestamp = null) {
     const chatMessages = document.getElementById('chatMessages');
     
     // 1. 生成或使用传入的唯一ID (用于撤回定位)
@@ -5088,6 +5188,20 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
     row.setAttribute('data-msg-id', uniqueId); 
     row.setAttribute('data-msg-text', text);   
     row.setAttribute('data-msg-sender', senderName || (type==='sent'?'ME':'AI')); 
+    // === 微信风格时间气泡：消息间隔 >= 5 分钟则插入时间标签 ===
+    // 【修复】移到 system/PAT_NOTICE 的 early return 之前，确保所有消息类型都更新 _lastChatMsgTimestamp
+    (function() {
+        const _msgTs = (timestamp && timestamp > 0) ? timestamp : Date.now();
+        // 真实微信风格：5分钟内的相邻消息不显示时间戳
+        if (_msgTs - _lastChatMsgTimestamp >= 5 * 60 * 1000) {
+            const _tb = document.createElement('div');
+            _tb.className = 'chat-time-divider';
+            _tb.innerHTML = `<span>${_formatChatTime(_msgTs)}</span>`;
+            chatMessages.appendChild(_tb);
+        }
+        _lastChatMsgTimestamp = _msgTs;
+    })();
+
  if (type === 'system') {
         const sysBubble = document.createElement('div');
         sysBubble.className = 'msg-system-greeting';
@@ -5109,6 +5223,7 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
         chatMessages.scrollTop = chatMessages.scrollHeight;
         return;
     }
+
     // === [新增] 多选框容器 (默认隐藏，CSS控制) ===
     const checkboxWrap = document.createElement('div');
     checkboxWrap.className = 'chat-row-checkbox';
@@ -9413,8 +9528,8 @@ window.sendFakeVoice = function() {
         if (currentChatId) {
             // 【关键修改】：存入历史记录时，前面加上 [VOICE]
             saveMessageToHistory(currentChatId, { text: '[VOICE]' + text, type: 'sent', senderName: 'ME' });
-            // 发给AI时还是发纯文本
-           
+            // 触发 AI 回复
+            sendMessageToAI('[VOICE]' + text);
         }
     } else {
         // 不填文字时的无字假语音
@@ -9490,8 +9605,75 @@ async function startHoldRecord() {
     const btn = document.getElementById('modalHoldToTalkBtn');
     if (!btn) return;
 
-    recognizedText = ""; // 每次录音前清空文本
+    recognizedText = "";
 
+    // ── APK 原生路径：使用 Android SpeechRecognizer，免费无需任何 API Key ──
+    const _isAndroidApp = !!(window.AndroidBridge);
+    if (_isAndroidApp) {
+        btn.classList.add('recording');
+        btn.innerHTML = `<i class="fas fa-microphone-alt" style="font-size:28px;"></i><span>识别中...</span>`;
+
+        // 定义回调：识别结果返回时由 Java 层调用此函数
+        window.__nativeSpeechCb = async function(text) {
+            // 恢复按钮 UI
+            if (btn) {
+                btn.classList.remove('recording');
+                btn.innerHTML = `<i class="fas fa-microphone" style="font-size:28px; color:#555;"></i><span style="color:#333;">按住说话</span>`;
+            }
+
+            closeVoiceActionModal();
+            document.getElementById('chat-extra-panels').classList.remove('open');
+
+            const voiceText = (text || '').trim();
+            const sec = Math.max(1, Math.ceil(voiceText.length / 4) || 3);
+
+            // 上屏语音气泡
+            const chatMessages = document.getElementById('chatMessages');
+            const uniqueId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const row = document.createElement('div');
+            row.className = 'chat-row sent';
+            row.setAttribute('data-msg-text', '[VOICE]' + voiceText);
+            row.setAttribute('data-msg-sender', 'ME');
+            row.setAttribute('data-msg-id', uniqueId);
+
+            const _avatar = document.createElement('img');
+            _avatar.className = 'chat-avatar-img';
+            _avatar.src = AVATAR_USER;
+
+            const _bubble = document.createElement('div');
+            _bubble.className = 'message-bubble sent';
+            _bubble.innerHTML = `
+              <div class="msg-voice-bar" onclick="this.nextElementSibling.classList.toggle('show')">
+                <div class="msg-voice-duration">${sec}"</div>
+                <i class="fas fa-rss msg-voice-icon" style="transform: rotate(45deg);"></i>
+              </div>
+              <div class="msg-voice-transcript show">${voiceText || '（未识别到文字）'}</div>
+            `;
+
+            attachBubbleMenuToCustomRow(_bubble, row, uniqueId, '[VOICE]' + voiceText, 'sent');
+            row.appendChild(_bubble);
+            row.appendChild(_avatar);
+            chatMessages.appendChild(row);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            if (currentChatId) {
+                await saveMessageToHistory(currentChatId, {
+                    id: uniqueId,
+                    text: '[VOICE]' + voiceText,
+                    type: 'sent',
+                    senderName: 'ME'
+                });
+                // 触发 AI 回复（sendMessageToAI 会自动把 [VOICE]text 转译为语音上下文）
+                sendMessageToAI('[VOICE]' + voiceText);
+            }
+        };
+
+        // 启动原生语音识别（麦克风由 SpeechRecognizer 接管）
+        window.AndroidBridge.startNativeSpeechRecognition('window.__nativeSpeechCb');
+        return;
+    }
+
+    // ── 浏览器路径（原有逻辑，PC/Chrome 等） ──
     try {
         // 1. 初始化原始的录音器（仅用于生成 UI 上的可播放语音条）
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -9506,9 +9688,9 @@ async function startHoldRecord() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             nativeRecognition = new SpeechRecognition();
-            nativeRecognition.lang = 'zh-CN'; // 设置识别语言为中文
-            nativeRecognition.continuous = true; // 持续识别
-            nativeRecognition.interimResults = true; // 允许返回临时结果
+            nativeRecognition.lang = 'zh-CN';
+            nativeRecognition.continuous = true;
+            nativeRecognition.interimResults = true;
 
             nativeRecognition.onresult = (event) => {
                 let finalTranscript = '';
@@ -9522,7 +9704,6 @@ async function startHoldRecord() {
                 }
                 recognizedText = finalTranscript + interimTranscript;
                 
-                // 炫酷体验：实时在按钮上显示识别出的文字
                 const span = btn.querySelector('span');
                 if (span && recognizedText) {
                     span.innerText = recognizedText.length > 8 
@@ -9540,7 +9721,6 @@ async function startHoldRecord() {
             console.warn("当前浏览器不支持原生语音识别 API");
         }
 
-        // 更新按钮样式为录音中
         btn.classList.add('recording');
         btn.innerHTML = `<i class="fas fa-microphone-alt" style="font-size:28px;"></i><span>录音中...</span>`;
     } catch (e) {
@@ -9550,6 +9730,19 @@ async function startHoldRecord() {
 
 async function stopHoldRecord() {
     const btn = document.getElementById('modalHoldToTalkBtn');
+
+    // ── APK 原生路径：停止识别，Java 层会自动触发 window.__nativeSpeechCb 回调 ──
+    const _isAndroidApp = !!(window.AndroidBridge);
+    if (_isAndroidApp) {
+        if (btn) {
+            btn.classList.remove('recording');
+            btn.innerHTML = `<i class="fas fa-microphone" style="font-size:28px; color:#555;"></i><span style="color:#333;">按住说话</span>`;
+        }
+        window.AndroidBridge.stopNativeSpeechRecognition();
+        return;
+    }
+
+    // ── 浏览器路径（原有逻辑） ──
     if (!mediaRecorder || mediaRecorder.state === 'inactive') return; // 防止重复触发
     
     // 停止原生语音识别
@@ -9566,38 +9759,34 @@ async function stopHoldRecord() {
         const blob = new Blob(mediaChunks, { type: 'audio/webm' });
         const sec = Math.max(1, Math.round((Date.now() - pressStartAt) / 1000));
 
-        // 立即关闭弹窗和面板
         closeVoiceActionModal();
         document.getElementById('chat-extra-panels').classList.remove('open');
 
-        // 上屏真实语音气泡 (UI 显示音频条)
         appendRealVoiceBubble(blob, sec);
 
-        // 稍微等待 500ms，确保浏览器的原生识别把最后一句话吐出来
         await new Promise(resolve => setTimeout(resolve, 500));
 
         let text = recognizedText.trim();
 
-        // 检查浏览器兼容性兜底
-        if (!text && !(window.SpeechRecognition || window.webkitSpeechRecognition)) {
-            text = "（当前浏览器不支持原生识别，请使用Chrome/Edge）";
+        if (!text) {
+            if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
+                text = "（当前浏览器不支持原生识别，请使用Chrome/Edge）";
+            }
         }
 
-        // 把识别结果填入气泡的文字区域
         const all = document.querySelectorAll('.msg-voice-transcript');
         if (all.length) {
             all[all.length - 1].innerHTML = text || '（未识别到文字，可能是没有出声）';
         }
 
-        // 识别成功，直接发送给 AI 请求回复，并记入历史
-        if (text && currentChatId) {
+        if (currentChatId) {
             await saveMessageToHistory(currentChatId, {
-                text: '[VOICE]' + text, type: 'sent', senderName: 'ME'
+                text: '[VOICE]' + (text || '（未识别到文字）'),
+                type: 'sent',
+                senderName: 'ME'
             });
-        } else if (currentChatId) {
-            await saveMessageToHistory(currentChatId, {
-                text: '[VOICE]（未识别到文字）', type: 'sent', senderName: 'ME'
-            });
+            // 触发 AI 回复
+            sendMessageToAI('[VOICE]' + (text || '（未识别到文字）'));
         }
         
         cleanupRecorder();
