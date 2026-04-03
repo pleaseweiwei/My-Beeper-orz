@@ -46,13 +46,6 @@ async function loadGroupsData() {
     }
 }
 
-// 在 DOMContentLoaded 后加载群聊数据
-document.addEventListener('DOMContentLoaded', async () => {
-    // 等 apps.js 的 loadFriendsData 完成后再加载群聊
-    setTimeout(async () => {
-        await loadGroupsData();
-    }, 500);
-});
 
 /* =========================================
    恢复群聊列表 UI
@@ -156,7 +149,7 @@ window.openGroupChat = async function (groupId) {
         }
         // 隐藏心声图标（群聊没有单人心声）
         const heartBtn = chatView.querySelector('.fa-heart-pulse');
-        if (heartBtn) heartBtn.style.display = 'none';
+        if (heartBtn) heartBtn.style.display = 'block'; // 群聊启用群友心声
 
         chatView.classList.add('show');
     }
@@ -240,14 +233,6 @@ function injectGroupPlusPanel() {
         { icon: 'fa-user-secret', label: '匿名',    fn: 'toggleAnonymousMode()' },
     ];
 
-    // 将原有「线下模式」按钮的点击行为切换为群聊版本
-    const origOfflineBtn = Array.from(plusGrid.querySelectorAll('.plus-item:not(.group-exclusive-btn)'))
-        .find(el => el.querySelector('span') && el.querySelector('span').textContent.trim() === '线下模式');
-    if (origOfflineBtn) {
-        origOfflineBtn._origOnclick = origOfflineBtn.onclick;
-        origOfflineBtn.onclick = () => openGroupOfflineMode();
-    }
-
     groupBtns.forEach(btn => {
         const div = document.createElement('div');
         div.className = 'plus-item group-exclusive-btn';
@@ -262,17 +247,6 @@ function injectGroupPlusPanel() {
    ========================================= */
 window.removeGroupPlusPanel = function () {
     document.querySelectorAll('#panel-plus .group-exclusive-btn').forEach(el => el.remove());
-
-    // 恢复原有「线下模式」按钮的 onclick
-    const plusGrid = document.querySelector('#panel-plus .plus-grid');
-    if (plusGrid) {
-        const origOfflineBtn = Array.from(plusGrid.querySelectorAll('.plus-item'))
-            .find(el => el.querySelector('span') && el.querySelector('span').textContent.trim() === '线下模式');
-        if (origOfflineBtn && origOfflineBtn._origOnclick !== undefined) {
-            origOfflineBtn.onclick = origOfflineBtn._origOnclick;
-            delete origOfflineBtn._origOnclick;
-        }
-    }
 };
 
 /* =========================================
@@ -1018,7 +992,7 @@ async function triggerGroupBgChat(groupId) {
         if (isMuted) tags.push('已被禁言，禁止让他发言');
         
         const tagStr = tags.length > 0 ? ` [${tags.join(' | ')}]` : '';
-        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${(mem.persona || '').substring(0, 80)}\n`;
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || ''}\n`;
     }
 
     const history = await loadChatHistory(groupId);
@@ -2015,191 +1989,6 @@ window.transferGroupOwner = async function () {
 /* =========================================
    群聊设置页面 (open / close / tabs / save)
    ========================================= */
-let _currentGroupSettingsId = null;
-
-window.openGroupSettingsPage = function (groupId) {
-    _currentGroupSettingsId = groupId;
-    const group = groupsData[groupId];
-    if (!group) return;
-
-    const page = document.getElementById('groupSettingsPage');
-    if (!page) return;
-
-    // 维护一个隐藏 input 供群成员面板使用
-    let hiddenId = document.getElementById('gs-current-group-id');
-    if (!hiddenId) {
-        hiddenId = document.createElement('input');
-        hiddenId.type = 'hidden';
-        hiddenId.id = 'gs-current-group-id';
-        document.body.appendChild(hiddenId);
-    }
-    hiddenId.value = groupId;
-
-    // ── INFO tab ──
-    const nameEl = document.getElementById('gs-group-name');
-    if (nameEl) nameEl.value = group.name || '';
-    const nickEl = document.getElementById('gs-my-nickname');
-    if (nickEl) nickEl.value = group.myNickname || '';
-
-    // 群头像
-    const avatarVal = group.customAvatar || '';
-    const avatarValEl = document.getElementById('gs-group-avatar-val');
-    const avatarUrlEl = document.getElementById('gs-group-avatar-url');
-    if (avatarValEl) avatarValEl.value = avatarVal;
-    if (avatarUrlEl) avatarUrlEl.value = avatarVal;
-    if (avatarVal) {
-        const img = document.getElementById('gs-group-avatar-img');
-        const ph  = document.getElementById('gs-group-avatar-placeholder');
-        if (img) { img.src = avatarVal; img.style.display = 'block'; }
-        if (ph)  ph.style.display = 'none';
-    }
-
-    // 我的群头像
-    if (group.myAvatar) {
-        const img = document.getElementById('gs-my-avatar-img');
-        const ph  = document.getElementById('gs-my-avatar-placeholder');
-        if (img) { img.src = group.myAvatar; img.style.display = 'block'; }
-        if (ph)  ph.style.display = 'none';
-    }
-    const frameEl = document.getElementById('gs-my-avatar-frame');
-    if (frameEl) frameEl.value = group.myAvatarFrame || '';
-
-    // 成员数标签
-    const countLabel = document.getElementById('gs-member-count-label');
-    if (countLabel) countLabel.textContent = `共 ${(group.members || []).length + 1} 位成员`;
-
-    // ── AI tab ──
-    const bgToggle = document.getElementById('gs-bg-activity-toggle');
-    if (bgToggle) {
-        bgToggle.checked = !!(group.settings && group.settings.bgActivityEnabled);
-        const box = document.getElementById('gs-bg-interval-box');
-        if (box) box.style.display = bgToggle.checked ? 'block' : 'none';
-    }
-    const bgIntervalEl = document.getElementById('gs-bg-interval');
-    if (bgIntervalEl) bgIntervalEl.value = (group.settings && group.settings.bgActivityInterval) || 120;
-
-    const memLimitEl = document.getElementById('gs-memory-limit');
-    if (memLimitEl) memLimitEl.value = group.memoryLimit || 10;
-    const replyMinEl = document.getElementById('gs-reply-min');
-    if (replyMinEl) replyMinEl.value = group.replyMin || 1;
-    const replyMaxEl = document.getElementById('gs-reply-max');
-    if (replyMaxEl) replyMaxEl.value = group.replyMax || 5;
-    const announcementEl = document.getElementById('gs-announcement');
-    if (announcementEl) announcementEl.value = group.announcement || '';
-
-    // ── VISUAL tab ──
-    const chatBgEl = document.getElementById('gs-chat-bg-url');
-    if (chatBgEl) chatBgEl.value = group.chatBgUrl || '';
-    const fontSlider = document.getElementById('gs-font-size-slider');
-    const fontVal    = document.getElementById('gs-font-size-val');
-    if (fontSlider) {
-        fontSlider.value = group.fontSize || 14;
-        if (fontVal) fontVal.textContent = (group.fontSize || 14) + 'px';
-    }
-    const cssCel = document.getElementById('gs-custom-css');
-    if (cssCel) cssCel.value = group.customCss || '';
-    const naiPosEl = document.getElementById('gs-nai-positive');
-    if (naiPosEl) naiPosEl.value = group.naiPositive || '';
-    const naiNegEl = document.getElementById('gs-nai-negative');
-    if (naiNegEl) naiNegEl.value = group.naiNegative || '';
-
-    // 渲染 CSS 预设
-    renderGsCssPresets();
-    // 加载记忆联动列表
-    loadGsLinkMemoryList(groupId);
-
-    switchGsTab('info');
-    page.classList.add('show');
-};
-
-window.closeGroupSettingsPage = function () {
-    const page = document.getElementById('groupSettingsPage');
-    if (page) page.classList.remove('show');
-};
-
-window.switchGsTab = function (tab) {
-    ['info', 'ai', 'visual', 'data'].forEach(t => {
-        const pane = document.getElementById('gs-pane-' + t);
-        const btn  = document.getElementById('gs-tab-btn-' + t);
-        if (pane) pane.classList.toggle('active', t === tab);
-        if (btn)  btn.classList.toggle('active',  t === tab);
-    });
-};
-
-window.saveGroupSettings = async function () {
-    const groupId = _currentGroupSettingsId;
-    const group   = groupsData[groupId];
-    if (!group) return;
-
-    // INFO
-    const newName = (document.getElementById('gs-group-name').value || '').trim();
-    if (newName) group.name = newName;
-    group.myNickname = (document.getElementById('gs-my-nickname').value || '').trim();
-
-    const avatarUrlVal = (document.getElementById('gs-group-avatar-url').value || '').trim()
-                      || document.getElementById('gs-group-avatar-val').value || '';
-    if (avatarUrlVal) group.customAvatar = avatarUrlVal;
-
-    const myAvatarImg = document.getElementById('gs-my-avatar-img');
-    if (myAvatarImg && myAvatarImg.src && myAvatarImg.style.display !== 'none') {
-        group.myAvatar = myAvatarImg.src;
-    }
-    group.myAvatarFrame = (document.getElementById('gs-my-avatar-frame').value || '').trim();
-
-    // AI
-    const bgToggle = document.getElementById('gs-bg-activity-toggle');
-    if (!group.settings) group.settings = {};
-    group.settings.bgActivityEnabled  = bgToggle ? bgToggle.checked : false;
-    group.settings.bgActivityInterval = parseInt(document.getElementById('gs-bg-interval').value) || 120;
-    group.memoryLimit = parseInt(document.getElementById('gs-memory-limit').value) || 10;
-    group.replyMin    = parseInt(document.getElementById('gs-reply-min').value) || 1;
-    group.replyMax    = parseInt(document.getElementById('gs-reply-max').value) || 5;
-    group.announcement = (document.getElementById('gs-announcement').value || '').trim();
-
-    // 记忆联动
-    const linkedCheckboxes = document.querySelectorAll('#gs-link-memory-container input[type="checkbox"]:checked');
-    group.linkedMemories = Array.from(linkedCheckboxes).map(cb => cb.value);
-
-    // VISUAL
-    group.chatBgUrl  = (document.getElementById('gs-chat-bg-url').value || '').trim();
-    group.fontSize   = parseInt(document.getElementById('gs-font-size-slider').value) || 14;
-    group.customCss  = document.getElementById('gs-custom-css').value || '';
-    group.naiPositive = (document.getElementById('gs-nai-positive').value || '').trim();
-    group.naiNegative = (document.getElementById('gs-nai-negative').value || '').trim();
-
-    // 应用聊天背景
-    if (currentChatId === groupId) {
-        const chatMessages = document.getElementById('chatMessages');
-        if (chatMessages) {
-            chatMessages.style.backgroundImage = group.chatBgUrl ? `url('${group.chatBgUrl}')` : '';
-        }
-        // 更新标题
-        const titleEl = document.querySelector('#chatLayer .chat-header span');
-        if (titleEl) {
-            const memberCount = (group.members || []).length + 1;
-            titleEl.innerHTML = `${group.name}<small style="font-size:9px; color:#aaa; font-weight:400; margin-left:4px;">${memberCount}人</small>`;
-        }
-    }
-
-    // 更新聊天列表项
-    const item = document.querySelector(`.wc-chat-item[data-chat-id="${groupId}"]`);
-    if (item) {
-        const nameEl = item.querySelector('.wc-chat-name');
-        if (nameEl) nameEl.textContent = group.name;
-        if (group.customAvatar) {
-            const avatarEl = item.querySelector('img');
-            if (avatarEl) avatarEl.src = group.customAvatar;
-        }
-    }
-
-    // 重启后台活跃
-    stopGroupBgActivity(groupId);
-    startGroupBgActivity(groupId);
-
-    await saveGroupsData();
-    if (typeof showToast === 'function') showToast('群聊设置已保存');
-    closeGroupSettingsPage();
-};
 
 /* ── 头像上传处理 ── */
 window.handleGsGroupAvatarUpload = function (input) {
@@ -3581,7 +3370,7 @@ async function sendGroupOfflineMessage(isRegen = false) {
         const affection = Math.max(0, Math.min(100, Number(mem.affection || 0)));
         const affStage = (typeof getAffectionStage === 'function') ? getAffectionStage(affection) : '普通';
         
-        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${(mem.persona || '普通的聚会成员').slice(0, 150)}\n  好感度: ${affection}/100 (关系阶段: ${affStage})  ← 据此决定对用户的亲密度、眼神接触、肢体界限，不得跨越当前阶段${shardNote}\n---\n`;
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || '普通的聚会成员'}\n  好感度: ${affection}/100 (关系阶段: ${affStage})  ← 据此决定对用户的亲密度、眼神接触、肢体界限，不得跨越当前阶段${shardNote}\n---\n`;
     }
 
     // ── 历史记录 ──
@@ -3899,5 +3688,130 @@ ${optionsInstr}
         }
     }
 }
+
+/* =========================================
+   重写 toggleMindCard 以支持群聊心声
+   ========================================= */
+const _origToggleMindCard = window.toggleMindCard;
+window.toggleMindCard = function(event) {
+    if (!event) return;
+
+    // 处理点击背景关闭
+    if (event.target.id === 'mind-card-overlay' || event.target.id === 'group-mind-card-overlay') {
+        const card = document.getElementById('mind-card-overlay');
+        const groupCard = document.getElementById('group-mind-card-overlay');
+        if (card) card.classList.remove('active');
+        if (groupCard) groupCard.classList.remove('active');
+        return;
+    }
+
+    if (currentChatType === 'group') {
+        const groupCard = document.getElementById('group-mind-card-overlay');
+        if (!groupCard) return;
+
+        if (groupCard.classList.contains('active')) {
+            groupCard.classList.remove('active');
+            return;
+        }
+
+        if (!currentChatId || !groupsData[currentChatId]) return;
+
+        refreshGroupMindCardUI(currentChatId, true);
+        groupCard.classList.add('active');
+        return;
+    }
+
+    // 单聊走原本逻辑
+    if (typeof _origToggleMindCard === 'function') {
+        _origToggleMindCard(event);
+    } else {
+        // Fallback to basic open
+        const card = document.getElementById('mind-card-overlay');
+        if (card) {
+            if (card.classList.contains('active')) {
+                card.classList.remove('active');
+            } else {
+                if (typeof refreshMindCardUI === 'function') refreshMindCardUI(currentChatId, false);
+                card.classList.add('active');
+            }
+        }
+    }
+};
+
+window.refreshGroupMindCardUI = function(groupId, useTyping = false) {
+    const group = groupsData[groupId];
+    if (!group) return;
+
+    const listContainer = document.getElementById('group-mind-card-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+    
+    // 获取群内非潜水/非禁言的活跃成员，最多显示8个
+    const members = (group.members || []).filter(id => {
+        const isMuted = (group.mutedMembers || []).includes(id);
+        return !isMuted && friendsData[id];
+    }).slice(0, 8);
+
+    if (members.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; color:#999; font-size:12px; padding:20px;">群里暂时没有人的心声...</div>';
+        return;
+    }
+
+    members.forEach(memberId => {
+        const friend = friendsData[memberId];
+        if (!friend.mindState) {
+            friend.mindState = { murmur: "...", hiddenThought: "..." };
+        }
+        const state = friend.mindState;
+        const affection = Math.max(0, Math.min(100, Number(friend.affection) || 0));
+        
+        const avatarUrl = friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(friend.realName || memberId)}`;
+        const name = friend.remark || friend.realName || memberId;
+        const murmur = state.murmur || "...";
+        const hiddenThought = state.hiddenThought || "";
+        
+        // 只要一两句话，这里直接取 murmur，如果太短再结合 hiddenThought
+        let thoughtText = murmur;
+        if (thoughtText === "..." && hiddenThought !== "...") {
+            thoughtText = hiddenThought;
+        } else if (hiddenThought && hiddenThought !== "..." && hiddenThought !== murmur) {
+            // 合并为一句简单的话，去掉明显的括号区分，或者只保留 murmur
+            thoughtText += ` ${hiddenThought}`;
+        }
+
+        const itemHtml = `
+            <div class="group-mind-item" style="padding: 16px; border-bottom: 1px dashed #f0f0f0; display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; align-items: center;">
+                    <div style="position: relative;">
+                        <img src="${avatarUrl}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.08); flex-shrink: 0;">
+                    </div>
+                    <div style="margin-left: 12px; flex: 1;">
+                        <div style="font-size: 14px; font-weight: 800; color: #111; letter-spacing: 0.5px; margin-bottom: 4px;">${name}</div>
+                        <div class="affection-bar-container" style="background: transparent; padding: 0;">
+                            <div class="affection-bar-label" style="font-size: 10px; color: #888; font-weight: 600; margin-bottom: 4px; display:flex; justify-content:space-between; letter-spacing: 0.5px;">
+                                <span>AFFECTION</span> <span style="color: #ff7e67;">${affection}%</span>
+                            </div>
+                            <div class="affection-progress-bar" style="height: 4px; background: #eee; border-radius: 2px; overflow: hidden;">
+                                <div style="height: 100%; background: linear-gradient(90deg, #ffb3c6, #ff7e67); width: ${affection}%; transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: #f9f9f9; border-radius: 12px; padding: 12px 14px; position: relative;">
+                    <i class="fas fa-quote-left" style="color: #ddd; font-size: 12px; position: absolute; top: -6px; left: 12px; background: #fff; padding: 0 4px;"></i>
+                    <div class="group-mind-text" id="gm-text-${memberId}" style="font-size: 13px; color: #444; line-height: 1.6; font-style: normal;">${thoughtText}</div>
+                </div>
+            </div>
+        `;
+        
+        listContainer.insertAdjacentHTML('beforeend', itemHtml);
+
+        if (useTyping && typeof typeWriterEffect === 'function' && thoughtText === murmur) {
+            // 如果没有 hiddenThought 混合格式，就使用打字机效果
+            typeWriterEffect(murmur, `gm-text-${memberId}`, 18);
+        }
+    });
+};
 
 console.log('[app_groupchat.js] 群聊线下模式模块已加载');

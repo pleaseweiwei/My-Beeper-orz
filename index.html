@@ -3828,7 +3828,7 @@
     </div>
 </div>
 
-    <script src="js/core.js"></script>
+    <script>window.onerror = function(msg, url, lineNo, columnNo, error) { alert('Error: ' + msg + '\nLine: ' + lineNo + '\nColumn: ' + columnNo + '\nError object: ' + JSON.stringify(error)); return false; }; window.onunhandledrejection = function(event) { alert('Unhandled promise rejection: ' + event.reason); };</script><script src="js/core.js"></script>
     <script src="js/app_imagegen.js"></script>
     <script src="js/apps.js"></script>
     <script src="js/app_worldbook.js"></script>
@@ -4338,7 +4338,20 @@ function switchCsTab(id) {
 </div>
 
 <input type="file" id="global-img-changer" accept="image/*" style="display:none" onchange="handleImageFileChange(this)">
-<!-- === [新增] 发布朋友圈弹窗 === -->
+  <!-- === [新增] 群聊心声卡片 === -->
+  <div id="group-mind-card-overlay" class="mind-overlay" onclick="toggleMindCard(event)">
+      <div class="mind-card-box group-mind-card-box" onclick="event.stopPropagation()" style="max-height: 80vh; display: flex; flex-direction: column; background: #fff; border-radius: 24px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+          <div style="font-size: 16px; font-weight: 800; color: #111; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; text-align: center; letter-spacing: 1px;">GROUP THOUGHTS</div>
+          <style>
+              #group-mind-card-list::-webkit-scrollbar { display: none; }
+          </style>
+          <div id="group-mind-card-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 0; scrollbar-width: none; -ms-overflow-style: none;">
+              <!-- JS 动态填充各个角色的心声卡片 -->
+          </div>
+      </div>
+  </div>
+
+  <!-- === [新增] 发布朋友圈弹窗 === -->
 <div id="post-moment-modal" class="modal-overlay">
     <div class="modal-box" style="width: 340px; max-height: 80vh; display:flex; flex-direction:column;">
         <div class="modal-header">

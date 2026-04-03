@@ -437,7 +437,25 @@ function constructWorldInfoPrompt(userMessage, characterName) {
             let bookContent = [];
             book.entries.forEach(entry => {
                 if(!entry.enabled) return;
-                bookContent.push(entry.content);
+                
+                let shouldInject = false;
+                const keysStr = (entry.keys || '').trim();
+                
+                // 1. 如果没有填写关键词，视为“常驻设定”，无条件读取
+                if (!keysStr) {
+                    shouldInject = true;
+                } else {
+                    // 2. 如果有关键词，进行动态匹配（支持中英文逗号分隔）
+                    const keywords = keysStr.split(/[,，]/).map(k => k.trim()).filter(k => k);
+                    const targetText = (userMessage || '');
+                    
+                    // 只要用户的消息中包含任意一个关键词，就触发该条目
+                    shouldInject = keywords.some(k => targetText.includes(k));
+                }
+
+                if (shouldInject) {
+                    bookContent.push(entry.content);
+                }
             });
             if (bookContent.length > 0) {
                 injectedContent.push(`【世界书：${book.title}】\n` + bookContent.join('\n\n'));

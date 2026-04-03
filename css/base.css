@@ -96,7 +96,7 @@ body {
 .page {
     min-width: 100%;
     height: 100%;
-    padding: calc(env(safe-area-inset-top) + 65px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
+    padding: calc(env(safe-area-inset-top) + 15px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
     scroll-snap-align: start;
     scroll-snap-stop: always; 
     overflow-y: hidden;
@@ -150,7 +150,7 @@ body {
     gap: 5px;
     animation: float-slow 6s ease-in-out infinite;
     justify-content: center;
-    padding-top: 15px; /* 添加上内边距让内部内容往下移动 */
+    padding-top: 0px; /* 添加上内边距让内部内容往下移动 */
 }
 
 .greeting-text {
@@ -527,7 +527,7 @@ input:checked + .slider:before { transform: translateX(18px); }
     }
     
     .page {
-        padding: calc(env(safe-area-inset-top) + 25px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
+        padding: calc(env(safe-area-inset-top) + 0px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
     }
 
     .dock-bar {

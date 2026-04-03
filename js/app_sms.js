@@ -463,7 +463,7 @@ ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
     const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
     const prompt = `你是 ${friend.remark || friend.realName || '某人'}。
-人设：${(friend.persona || '').slice(0, 200)}
+人设：${friend.persona || ''}
 用户把你在微信上拉黑了，你非常委屈或愤怒。
 现在用短信联系对方，写一条情感真实的短信（15-45字），
 只有纯文字，不能有动作描写，不能有 *号，要像真实短信那样。`;

@@ -107,7 +107,7 @@ const TrackerApp = (() => {
         return Object.keys(friendsData).map(id => ({
           id: id,
           name: friendsData[id].remark || friendsData[id].realName || id,
-          description: (friendsData[id].persona || '').slice(0, 60),
+          description: friendsData[id].persona || '',
           avatar: friendsData[id].avatar || '',
           persona: friendsData[id].persona || '',
         }));
@@ -2064,7 +2064,7 @@ function generateAndSaveCharPin() {
 
   const char = (typeof friendsData !== 'undefined' && friendsData[charId]) || {};
   const charName = char.remark || char.realName || charId;
-  const persona  = (char.persona || '').slice(0, 300);
+  const persona  = char.persona || '';
 
   let apiKey = '', apiEndpoint = '', model = 'gpt-4o-mini';
   try {

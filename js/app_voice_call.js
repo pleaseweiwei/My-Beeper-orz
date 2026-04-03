@@ -206,7 +206,7 @@ async function _buildCallSystemPrompt(userMessage) {
             const recent = hist.slice(-memoryLimit);
             historyCtx = recent.map(m => {
                 const r = m.type === 'sent' ? 'Me' : aiName;
-                return `${r}: ${(m.text || '').slice(0, 100)}`;
+                return `${r}: ${(m.text || '')}`;
             }).join('\n');
         } catch (e) { /* ignore */ }
     }
@@ -798,7 +798,7 @@ window.startVideoCall = async function(chatId, isGroup) {
     const acceptPrompt = `[HIDDEN SYSTEM COMMAND]
 The user is calling you via video call. Based on your current mood, relationship stage, and persona, decide whether to answer.
 Current affection: ${Number(friend.affection || 0)}/100
-Your persona: ${(friend.persona || '').slice(0, 200)}
+Your persona: ${friend.persona || ''}
 
 Reply with EXACTLY one word (no punctuation): ACCEPT or REJECT`;
 

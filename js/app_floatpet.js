@@ -411,7 +411,7 @@ const FloatPet = (function () {
 
             /* ── 角色基本信息 ── */
             window.AndroidBridge.saveString('pet_char_name',    _getCharName(charId));
-            window.AndroidBridge.saveString('pet_char_persona', (f.persona || '').slice(0, 1200));
+            window.AndroidBridge.saveString('pet_char_persona', f.persona || '');
             window.AndroidBridge.saveString('pet_affection',    String(f.affection || 0));
 
             /* ── 好感阶段关系日志（最近3条，供 overlay 还原关系历史） ── */
@@ -427,7 +427,7 @@ const FloatPet = (function () {
 
             /* ── 我的人设 ── */
             window.AndroidBridge.saveString('pet_my_name',    myInfo.name    || '主人');
-            window.AndroidBridge.saveString('pet_my_persona', (myInfo.persona || '').slice(0, 600));
+            window.AndroidBridge.saveString('pet_my_persona', myInfo.persona || '');
 
             /* ── 剧情总结（最近3段） ── */
             var summaryText = '';

@@ -616,6 +616,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 【修复】加上 await 确保后续红点更新等逻辑能读到最新鲜的数据
     await loadFriendsData();
+    
+    // 【修复】加载群聊数据，确保在身份切换后正确加载，避免群聊消失
+    if (typeof loadGroupsData === 'function') await loadGroupsData();
+
     // 桌宠外观依赖 friendsData（头像），数据加载完后刷新一次
     if (typeof FloatPet !== 'undefined' && typeof FloatPet.refresh === 'function') {
         FloatPet.refresh();
@@ -2607,6 +2611,10 @@ AI 原始输出示例 2：[表情:嫌弃]
         To do this, include this exact tag anywhere in your reply: [GRANT_PAY:Amount] (e.g. [GRANT_PAY:5200] or [GRANT_PAY:无限]).
         Only use this when emotionally appropriate.
         `;
+        if (chatSettings.statusRegexEnabled && chatSettings.statusFormatReq) {
+            systemPrompt += `\n[CUSTOM STATUS FORMAT INSTRUCTION]\n${chatSettings.statusFormatReq}\n`;
+        }
+
         // === [新增] 定位发送与创建规则 ===
         systemPrompt += `
         \n[LOCATION RADAR SYSTEM]
@@ -2658,7 +2666,7 @@ Weather: (current weather)
 BGM: (one fitting bgm title, format: Title - Artist/Style)
 Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
 Secret: (3 to 4 longer sentences, first-person self-talk, hidden deeper thoughts, in character voice)
-DarkSecret: (3 to 4 longer sentences, first-person self-talk, highly NSFW/yandere/obsessive/possessive dark hidden thoughts about the user, in character voice)
+DarkSecret: (3 to 4 longer sentences, first-person self-talk, hidden thoughts or deep feelings about the user, strictly adhering to the character's persona and relationship with the user)
 Kaomoji: (one matching kaomoji)
 [STATUS_END]
 Rules:
@@ -2677,7 +2685,7 @@ Weather: 小雨
 BGM: cardigan - Taylor Swift
 Murmur: 他今天倒是来得比我想象中早一点。我本来还想装作无所谓，结果还是第一时间去看消息了。真烦，明明不该这么在意的。可我就是忍不住。
 Secret: 其实我有一点高兴。不是一点，是比我愿意承认的还要更多。要是他再多说几句好听的，我可能真的会心软得很快。现在先藏着吧，至少我还不想让他看得太明白。
-DarkSecret: 真的好想把他绑起来，让他哪里也去不了，只能每天看着我一个人。只要他敢看别人一眼，我就把他的眼睛蒙上，让他只能感受我的存在。
+DarkSecret: 他刚刚的样子真的很有趣，不过如果他知道我现在脑子里在想什么，会不会被吓跑呢？还是先保持现在的距离慢慢来吧。
 Kaomoji: ( ｡•̀ᴗ-)✧
 [STATUS_END]
 `;
@@ -3158,8 +3166,26 @@ if (statusMatch) {
     } // end null safety check
 }
 
-
-
+            // === [自定义状态正则提取与替换] ===
+            if (chatSettings.statusRegexEnabled && chatSettings.statusExtractRegex) {
+                try {
+                    const extractReg = new RegExp(chatSettings.statusExtractRegex, 'i');
+                    const extractMatch = rawReply.match(extractReg);
+                    if (extractMatch && extractMatch[1]) {
+                        if (friendsData[targetChatId] && friendsData[targetChatId].mindState) {
+                            friendsData[targetChatId].mindState.action = extractMatch[1].trim();
+                            saveFriendsData();
+                            refreshMindCardUI(targetChatId, false);
+                        }
+                    }
+                    if (chatSettings.statusReplaceRegex) {
+                        const replaceReg = new RegExp(chatSettings.statusReplaceRegex, 'ig');
+                        rawReply = rawReply.replace(replaceReg, '').trim();
+                    }
+                } catch (e) {
+                    console.error("Custom status regex error:", e);
+                }
+            }
 
             // 2. 提取弹幕 [DANMAKU_START]...[DANMAKU_END]，并从 rawReply 中移除
             const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[DANMAKU_END\]/i;
@@ -3505,37 +3531,6 @@ window.updateCreateBtnCount = function() {
     if(btn) btn.innerText = `创建 (${checkboxes.length})`;
 }
 
-// 5. 确认创建群聊
-window.confirmCreateGroup = function() {
-    const nameInput = document.getElementById('cg-groupname');
-    const checkboxes = document.querySelectorAll('#cg-friend-list input[type="checkbox"]:checked');
-    
-    if (checkboxes.length < 1) {
-        alert("请至少选择 1 个好友！");
-        return;
-    }
-    
-    const groupName = nameInput.value.trim() || "未命名群聊";
-    const memberIds = Array.from(checkboxes).map(cb => cb.value); // 获取勾选的好友ID
-    
-    // 简单起见，用群名当ID（实际开发通常用UUID）
-    const groupId = groupName; 
-    
-    // 存入数据
-    groupsData[groupId] = {
-        name: groupName,
-        members: memberIds
-    };
-    
-    // 添加到聊天列表
-    const groupAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${groupName}&backgroundColor=e5e5e5`;
-    
-    // 这是一个辅助函数，用来把群加到界面上
-    addChatListEntry(groupId, groupName, "群聊已创建", groupAvatar, 'group');
-    
-    closeCreateGroupModal();
-}
-
 // 6. 辅助函数：通用的添加聊天列表项 (支持群聊和单聊)
 function addChatListEntry(id, displayName, lastMsg, avatarUrl, type) {
     const chatList = document.querySelector('#tab-chats');
@@ -3572,45 +3567,6 @@ function addChatListEntry(id, displayName, lastMsg, avatarUrl, type) {
     }
 }
 
-// 7. 打开群聊窗口逻辑
-window.openGroupChat = function(groupId) {
-    // 【新增】进入群聊时，清除该群的未读数据
-    if (groupsData && groupsData[groupId]) {
-        groupsData[groupId].unreadCount = 0;
-    }
-    updateChatListUnreadUI(groupId);
-    updateDockUnreadDot();
-
-    stopDanmakuLoop();
-    const dmLayer = document.getElementById('danmaku-layer');
-    if(dmLayer) dmLayer.innerHTML = '';
-    danmakuPool = [];
-    const group = groupsData[groupId];
-    if(!group) return;
-
-    currentChatId = groupId;
-    currentChatType = 'group'; // 标记为群聊状态
-
-    const chatView = document.getElementById('chatLayer');
-    if(chatView) {
-        const titleEl = chatView.querySelector('.chat-header span');
-        // 标题显示群名和成员数
-        if(titleEl) {
-             titleEl.innerHTML = `${group.name}<small style="font-size:9px; color:#aaa; font-weight:400;">${group.members.length + 1} members</small>`;
-        }
-        chatView.classList.add('show');
-    }
-    
-    // 清空聊天记录
-    const chatMessages = document.getElementById('chatMessages');
-    chatMessages.innerHTML = '';
-    
-    // 显示一条系统消息
-    const sysMsg = document.createElement('div');
-    sysMsg.style.textAlign = 'center'; sysMsg.style.margin = '15px 0';
-    sysMsg.innerHTML = `<span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:4px; font-size:11px; color:#999;">你邀请了 ${group.members.join(', ')} 加入群聊</span>`;
-    chatMessages.appendChild(sysMsg);
-}
 window.toggleMindCard = function(event) {
     if (!event) return;
 
@@ -4239,113 +4195,100 @@ function refreshFriendAvatarInUI(chatId, newAvatar) {
 }
 
 
-// =========================================
-//  【重构后】保存聊天设置数据 (V3 - 实现了开场白更换后自动清空)
-// =========================================
-// =========================================
-//  【你的要求实现版】保存聊天设置 (V3 - 实现了开场白更换后自动清空)
-// =========================================
-window.saveChatSettings = async function() {
-    if (!currentChatId || !friendsData[currentChatId]) {
-        alert("错误：没有找到当前聊天对象。");
-        return;
-    }
-    
+  // =========================================
+  //  【你的要求实现版】保存聊天设置(V3 - 实现了开场白更换后自动清除)
+  // =========================================
+window.saveChatSettings = async function () {
+    if (!currentChatId || currentChatType !== 'single') return;
     const friend = friendsData[currentChatId];
-    
-    // [关键] 1. 在修改前，先获取旧的有效开场白
-    const oldGreeting = getEffectiveGreeting(friend);
-
-    // --- 2. 读取所有设置并更新到friend对象 (你的东西都在这里) ---
-    const newRemark = document.getElementById('cs-remark').value.trim();
-    if (newRemark !== friend.remark) {
-        friend.remark = newRemark;
-        // 如果当前聊天窗口开着，立刻更新顶部标题
-        const chatTitleEl = document.querySelector('#chatLayer.show .chat-header span');
-        if(chatTitleEl) {
-             chatTitleEl.innerHTML = `${friend.remark || friend.realName}<small style="font-size:9px; color:#aaa; font-weight:400;">Online</small>`;
-        }
-    }
-    friend.realName = document.getElementById('cs-realname').value.trim();
-    friend.persona = document.getElementById('cs-persona').value.trim();
-    friend.avatar = document.getElementById('cs-avatar-hidden-val').value;
-
-    if(!friend.realName) {
-        alert("真实姓名不能为空！");
+    if (!friend) {
+        alert("未找到当前聊天对象。");
         return;
     }
-
-    // 开场白设置 (统一编辑版)
-    const _unifiedGreetingVal = (document.getElementById('cs-greeting-unified')?.value || '').trim();
-    const _greetList = Array.isArray(friend.greetingList) ? friend.greetingList :
-        (friend.tavernGreeting ? [friend.tavernGreeting] : []);
-    const _matchIdx = _greetList.findIndex(g => String(g).trim() === _unifiedGreetingVal);
-    if (!_unifiedGreetingVal) {
-        friend.greetingMode = 'none';
-        friend.greetingCustom = '';
-        friend.greetingSelected = 0;
-    } else if (_matchIdx >= 0) {
-        friend.greetingMode = 'tavern';
-        friend.greetingSelected = _matchIdx;
-        friend.greetingCustom = '';
-    } else {
+    
+    if (!friend.chatSettings) friend.chatSettings = {};
+    
+    const oldGreeting = getEffectiveGreeting(friend);
+    const _prevLastChatTime = friend.chatSettings.lastChatTime;
+    const _prevLinkMemory = friend.chatSettings.linkMemory;
+    
+    // 1. 获取新数据
+    friend.realName = document.getElementById('cs-realname').value.trim();
+    friend.remark = document.getElementById('cs-remark').value.trim();
+    friend.persona = document.getElementById('cs-persona').value.trim();
+    
+    const unifiedGreeting = document.getElementById('cs-greeting-unified');
+    if (unifiedGreeting) {
+        friend.greetingCustom = unifiedGreeting.value.trim();
         friend.greetingMode = 'custom';
-        friend.greetingCustom = _unifiedGreetingVal;
-        friend.greetingSelected = 0;
     }
 
-    // 世界书
-    const selectedWbCheckboxes = document.querySelectorAll('#cs-worldbook-container input[type="checkbox"]:checked');
-    friend.worldbook = Array.from(selectedWbCheckboxes).map(cb => cb.value);
-
-    // 保存前捕获记忆引擎持久字段（避免被 chatSettings 全量覆盖而丢失）
-    const _prevLastChatTime = (friend.chatSettings && friend.chatSettings.lastChatTime) || null;
-    const _prevLinkMemory   = (friend.chatSettings && friend.chatSettings.linkMemory)   || null;
-
-    // 高级设置 (翻译、记忆等全都在)
-    friend.chatSettings = {
-        memoryLimit: parseInt(document.getElementById('cs-memory-limit').value) || 20,
-        translationMode: document.getElementById('cs-translation-mode').value,
-        targetOutputLang: document.getElementById('cs-target-lang').value.trim(),
-        inactivityEnabled: document.getElementById('cs-inactivity-toggle').checked,
-        inactivityTime: parseInt(document.getElementById('cs-inactivity-time').value) || 300,
-        statusRegexEnabled: document.getElementById('cs-status-regex-toggle').checked,
-        statusFormatReq: document.getElementById('cs-status-format-req').value,
-        statusExtractRegex: document.getElementById('cs-status-extract-regex').value,
-        statusReplaceRegex: document.getElementById('cs-status-replace-regex').value,
-        
-        // Voice TTS Settings
-        voiceId: document.getElementById('cs-voice-id') ? document.getElementById('cs-voice-id').value.trim() : '',
-        voiceSpeed: document.getElementById('cs-voice-speed') ? parseFloat(document.getElementById('cs-voice-speed').value) : 1.0,
-        voiceLangBoost: document.getElementById('cs-voice-lang') ? document.getElementById('cs-voice-lang').value : ''
-    };
-    friend.chatSettings.visionStickerEnabled = document.getElementById('cs-vision-sticker-toggle').checked;
+    const hiddenAvatar = document.getElementById('cs-avatar-hidden-val');
+    if (hiddenAvatar && hiddenAvatar.value) {
+        friend.avatar = hiddenAvatar.value;
+    }
     
-    // 个性化语音设置保存
-    friend.chatSettings.voiceId = document.getElementById('cs-voice-id').value.trim();
-    friend.chatSettings.voiceSpeed = parseFloat(document.getElementById('cs-voice-speed').value) || 1.0;
-    friend.chatSettings.voiceLang = document.getElementById('cs-voice-lang').value;
+    const selectedWb = document.querySelectorAll('#cs-worldbook-container input[type="checkbox"]:checked:not(:disabled)');
+    friend.worldbook = Array.from(selectedWb).map(cb => cb.value);
 
-    // [新增] 时间感知 & 回复条数
-    const taEl = document.getElementById('cs-time-awareness-toggle');
-    friend.chatSettings.timeAwareness = taEl ? taEl.checked : true;
-    const ctEl = document.getElementById('cs-custom-time-input');
-    friend.chatSettings.customTime = ctEl ? ctEl.value.trim() : '';
-    const rmn = document.getElementById('cs-reply-min');
-    const rmx = document.getElementById('cs-reply-max');
-    friend.chatSettings.replyMin = rmn ? Math.max(1, parseInt(rmn.value) || 1) : 1;
-    friend.chatSettings.replyMax = rmx ? Math.max(1, parseInt(rmx.value) || 5) : 5;
-    if (friend.chatSettings.replyMin > friend.chatSettings.replyMax) friend.chatSettings.replyMax = friend.chatSettings.replyMin;
+    const voiceIdEl = document.getElementById('cs-voice-id');
+    if (voiceIdEl) friend.chatSettings.voiceId = voiceIdEl.value;
+    
+    const voiceSpeedEl = document.getElementById('cs-voice-speed');
+    if (voiceSpeedEl) friend.chatSettings.voiceSpeed = parseFloat(voiceSpeedEl.value) || 1.0;
+    
+    const voiceLangEl = document.getElementById('cs-voice-lang');
+    if (voiceLangEl) friend.chatSettings.voiceLang = voiceLangEl.value;
 
-    // [新增] VISUAL 美化设置保存
-    const csBgEl = document.getElementById('cs-chat-bg-url');
-    if (csBgEl) friend.chatSettings.chatBgUrl = csBgEl.value.trim();
-    const csFsEl = document.getElementById('cs-font-size-slider');
-    if (csFsEl) friend.chatSettings.fontSize = parseInt(csFsEl.value) || 14;
-    const csCssEl2 = document.getElementById('cs-custom-css');
-    if (csCssEl2) friend.chatSettings.customCss = csCssEl2.value;
-    // bubbleTheme 由 selectCsSingleBubbleTheme 实时写入，此处只做兜底（避免丢失）
-    if (!friend.chatSettings.bubbleTheme) friend.chatSettings.bubbleTheme = '';
+    const memLimitEl = document.getElementById('cs-memory-limit');
+    if (memLimitEl) friend.chatSettings.memoryLimit = parseInt(memLimitEl.value) || 20;
+    
+    const transModeEl = document.getElementById('cs-translation-mode');
+    if (transModeEl) friend.chatSettings.translationMode = transModeEl.value;
+    
+    const targetLangEl = document.getElementById('cs-target-lang');
+    if (targetLangEl) friend.chatSettings.targetOutputLang = targetLangEl.value;
+
+    const inactivityToggle = document.getElementById('cs-inactivity-toggle');
+    friend.chatSettings.inactivityEnabled = inactivityToggle ? inactivityToggle.checked : false;
+    const inactivityTime = document.getElementById('cs-inactivity-time');
+    if (inactivityTime) friend.chatSettings.inactivityTime = parseInt(inactivityTime.value) || 300;
+
+    const statusToggle = document.getElementById('cs-status-regex-toggle');
+    friend.chatSettings.statusRegexEnabled = statusToggle ? statusToggle.checked : false;
+    
+    const statusFormatEl = document.getElementById('cs-status-format-req');
+    if (statusFormatEl) friend.chatSettings.statusFormatReq = statusFormatEl.value;
+    
+    const statusExtractEl = document.getElementById('cs-status-extract-regex');
+    if (statusExtractEl) friend.chatSettings.statusExtractRegex = statusExtractEl.value;
+    
+    const statusReplaceEl = document.getElementById('cs-status-replace-regex');
+    if (statusReplaceEl) friend.chatSettings.statusReplaceRegex = statusReplaceEl.value;
+    
+    const visionToggle = document.getElementById('cs-vision-sticker-toggle');
+    friend.chatSettings.visionStickerEnabled = visionToggle ? visionToggle.checked : false;
+
+    const timeAwarenessToggle = document.getElementById('cs-time-awareness-toggle');
+    if (timeAwarenessToggle) {
+        friend.chatSettings.timeAwareness = timeAwarenessToggle.checked;
+        const customInput = document.getElementById('cs-custom-time-input');
+        if (customInput) friend.chatSettings.customTime = customInput.value.trim();
+    }
+
+    const replyMinEl = document.getElementById('cs-reply-min');
+    const replyMaxEl = document.getElementById('cs-reply-max');
+    if (replyMinEl) friend.chatSettings.replyMin = parseInt(replyMinEl.value) || 1;
+    if (replyMaxEl) friend.chatSettings.replyMax = parseInt(replyMaxEl.value) || 5;
+
+    const csChatBgUrlEl = document.getElementById('cs-chat-bg-url');
+    if (csChatBgUrlEl) friend.chatSettings.chatBgUrl = csChatBgUrlEl.value.trim();
+    
+    const csFontSliderEl = document.getElementById('cs-font-size-slider');
+    if (csFontSliderEl) friend.chatSettings.fontSize = parseInt(csFontSliderEl.value) || 14;
+    
+    const csCssEl = document.getElementById('cs-custom-css');
+    if (csCssEl) friend.chatSettings.customCss = csCssEl.value.trim();
 
     const selectedStickers = document.querySelectorAll('#cs-sticker-categories input[type="checkbox"]:checked');
     friend.chatSettings.activeStickers = Array.from(selectedStickers).map(cb => cb.value);
@@ -7439,7 +7382,29 @@ function importTavernCard(json, fileName, customAvatar) {
     const data = json.data || json; 
     
     // 1. 提取基础信息
-    const charName = data.name || fileName.replace(/\.(json|png)$/i, '');
+    let charName = data.name || fileName.replace(/\.(json|png)$/i, '');
+    
+    // Prompt the user for an optional custom regex
+    const customRegexStr = prompt(`导入角色卡 "${charName}"\n如果你需要自定义正则替换名字，请在此输入（例如：/\\s*\\(.*?\\)\\s*/g）\n如果不需要，请直接点击确定或取消。`);
+    if (customRegexStr) {
+        try {
+            // 解析用户输入的正则。如果用户输入类似 /pattern/flags，尝试分离
+            let regexPattern = customRegexStr;
+            let flags = 'g'; // default
+            
+            const regexMatch = customRegexStr.match(/^\/(.*?)\/([gimsuy]*)$/);
+            if (regexMatch) {
+                regexPattern = regexMatch[1];
+                flags = regexMatch[2];
+            }
+            
+            const regex = new RegExp(regexPattern, flags);
+            charName = charName.replace(regex, '');
+        } catch(e) {
+            console.warn("自定义正则解析失败，忽略正则替换", e);
+            alert("自定义正则解析失败，将使用原名。");
+        }
+    }
     const description = data.description || '';
     const personality = data.personality || '';
     const scenario = data.scenario || '';
@@ -8266,9 +8231,9 @@ window.closeHistoryDetail = function() {
    ========================================= */
 
 // 1. 打开/关闭
-window.openOfflineMode = function() {
+window.openOfflineMode = function() { console.log('openOfflineMode called'); 
     if (!currentChatId) {
-        alert("请先进入一个聊天窗口");
+        console.warn("请先进入一个聊天窗口");
         return;
     }
     
@@ -8467,14 +8432,48 @@ window.sendOfflineMessage = async function(isRegen = false) {
     const affectionStage = getAffectionStage(currentAffection);
     const currentLocation = friend.mindState?.location || '当前约会场景';
 
-    let systemPrompt = `你是${friend.realName}，正在与用户面对面相处，地点：${currentLocation}，好感度${currentAffection}/100（${affectionStage}阶段）。
+    // --- 收集世界书全文内容（与线上模式保持一致） ---
+    let worldbookContent = '';
+    try {
+        const wbIds = Array.isArray(friend.worldbook)
+            ? friend.worldbook
+            : (friend.worldbook ? [friend.worldbook] : []);
+        if (wbIds.length && typeof worldBooks !== 'undefined' && worldBooks.length) {
+            worldbookContent = wbIds.map(id => {
+                const wb = worldBooks.find(w => w.id === id);
+                if (!wb) return '';
+                if (wb.entries && wb.entries.length) {
+                    return wb.entries
+                        .filter(e => e.enabled !== false)
+                        .map(e => e.content || '')
+                        .filter(Boolean)
+                        .join('\n');
+                }
+                return wb.description || wb.content || wb.title || '';
+            }).filter(Boolean).join('\n\n');
+        } else if (typeof friend.worldbook === 'string' && friend.worldbook) {
+            worldbookContent = friend.worldbook;
+        }
+        // 补充全局世界书
+        if (typeof worldBooks !== 'undefined') {
+            const globalContent = worldBooks
+                .filter(wb => wb.global)
+                .flatMap(wb => (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || ''))
+                .filter(Boolean)
+                .join('\n');
+            if (globalContent) worldbookContent = (worldbookContent ? worldbookContent + '\n\n' : '') + globalContent;
+        }
+    } catch (e) { /* 静默 */ }
+
+let systemPrompt = `你是${friend.realName}，正在与用户面对面相处，地点：${currentLocation}，好感度${currentAffection}/100（${affectionStage}阶段）。
 ${friend.persona}
-${friend.worldbook ? `\n世界观：${friend.worldbook}` : ''}
+${worldbookContent ? `\n【世界观 / 背景设定】：\n${worldbookContent}` : ''}
 ${preset.jailbreak || ''}
-${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n用户身份：${me.persona}` : ''; })()}
+${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n【用户身份】：${me.persona}` : ''; })()}
 ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingStyle}` : ''}
 
 以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。
+【重要】：严格基于【角色人设】及好感度进行推演。绝不可擅自OOC加戏。
 你的回复【必须】是一个完整的、连贯的叙事长句，减少零散的短句。
 格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。
 你的正文回复必须控制在 ${limit} 字左右。
@@ -8486,16 +8485,16 @@ Action: （当前动作）
 Location: （地点）
 Weather: （天气）
 BGM: （歌名 - 歌手）
-Murmur: （3-4句表层心声）
-Secret: （3-4句深层想法）
-DarkSecret: （3-4句偏执/占有欲阴暗心思）
+Murmur: （3-4句表层心声，符合人设）
+Secret: （3-4句深层想法，符合人设）
+DarkSecret: （3-4句最深层的隐秘心思，必须绝对契合人设，切勿OOC）
 Kaomoji: （颜文字）
 [STATUS_END]`;
     // 弹幕 OFF 时：不要求生成弹幕块；弹幕 ON 时：才要求生成
 if (isDanmakuOn) {
     systemPrompt += `
 [DANMAKU_START]
-（生成5-8条搞笑的简体中文网友评论。绝对不得出现厌女或侮辱性词语。）
+（生成5-8条搞笑的简体中文网友评论。不得出现厌女或侮辱性内容。）
 [DANMAKU_END]
 `;
 }
@@ -10589,7 +10588,10 @@ window.quickSwitchIdentity = async function() {
     
     friendsData = {}; 
     momentsFeed = [];
+    groupsData = {};
+    document.querySelectorAll('.wc-chat-item').forEach(el => el.remove()); // 清理旧聊天列表
     await loadFriendsData();
+    if (typeof loadGroupsData === 'function') await loadGroupsData();
     loadMomentsFeed();
     applyPersonaToUI();
       if (document.getElementById('personaBuilderApp') && document.getElementById('personaBuilderApp').classList.contains('open')) {
@@ -11674,3 +11676,96 @@ window.sendHiddenAIMessage = async function(prompt) {
         return '';
     }
 };
+
+// ====== [新增] 朋友圈后台自动更新定时器 ======
+setInterval(async () => {
+    if (typeof friendsData === 'undefined') return;
+    const now = Date.now();
+    for (const friendId of Object.keys(friendsData)) {
+        const friend = friendsData[friendId];
+        if (!friend || !friend.chatSettings) continue;
+        if (!friend.chatSettings.momentFreqEnabled) continue;
+        
+        const freqMinutes = friend.chatSettings.momentFreqTime || 60;
+        const lastTime = friend.chatSettings.lastMomentGenTime || friend.chatSettings.lastChatTime || now;
+        
+        if (now - lastTime >= freqMinutes * 60 * 1000) {
+            if (friend._isGeneratingMoment) continue;
+            friend._isGeneratingMoment = true;
+            console.log(`[Auto Moment] Triggering moment for ${friendId}`);
+            
+            try {
+                friend.chatSettings.lastMomentGenTime = now;
+                if (typeof saveFriendsData === 'function') saveFriendsData();
+                
+                const settingsJSON = localStorage.getItem('aiChatSettings');
+                if (!settingsJSON) continue;
+                const settings = JSON.parse(settingsJSON);
+                
+                let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+                const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+                
+                const promptText = friend.chatSettings.momentFreqPrompt || "日常更新一条朋友圈，随便分享点生活或想法。";
+                let sysPrompt = `You are ${friend.realName}. Your persona: ${friend.persona}.`;
+                
+                let userPrompt = `[System Command: Autonomous Moment Posting]
+It's been a while since your last activity.
+Please generate a new WeChat Moment post based on this instruction: "${promptText}"
+
+Format your output exactly like this:
+[MOMENT]
+Your post text here...
+[/MOMENT]
+[MOMENT_IMG]
+Optional description for an image here (you can write 0 to 3 of these tags)
+[/MOMENT_IMG]
+
+Return ONLY the formatted blocks. Do not explain yourself.`;
+                
+                if (friend.chatSettings.isTranslationEnabled && typeof TRANS_SEPARATOR !== 'undefined') {
+                     userPrompt += `\nSince Translation Mode is ON, please format [MOMENT] text with both ${friend.realName}'s language and Chinese separated by '${TRANS_SEPARATOR}'.`;
+                }
+                
+                const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+                    body: JSON.stringify({
+                        model: settings.model,
+                        messages: [
+                            { role: 'system', content: sysPrompt },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: 0.8
+                    })
+                });
+                if (!res.ok) continue;
+                const data = await res.json();
+                const reply = (data?.choices?.[0]?.message?.content || '').trim();
+                
+                let momentText = null;
+                let momentImages = [];
+                const momentBlockRegex = /\[MOMENT\]([\s\S]*?)\[\/MOMENT\]/i;
+                const mMatch = reply.match(momentBlockRegex);
+                if (mMatch) { momentText = mMatch[1].trim(); }
+
+                const imgRegex = /\[MOMENT_IMG\]([\s\S]*?)\[\/MOMENT_IMG\]/gi;
+                let imgMatch;
+                while ((imgMatch = imgRegex.exec(reply)) !== null) {
+                    const desc = (imgMatch[1] || '').trim();
+                    if (desc) momentImages.push(desc);
+                }
+
+                if (momentText) {
+                    if (typeof createMomentFromAI === 'function') {
+                        createMomentFromAI(friendId, momentText, momentImages);
+                    }
+                }
+                
+            } catch (e) {
+                console.error("Auto moment generation failed:", e);
+            } finally {
+                friend._isGeneratingMoment = false;
+            }
+        }
+    }
+}, 60000); // 每分钟检查一次
