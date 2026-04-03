@@ -88,7 +88,10 @@ window.buildLinkedMemoryContext = async function(chatSettings, currentChatId) {
     
     // 使用 Promise.all 并发拉取所有关联记录优化性能
     const histPromises = linked.linkedChatIds.map(async linkedId => {
-        const friend = fd[linkedId];
+        // 先检查是否是群聊 (在 groupsData 中)
+        const isLinkedGroup = typeof groupsData !== 'undefined' && groupsData[linkedId];
+        const friend = isLinkedGroup ? groupsData[linkedId] : fd[linkedId];
+        
         if (!friend) return null;
         let hist = [];
         try {
@@ -98,22 +101,21 @@ window.buildLinkedMemoryContext = async function(chatSettings, currentChatId) {
                 hist = await IDB.get(scopedChatKey(linkedId)) || [];
             }
         } catch (e) { return null; }
-        return { linkedId, friend, hist };
+        return { linkedId, friend, hist, isLinkedGroup };
     });
 
     const results = await Promise.all(histPromises);
 
     for (const item of results) {
         if (!item) continue;
-        const { linkedId, friend, hist } = item;
+        const { linkedId, friend, hist, isLinkedGroup } = item;
         
         const recentReal = hist
             .filter(m => m.type !== 'summary' && m.type !== 'system')
             .slice(-depth);
         if (recentReal.length === 0) continue;
         
-        const isLinkedGroup = friend.isGroup;
-        const name = friend.remark || friend.realName || linkedId;
+        const name = friend.name || friend.remark || friend.realName || linkedId;
         
         // 消息翻译与清洗
         const lines = recentReal.map(m => {
@@ -355,21 +357,30 @@ window.renderLinkMemoryUI = async function() {
     const linkedIds = linked.linkedChatIds || [];
     const depth = linked.linkMemoryDepth || 5;
 
-    // 直接从 friendsData 构建列表，排除当前聊天
+    // 从 friendsData 构建单聊列表
     const allFriends = Object.entries(fd)
         .filter(([id]) => id !== chatId)
         .map(([id, f]) => ({ ...f, chatId: id }))
-        .filter(f => !f.blocked); // 排除已拉黑（允许选择群聊）
+        .filter(f => !f.blocked); // 排除已拉黑
+
+    // 从 groupsData 构建群聊列表
+    const gd = (typeof groupsData !== 'undefined') ? groupsData : {};
+    const allGroups = Object.entries(gd)
+        .filter(([id]) => id !== chatId)
+        .map(([id, g]) => ({ ...g, chatId: id, isGroup: true, remark: g.name }));
+        
+    // 合并列表
+    const allChats = [...allFriends, ...allGroups];
 
     el.innerHTML = `
-        ${allFriends.length === 0
+        ${allChats.length === 0
             ? '<div style="color:#ccc;font-size:12px;text-align:center;padding:10px;">暂无其他聊天</div>'
-            : allFriends.map(f => `
+            : allChats.map(c => `
                 <label style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:#fafafa;margin-bottom:6px;cursor:pointer;">
-                    <input type="checkbox" data-linkid="${f.chatId}" ${linkedIds.includes(f.chatId) ? 'checked' : ''} onchange="updateLinkMemorySelection()">
-                    <img src="${f.avatar || ''}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;background:#eee;"
-                         onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=${f.chatId}'">
-                    <span style="font-size:13px;font-weight:600;color:#333;">${f.remark || f.realName || f.chatId}</span>
+                    <input type="checkbox" data-linkid="${c.chatId}" ${linkedIds.includes(c.chatId) ? 'checked' : ''} onchange="updateLinkMemorySelection()">
+                    <img src="${c.avatar || ''}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;background:#eee;"
+                         onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=${c.chatId}'">
+                    <span style="font-size:13px;font-weight:600;color:#333;">${c.remark || c.realName || c.name || c.chatId} ${c.isGroup ? '<span style="color:#999;font-size:11px;">(群聊)</span>' : ''}</span>
                 </label>
             `).join('')}
         <div style="margin-top:10px;">

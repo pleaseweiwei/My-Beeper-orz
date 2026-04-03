@@ -166,6 +166,8 @@ window.openGroupChat = async function (groupId) {
     chatMessages.innerHTML = '';
 
     const history = await loadChatHistory(groupId);
+    if (currentChatId !== groupId || currentChatType !== 'group') return;
+
     if (history && history.length > 0) {
         chatMessages.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">历史消息</span></div>`;
         history.forEach(msg => {
@@ -633,7 +635,7 @@ window.sendGroupMessageToAI = async function (userMessage) {
             
             const tagStr = tags.length > 0 ? ` [${tags.join(' | ')}]` : '';
             
-            const shard = dispatchedMemberIds.includes(memberId) ? await getShardedMemoryForMember(memberId, currentChatId) : null;
+            const shard = dispatchedMemberIds.includes(memberId) ? await getShardedMemoryForMember(memberId, targetGroupId) : null;
             const shardNote = shard ? `\n  [私人记忆]: ${shard}` : '';
             
             membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || '普通的群成员'}${shardNote}\n`;
@@ -971,7 +973,7 @@ function startGroupBgActivity(groupId) {
     groupBgActivityTimers[groupId] = setInterval(async () => {
         // 只有在不看这个群聊时才触发
         const chatLayer = document.getElementById('chatLayer');
-        const isViewingThisGroup = chatLayer && chatLayer.classList.contains('show') && currentChatId === groupId;
+        const isViewingThisGroup = chatLayer && chatLayer.classList.contains('show') && currentChatId === groupId && currentChatType === 'group';
         if (isViewingThisGroup) return;
 
         await triggerGroupBgChat(groupId);
@@ -1244,7 +1246,7 @@ window.kickMember = async function (memberId, groupId) {
     // 系统消息
     const sysMsg = `${name} 被移出了群聊`;
     const chatMessages = document.getElementById('chatMessages');
-    if (chatMessages && currentChatId === groupId) {
+    if (chatMessages && currentChatId === groupId && currentChatType === 'group') {
         const div = document.createElement('div');
         div.style.cssText = 'text-align:center; margin:8px 0;';
         div.innerHTML = `<span style="background:rgba(0,0,0,0.04); padding:3px 10px; border-radius:4px; font-size:11px; color:#999;">${sysMsg}</span>`;
@@ -1315,7 +1317,7 @@ window.confirmAddMember = async function () {
     // 系统消息
     const names = newIds.map(id => friendsData[id] ? (friendsData[id].remark || friendsData[id].realName) : id).join('、');
     const sysMsg = `${names} 加入了群聊`;
-    if (currentChatId === groupId) {
+    if (currentChatId === groupId && currentChatType === 'group') {
         const chatMessages = document.getElementById('chatMessages');
         const div = document.createElement('div');
         div.style.cssText = 'text-align:center; margin:8px 0;';
@@ -2768,7 +2770,7 @@ window.saveGroupSettings = async function () {
     await saveGroupsData();
 
     // 如果当前正在看这个群，应用视觉设置并更新标题
-    if (currentChatId === groupId) {
+    if (currentChatId === groupId && currentChatType === 'group') {
         applyGroupVisualSettings(groupId);
         const titleEl = document.querySelector('#chatLayer .chat-header span');
         if (titleEl) {
@@ -3051,7 +3053,7 @@ window.clearGroupChatHistory = async function () {
         groupsData[groupId].lastMessage = '';
         await saveGroupsData();
     }
-    if (currentChatId === groupId) {
+    if (currentChatId === groupId && currentChatType === 'group') {
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) chatMessages.innerHTML = '';
     }
@@ -3181,7 +3183,7 @@ window.confirmCreateNewMember = async function () {
     renderGroupMemberList(groupId);
 
     const sysMsg = `${name} 加入了群聊`;
-    if (currentChatId === groupId) {
+    if (currentChatId === groupId && currentChatType === 'group') {
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
             const div = document.createElement('div');
@@ -3378,6 +3380,8 @@ async function renderGroupOfflineHistory(groupId) {
     const group = groupsData[groupId];
     const history = await loadChatHistory(groupId);
 
+    if (currentChatId !== groupId || currentChatType !== 'group') return;
+
     if (!history || history.length === 0) {
         // 显示聚会开场提示
         const memberNames = (group.members || []).slice(0, 4).map(id => {
@@ -3519,12 +3523,12 @@ async function sendGroupOfflineMessage(isRegen = false) {
     const input = document.getElementById('offline-input');
     let userText = (input ? input.value.trim() : '') || (!isRegen ? '*静静地等待大家的反应*' : '');
 
-    const isLookingAtThisGroupOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetGroupId;
+    const isLookingAtThisGroupOffline = () => document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetGroupId && currentChatType === 'group';
 
     // 上屏用户输入
     if (!isRegen && userText) {
         const userMsgId = 'grp_off_u_' + Date.now();
-        if (isLookingAtThisGroupOffline) {
+        if (isLookingAtThisGroupOffline()) {
             appendGroupOfflineEntry('user', userText, '你', userMsgId, null);
         }
         await saveMessageToHistory(targetGroupId, {
@@ -3813,10 +3817,10 @@ ${optionsInstr}
                 : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.name)}`;
 
             const aiMsgId = 'grp_off_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && 
+            const isLookingOffline = () => document.getElementById('offlineModeView')?.classList.contains('show') &&
                                      currentChatId === targetGroupId && currentChatType === 'group';
             
-            if (isLookingOffline) {
+            if (isLookingOffline()) {
                 appendGroupOfflineEntry('ai', msg.content, msg.name, aiMsgId, avatarUrl);
             } else {
                 if (typeof showToast === 'function') {

@@ -2421,6 +2421,7 @@ async function sendMessageToAI(userMessage) {
     currentAiController = new AbortController();
     // 【竞态修复】立即捕获当前聊天对象 ID，防止异步 fetch 期间用户切换联系人导致回复串台
     const targetChatId = currentChatId;
+    const targetChatType = currentChatType;
 
     const chatMessages = document.getElementById('chatMessages');
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
@@ -2482,7 +2483,7 @@ async function sendMessageToAI(userMessage) {
     let isTranslationEnabled = false;
 
     // 检查：如果当前不是群聊，且用户开启了“翻译AI输出到中文”
-    if (currentChatType !== 'group' && chatSettings.translationMode === 'ai_to_zh') {
+    if (targetChatType !== 'group' && chatSettings.translationMode === 'ai_to_zh') {
         isTranslationEnabled = true;
     }
     // === [新增] 表情包权限判定与系统级注入 ===
@@ -2517,11 +2518,11 @@ AI 原始输出示例 2：[表情:嫌弃]
     }
 
     // === 判断是群聊还是单聊 (这是你最担心的部分，完全保留) ===
-        // === 判断是群聊还是单聊 ===
-    if (currentChatType === 'group' && currentChatId) {
+    // === 判断是群聊还是单聊 ===
+    if (targetChatType === 'group' && targetChatId) {
         // ------ 群聊逻辑 (Group Chat Logic) ------
         // 1. 获取群数据 (保留原逻辑)
-        const group = groupsData[currentChatId];
+        const group = groupsData[targetChatId];
         
         // 2. 收集群里所有成员的人设 (保留原逻辑)
         let charactersInfo = "";
@@ -2533,12 +2534,21 @@ AI 原始输出示例 2：[表情:嫌弃]
         });
 
         // 3. 构建群聊提示词 (★这里升级了！注入了拟人化规则★)
+        const gSet = group.settings || {};
+        const _gMin = Math.max(1, parseInt(gSet.replyMin) || 1);
+        const _gMax = Math.max(_gMin, parseInt(gSet.replyMax) || 5);
+
         systemPrompt = `
         你负责扮演这个群里除用户以外的所有角色，自然地推动群聊对话。
 
         [群成员设定]
         ${charactersInfo}
         ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[用户身份]\n        ${me.persona}` : ''; })()}
+
+        【回复要求】
+        - 模拟真实的群聊节奏，大家一人一句。
+        - 你本次必须生成 ${_gMin} 到 ${_gMax} 条消息。绝对不要生成一大段话！
+        - 每条消息必须极度简短、口语化。
 
         【禁止】以任何形式替用户（"我"）发言。
 
@@ -2549,6 +2559,15 @@ AI 原始输出示例 2：[表情:嫌弃]
          // ------ 单聊逻辑 (Single Chat Logic) ------
         const currentAffection = Number(f.affection || 0);
         const affectionStage = getAffectionStage(currentAffection);
+        
+        const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
+        const _promptReplyMax = Math.max(_promptReplyMin, parseInt(chatSettings.replyMax) || 5);
+        let replyInstruction = "";
+        if (_promptReplyMax === 1) {
+            replyInstruction = `- **你必须且只能回复 1 条消息！绝对禁止换行！**\n           - **消息必须极度简短，最多只能包含一到两句短话，严禁生成一大段话！**`;
+        } else {
+            replyInstruction = `- **你必须分 ${_promptReplyMin} 到 ${_promptReplyMax} 条短消息来连发回复！**\n           - **必须严格使用换行符（回车）来分隔每一条消息！每换一行就是一个新气泡，绝不要把多句话挤在同一行（一大段话）里！**`;
+        }
 
         systemPrompt = `
         系统提示词：线上聊天模拟器
@@ -2571,10 +2590,8 @@ AI 原始输出示例 2：[表情:嫌弃]
         2. 非通话警告：这【不是电话通话】。你们是通过类似微信/QQ的软件进行交流，因此【绝对禁止】使用"挂断"、"挂电话"、"挂了"等与语音通话相关的词语。
         3. 角色一致性：你的所有言行举止都必须严格遵循你的角色设定，不要崩人设。
         4. 对话节奏与格式（最高优先级）：模拟真实的线上真人聊天习惯，【极度简短】！
-           - **你的聊天正文总字数【绝对不要超过 50 字】！**
-           - **每次最多只回复 1 到 3 句话。能用两三个字回答的，就不要写一行。严禁长篇大论或过度解释。**
-           - **必须使用换行符（回车）来切分你要连发的多条消息。**（例如每一行短句代表一个独立发送的聊天气泡）。
-           - 语气必须随意、口语化，拒绝机械感。
+           ${replyInstruction}
+           - 语气必须随意、口语化，拒绝机械感。能用两三个字回答的，就不要长篇大论。
 
         `;
 
@@ -2746,7 +2763,7 @@ IMPORTANT: Danmaku is OFF. Do NOT output any [DANMAKU_START]...[DANMAKU_END] blo
     // ============================================
     // [插入] 注入手机密码自我感知（来自查手机 APP 预生成）
     // ============================================
-    if (currentChatType === 'single') {
+    if (targetChatType === 'single') {
         try {
             // 优先读取角色对象的运行时字段（_injectPinAwareness 写入）
             let _pin = f._phonePin;
@@ -2803,7 +2820,7 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
 
     // === 构建历史消息上下文 (Context Memory) ===
     let contextMessages = [];
-    if (currentChatType === 'single') {
+    if (targetChatType === 'single') {
         const memoryLimit = parseInt(chatSettings.memoryLimit) || 20; // 获取记忆轮数限制，默认20
         if (memoryLimit > 0) {
             try {
@@ -2863,7 +2880,7 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
     }
 
     // === 五维记忆引擎：§4 情景记忆 & §3 跨聊天记忆注入 ===
-    if (currentChatType === 'single') {
+    if (targetChatType === 'single') {
         // § 4 动态情景记忆：注入当前真实时间 + 距上次聊天时长（受时间感知开关控制）
         if (typeof buildSituationalAwareness === 'function') {
             const _sa = buildSituationalAwareness(chatSettings);
@@ -2871,7 +2888,7 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
         }
         // § 3 跨聊天记忆互通：注入关联角色近期对话片段
         if (typeof buildLinkedMemoryContext === 'function') {
-            const _linkedCtx = await buildLinkedMemoryContext(chatSettings, currentChatId);
+            const _linkedCtx = await buildLinkedMemoryContext(chatSettings, targetChatId);
             if (_linkedCtx) systemPrompt += _linkedCtx;
         }
         // 更新最后聊天时间戳（供下次 buildSituationalAwareness 计算间隔）
@@ -2972,9 +2989,14 @@ if (!aiReply.trim()) {
         }
 
         // === 处理返回结果 ===
-        if (currentChatType === 'group') {
+        if (targetChatType === 'group') {
             // ------ 群聊结果解析 (完全保留) ------
             // 需要把 AI 返回的一大段话，按行切分，并识别是谁说的
+            const isLookingAtThisChat = () => {
+                const chatLayer = document.getElementById('chatLayer');
+                return chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'group';
+            };
+
             const lines = aiReply.split('\n');
             lines.forEach(line => {
                 line = line.trim();
@@ -2983,14 +3005,22 @@ if (!aiReply.trim()) {
                 // 正则匹配 "名字: 内容"
                 const match = line.match(/^([^:：]+)[:：](.*)/);
                 
+                let name = 'AI';
+                let content = line;
+                let avatarUrl = null;
+
                 if (match) {
-                    const name = match[1].trim();
-                    const content = match[2].trim();
+                    name = match[1].trim();
+                    content = match[2].trim();
                     // 简单的头像生成
-                    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
+                    avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
+                }
+
+                if (isLookingAtThisChat()) {
                     appendMessage(content, 'received', avatarUrl, name);
                 } else {
-                    appendMessage(line, 'received', null, 'AI');
+                    const dockDot = document.getElementById('dock-dot');
+                    if (dockDot) dockDot.style.display = 'block';
                 }
             });
             
@@ -3001,7 +3031,7 @@ if (!aiReply.trim()) {
 
             // === [图像生成] 解析并处理图像指令 (naiimag / REALIMAG / NAIIMAG) ===
             if (typeof processImagegenFromAIReply === 'function') {
-                rawReply = await processImagegenFromAIReply(rawReply, currentChatId);
+                rawReply = await processImagegenFromAIReply(rawReply, targetChatId);
             }
             let extractedDanmaku = [];       // 弹幕数组
             let finalTranslation = null;     // 气泡翻译文本
@@ -3019,7 +3049,7 @@ if (!aiReply.trim()) {
             }
 
             if (intimateDecision) {
-                loadChatHistory(currentChatId).then(async (history) => {
+                loadChatHistory(targetChatId).then(async (history) => {
                     let changed = false;
                     for (let i = history.length - 1; i >= 0; i--) {
                         if (history[i].text.startsWith('[INTIMATE_ME2AI') && history[i].text.includes(':pending:')) {
@@ -3031,28 +3061,34 @@ if (!aiReply.trim()) {
                                 const limitStr = parts[1];
                                 let limit = limitStr === '无限' ? '无限' : parseFloat(limitStr);
                                 if (!payData.intimatePay) payData.intimatePay = {};
-                                payData.intimatePay[currentChatId] = { limit: limit, spent: 0, month: new Date().getMonth() };
+                                payData.intimatePay[targetChatId] = { limit: limit, spent: 0, month: new Date().getMonth() };
                                 savePayData(); 
                                 
                                 setTimeout(() => {
                                     showToast(`<i class="fas fa-heart" style="color:#ff7e67;"></i> 对方已接受你的亲密付`);
                                 }, 500);
                             }
-                            await IDB.set(scopedChatKey(currentChatId), history);
+                            await IDB.set(scopedChatKey(targetChatId), history);
                             changed = true;
                             break;
                         }
                     }
                     if (changed) {
-                        const chatMessages = document.getElementById('chatMessages');
-                        chatMessages.innerHTML = '';
-                        history.forEach(msg => {
-                            if (!msg.isOffline) {
-                                let displayAvatar = msg.customAvatar;
-                                if (msg.type === 'received' && friendsData[currentChatId]?.avatar) displayAvatar = friendsData[currentChatId].avatar;
-                                appendMessage(msg.text, msg.type, displayAvatar, msg.senderName, msg.translation);
-                            }
-                        });
+                        const isLookingAtThisChat = () => {
+                            const chatMessages = document.getElementById('chatMessages');
+                            return chatMessages && document.getElementById('chatLayer')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
+                        };
+                        if (isLookingAtThisChat()) {
+                            const chatMessages = document.getElementById('chatMessages');
+                            chatMessages.innerHTML = '';
+                            history.forEach(msg => {
+                                if (!msg.isOffline) {
+                                    let displayAvatar = msg.customAvatar;
+                                    if (msg.type === 'received' && friendsData[targetChatId]?.avatar) displayAvatar = friendsData[targetChatId].avatar;
+                                    appendMessage(msg.text, msg.type, displayAvatar, msg.senderName, msg.translation);
+                                }
+                            });
+                        }
                     }
                 });
             }
@@ -3148,8 +3184,17 @@ if (statusMatch) {
                 setTimeout(() => {
                     const msgId = 'invite_ai_' + Date.now();
                     const tagText = `[INTIMATE_AI2ME:${limitStr}:pending:${msgId}]`;
-                    appendMessage(tagText, 'received', friendsData[currentChatId].avatar, friendsData[currentChatId].realName);
-                    saveMessageToHistory(currentChatId, { text: tagText, type: 'received', senderName: friendsData[currentChatId].realName });
+                    const isLookingAtThisChat = () => {
+                        const chatLayer = document.getElementById('chatLayer');
+                        return chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
+                    };
+                    if (isLookingAtThisChat()) {
+                        appendMessage(tagText, 'received', friendsData[targetChatId].avatar, friendsData[targetChatId].realName);
+                    } else {
+                        const dockDot = document.getElementById('dock-dot');
+                        if (dockDot) dockDot.style.display = 'block';
+                    }
+                    saveMessageToHistory(targetChatId, { text: tagText, type: 'received', senderName: friendsData[targetChatId].realName });
                 }, 1000);
             }
             // === [新增] 解析 AI 主动发送的定位卡片 ===
@@ -3173,7 +3218,7 @@ if (statusMatch) {
                     
                     // 检查是否存在，不存在就自动新建
                     const existAi = mapsData[defaultMapId].locations.find(l => l.name === aiLoc);
-                    if (!existAi) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now(), name: aiLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: [currentChatId]});
+                    if (!existAi) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now(), name: aiLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: [targetChatId]});
                     
                     const existMe = mapsData[defaultMapId].locations.find(l => l.name === meLoc);
                     if (!existMe) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now()+'_2', name: meLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: []});
@@ -3185,12 +3230,21 @@ if (statusMatch) {
                     const msgId = 'msg_aimap_' + Date.now();
                     
                     // 获取当前聊天人设的真实名字和头像
-                    const fName = friendsData[currentChatId]?.remark || friendsData[currentChatId]?.realName;
-                    const fAvatar = friendsData[currentChatId]?.avatar;
+                    const fName = friendsData[targetChatId]?.remark || friendsData[targetChatId]?.realName;
+                    const fAvatar = friendsData[targetChatId]?.avatar;
                     
-                    appendMessage(tagText, 'received', fAvatar, fName, null, msgId);
+                    const isLookingAtThisChat = () => {
+                        const chatLayer = document.getElementById('chatLayer');
+                        return chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
+                    };
+                    if (isLookingAtThisChat()) {
+                        appendMessage(tagText, 'received', fAvatar, fName, null, msgId);
+                    } else {
+                        const dockDot = document.getElementById('dock-dot');
+                        if (dockDot) dockDot.style.display = 'block';
+                    }
                     
-                    saveMessageToHistory(currentChatId, {
+                    saveMessageToHistory(targetChatId, {
                         id: msgId,
                         text: tagText,
                         type: 'received',
@@ -3229,7 +3283,7 @@ if (statusMatch) {
             rawReply = rawReply.replace(momentBlockRegex, '').replace(imgRegex, '').trim();
 
             if (momentText) {
-                createMomentFromAI(currentChatId, momentText, momentImages);
+                createMomentFromAI(targetChatId, momentText, momentImages);
             }
 
 
@@ -3259,7 +3313,7 @@ if (!avatarUrl) {
                     finalContent = TransferApp.parseAndHandleAITransfer(finalContent);
                 }
                 if (typeof PatApp !== 'undefined' && PatApp.parseAndHandleAIPat) {
-                    finalContent = PatApp.parseAndHandleAIPat(finalContent, currentChatId);
+                    finalContent = PatApp.parseAndHandleAIPat(finalContent, targetChatId);
                 }
                 
                 // 1. 先将富媒体标签强制提行，防止混排导致 startsWith 检测失败
@@ -3275,7 +3329,18 @@ if (!avatarUrl) {
                 // 回复条数区间控制 (replyMin ~ replyMax)
                 const _replyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
                 const _replyMax = Math.max(_replyMin, parseInt(chatSettings.replyMax) || 5);
-                if (textSegments.length > _replyMax) {
+
+                // 【修复】如果 AI 把所有话都挤在了一行里（一大段话），且允许连发，我们帮它按标点符号拆开
+                if (textSegments.length === 1 && _replyMax > 1 && textSegments[0].length > 15 && !textSegments[0].startsWith('[')) {
+                    const sentences = textSegments[0].match(/[^。！？.!?~～]+[。！？.!?~～]*/g);
+                    if (sentences && sentences.length > 1) {
+                        textSegments = sentences.map(s => s.trim()).filter(Boolean);
+                    }
+                }
+
+                if (textSegments.length > _replyMax && _replyMax === 1) {
+                    textSegments = [textSegments.join(' ')];
+                } else if (textSegments.length > _replyMax) {
                     const _kept = textSegments.slice(0, _replyMax - 1);
                     _kept.push(textSegments.slice(_replyMax - 1).join(' '));
                     textSegments = _kept;
@@ -3302,12 +3367,13 @@ if (!avatarUrl) {
 
                         const aiMsgId = 'msg_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-                        // 上屏，必须带上 aiMsgId
-                        appendMessage(seg, 'received', avatarUrl, null, currentTrans, aiMsgId);
-
-                        // 红点提醒逻辑
                         const chatLayer = document.getElementById('chatLayer');
-                        if (!chatLayer.classList.contains('show') || currentChatId !== currentName) {
+                        const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === currentName && currentChatType === 'single';
+                        if (isLookingAtThisChat) {
+                            // 上屏，必须带上 aiMsgId
+                            appendMessage(seg, 'received', avatarUrl, null, currentTrans, aiMsgId);
+                        } else {
+                            // 红点提醒逻辑
                             const dockDot = document.getElementById('dock-dot');
                             if (dockDot) dockDot.style.display = 'block';
                         }
@@ -4599,7 +4665,7 @@ async function saveMessageToHistory(chatId, msgData) {
     // 【新增核心】未读数统计逻辑：只有收到的消息，并且当前没看着这个聊天，才增加未读
     if (msgData.senderName !== 'ME') {
         const chatLayer = document.getElementById('chatLayer');
-        const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === chatId;
+        const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === chatId && currentChatType === 'single';
         
         if (!isLookingAtThisChat) {
             if (friendsData[chatId]) {
@@ -8360,7 +8426,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
     const friend = friendsData[targetChatId];
     if (!friend) return;
 
-    const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId;
+    const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
 
     if (!isRegen) {
         const userMsgId = 'off_u_' + Date.now();
@@ -8478,23 +8544,30 @@ if (isDanmakuOn) {
 
     if (offlineConfig.streamingEnabled) {
         const aiMsgId = 'off_ai_' + Date.now();
-        const container = document.getElementById('offline-log-container');
-        const entryDiv = document.createElement('div');
-        entryDiv.className = 'offline-entry ai';
-        entryDiv.setAttribute('data-msg-id', aiMsgId);
-        entryDiv.innerHTML = `
-            <div class="oe-name">${friend.realName}</div>
-            <div class="oe-text serif streaming" id="stream-${aiMsgId}"></div>
-            <div class="oe-actions" style="display: none;">
-                <div class="oe-btn" onclick="regenerateOfflineMessage('${aiMsgId}')" title="重试/重回"><i class="fas fa-sync-alt"></i></div>
-                <div class="oe-btn" onclick="openModifyOffline('${aiMsgId}')" title="修改"><i class="fas fa-pen"></i></div>
-                <div class="oe-btn delete" onclick="deleteOfflineMsgUI('${aiMsgId}')" title="删除"><i class="fas fa-trash"></i></div>
-            </div>
-        `;
-        const dmArea = container.querySelector('.offline-danmaku-area');
-if (dmArea) container.insertBefore(entryDiv, dmArea);
-else container.appendChild(entryDiv);
-        const textElement = document.getElementById(`stream-${aiMsgId}`);
+        const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
+        
+        let textElement = null;
+        let entryDiv = null;
+        
+        if (isLookingOffline) {
+            const container = document.getElementById('offline-log-container');
+            entryDiv = document.createElement('div');
+            entryDiv.className = 'offline-entry ai';
+            entryDiv.setAttribute('data-msg-id', aiMsgId);
+            entryDiv.innerHTML = `
+                <div class="oe-name">${friend.realName}</div>
+                <div class="oe-text serif streaming" id="stream-${aiMsgId}"></div>
+                <div class="oe-actions" style="display: none;">
+                    <div class="oe-btn" onclick="regenerateOfflineMessage('${aiMsgId}')" title="重试/重回"><i class="fas fa-sync-alt"></i></div>
+                    <div class="oe-btn" onclick="openModifyOffline('${aiMsgId}')" title="修改"><i class="fas fa-pen"></i></div>
+                    <div class="oe-btn delete" onclick="deleteOfflineMsgUI('${aiMsgId}')" title="删除"><i class="fas fa-trash"></i></div>
+                </div>
+            `;
+            const dmArea = container.querySelector('.offline-danmaku-area');
+            if (dmArea) container.insertBefore(entryDiv, dmArea);
+            else container.appendChild(entryDiv);
+            textElement = document.getElementById(`stream-${aiMsgId}`);
+        }
         
         const sendBtn = document.querySelector('.offline-send-btn');
         if(sendBtn) {
@@ -8536,8 +8609,10 @@ else container.appendChild(entryDiv);
                         const content = data.choices[0]?.delta?.content || '';
                         if (content) {
                             fullReply += content;
-                            let partialClean = fullReply.split('[OPTIONS_START]')[0];
-                            textElement.innerHTML = partialClean.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
+                            if (textElement) {
+                                let partialClean = fullReply.split('[OPTIONS_START]')[0];
+                                textElement.innerHTML = partialClean.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
+                            }
                             // 【修复】移除滚动，保持位置
                         }
                     } catch (e) { /* ignore parse errors */ }
@@ -8548,8 +8623,8 @@ else container.appendChild(entryDiv);
                 sendBtn.classList.remove('sending');
                 sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
             }
-            textElement.classList.remove('streaming');
-            entryDiv.querySelector('.oe-actions').style.display = 'flex';
+            if (textElement) textElement.classList.remove('streaming');
+            if (entryDiv) entryDiv.querySelector('.oe-actions').style.display = 'flex';
 
             let cleanReply = fullReply;
 
@@ -8580,7 +8655,9 @@ else container.appendChild(entryDiv);
                 cleanReply = cleanReply.replace(danmakuRegex, '').trim();
             }
 
-            textElement.innerHTML = cleanReply.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
+            if (textElement) {
+                textElement.innerHTML = cleanReply.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
+            }
             
             await saveMessageToHistory(targetChatId, {
                 text: cleanReply, type: 'received', senderName: friend.realName,
@@ -8588,7 +8665,9 @@ else container.appendChild(entryDiv);
             });
 
             // 【修复】渲染选项分支
-            if (isOfflineOptionsOn && extractedOptions.length > 0) {
+            const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
+            if (isLookingOfflineNow && isOfflineOptionsOn && extractedOptions.length > 0) {
+                const container = document.getElementById('offline-log-container');
                 const optDiv = document.createElement('div');
                 optDiv.id = 'vn-options-box';
                 optDiv.className = 'vn-options-container';
@@ -8599,13 +8678,13 @@ else container.appendChild(entryDiv);
                     btn.onclick = () => selectOfflineOption(opt);
                     optDiv.appendChild(btn);
                 });
-               const dmArea = container.querySelector('.offline-danmaku-area');
-if (dmArea) {
-    if (dmArea.nextSibling) container.insertBefore(optDiv, dmArea.nextSibling);
-    else container.appendChild(optDiv);
-} else {
-    container.appendChild(optDiv);
-}
+                const dmArea = container.querySelector('.offline-danmaku-area');
+                if (dmArea) {
+                    if (dmArea.nextSibling) container.insertBefore(optDiv, dmArea.nextSibling);
+                    else container.appendChild(optDiv);
+                } else {
+                    container.appendChild(optDiv);
+                }
 
                 // 【修复】选项出现后自动滚动到底部，确保能看到
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
@@ -8728,7 +8807,8 @@ if (!rawReply.trim()) {
             }
 
             const aiMsgId = 'off_ai_' + Date.now();
-            if (document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId) {
+            const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
+            if (isLookingOffline) {
                 appendOfflineEntry('ai', rawReply, friend.realName, aiMsgId);
             }
             
@@ -8738,7 +8818,8 @@ if (!rawReply.trim()) {
             });
             
             // 【修复】渲染选项分支
-            if (isOfflineOptionsOn && extractedOptions.length > 0) {
+            if (isLookingOffline && isOfflineOptionsOn && extractedOptions.length > 0) {
+                const container = document.getElementById('offline-log-container');
                 const optDiv = document.createElement('div');
                 optDiv.id = 'vn-options-box';
                 optDiv.className = 'vn-options-container';
@@ -11535,6 +11616,8 @@ async function callMinimaxVoiceAPI(text, globalSettings, chatSettings) {
    ========================================= */
 window.sendHiddenAIMessage = async function(prompt) {
     if (!currentChatId) return '';
+    const targetChatId = currentChatId;
+    const targetChatType = currentChatType;
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
     if (!settingsJSON) return '';
     const settings = JSON.parse(settingsJSON);
@@ -11542,7 +11625,7 @@ window.sendHiddenAIMessage = async function(prompt) {
     let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
     const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
-    const f = friendsData[currentChatId] || {};
+    const f = friendsData[targetChatId] || {};
     const systemPrompt = `You are ${f.realName || 'AI'}. ${f.persona || ''}`;
 
     try {
@@ -11570,10 +11653,17 @@ window.sendHiddenAIMessage = async function(prompt) {
                 const avatarUrl = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.realName || 'AI'}`;
                 const aiMsgId = 'msg_hid_' + Date.now();
                 setTimeout(() => {
-                    appendMessage(clean, 'received', avatarUrl, null, null, aiMsgId);
-                    saveMessageToHistory(currentChatId, {
+                    const chatLayer = document.getElementById('chatLayer');
+                    const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === targetChatType;
+                    if (isLookingAtThisChat) {
+                        appendMessage(clean, 'received', avatarUrl, null, null, aiMsgId);
+                    } else {
+                        const dockDot = document.getElementById('dock-dot');
+                        if (dockDot) dockDot.style.display = 'block';
+                    }
+                    saveMessageToHistory(targetChatId, {
                         id: aiMsgId, text: clean, type: 'received',
-                        customAvatar: avatarUrl, senderName: currentChatId
+                        customAvatar: avatarUrl, senderName: targetChatId
                     });
                 }, 600);
             }
