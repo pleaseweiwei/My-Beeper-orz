@@ -19,7 +19,8 @@
 
 body {
     margin: 0;
-    height: 100vh;
+    height: var(--vh, 100dvh);
+    min-height: var(--vh, 100dvh);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -30,9 +31,9 @@ body {
 
 .phone {
     width: 375px;
-    height: 100vh; /* Changed from 812px to 100vh */
-    max-height: 812px; /* Added max-height to retain original size on larger screens */
-    aspect-ratio: 9 / 19.5; /* Keep iPhone aspect ratio, but let it scale */
+    height: var(--vh, 100dvh); 
+    /* use --vh to accurately match the visible viewport height, preventing the dock from hiding behind mobile browser UI */
+    max-height: 896px; /* slightly taller max-height for modern tall phones on desktop view */
     max-width: 100vw;
     background-color: var(--bg-color);
     background-image: var(--phone-bg-image);
@@ -519,16 +520,18 @@ input:checked + .slider:before { transform: translateX(18px); }
            消除 iOS Safari 因地址栏/工具栏造成的底部空白 */
         height: var(--vh, 100dvh);
         min-height: var(--vh, 100dvh);
+        max-height: none;
+        aspect-ratio: auto;
         border-radius: 0;
         box-shadow: none;
     }
     
-        .page {
+    .page {
         padding: calc(env(safe-area-inset-top) + 25px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
     }
 
     .dock-bar {
         /* 兼容 iOS home indicator 安全区，避免 Dock 被压在 home bar 下面 */
-        bottom: max(20px, env(safe-area-inset-bottom));
+        bottom: calc(35px + env(safe-area-inset-bottom, 0px));
     }
 }
