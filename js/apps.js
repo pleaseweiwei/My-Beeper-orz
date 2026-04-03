@@ -590,11 +590,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // === [Bono机 开机动画] ===
     setTimeout(() => {
         const bootScreen = document.getElementById('boot-screen');
+        const mainDockBar = document.getElementById('main-dock-bar');
         if (bootScreen) {
             bootScreen.classList.add('fade-out'); // 添加淡出类
+            if (mainDockBar) {
+                mainDockBar.style.opacity = '1';
+                mainDockBar.style.pointerEvents = 'auto';
+            }
             setTimeout(() => {
                 bootScreen.remove(); // 动画完后移除元素
             }, 800); 
+        } else if (mainDockBar) {
+            mainDockBar.style.opacity = '1';
+            mainDockBar.style.pointerEvents = 'auto';
         }
     }, 2800); // 3.2秒后消失，稍微多留一点时间展示动画细节
 
@@ -2863,7 +2871,7 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
         }
         // § 3 跨聊天记忆互通：注入关联角色近期对话片段
         if (typeof buildLinkedMemoryContext === 'function') {
-            const _linkedCtx = await buildLinkedMemoryContext(chatSettings);
+            const _linkedCtx = await buildLinkedMemoryContext(chatSettings, currentChatId);
             if (_linkedCtx) systemPrompt += _linkedCtx;
         }
         // 更新最后聊天时间戳（供下次 buildSituationalAwareness 计算间隔）
@@ -8330,21 +8338,27 @@ window.sendOfflineMessage = async function(isRegen = false) {
     }
     currentAiController = new AbortController();
 
+    const targetChatId = currentChatId;
+
     hideOfflineDanmakuArea(true);
     const input = document.getElementById('offline-input');
-    let text = input.value.trim();
+    let text = input ? input.value.trim() : '';
     
     if (!text && !isRegen) {
         text = "*静静地等待事情发展*"; 
     }
     
-    const friend = friendsData[currentChatId];
+    const friend = friendsData[targetChatId];
     if (!friend) return;
+
+    const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId;
 
     if (!isRegen) {
         const userMsgId = 'off_u_' + Date.now();
-        appendOfflineEntry('user', text, 'You', userMsgId);
-        saveMessageToHistory(currentChatId, {
+        if (isLookingOffline) {
+            appendOfflineEntry('user', text, 'You', userMsgId);
+        }
+        saveMessageToHistory(targetChatId, {
             text: text, type: 'sent', senderName: 'ME', isOffline: true, id: userMsgId
         });
     } else {
@@ -8367,7 +8381,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
     const oldOpts = document.getElementById('vn-options-box');
     if (oldOpts) oldOpts.remove();
 
-    const history = await loadChatHistory(currentChatId);
+    const history = await loadChatHistory(targetChatId);
     const memoryLimit = parseInt((friend.chatSettings && friend.chatSettings.memoryLimit) || 20);
     const historyContext = history.slice(-memoryLimit).map(h => 
         `${h.type==='sent'?'User':friend.realName}: ${h.isOffline?h.text:'(Online Memory: '+h.text+')'}`
@@ -8388,7 +8402,7 @@ ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingSt
 以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。
 你的回复【必须】是一个完整的、连贯的叙事长句，减少零散的短句。
 格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。
-你的正文回复（不含状态块、弹幕块、选项块）必须控制在 ${limit} 字左右。
+你的正文回复必须控制在 ${limit} 字左右。
 
 回复末尾附状态块：
 [STATUS_START]
@@ -8423,7 +8437,7 @@ if (isDanmakuOn) {
         systemPrompt += `\n\n[OUR RELATIONSHIP HISTORY]:\n${relationshipText}\n`;
     }
     // === 注入世界书关键词触发 ===
-    const offlineWorldInfo = constructWorldInfoPrompt(text, currentChatId);
+    const offlineWorldInfo = constructWorldInfoPrompt(text, targetChatId);
     if (offlineWorldInfo) {
         systemPrompt += `\n\n[World Setting / Lorebook Data]:\n${offlineWorldInfo}\n`;
     }
@@ -8542,7 +8556,7 @@ else container.appendChild(entryDiv);
             const statusRegex = new RegExp(statusRegStr, 'i');
             const statusMatch = cleanReply.match(statusRegex);
             if (statusMatch) {
-                updateMindStateFromText(statusMatch[1], currentChatId); 
+                updateMindStateFromText(statusMatch[1], targetChatId); 
                 cleanReply = cleanReply.replace(statusRegex, '').trim();
             }
 
@@ -8559,7 +8573,7 @@ else container.appendChild(entryDiv);
 
             textElement.innerHTML = cleanReply.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
             
-            await saveMessageToHistory(currentChatId, {
+            await saveMessageToHistory(targetChatId, {
                 text: cleanReply, type: 'received', senderName: friend.realName,
                 customAvatar: friend.avatar, isOffline: true, id: aiMsgId
             });
@@ -8688,7 +8702,7 @@ if (!rawReply.trim()) {
             const statusRegex = new RegExp(statusRegStr, 'i');
             const statusMatch = rawReply.match(statusRegex);
             if (statusMatch) {
-                updateMindStateFromText(statusMatch[1], currentChatId); 
+                updateMindStateFromText(statusMatch[1], targetChatId); 
                 rawReply = rawReply.replace(statusRegex, '').trim();
             }
 
@@ -8705,9 +8719,11 @@ if (!rawReply.trim()) {
             }
 
             const aiMsgId = 'off_ai_' + Date.now();
-            appendOfflineEntry('ai', rawReply, friend.realName, aiMsgId);
+            if (document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId) {
+                appendOfflineEntry('ai', rawReply, friend.realName, aiMsgId);
+            }
             
-            saveMessageToHistory(currentChatId, {
+            saveMessageToHistory(targetChatId, {
                 text: rawReply, type: 'received', senderName: friend.realName,
                 customAvatar: friend.avatar, isOffline: true, id: aiMsgId
             });

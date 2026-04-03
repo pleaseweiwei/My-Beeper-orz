@@ -578,7 +578,10 @@ async function handleGossipCommand(gossipData, triggerGroupId) {
 
 window.sendGroupMessageToAI = async function (userMessage) {
     if (!currentChatId || currentChatType !== 'group') return;
-    const group = groupsData[currentChatId];
+    
+    // 【竞态修复】捕获目标群聊 ID
+    const targetGroupId = currentChatId;
+    const group = groupsData[targetGroupId];
     if (!group) return;
 
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
@@ -596,7 +599,7 @@ window.sendGroupMessageToAI = async function (userMessage) {
 
     try {
         // 获取历史（用于智能调度）
-        const history = await loadChatHistory(currentChatId);
+        const history = await loadChatHistory(targetGroupId);
         const recentHistory = history.slice(-20);
 
         const allActiveMemberIds = (group.members || []).filter(id =>
@@ -605,45 +608,77 @@ window.sendGroupMessageToAI = async function (userMessage) {
 
         // ★ 智能调度器
         const dispatchedMemberIds = smartDispatchMembers(allActiveMemberIds, recentHistory, userMessage);
-        const benchMemberIds = allActiveMemberIds.filter(id => !dispatchedMemberIds.includes(id));
-
-        // 主要发言角色人设（详细 + 视角记忆）
-        let membersInfo = '';
-        for (const memberId of dispatchedMemberIds) {
-            const mem = friendsData[memberId];
-            if (!mem) continue;
-            const title = (group.memberTitles || {})[memberId] ? `[${group.memberTitles[memberId]}]` : '';
-            const shard = await getShardedMemoryForMember(memberId, currentChatId);
-            const shardNote = shard ? `\n  [${mem.realName}的私人记忆]: ${shard}` : '';
-            membersInfo += `角色名: ${mem.realName || memberId} ${title}\n性格人设: ${mem.persona || '普通的群成员'}${shardNote}\n---\n`;
-        }
-
-        // 潜水成员（仅提供名字，不参与回复）
-        const benchNames = benchMemberIds.map(id => {
-            const f = friendsData[id];
-            return f ? (f.realName || id) : id;
-        });
-        const benchNote = benchNames.length > 0 ? `\n[当前潜水中的成员 (不发言)]: ${benchNames.join('、')}` : '';
 
         // 获取我的人设
         const me = personasMeta[currentPersonaId];
-        const myPersonaStr = (me && me.persona) ? `[用户身份描述]: ${me.persona}` : '';
+        const myName = group.myNickname || (me ? me.name : '我') || '用户';
+        const myPersonaStr = `[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
 
-        // 获取群公告
-        const announcementStr = group.announcement ? `\n[群公告 (最高优先级，所有人必须遵守)]: ${group.announcement}` : '';
+        // 主要发言角色人设（包含禁言标签）
+        let membersInfo = '';
+        const allMemberIds = group.members || [];
+        for (const memberId of allMemberIds) {
+            const mem = friendsData[memberId];
+            if (!mem) continue;
+            
+            const isMuted = (group.mutedMembers || []).includes(memberId);
+            const isAdmin = (group.admins || []).includes(memberId);
+            const customTitle = (group.memberTitles || {})[memberId];
+            
+            let tags = [];
+            if (isAdmin) tags.push('管理员');
+            if (customTitle) tags.push(`头衔:${customTitle}`);
+            if (isMuted) tags.push('已被禁言，禁止让他发言');
+            else if (!dispatchedMemberIds.includes(memberId)) tags.push('当前潜水中，尽量不发言');
+            
+            const tagStr = tags.length > 0 ? ` [${tags.join(' | ')}]` : '';
+            
+            const shard = dispatchedMemberIds.includes(memberId) ? await getShardedMemoryForMember(memberId, currentChatId) : null;
+            const shardNote = shard ? `\n  [私人记忆]: ${shard}` : '';
+            
+            membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || '普通的群成员'}${shardNote}\n`;
+        }
 
-        // 历史记录文本
+        // 长期记忆（对话总结）
+        const longTermMemoryStr = group.longTermSummary ? `\n[长期记忆摘要]\n${group.longTermSummary}` : '';
+
+        // 获取互通记忆情报
+        let linkedMemoryCtx = '';
+        if (typeof buildLinkedMemoryContext === 'function') {
+            const rawLinked = await buildLinkedMemoryContext(group.settings, targetGroupId);
+            if (rawLinked) {
+                linkedMemoryCtx = `\n[仅 AI 可见的附加上下文（情报）]\n${rawLinked}`;
+            }
+        }
+
+        // 历史记录文本（短期记忆）
         let historyText = '';
         recentHistory.forEach(msg => {
             if (msg.type === 'system') return;
-            const sender = msg.type === 'sent' ? '用户' : (msg.senderName || 'AI');
-            historyText += `${sender}: ${(msg.text || '').substring(0, 100)}\n`;
+            const sender = msg.type === 'sent' ? myName : (msg.senderName || 'AI');
+            
+            // 时间戳标注
+            let timeStr = '';
+            let msgTs = msg.timestamp || (msg.id ? parseInt(msg.id.split('_').pop(), 10) : 0);
+            if (!msgTs || isNaN(msgTs) || msgTs < 1000000000000) msgTs = Date.now();
+            const d = new Date(msgTs);
+            timeStr = `[${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}] `;
+            
+            // 特殊消息转化
+            let content = msg.text || '';
+            if (msg.isImage) content = '[图片]';
+            else if (msg.isEmoji) content = `[发送了一个表情: ${msg.emojiName || '表情'}]`;
+            else if (msg.isRevoked) content = '[用户撤回了一条消息，你不知道内容，但你可以对此做出反应]';
+            else content = content.substring(0, 100);
+            
+            historyText += `${timeStr}${sender}: ${content}\n`;
         });
 
-        // 世界书注入
+        // 世界书注入（核心世界观设定）
         const worldInfoText = (typeof constructWorldInfoPrompt === 'function')
-            ? constructWorldInfoPrompt(userMessage, currentChatId)
+            ? constructWorldInfoPrompt(userMessage, targetGroupId)
             : '';
+        const worldStr = worldInfoText ? `\n[核心世界观设定]\n${worldInfoText}` : '';
 
         // 匿名模式处理
         const anonNote = groupAnonymousMode ? `\n[匿名模式已开启]: 用户此刻的身份是"${myAnonName}"，请以此称呼用户。` : '';
@@ -652,31 +687,35 @@ window.sendGroupMessageToAI = async function (userMessage) {
         const atMatches = userMessage.match(/@(\S+)/g);
         const atNote = atMatches ? `\n[用户提及了]: ${atMatches.join(', ')}，被提及的角色必须优先回复。` : '';
 
+        // 获取群公告
+        const announcementStr = group.announcement ? `\n[最高优先级规则，必须严格遵守]\n以下是群公告，你扮演的所有角色在接下来的对话中受此规则约束：\n${group.announcement}` : '';
+
         const systemPrompt = `
-[系统指令: 动态群聊模拟器 — 智能调度版]
-你是一个同时扮演多个角色的群聊模拟引擎。只让下面【参与发言的成员】回复，潜水成员不得发言。
+[系统指令: 动态群聊模拟器]
+你是一个同时扮演多个角色的群聊模拟引擎。你的任务是扮演且仅能扮演下述【群成员花名册】中未被禁言的NPC，每个角色的语气必须符合其人设。
 
-[参与发言的成员档案]
+[群成员花名册与详细人设]
 ${membersInfo || '暂无成员信息'}
-${benchNote}
 
-${myPersonaStr}${anonNote}${atNote}
+${myPersonaStr}
+${anonNote}${atNote}
 ${announcementStr}
-${worldInfoText ? `[世界观设定]\n${worldInfoText}` : ''}
+${worldStr}${longTermMemoryStr}${linkedMemoryCtx}
 
 [近期群聊记录]
 ${historyText || '(暂无历史记录)'}
 
 [最高优先级规则]
-1. 输出格式: JSON 数组，每项 {"name":"角色名","content":"消息内容"} 
+1. 输出格式: JSON 数组，每项 {"name":"角色群昵称","content":"消息内容"} 
    - 可选附加: {"name":"xxx","content":"...","cmd":{"type":"create_private_group","invitees":["user","角色名"],"reason":"..."}} 当某成员想私下聊时使用
-2. 消息数量: 2~6 条，根据话题热度决定
-3. 真实感: 角色可相互回复、打断、不一定每人都发言
-4. 每条消息 ≤ 30 字，像真实微信群一样碎片化
-5. 被@的角色必须优先且强制回复
-6. 只输出 JSON，不要任何多余文字
+2. 消息数量: 2~6 条，根据话题热度决定。只让合适的几个角色发言，不一定每个人都说话。
+3. 真实感: 角色可相互回复、打断。
+4. 每条消息 ≤ 30 字，像真实微信群一样碎片化。
+5. 被@的角色必须优先且强制回复。
+6. 你绝对不能扮演用户（${myName}），严禁生成用户的对话！
+7. 只输出 JSON，不要任何多余文字。
 
-现在，用户${groupAnonymousMode ? `（化名"${myAnonName}"）` : ''}发送了: "${userMessage}"
+现在，用户${groupAnonymousMode ? `（化名"${myAnonName}"）` : `（${myName}）`}发送了: "${userMessage}"
 请生成群聊回复（纯 JSON 数组）:
 `;
 
@@ -704,7 +743,7 @@ ${historyText || '(暂无历史记录)'}
         rawReply = rawReply.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
 
         // 检查是否有红包抢包指令 [open_red_packet:xxx]
-        await checkAndProcessGroupCommands(rawReply, currentChatId);
+        await checkAndProcessGroupCommands(rawReply, targetGroupId);
 
         let messages = [];
         try {
@@ -737,31 +776,125 @@ ${historyText || '(暂无历史记录)'}
                 const content = msg.content;
 
                 const aiMsgId = 'msg_grp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                appendMessage(content, 'received', avatarUrl, displayName, null, aiMsgId);
 
-                await saveMessageToHistory(currentChatId, {
+                const chatLayer = document.getElementById('chatLayer');
+                const isLookingAtThisGroup = chatLayer && chatLayer.classList.contains('show') && 
+                                             currentChatId === targetGroupId && currentChatType === 'group';
+
+                if (isLookingAtThisGroup) {
+                    appendMessage(content, 'received', avatarUrl, displayName, null, aiMsgId);
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast(`[${group.name}] ${displayName}: 发来了一条新消息`);
+                    }
+                    if (groupsData[targetGroupId]) {
+                        groupsData[targetGroupId].unreadCount = (groupsData[targetGroupId].unreadCount || 0) + 1;
+                    }
+                    if (typeof updateChatListUnreadUI === 'function') updateChatListUnreadUI(targetGroupId);
+                    if (typeof updateDockUnreadDot === 'function') updateDockUnreadDot();
+                }
+
+                await saveMessageToHistory(targetGroupId, {
                     id: aiMsgId, text: content, type: 'received',
                     senderName: msg.name, customAvatar: avatarUrl
                 });
 
-                if (groupsData[currentChatId]) {
-                    groupsData[currentChatId].lastMessage = `${msg.name}: ${content}`;
+                if (groupsData[targetGroupId]) {
+                    groupsData[targetGroupId].lastMessage = `${msg.name}: ${content.substring(0, 20)}`;
                     saveGroupsData();
                 }
 
                 // 处理 Gossip 拉群指令
                 if (msg.cmd && msg.cmd.type === 'create_private_group') {
-                    setTimeout(() => handleGossipCommand(msg.cmd, currentChatId), 1500);
+                    setTimeout(() => handleGossipCommand(msg.cmd, targetGroupId), 1500);
                 }
 
             }, cumulativeDelay);
         });
+
+        // 触发群聊记忆总结（延迟执行以确保消息都保存完毕）
+        setTimeout(() => {
+            checkAndGenerateGroupSummary(targetGroupId);
+        }, cumulativeDelay + 2000);
 
     } catch (e) {
         document.getElementById(loadingId)?.remove();
         if (e.name !== 'AbortError') {
             showAiErrorModal('群聊生成失败', e.message);
         }
+    }
+};
+
+window.checkAndGenerateGroupSummary = async function(groupId) {
+    const group = groupsData[groupId];
+    if (!group) return;
+
+    try {
+        const history = await loadChatHistory(groupId);
+        
+        // 当聊天记录大于等于设置的条数（默认40）时触发总结
+        const memoryLimit = (group.settings && group.settings.memoryLimit) ? parseInt(group.settings.memoryLimit) : 40;
+        if (history.length < memoryLimit) return;
+        
+        // 提取需要总结的部分（前面的一大半）
+        const keepCount = 10; // 总结后保留的短期记忆条数
+        const toSummarize = history.slice(0, history.length - keepCount);
+        if (toSummarize.length === 0) return;
+
+        const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+        if (!settingsJSON) return;
+        const settings = JSON.parse(settingsJSON);
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+        // 格式化历史
+        let historyText = '';
+        toSummarize.forEach(msg => {
+            if (msg.type === 'system') return;
+            const sender = msg.type === 'sent' ? (group.myNickname || '用户') : (msg.senderName || 'AI');
+            let content = msg.text || '';
+            if (msg.isImage) content = '[图片]';
+            if (msg.isEmoji) content = '[表情]';
+            historyText += `${sender}: ${content}\n`;
+        });
+
+        const prompt = `请将以下群聊记录总结为一段精简的【长期记忆摘要】。
+要求：
+1. 重点保留关键事件、角色关系变化和重要情报。
+2. 尽可能简短，不要废话，用客观的第三方口吻。
+3. 如果之前已有摘要，请将其与新对话内容结合，合并为一个完整的摘要。
+
+【以前的记忆摘要】：
+${group.longTermSummary || '无'}
+
+【新对话记录】：
+${historyText}`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [{ role: 'system', content: '你是一个专业的群聊记忆总结助手。只输出摘要内容，不要任何寒暄。' }, { role: 'user', content: prompt }],
+                temperature: 0.3
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const newSummary = data?.choices?.[0]?.message?.content;
+            if (newSummary) {
+                group.longTermSummary = newSummary.trim();
+                saveGroupsData();
+                
+                // 截断历史记录，只保留最后 keepCount 条
+                const newHistory = history.slice(-keepCount);
+                localStorage.setItem(`chat_${groupId}`, JSON.stringify(newHistory));
+                console.log(`[群聊 ${groupId}] 长期记忆已触发并更新，历史已清理。`);
+            }
+        }
+    } catch (e) {
+        console.error('总结群聊记忆失败:', e);
     }
 };
 
@@ -828,23 +961,45 @@ async function triggerGroupBgChat(groupId) {
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    const activeMemberIds = group.members.filter(id => !(group.mutedMembers || []).includes(id));
+    const me = personasMeta[currentPersonaId];
+    const myName = group.myNickname || (me ? me.name : '我') || '用户';
+    const myPersonaStr = `[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
+
+    const allMemberIds = group.members || [];
     let membersInfo = '';
-    activeMemberIds.forEach(memberId => {
+    for (const memberId of allMemberIds) {
         const mem = friendsData[memberId];
-        if (!mem) return;
-        membersInfo += `角色名: ${mem.realName || memberId}, 人设: ${(mem.persona || '').substring(0, 50)}\n`;
-    });
+        if (!mem) continue;
+        
+        const isMuted = (group.mutedMembers || []).includes(memberId);
+        const isAdmin = (group.admins || []).includes(memberId);
+        const customTitle = (group.memberTitles || {})[memberId];
+        
+        let tags = [];
+        if (isAdmin) tags.push('管理员');
+        if (customTitle) tags.push(`头衔:${customTitle}`);
+        if (isMuted) tags.push('已被禁言，禁止让他发言');
+        
+        const tagStr = tags.length > 0 ? ` [${tags.join(' | ')}]` : '';
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${(mem.persona || '').substring(0, 80)}\n`;
+    }
 
     const history = await loadChatHistory(groupId);
-    const recent = history.slice(-10).map(m => `${m.senderName || (m.type === 'sent' ? '用户' : 'AI')}: ${(m.text || '').substring(0, 60)}`).join('\n');
+    const recent = history.slice(-10).map(m => `${m.senderName || (m.type === 'sent' ? myName : 'AI')}: ${(m.text || '').substring(0, 60)}`).join('\n');
+
+    let linkedMemoryCtx = '';
+    if (typeof buildLinkedMemoryContext === 'function') {
+        linkedMemoryCtx = await buildLinkedMemoryContext(group.settings, groupId);
+    }
 
     const prompt = `
 [系统: 群聊后台自动活跃模式]
-现在时间是 ${timeStr}，用户不在线。请以群聊成员的身份，自发地聊几句天。
+现在时间是 ${timeStr}，用户（${myName}）不在线。你的任务是扮演且仅能扮演下述【群成员花名册】中未被禁言的NPC，自发地聊几句天。
 
-[成员信息]
+[群成员花名册]
 ${membersInfo}
+${myPersonaStr}
+${linkedMemoryCtx}
 
 [近期聊天]
 ${recent || '(暂无)'}
@@ -852,7 +1007,7 @@ ${recent || '(暂无)'}
 规则:
 - 输出 JSON 数组，2-5 条消息
 - 消息要符合当前时间和成员人设
-- 可以闲聊、吐槽、分享生活等
+- 角色可相互回复、打断。
 - 纯 JSON，无多余文字
 
 输出:
@@ -896,16 +1051,22 @@ ${recent || '(暂无)'}
             unreadAdded++;
         }
 
-        // 更新未读数
+        const isLookingAtThisGroup = document.getElementById('chatLayer')?.classList.contains('show') && 
+                                     currentChatId === groupId && currentChatType === 'group';
+
         if (groupsData[groupId]) {
-            groupsData[groupId].unreadCount = (groupsData[groupId].unreadCount || 0) + unreadAdded;
             groupsData[groupId].lastMessage = messages[messages.length - 1]?.content || '';
+            if (!isLookingAtThisGroup) {
+                groupsData[groupId].unreadCount = (groupsData[groupId].unreadCount || 0) + unreadAdded;
+            }
             saveGroupsData();
         }
-        updateDockUnreadDot();
-
-        // 如果当前在看这个群，刷新显示
-        if (currentChatId === groupId && document.getElementById('chatLayer')?.classList.contains('show')) {
+        
+        if (!isLookingAtThisGroup) {
+            if (typeof updateChatListUnreadUI === 'function') updateChatListUnreadUI(groupId);
+            if (typeof updateDockUnreadDot === 'function') updateDockUnreadDot();
+        } else {
+            // 如果当前在看这个群，刷新显示
             const chatMessages = document.getElementById('chatMessages');
             messages.forEach(msg => {
                 if (!msg.name || !msg.content) return;
@@ -913,7 +1074,7 @@ ${recent || '(暂无)'}
                 const avatarUrl = mem && mem.avatar ? mem.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.name)}`;
                 appendMessage(msg.content, 'received', avatarUrl, msg.name);
             });
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
     } catch (e) {
@@ -1264,7 +1425,20 @@ async function triggerAiGrabRedPacket(rpId, groupId) {
             let comment = `抢到了 ¥${result.amount}${isKing ? ' 👑' : ''}`;
 
             const aiMsgId = 'msg_rp_grab_' + Date.now() + idx;
-            appendMessage(comment, 'received', avatar, name, null, aiMsgId);
+            const isLookingAtThisGroup = document.getElementById('chatLayer')?.classList.contains('show') && 
+                                         currentChatId === groupId && currentChatType === 'group';
+            
+            if (isLookingAtThisGroup) {
+                appendMessage(comment, 'received', avatar, name, null, aiMsgId);
+            } else {
+                if (groupsData[groupId]) {
+                    groupsData[groupId].unreadCount = (groupsData[groupId].unreadCount || 0) + 1;
+                    saveGroupsData();
+                }
+                if (typeof updateChatListUnreadUI === 'function') updateChatListUnreadUI(groupId);
+                if (typeof updateDockUnreadDot === 'function') updateDockUnreadDot();
+            }
+            
             await saveMessageToHistory(groupId, {
                 id: aiMsgId, text: comment, type: 'received', senderName: name, customAvatar: avatar
             });
@@ -1279,11 +1453,19 @@ async function triggerAiGrabRedPacket(rpId, groupId) {
             ? `红包已被抢 ${totalCount} 个，还剩 ${leftCount} 个未领取`
             : `红包已全部抢完！手气王：${friendsData[luckyKing] ? (friendsData[luckyKing].remark || friendsData[luckyKing].realName) : '未知'}`;
         
-        const chatMessages = document.getElementById('chatMessages');
-        const div = document.createElement('div');
-        div.style.cssText = 'text-align:center; margin:8px 0;';
-        div.innerHTML = `<span style="background:rgba(0,0,0,0.04); padding:3px 10px; border-radius:4px; font-size:11px; color:#999;">${sysText}</span>`;
-        if (chatMessages) chatMessages.appendChild(div);
+        const isLookingAtThisGroup = document.getElementById('chatLayer')?.classList.contains('show') && 
+                                     currentChatId === groupId && currentChatType === 'group';
+                                     
+        if (isLookingAtThisGroup) {
+            const chatMessages = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.style.cssText = 'text-align:center; margin:8px 0;';
+            div.innerHTML = `<span style="background:rgba(0,0,0,0.04); padding:3px 10px; border-radius:4px; font-size:11px; color:#999;">${sysText}</span>`;
+            if (chatMessages) {
+                chatMessages.appendChild(div);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
     }, grabResults.length * 800 + 1200);
 }
 
@@ -2529,7 +2711,12 @@ window.saveGroupSettings = async function () {
 
     // Link memory
     const linkChecks = document.querySelectorAll('#gs-link-memory-container input[type="checkbox"]:checked');
-    group.settings.linkMemoryIds = Array.from(linkChecks).map(cb => cb.value);
+    const linkedChatIds = Array.from(linkChecks).map(cb => cb.value);
+    const linkMemoryDepth = parseInt(document.getElementById('gs-link-depth')?.value || '5');
+    group.settings.linkMemory = {
+        linkedChatIds: linkedChatIds,
+        linkMemoryDepth: linkMemoryDepth
+    };
 
     // VISUAL
     group.chatBgUrl = document.getElementById('gs-chat-bg-url')?.value.trim() || '';
@@ -2722,28 +2909,56 @@ function renderGsLinkMemoryList(group) {
     const container = document.getElementById('gs-link-memory-container');
     if (!container) return;
     container.innerHTML = '';
-    const linkedIds = (group.settings && group.settings.linkMemoryIds) || [];
+    
+    const linkMemory = (group.settings && group.settings.linkMemory) || {};
+    // 兼容旧版 linkMemoryIds
+    const linkedIds = linkMemory.linkedChatIds || (group.settings && group.settings.linkMemoryIds) || [];
+    const depth = linkMemory.linkMemoryDepth || 5;
+
+    // 获取除自己外的所有聊天（单聊+群聊）
+    const allChats = [];
     Object.keys(friendsData).forEach(id => {
         const f = friendsData[id];
-        if (!f) return;
+        if (!f || f.blocked) return;
+        allChats.push({ id, name: f.remark || f.realName || id, avatar: f.avatar });
+    });
+    Object.keys(groupsData).forEach(gId => {
+        if (gId === group.id) return;
+        const g = groupsData[gId];
+        if (!g) return;
+        allChats.push({ id: gId, name: g.name, avatar: g.avatar || g.customAvatar, isGroup: true });
+    });
+
+    allChats.forEach(chat => {
         const item = document.createElement('label');
-        item.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:12px;';
+        item.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:12px;background:#fafafa;border-radius:10px;margin-bottom:6px;';
         const cb = document.createElement('input');
         cb.type = 'checkbox';
-        cb.value = id;
-        cb.checked = linkedIds.includes(id);
+        cb.value = chat.id;
+        cb.checked = linkedIds.includes(chat.id);
         const avatar = document.createElement('img');
-        avatar.src = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(f.realName || id)}`;
-        avatar.style.cssText = 'width:24px;height:24px;border-radius:50%;object-fit:cover;';
+        avatar.src = chat.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(chat.name)}`;
+        avatar.style.cssText = 'width:28px;height:28px;border-radius:50%;object-fit:cover;background:#eee;';
         const span = document.createElement('span');
-        span.textContent = f.remark || f.realName || id;
+        span.style.cssText = 'font-size:13px;font-weight:600;color:#333;';
+        span.textContent = chat.name + (chat.isGroup ? ' (群聊)' : '');
         item.appendChild(cb);
         item.appendChild(avatar);
         item.appendChild(span);
         container.appendChild(item);
     });
+
     if (container.children.length === 0) {
-        container.innerHTML = '<div style="color:#ccc;font-size:12px;text-align:center;padding:15px;">暂无可选角色</div>';
+        container.innerHTML = '<div style="color:#ccc;font-size:12px;text-align:center;padding:15px;">暂无可选聊天</div>';
+    } else {
+        const depthContainer = document.createElement('div');
+        depthContainer.style.cssText = 'margin-top:10px;';
+        depthContainer.innerHTML = `
+            <label style="font-size:12px;font-weight:600;color:#555;">互通条数 (最近N条)</label>
+            <input type="number" id="gs-link-depth" value="${depth}" min="1" max="20"
+                   style="width:80px;margin-left:10px;text-align:center;border:1px solid #eee;border-radius:8px;padding:4px 8px;">
+        `;
+        container.appendChild(depthContainer);
     }
 }
 
@@ -3253,20 +3468,26 @@ async function sendGroupOfflineMessage(isRegen = false) {
         window.currentAiController = new AbortController();
     }
 
+    // 【竞态修复】捕获目标群聊 ID
+    const targetGroupId = currentChatId;
+    const group = groupsData[targetGroupId];
+    if (!group) return;
+
     // 清空弹幕区
     if (typeof hideOfflineDanmakuArea === 'function') hideOfflineDanmakuArea(true);
 
     const input = document.getElementById('offline-input');
     let userText = (input ? input.value.trim() : '') || (!isRegen ? '*静静地等待大家的反应*' : '');
 
-    const group = groupsData[currentChatId];
-    if (!group) return;
+    const isLookingAtThisGroupOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetGroupId;
 
     // 上屏用户输入
     if (!isRegen && userText) {
         const userMsgId = 'grp_off_u_' + Date.now();
-        appendGroupOfflineEntry('user', userText, '你', userMsgId, null);
-        await saveMessageToHistory(currentChatId, {
+        if (isLookingAtThisGroupOffline) {
+            appendGroupOfflineEntry('user', userText, '你', userMsgId, null);
+        }
+        await saveMessageToHistory(targetGroupId, {
             id: userMsgId, text: userText, type: 'sent',
             senderName: 'ME', isOffline: true
         });
@@ -3282,35 +3503,65 @@ async function sendGroupOfflineMessage(isRegen = false) {
     }
     const settings = JSON.parse(settingsJSON);
 
+    // ── 用户人设 ──
+    const me = personasMeta[currentPersonaId];
+    const myName = group.myNickname || (me ? me.name : '我') || '用户';
+    const myPersonaStr = `[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
+
     // ── 构建成员人设 ──
-    const activeMemberIds = (group.members || []).filter(id => !((group.mutedMembers || []).includes(id)));
+    const allMemberIds = group.members || [];
+    const activeMemberIds = allMemberIds.filter(id => !((group.mutedMembers || []).includes(id)));
     const dispatched = smartDispatchMembers(activeMemberIds, [], userText);
 
     let membersInfo = '';
-    for (const memberId of dispatched) {
+    for (const memberId of allMemberIds) {
         const mem = friendsData[memberId];
         if (!mem) continue;
-        const title = (group.memberTitles || {})[memberId] ? ` [${group.memberTitles[memberId]}]` : '';
-        const shard = await getShardedMemoryForMember(memberId, currentChatId, []);
-        const shardNote = shard ? `\n  （${mem.realName}的私人记忆）${shard}` : '';
+        
+        const isMuted = (group.mutedMembers || []).includes(memberId);
+        const isAdmin = (group.admins || []).includes(memberId);
+        const customTitle = (group.memberTitles || {})[memberId];
+        
+        let tags = [];
+        if (isAdmin) tags.push('管理员');
+        if (customTitle) tags.push(`头衔:${customTitle}`);
+        if (isMuted) tags.push('已被禁言，禁止让他发言');
+        else if (!dispatched.includes(memberId)) tags.push('当前潜水中，尽量不发言');
+        
+        const tagStr = tags.length > 0 ? ` [${tags.join(' | ')}]` : '';
+        
+        const shard = dispatched.includes(memberId) ? await getShardedMemoryForMember(memberId, targetGroupId, []) : null;
+        const shardNote = shard ? `\n  [私人记忆]: ${shard}` : '';
+        
         // 读取好感度
         const affection = Math.max(0, Math.min(100, Number(mem.affection || 0)));
         const affStage = (typeof getAffectionStage === 'function') ? getAffectionStage(affection) : '普通';
-        membersInfo += `角色名: ${mem.realName || memberId}${title}\n人设: ${(mem.persona || '普通的聚会成员').slice(0, 150)}\n好感度: ${affection}/100 (关系阶段: ${affStage})  ← 据此决定对用户的亲密度、眼神接触、肢体界限，不得跨越当前阶段${shardNote}\n---\n`;
+        
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${(mem.persona || '普通的聚会成员').slice(0, 150)}\n  好感度: ${affection}/100 (关系阶段: ${affStage})  ← 据此决定对用户的亲密度、眼神接触、肢体界限，不得跨越当前阶段${shardNote}\n---\n`;
     }
 
-    const benchIds = activeMemberIds.filter(id => !dispatched.includes(id));
-    const benchNote = benchIds.length > 0
-        ? `\n[当前旁观中（不主动发言）]: ${benchIds.map(id => { const f = friendsData[id]; return f ? (f.realName || id) : id; }).join('、')}`
-        : '';
-
     // ── 历史记录 ──
-    const history = await loadChatHistory(currentChatId);
-    const recentOffline = history.filter(m => m.isOffline).slice(-20);
-    const historyText = recentOffline.map(m => {
-        const sender = m.type === 'sent' ? '你' : (m.senderName || 'AI');
-        return `${sender}: ${(m.text || '').substring(0, 100)}`;
-    }).join('\n');
+    const history = await loadChatHistory(targetGroupId);
+    const recentOffline = history.slice(-20);
+    let historyText = '';
+    recentOffline.forEach(m => {
+        if (m.type === 'system') return;
+        const sender = m.type === 'sent' ? myName : (m.senderName || 'AI');
+        
+        let timeStr = '';
+        let msgTs = m.timestamp || (m.id ? parseInt(m.id.split('_').pop(), 10) : 0);
+        if (!msgTs || isNaN(msgTs) || msgTs < 1000000000000) msgTs = Date.now();
+        const d = new Date(msgTs);
+        timeStr = `[${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}] `;
+        
+        let content = m.text || '';
+        if (m.isImage) content = '[图片]';
+        else if (m.isEmoji) content = `[发送了一个表情: ${m.emojiName || '表情'}]`;
+        else if (m.isRevoked) content = '[用户撤回了一条消息，你不知道内容，但你可以对此做出反应]';
+        else content = content.substring(0, 100);
+
+        historyText += `${timeStr}${sender}: ${content}\n`;
+    });
 
     // ── 获取当前场景地点 ──
     let currentLocation = '线下聚会中';
@@ -3322,16 +3573,9 @@ async function sendGroupOfflineMessage(isRegen = false) {
         }
     }
 
-    // ── 用户人设 ──
-    const myPersonaStr = (() => {
-        if (typeof personasMeta === 'undefined' || typeof currentPersonaId === 'undefined') return '';
-        const me = personasMeta[currentPersonaId];
-        return (me && me.persona) ? `[你的身份]: ${me.persona}` : '';
-    })();
-
     // ── 世界书 ──
     const worldInfoText = (typeof constructWorldInfoPrompt === 'function')
-        ? constructWorldInfoPrompt(userText, currentChatId)
+        ? constructWorldInfoPrompt(userText, targetGroupId)
         : '';
 
     // ── 字数限制 ──
@@ -3351,24 +3595,36 @@ async function sendGroupOfflineMessage(isRegen = false) {
     // ── 群公告 ──
     const announcementStr = group.announcement ? `\n[群公告（最高优先级，所有人必须遵守）]: ${group.announcement}` : '';
 
-    const systemPrompt = `[系统：群体线下聚会叙事引擎 V1.0]
-你正在模拟一场多人共同参与的真实线下聚会。
-当前地点：【${currentLocation}】
-在场总人数：${dispatched.length} 人
+    // ── 长期记忆 ──
+    const longTermMemoryStr = group.longTermSummary ? `\n[长期记忆摘要]\n${group.longTermSummary}` : '';
 
-[参与叙事的成员档案]
+    // ── 外部情报 ──
+    let linkedMemoryCtx = '';
+    if (typeof buildLinkedMemoryContext === 'function') {
+        const rawLinked = await buildLinkedMemoryContext(group.settings, targetGroupId);
+        if (rawLinked) {
+            linkedMemoryCtx = `\n[仅 AI 可见的附加上下文（情报）]\n${rawLinked}`;
+        }
+    }
+
+    const systemPrompt = `[系统：群体线下聚会叙事引擎 V1.0]
+你正在模拟一场多人共同参与的真实线下聚会。你的任务是扮演且仅能扮演下述【群成员花名册】中未被禁言的NPC，每个角色的语气必须符合其人设。
+当前地点：【${currentLocation}】
+在场总人数：${allMemberIds.length} 人
+
+[群成员花名册]
 ${membersInfo || '（暂无成员信息）'}
-${benchNote}
 
 ${myPersonaStr}
 ${announcementStr}
-${worldInfoText ? `\n[世界观设定]\n${worldInfoText}` : ''}
+${worldInfoText ? `\n[核心世界观设定]\n${worldInfoText}` : ''}
+${longTermMemoryStr}${linkedMemoryCtx}
 
 [近期线下互动记录]
 ${historyText || '（刚刚开始聚会）'}
 
 [核心叙事规则 — 严格遵守]
-1. 【多角色参与】：必须让2-4个成员参与互动，允许相互呼应与打断，体现真实聚会感。
+1. 【多角色参与】：必须让2-4个未潜水成员参与互动，允许相互呼应与打断，体现真实聚会感。
 2. 【沉浸叙事】：用 *星号* 包裹动作/肢体语言，用 「」 包裹直接对话，不能只有台词。
 3. 【场景融入】：叙事要自然融入当前场景（${currentLocation}），注意灯光/声音/空间感。
 4. 【字数要求】：每位角色叙事约${perCharLen}字，总长度控制在${maxLen}字以内。
@@ -3376,11 +3632,12 @@ ${historyText || '（刚刚开始聚会）'}
    - affection_delta：本次互动后该角色对用户好感度的变化，整数范围 -2 ~ +2（0 表示无变化）
    - 不要在 JSON 数组外添加任何多余文字。
 6. 【好感度驱动】：好感度低的角色应表现出更多保留/疏离；高好感角色自然更亲近，但仍需符合人设与场景。
+7. 【防出戏死命令】：你绝对不能扮演用户（${myName}），严禁生成用户的对话！
 
 ${danmakuInstr}
 ${optionsInstr}
 
-用户（你）刚才说/做了："${userText}"
+用户（${myName}）刚才说/做了："${userText}"
 请生成本次聚会的多角色沉浸叙事（纯 JSON 数组）：`;
 
     // ── Loading 条目 ──
@@ -3511,16 +3768,31 @@ ${optionsInstr}
                 : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.name)}`;
 
             const aiMsgId = 'grp_off_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            appendGroupOfflineEntry('ai', msg.content, msg.name, aiMsgId, avatarUrl);
-
-            await saveMessageToHistory(currentChatId, {
+            const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && 
+                                     currentChatId === targetGroupId && currentChatType === 'group';
+            
+            if (isLookingOffline) {
+                appendGroupOfflineEntry('ai', msg.content, msg.name, aiMsgId, avatarUrl);
+            } else {
+                if (typeof showToast === 'function') {
+                    showToast(`[${group.name}] ${msg.name} (线下): 有新动作`);
+                }
+                if (groupsData[targetGroupId]) {
+                    groupsData[targetGroupId].unreadCount = (groupsData[targetGroupId].unreadCount || 0) + 1;
+                    saveGroupsData();
+                }
+                if (typeof updateChatListUnreadUI === 'function') updateChatListUnreadUI(targetGroupId);
+                if (typeof updateDockUnreadDot === 'function') updateDockUnreadDot();
+            }
+            
+            await saveMessageToHistory(targetGroupId, {
                 id: aiMsgId, text: msg.content, type: 'received',
                 senderName: msg.name, customAvatar: avatarUrl, isOffline: true
             });
 
             // 更新群列表预览
-            if (groupsData[currentChatId]) {
-                groupsData[currentChatId].lastMessage = `${msg.name}: ${msg.content.substring(0, 30)}`;
+            if (groupsData[targetGroupId]) {
+                groupsData[targetGroupId].lastMessage = `${msg.name}: ${msg.content.substring(0, 30)}`;
                 saveGroupsData();
             }
 

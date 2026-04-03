@@ -399,12 +399,34 @@ window.exportCurrentWorldBook = function() {
 function constructWorldInfoPrompt(userMessage, characterName) {
     let injectedContent = [];
     
-    // 获取当前角色的关联世界书
+    // 获取关联的世界书ID（支持私聊和群聊）
     let linkedBookIds = [];
-    if(characterName && friendsData[characterName]) {
-        const charWb = friendsData[characterName].worldbook;
-        if(Array.isArray(charWb)) linkedBookIds = charWb;
-        else if(charWb) linkedBookIds = [charWb];
+    if (characterName) {
+        if (friendsData && friendsData[characterName]) {
+            // 私聊：直接获取该角色的世界书
+            const charWb = friendsData[characterName].worldbook;
+            if (Array.isArray(charWb)) linkedBookIds = [...charWb];
+            else if (charWb) linkedBookIds = [charWb];
+        } else if (typeof groupsData !== 'undefined' && groupsData[characterName]) {
+            // 群聊：合并群内所有成员的世界书
+            const group = groupsData[characterName];
+            if (group && group.members) {
+                group.members.forEach(memberId => {
+                    if (friendsData && friendsData[memberId]) {
+                        const charWb = friendsData[memberId].worldbook;
+                        let memberWbs = [];
+                        if (Array.isArray(charWb)) memberWbs = charWb;
+                        else if (charWb) memberWbs = [charWb];
+                        
+                        memberWbs.forEach(wbId => {
+                            if (!linkedBookIds.includes(wbId)) {
+                                linkedBookIds.push(wbId);
+                            }
+                        });
+                    }
+                });
+            }
+        }
     }
     
     // 遍历所有世界书
@@ -412,27 +434,16 @@ function constructWorldInfoPrompt(userMessage, characterName) {
         // 条件：要么是全局开启，要么是当前角色关联的
         const isLinked = linkedBookIds.includes(book.id);
         if (book.global || isLinked) {
+            let bookContent = [];
             book.entries.forEach(entry => {
                 if(!entry.enabled) return;
-                
-                const keysArr = entry.keys.split(/,|，/).map(k => k.trim()).filter(k => k);
-                let triggered = false;
-
-                // 简单的关键词匹配
-                for(let key of keysArr) {
-                    if(userMessage.toLowerCase().includes(key.toLowerCase())) {
-                        triggered = true;
-                        break;
-                    }
-                }
-                
-                if(triggered) {
-                    injectedContent.push(entry.content);
-                    console.log(`[WorldBook] 触发: ${book.title} -> ${keysArr[0]}`);
-                }
+                bookContent.push(entry.content);
             });
+            if (bookContent.length > 0) {
+                injectedContent.push(`【世界书：${book.title}】\n` + bookContent.join('\n\n'));
+            }
         }
     });
 
-    return injectedContent.join('\n\n');
+    return injectedContent.join('\n\n---\n\n');
 }

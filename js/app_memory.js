@@ -74,15 +74,22 @@ window.condenseSummaries = async function() {
 };
 
 /* ─── § 3  记忆互通：构建跨聊天上下文注入 ─── */
-window.buildLinkedMemoryContext = async function(chatSettings) {
+window.buildLinkedMemoryContext = async function(chatSettings, currentChatId) {
     const linked = chatSettings && chatSettings.linkMemory;
     if (!linked || !linked.linkedChatIds || linked.linkedChatIds.length === 0) return '';
     const depth = parseInt(linked.linkMemoryDepth) || 5;
     const fd = (typeof friendsData !== 'undefined') ? friendsData : {};
+    
+    // 获取当前聊天信息，判断是单聊还是群聊
+    const currentFriend = currentChatId ? fd[currentChatId] : null;
+    const isCurrentGroup = currentFriend && currentFriend.isGroup;
+
     let result = '';
-    for (const linkedId of linked.linkedChatIds) {
+    
+    // 使用 Promise.all 并发拉取所有关联记录优化性能
+    const histPromises = linked.linkedChatIds.map(async linkedId => {
         const friend = fd[linkedId];
-        if (!friend) continue;
+        if (!friend) return null;
         let hist = [];
         try {
             if (typeof loadChatHistory === 'function') {
@@ -90,22 +97,75 @@ window.buildLinkedMemoryContext = async function(chatSettings) {
             } else if (typeof IDB !== 'undefined' && typeof scopedChatKey === 'function') {
                 hist = await IDB.get(scopedChatKey(linkedId)) || [];
             }
-        } catch (e) { continue; }
+        } catch (e) { return null; }
+        return { linkedId, friend, hist };
+    });
+
+    const results = await Promise.all(histPromises);
+
+    for (const item of results) {
+        if (!item) continue;
+        const { linkedId, friend, hist } = item;
+        
         const recentReal = hist
             .filter(m => m.type !== 'summary' && m.type !== 'system')
             .slice(-depth);
         if (recentReal.length === 0) continue;
+        
+        const isLinkedGroup = friend.isGroup;
         const name = friend.remark || friend.realName || linkedId;
+        
+        // 消息翻译与清洗
         const lines = recentReal.map(m => {
-            const role = m.type === 'sent' ? '用户' : name;
-            const ts = formatMsgTimestamp(m.timestamp);
-            let c = m.text || '[多媒体内容]';
-            if (/^\[表情:.*?\]$/.test(c.trim())) {
-                c = `[表情: ${c.match(/^\[表情:(.*?)\]$/)?.[1] || ''}]`;
+            let role = '';
+            if (m.type === 'sent') {
+                role = '用户';
+            } else {
+                if (isLinkedGroup) {
+                    role = m.senderName || name;
+                } else {
+                    role = name;
+                }
             }
+
+            const ts = formatMsgTimestamp(m.timestamp);
+            let c = m.text || '';
+            
+            // 多模态内容转义为动作描述
+            if (/^\[表情:.*?\]$/.test(c.trim())) {
+                const emoName = c.match(/^\[表情:(.*?)\]$/)?.[1] || '';
+                c = `[发送了一个表情: ${emoName}]`;
+            } else if (c.startsWith('[VOICE]')) {
+                const txt = c.replace('[VOICE]', '').trim();
+                c = txt ? `[发送了一段语音: "${txt}"]` : '[发送了一段语音]';
+            } else if (m.type === 'transfer' || /^\[转账\]/.test(c)) {
+                c = `[发起了一笔转账]`;
+            } else if (m.type === 'location' || /^\[位置\]/.test(c)) {
+                c = `[发送了一个位置信息]`;
+            } else if (c === '[图片]' || m.type === 'image') {
+                c = `[发送了一张图片]`;
+            }
+
             return `${ts} ${role}: ${c}`;
         }).join('\n');
-        result += `\n\n# 附加上下文：来自与"${name}"的最近对话内容 (仅你可见)\n${lines}`;
+        
+        // 场景拆解：精准提示语防止幻觉
+        let sourceDesc = '';
+        if (!isCurrentGroup && !isLinkedGroup) {
+            // 单聊 偷窥 单聊
+            sourceDesc = `这是用户与【${name}】的私下对话。你是从其他途径得知此事的，用户并没有直接对你说这些。你可以自然地利用这些情报进行试探、吃醋或关心。`;
+        } else if (!isCurrentGroup && isLinkedGroup) {
+            // 单聊 偷窥 群聊
+            sourceDesc = `这是在【${name}】群聊中的公开讨论。你作为旁观者/潜水者/黑客得知了这些内容，你可以针对群里发生的事发表意见或关心用户。`;
+        } else if (isCurrentGroup && !isLinkedGroup) {
+            // 群聊 偷窥 单聊
+            sourceDesc = `这是用户与【${name}】的私下对话。注意：现在群里的所有人（你们）通过某种途径知道了这些秘密对话，你们可以针对这件事起哄、八卦或质问用户。`;
+        } else if (isCurrentGroup && isLinkedGroup) {
+            // 群聊 偷窥 群聊
+            sourceDesc = `这是在另一个群聊【${name}】中的公开对话情报。你们可以针对另一个群的战术、八卦或讨论内容进行嘲笑、评价或联动。`;
+        }
+
+        result += `\n\n--- 外部情报开始 ---\n## 附加上下文：${sourceDesc}\n（注意：绝对不允许将外部情报中的人物当作当前聊天框里的参与者，这仅作为背景情报）\n${lines}\n--- 外部情报结束 ---`;
     }
     return result;
 };
@@ -299,7 +359,7 @@ window.renderLinkMemoryUI = async function() {
     const allFriends = Object.entries(fd)
         .filter(([id]) => id !== chatId)
         .map(([id, f]) => ({ ...f, chatId: id }))
-        .filter(f => !f.blocked && !f.isGroup); // 排除已拉黑和群聊（可选）
+        .filter(f => !f.blocked); // 排除已拉黑（允许选择群聊）
 
     el.innerHTML = `
         ${allFriends.length === 0
