@@ -2343,7 +2343,7 @@ function addFriendToChatList(name, lastMsg) {
     
     // 创建新的一行
     const newItem = document.createElement('div');
-    newItem.className = 'wc-chat-item';
+    newItem.className = 'wc-chat-item widget-1x1 sortable-item';
     newItem.setAttribute('data-chat-id', name); 
     // 点击这一行时，打开对应名字的聊天
     newItem.onclick = function() { openChatDetail(name); }; 
@@ -3459,7 +3459,7 @@ function addChatListEntry(id, displayName, lastMsg, avatarUrl, type) {
     const searchBar = chatList.querySelector('.wc-search-container');
     
     const newItem = document.createElement('div');
-    newItem.className = 'wc-chat-item';
+    newItem.className = 'wc-chat-item widget-1x1 sortable-item';
     newItem.setAttribute('data-chat-id', id);
     
     // 点击逻辑：如果是群，调用 openGroupChat；如果是单人，调用 openChatDetail
@@ -8385,7 +8385,8 @@ ${preset.jailbreak || ''}
 ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n用户身份：${me.persona}` : ''; })()}
 ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingStyle}` : ''}
 
-以第一人称写沉浸式叙事。禁止描写用户内心，禁止暗示自己是AI。
+以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。
+你的回复【必须】是一个完整的、连贯的叙事长句，减少零散的短句。
 格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。
 你的正文回复（不含状态块、弹幕块、选项块）必须控制在 ${limit} 字左右。
 

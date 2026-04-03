@@ -73,8 +73,9 @@ body {
     /* 改用智能安全区，如果没有刘海就是 10px，有刘海就自动避开 */
     top: max(10px, env(safe-area-inset-top));
     width: 100%; 
-    z-index: 20;
+    z-index: 9999;
     opacity: 0.8;
+    pointer-events: none;
 }
 
 .screen-container {
@@ -91,19 +92,52 @@ body {
 
 
 .screen-container::-webkit-scrollbar { display: none; }
-
 .page {
     min-width: 100%;
     height: 100%;
-    padding: 60px 24px 80px 24px;
+    padding: calc(env(safe-area-inset-top) + 65px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
     scroll-snap-align: start;
-    scroll-snap-stop: always; /* 👈 就是加了这行，让它强制刹车 */
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
+    scroll-snap-stop: always; 
+    overflow-y: hidden;
+    
+    /* === 改为 4x7 正方形网格 === */
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(7, 75px); /* 【修改】减去最后一行，避免和底栏重叠 */
+    gap: 15px 12px; 
+    align-content: start; 
     position: relative;
 }
+
+.page > * {
+    width: 100%;
+    height: 100%;
+    margin: 0 !important; 
+}
+
+/* === 特定小组件尺寸微调 === */
+/* 第一页音乐组件：网格依然占两行，但视觉上改窄并垂直居中 */
+.page > .music-widget.sortable-item {
+    height: 125px !important; /* 降低高度使其变窄 */
+    margin: auto !important; /* 在两行的网格空间内居中 */
+}
+
+/* 第三页韩系组件：网格升为占四行，但保持原来三行(255px)的大小并垂直居中 */
+.page > .k-mood-board.sortable-item {
+    height: 255px !important; /* 锁定原先的视觉高度 */
+    margin: auto !important; /* 在四行的网格空间内居中 */
+}
+
+
+/* 拖拽组件网格尺寸 */
+.widget-1x1 { grid-column: span 1; grid-row: span 1; }
+.widget-2x1 { grid-column: span 2; grid-row: span 1; }
+.widget-2x2 { grid-column: span 2; grid-row: span 2; }
+.widget-2x3 { grid-column: span 2; grid-row: span 3; }
+.widget-4x1 { grid-column: span 4; grid-row: span 1; }
+.widget-4x2 { grid-column: span 4; grid-row: span 2; }
+.widget-4x3 { grid-column: span 4; grid-row: span 3; }
+.widget-4x4 { grid-column: span 4; grid-row: span 4; }
 
 
 .page::-webkit-scrollbar { display: none; }
@@ -114,6 +148,8 @@ body {
     flex-direction: column;
     gap: 5px;
     animation: float-slow 6s ease-in-out infinite;
+    justify-content: center;
+    padding-top: 15px; /* 添加上内边距让内部内容往下移动 */
 }
 
 .greeting-text {
@@ -124,7 +160,7 @@ body {
     min-height: 30px;
     text-shadow: 0 1px 2px rgba(255,255,255,0.8); 
     opacity: 0.9;
-    margin-bottom: -27px;
+    margin-bottom: -15px; /* 减小负的 margin-bottom 以增加与时间的距离 */
 }
 
 .clock-profile-combo {
@@ -135,7 +171,7 @@ body {
 
 .time-block {
     font-family: 'Playfair Display', serif;
-    font-size: calc(82px * var(--font-scale)); /* [修复] 缩小字号，防止0点时撑开布局 */
+    font-size: calc(100px * var(--font-scale)); /* 再调大一点点 */
     line-height: 1;
     color: var(--theme-text-color); /* 应用变量 */
     letter-spacing: -3px;
@@ -201,7 +237,6 @@ body {
 
 /* === 音乐播放器 === */
 .music-widget {
-    height: 120px;
     background: rgba(255,255,255,0.9);
     backdrop-filter: blur(10px);
     border-radius: var(--radius-lg);
@@ -247,13 +282,7 @@ body {
 .wave:nth-child(3) { animation-delay: 0.2s; background: #999; }
 .wave:nth-child(4) { animation-delay: 0.3s; background: #bbb; }
 
-/* === App 网格 === */
-.grid-apps {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px 5px;
-    padding-top: 5px;
-}
+/* 已废弃 .grid-apps，由 .page 网格接管 */
 .app-cell {
     display: flex;
     flex-direction: column;
@@ -291,11 +320,11 @@ body {
 /* Page 2: 相册 */
 .photo-stack {
     position: relative;
-    height: 240px;
-    margin-top: 20px;
+    height: 100%; /* 交给 Grid 控制 */
     display: flex;
     justify-content: center;
 }
+
 .stack-item {
     position: absolute;
     width: 160px;
@@ -494,14 +523,10 @@ input:checked + .slider:before { transform: translateX(18px); }
         box-shadow: none;
     }
     
-    .page {
-        /* APK全屏模式：env(safe-area-inset-top) 会推高自定义状态栏，
-           padding-top 必须跟随其变化，避免内容与状态栏重叠。
-           公式：安全区高度 + 状态栏自身高度(20px) + 额外间距(24px) */
-        padding-top: max(60px, calc(env(safe-area-inset-top) + 44px));
-        /* 底部 padding 兼容 iOS home indicator 安全区 */
-        padding-bottom: max(80px, calc(60px + env(safe-area-inset-bottom))); 
+        .page {
+        padding: calc(env(safe-area-inset-top) + 25px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
     }
+
     .dock-bar {
         /* 兼容 iOS home indicator 安全区，避免 Dock 被压在 home bar 下面 */
         bottom: max(20px, env(safe-area-inset-bottom));

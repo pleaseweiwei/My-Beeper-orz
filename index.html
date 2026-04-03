@@ -124,226 +124,165 @@
 
 
 
-        <div class="status-bar">
+        <div class="status-bar" id="global-status-bar">
             <span id="sb-time-display" style="font-weight:600;"></span>
             <div style="display:flex; gap:6px; opacity:0.6;">
                 <i class="fas fa-signal"></i>
-                <i class="fas fa-battery-three-quarters"></i>
+                <i class="fas fa-battery-three-quarters" id="sb-battery-icon"></i>
             </div>
         </div>
-          <div class="screen-container" id="screen">
+                <div class="screen-container" id="screen">
             
-    <!-- === 第一页 (P1): 主页 & 基础APP === -->
-    <div class="page" id="p1">
-        <div class="unified-header-widget">
-            <div class="greeting-text" id="greetingText"></div>
-            <div class="clock-profile-combo">
-                <div class="time-block">
-                    <span id="h">14</span><span class="time-colon">:</span><span id="m">30</span>
-                </div>
-                <div class="vertical-divider"></div>
-                <div class="profile-stack">
-                    <div class="mini-profile-row">
-                        <div class="editable-name" contenteditable="true">Hannah</div>
-                        <div class="avatar-circle-sm" data-edit-key="avatar" onclick="triggerChangeImage(this, 'img')">
-                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop">
+            <!-- === 第一页 (P1): 主页 & 基础APP === -->
+            <div class="page ds-flat" id="p1">
+                <div class="unified-header-widget widget-4x2 sortable-item">
+                    <div class="greeting-text" id="greetingText"></div>
+                    <div class="clock-profile-combo">
+                        <div class="time-block">
+                            <span id="h">14</span><span class="time-colon">:</span><span id="m">30</span>
+                        </div>
+                        <div class="vertical-divider"></div>
+                        <div class="profile-stack">
+                            <div class="mini-profile-row">
+                                <div class="editable-name" contenteditable="true">Hannah</div>
+                                <div class="avatar-circle-sm" data-edit-key="avatar" onclick="triggerChangeImage(this, 'img')">
+                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop">
+                                </div>
+                            </div>
+                            <div class="date-pill" id="fullDate">Jan 30</div>
                         </div>
                     </div>
-                    <div class="date-pill" id="fullDate">Jan 30</div>
                 </div>
-            </div>
-        </div>
 
-        <div class="music-widget" id="home-music-widget" onclick="openMusicPlayer()">
-    <div class="music-info">
-        <div style="font-size:9px; color:#aaa; margin-bottom:5px; letter-spacing:1px;">NOW PLAYING</div>
-        <!-- 增加了 contenteditable 和 onblur 用于保存文字 -->
-        <div class="music-title" id="home-music-title" contenteditable="true" onclick="event.stopPropagation()" onblur="saveHomeMusicText()">Lover</div>
-        <div class="music-artist" id="home-music-artist" contenteditable="true" onclick="event.stopPropagation()" onblur="saveHomeMusicText()">Taylor Swift</div>
-        <div class="wave-box"><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
-    </div>
-    <div class="vinyl-record">
-        <!-- 保留了原来的换图功能，加了 stopPropagation 防止点击换图时打开播放器 -->
-        <div class="vinyl-inner" data-edit-key="music" onclick="event.stopPropagation(); triggerChangeImage(this, 'bg')"></div>
-    </div>
-</div>
-
-        <div class="grid-apps">
-            <div class="app-cell" data-app-id="wechat" onclick="openWeChatApp()"><div class="icon-box"><i class="fab fa-weixin" style="color:#07c160;"></i></div><span class="app-label">WeChat</span></div>
-            <div class="app-cell" data-app-id="api" onclick="toggleSettings()"><div class="icon-box"><i class="fas fa-link"></i></div><span class="app-label">API</span></div>
-            <div class="app-cell" data-app-id="theme" onclick="toggleSettings('theme')"><div class="icon-box"><i class="fas fa-magic"></i></div><span class="app-label">Theme</span></div>
-           <div class="app-cell" data-app-id="lovespace" onclick="openLoveSpaceApp()"><div class="icon-box"><i class="fas fa-heart" style="color:#e91e63;"></i></div><span class="app-label">Love Space</span></div>
-            <div class="app-cell" data-app-id="worldbook"><div class="icon-box"><i class="fas fa-globe-asia"></i></div><span class="app-label">WorldBook</span></div>
-            <div class="app-cell" data-app-id="presets" onclick="openPresetsApp()"><div class="icon-box"><i class="fas fa-sliders-h"></i></div><span class="app-label">Presets</span></div>
-          <div class="app-cell" data-app-id="game" onclick="openGameApp()">
-    <div class="icon-box">
-        <i class="fas fa-gamepad"></i>
-    </div>
-    <span class="app-label">game</span>
-</div>
-
-
-            <div class="app-cell" data-app-id="novel" onclick="openNovelApp()"><div class="icon-box"><i class="fas fa-book-open"></i></div><span class="app-label">Novel</span></div>
-        </div>
-    </div>
-
-    <!-- === 第二页 (P2): 相册 & 直播 === -->
-    <div class="page" id="p2">
-        <div style="text-align:center; margin-bottom:10px;">
-            <div class="app-label" style="font-family:'Alex Brush'; font-size:36px;" contenteditable="true">Our Memories</div>
-            <div style="font-size:10px; color:#999; letter-spacing:2px; text-transform:uppercase;">Collect Moments</div>
-        </div>
-
-        <div class="photo-stack">
-            <div class="stack-item"><img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=200&auto=format&fit=crop" data-edit-key="photo1" onclick="triggerChangeImage(this, 'self')"></div>
-            <div class="stack-item"><img src="https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=200&auto=format&fit=crop" data-edit-key="photo2" onclick="triggerChangeImage(this, 'self')"></div>
-            <div class="stack-item"><img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=200&auto=format&fit=crop" data-edit-key="photo3" onclick="triggerChangeImage(this, 'self')"></div>
-        </div>
-
-        <div class="grid-apps">
-            <div class="app-cell" data-app-id="pay" onclick="openPayApp()"><div class="icon-box"><i class="fas fa-qrcode"></i></div><span class="app-label">Pay</span></div>
-            <div class="app-cell" data-app-id="map" onclick="openMapApp()"><div class="icon-box"><i class="fas fa-map-marker-alt"></i></div><span class="app-label">Map</span></div>
-           <div class="app-cell" data-app-id="live" onclick="openLiveApp()">
-    <div class="icon-box" style="background: #fff; border: 1px solid rgba(0,0,0,0.03); box-shadow: 0 10px 25px rgba(0,0,0,0.02);"><i class="fas fa-satellite-dish" style="color: #111;"></i></div>
-    <span class="app-label" style="font-weight:600; color:#333;">LIVE.</span>
-</div>
-
-            <div class="app-cell" data-app-id="cam"><div class="icon-box"><i class="fas fa-camera"></i></div><span class="app-label">Cam</span></div>
-        </div>
-    </div>
-
-    <!-- === 第三页 (P3): 韩系CD机 + 实用APP网格 === -->
-    <div class="page" id="p3">
-        <!-- CD机组件 -->
-        <div class="k-mood-board">
-            <div class="k-cd-player">
-                <div class="k-disc-wrap">
-                    <div class="k-disc" data-edit-key="k_cd_cover" onclick="triggerChangeImage(this, 'bg')" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=200&auto=format&fit=crop');"><div class="k-disc-center"></div></div>
-                </div>
-                <div class="k-song-info">
-                    <div class="k-play-btn"><i class="fas fa-play"></i></div>
-                    <div style="flex:1;">
-                        <div contenteditable="true" class="k-song-title" id="p3-song">Palette</div>
-<div contenteditable="true" class="k-artist" id="p3-artist">IU (아이유)</div>
+                <div class="music-widget widget-4x2 sortable-item" id="home-music-widget" onclick="openMusicPlayer()">
+                    <div class="music-info">
+                        <div style="font-size:9px; color:#aaa; margin-bottom:5px; letter-spacing:1px;">NOW PLAYING</div>
+                        <div class="music-title" id="home-music-title" contenteditable="true" onclick="event.stopPropagation()" onblur="saveHomeMusicText()">Lover</div>
+                        <div class="music-artist" id="home-music-artist" contenteditable="true" onclick="event.stopPropagation()" onblur="saveHomeMusicText()">Taylor Swift</div>
+                        <div class="wave-box"><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+                    </div>
+                    <div class="vinyl-record">
+                        <div class="vinyl-inner" data-edit-key="music" onclick="event.stopPropagation(); triggerChangeImage(this, 'bg')"></div>
                     </div>
                 </div>
-            </div>
-            <div class="k-polaroid">
-                <div class="k-tape"></div>
-                <div class="k-photo-frame" data-edit-key="k_polaroid_img" onclick="triggerChangeImage(this, 'bg')" style="background-image: url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop');"></div>
-                <div class="k-handwriting" contenteditable="true" id="p3-handwriting">Vibe ☁️</div>
-            </div>
-        </div>
 
-        <!-- 这里的APP全都在！Galgame, Pet, Fate... -->
-        <div class="grid-apps">
-            <div class="app-cell" data-app-id="galgame" onclick="openGalgameApp()"><div class="icon-box"><i class="fas fa-gamepad"></i></div><span class="app-label">Galgame</span></div>
-            <div class="app-cell" data-app-id="pet" onclick="openPetApp()">
-    <div class="icon-box"><i class="fas fa-paw"></i></div>
-    <span class="app-label">Pet</span>
-</div>
-            <div class="app-cell" data-app-id="tracker" onclick="TrackerApp.open()"><div class="icon-box"><i class="fas fa-user-secret"></i></div><span class="app-label">Spy</span></div>
-            <div class="app-cell" data-app-id="mihuashi" onclick="alert('画师列表...')"><div class="icon-box"><i class="fas fa-palette"></i></div><span class="app-label">Art</span></div>
-            <div class="app-cell" data-app-id="divination" onclick="alert('今日运势：大吉')"><div class="icon-box"><i class="fas fa-star-half-alt"></i></div><span class="app-label">Fate</span></div>
-            <div class="app-cell" data-app-id="myhome" onclick="alert('进入家园...')"><div class="icon-box"><i class="fas fa-home"></i></div><span class="app-label">Home</span></div>
-            <div class="app-cell" data-app-id="calendar" onclick="alert('日历')"><div class="icon-box"><i class="fas fa-calendar"></i></div><span class="app-label">Calendar</span></div>
-            <div class="app-cell" data-app-id="bubble" onclick="openBubbleApp()">
-    <div class="icon-box"><i class="far fa-comments"></i></div>
-    <span class="app-label">Bubble</span>
-</div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="wechat" onclick="openWeChatApp()"><div class="icon-box"><i class="fab fa-weixin" style="color:#07c160;"></i></div><span class="app-label">WeChat</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="api" onclick="toggleSettings()"><div class="icon-box"><i class="fas fa-link"></i></div><span class="app-label">API</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="theme" onclick="toggleSettings('theme')"><div class="icon-box"><i class="fas fa-magic"></i></div><span class="app-label">Theme</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="lovespace" onclick="openLoveSpaceApp()"><div class="icon-box"><i class="fas fa-heart" style="color:#e91e63;"></i></div><span class="app-label">Love Space</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="worldbook"><div class="icon-box"><i class="fas fa-globe-asia"></i></div><span class="app-label">WorldBook</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="presets" onclick="openPresetsApp()"><div class="icon-box"><i class="fas fa-sliders-h"></i></div><span class="app-label">Presets</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="game" onclick="openGameApp()"><div class="icon-box"><i class="fas fa-gamepad"></i></div><span class="app-label">game</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="novel" onclick="openNovelApp()"><div class="icon-box"><i class="fas fa-book-open"></i></div><span class="app-label">Novel</span></div>
+            </div>
 
-        </div>
-    </div> 
-                <!-- === 第四页 (P4): 生活记录 & 电子小票 (优化版) === -->
-    <div class="page" id="p4">
-        
-        <!-- 1. 收藏信息滚动组件 -->
-        <div class="collection-ticker-widget">
-            <div class="ticker-icon"><i class="fas fa-quote-left"></i></div>
-            
-            <!-- 滚动文字区 -->
-            <div class="ticker-wrapper">
-                <!-- 第一组内容 -->
-                <div class="ticker-content">
-                    <span>记得给阳台的花浇水</span><span class="dot">•</span>
-                    <span>下周五去看展</span><span class="dot">•</span>
-                    <span>密码 123456</span><span class="dot">•</span>
-                    <span>Stay foolish</span><span class="dot">•</span>
-                    <span>买猫粮</span><span class="dot">•</span>
+            <!-- === 第二页 (P2): 相册 & 直播 === -->
+            <div class="page ds-flat" id="p2">
+                <div class="widget-4x1 sortable-item" style="text-align:center;">
+                    <div class="app-label" style="font-family:'Alex Brush'; font-size:36px;" contenteditable="true">Our Memories</div>
+                    <div style="font-size:10px; color:#999; letter-spacing:2px; text-transform:uppercase;">Collect Moments</div>
                 </div>
-                <!-- 第二组内容 (复制一份用于无缝连接) -->
-                <div class="ticker-content">
-                    <span>记得给阳台的花浇水</span><span class="dot">•</span>
-                    <span>下周五去看展</span><span class="dot">•</span>
-                    <span>密码 123456</span><span class="dot">•</span>
-                    <span>Stay foolish</span><span class="dot">•</span>
-                    <span>买猫粮</span><span class="dot">•</span>
+
+                <div class="photo-stack widget-4x3 sortable-item">
+                    <div class="stack-item"><img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=200&auto=format&fit=crop" data-edit-key="photo1" onclick="triggerChangeImage(this, 'self')"></div>
+                    <div class="stack-item"><img src="https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=200&auto=format&fit=crop" data-edit-key="photo2" onclick="triggerChangeImage(this, 'self')"></div>
+                    <div class="stack-item"><img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=200&auto=format&fit=crop" data-edit-key="photo3" onclick="triggerChangeImage(this, 'self')"></div>
                 </div>
+
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="pay" onclick="openPayApp()"><div class="icon-box"><i class="fas fa-qrcode"></i></div><span class="app-label">Pay</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="map" onclick="openMapApp()"><div class="icon-box"><i class="fas fa-map-marker-alt"></i></div><span class="app-label">Map</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="live" onclick="openLiveApp()"><div class="icon-box" style="background: #fff; border: 1px solid rgba(0,0,0,0.03); box-shadow: 0 10px 25px rgba(0,0,0,0.02);"><i class="fas fa-satellite-dish" style="color: #111;"></i></div><span class="app-label" style="font-weight:600; color:#333;">LIVE.</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="cam"><div class="icon-box"><i class="fas fa-camera"></i></div><span class="app-label">Cam</span></div>
             </div>
 
-            <!-- 右侧圆形图片 (点击可更换) -->
-            <div class="ticker-img-circle">
-                <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop" 
-                     data-edit-key="p4_ticker_img" 
-                     onclick="triggerChangeImage(this, 'self')">
-            </div>
-        </div>
-
-        <!-- 2. 发票/小票造型组件 (变短版) -->
-        <div class="receipt-widget short-version">
-            <!-- 顶部打孔 -->
-            <div class="receipt-hole"></div>
-            
-            <div class="receipt-header">
-                <div class="receipt-title">RECEIPT</div>
-                <div class="receipt-date">NO.2026-02-22</div>
-            </div>
-            
-            <div class="receipt-divider-dashed"></div>
-
-            <!-- 列表区域 -->
-            <div class="receipt-list">
-                <div class="receipt-item" onclick="openSimulatedApp('taobao')">
-                    <div class="r-item-name">
-                        <span class="r-qty">01</span>
-                        <span>SHOPPING (Taobao)</span>
+            <!-- === 第三页 (P3): 韩系CD机 + 实用APP === -->
+            <div class="page ds-flat" id="p3">
+                <div class="k-mood-board widget-4x4 sortable-item">
+                    <div class="k-cd-player">
+                        <div class="k-disc-wrap">
+                            <div class="k-disc" data-edit-key="k_cd_cover" onclick="triggerChangeImage(this, 'bg')" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=200&auto=format&fit=crop');"><div class="k-disc-center"></div></div>
+                        </div>
+                        <div class="k-song-info">
+                            <div class="k-play-btn"><i class="fas fa-play"></i></div>
+                            <div style="flex:1;">
+                                <div contenteditable="true" class="k-song-title" id="p3-song">Palette</div>
+                                <div contenteditable="true" class="k-artist" id="p3-artist">IU (아이유)</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
-                </div>
-                
-                <div class="receipt-item" onclick="openSimulatedApp('meituan')">
-                    <div class="r-item-name">
-                        <span class="r-qty">02</span>
-                        <span>DELIVERY (Meituan)</span>
+                    <div class="k-polaroid">
+                        <div class="k-tape"></div>
+                        <div class="k-photo-frame" data-edit-key="k_polaroid_img" onclick="triggerChangeImage(this, 'bg')" style="background-image: url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop');"></div>
+                        <div class="k-handwriting" contenteditable="true" id="p3-handwriting">Vibe ☁️</div>
                     </div>
-                    <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
                 </div>
+
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="galgame" onclick="openGalgameApp()"><div class="icon-box"><i class="fas fa-gamepad"></i></div><span class="app-label">Galgame</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="pet" onclick="openPetApp()"><div class="icon-box"><i class="fas fa-paw"></i></div><span class="app-label">Pet</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="tracker" onclick="TrackerApp.open()"><div class="icon-box"><i class="fas fa-user-secret"></i></div><span class="app-label">Spy</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="mihuashi" onclick="alert('画师列表...')"><div class="icon-box"><i class="fas fa-palette"></i></div><span class="app-label">Art</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="divination" onclick="alert('今日运势：大吉')"><div class="icon-box"><i class="fas fa-star-half-alt"></i></div><span class="app-label">Fate</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="myhome" onclick="alert('进入家园...')"><div class="icon-box"><i class="fas fa-home"></i></div><span class="app-label">Home</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="calendar" onclick="alert('日历')"><div class="icon-box"><i class="fas fa-calendar"></i></div><span class="app-label">Calendar</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="bubble" onclick="openBubbleApp()"><div class="icon-box"><i class="far fa-comments"></i></div><span class="app-label">Bubble</span></div>
+            </div> 
+
+            <!-- === 第四页 (P4): 生活记录 & 电子小票 === -->
+            <div class="page ds-flat" id="p4">
+                <div class="collection-ticker-widget widget-4x1 sortable-item">
+                    <div class="ticker-icon"><i class="fas fa-quote-left"></i></div>
+                    <div class="ticker-wrapper">
+                        <div class="ticker-content">
+                            <span>记得给阳台的花浇水</span><span class="dot">•</span>
+                            <span>下周五去看展</span><span class="dot">•</span>
+                            <span>密码 123456</span><span class="dot">•</span>
+                            <span>Stay foolish</span><span class="dot">•</span>
+                            <span>买猫粮</span><span class="dot">•</span>
+                        </div>
+                        <div class="ticker-content">
+                            <span>记得给阳台的花浇水</span><span class="dot">•</span>
+                            <span>下周五去看展</span><span class="dot">•</span>
+                            <span>密码 123456</span><span class="dot">•</span>
+                            <span>Stay foolish</span><span class="dot">•</span>
+                            <span>买猫粮</span><span class="dot">•</span>
+                        </div>
+                    </div>
+                    <div class="ticker-img-circle">
+                        <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop" data-edit-key="p4_ticker_img" onclick="triggerChangeImage(this, 'self')">
+                    </div>
+                </div>
+
+                <div class="receipt-widget short-version widget-4x3 sortable-item">
+                    <div class="receipt-hole"></div>
+                    <div class="receipt-header">
+                        <div class="receipt-title">RECEIPT</div>
+                        <div class="receipt-date">NO.2026-02-22</div>
+                    </div>
+                    <div class="receipt-divider-dashed"></div>
+                    <div class="receipt-list">
+                        <div class="receipt-item" onclick="openSimulatedApp('taobao')">
+                            <div class="r-item-name"><span class="r-qty">01</span><span>SHOPPING (Taobao)</span></div>
+                            <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
+                        </div>
+                        <div class="receipt-item" onclick="openSimulatedApp('meituan')">
+                            <div class="r-item-name"><span class="r-qty">02</span><span>DELIVERY (Meituan)</span></div>
+                            <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
+                        </div>
+                    </div>
+                    <div class="receipt-divider-line"></div>
+                    <div class="receipt-footer">
+                        <div class="receipt-total"><span>TOTAL</span><span style="font-weight:700;">¥ 999.00</span></div>
+                        <div class="receipt-barcode">||| || ||| | |||| || || | |||| |||</div>
+                    </div>
+                </div>
+
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="notes" onclick="alert('便签')"><div class="icon-box"><i class="far fa-sticky-note"></i></div><span class="app-label">Notes</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="files" onclick="alert('文件管理')"><div class="icon-box"><i class="far fa-folder"></i></div><span class="app-label">Files</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="backpack" onclick="openBackpackApp()"><div class="icon-box"><i class="fas fa-bag-shopping" style="color:#f59e0b;"></i></div><span class="app-label">Backpack</span></div>
+                <div class="app-cell widget-1x1 sortable-item" style="opacity:0.3;"><div class="icon-box" style="border:1px dashed #ccc; box-shadow:none;"><i class="fas fa-plus"></i></div></div>
             </div>
 
-            <div class="receipt-divider-line"></div>
-
-            <div class="receipt-footer">
-                <div class="receipt-total">
-                    <span>TOTAL</span>
-                    <span style="font-weight:700;">¥ 999.00</span>
-                </div>
-                <div class="receipt-barcode">
-                    ||| || ||| | |||| || || | |||| |||
-                </div>
-            </div>
         </div>
-
-        <!-- 3. APP 网格 (样式与P3一致，位置下移) -->
-        <div class="grid-apps p4-apps">
-            <div class="app-cell" data-app-id="notes" onclick="alert('便签')"><div class="icon-box"><i class="far fa-sticky-note"></i></div><span class="app-label">Notes</span></div>
-            <div class="app-cell" data-app-id="files" onclick="alert('文件管理')"><div class="icon-box"><i class="far fa-folder"></i></div><span class="app-label">Files</span></div>
-            <div class="app-cell" data-app-id="backpack" onclick="openBackpackApp()"><div class="icon-box"><i class="fas fa-bag-shopping" style="color:#f59e0b;"></i></div><span class="app-label">Backpack</span></div>
-            <!-- 空位占位符 -->
-            <div class="app-cell" style="opacity:0.3;"><div class="icon-box" style="border:1px dashed #ccc; box-shadow:none;"><i class="fas fa-plus"></i></div></div>
-        </div>
-
-    </div>
-
 
   
         <!-- 小组件库面板 -->
@@ -361,93 +300,202 @@
             </div>
             
             <div style="flex:1; overflow-y:auto;">
-                <!-- 极简 (Aesthetic) -->
+                    <!-- 极简 (Aesthetic) -->
                 <div id="wl-content-aesthetic" class="wc-body-container" style="padding: 0 16px; display: none;">
-                    <div class="wl-item" onclick="addWidget('k-dday', 'widget-2x2')">
-                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fff; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-                            <div style="font-size:8px; color:#666; letter-spacing:1px; margin-bottom:4px; font-weight:300;">OUR DAYS</div>
-                            <div style="font-size:24px; color:#222; font-family:'Times New Roman', serif; font-style:italic;">100</div>
+                    <div class="wl-item" onclick="addWidget('k-memo-pad', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fffdf5; border: 1px solid #e0dcd3; box-shadow: 2px 4px 10px rgba(0,0,0,0.05); position:relative; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:10px; box-sizing:border-box; transform: rotate(1deg);">
+                            <div style="width: 30px; height: 10px; background: rgba(255,255,255,0.7); border: 1px solid #eee; position:absolute; top:-5px; transform: rotate(-3deg);"></div>
+                            <div style="font-family:'Caveat', cursive; font-size:16px; color:#555;">Memo</div>
                         </div>
-                        <div class="wl-info">纪念日 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                        <span class="wl-name">便利贴</span>
                     </div>
-                    <div class="wl-item" onclick="addWidget('k-quote', 'widget-4x2')">
-                        <div class="wl-preview" style="height: 100px; background: #fdfdfd; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); padding: 10px;">
-                            <div style="font-size:12px; color:#222; font-family:'Times New Roman', serif; font-style:italic; text-align:center;">"Love yourself first."</div>
+                    <div class="wl-item" onclick="addWidget('k-film-strip', 'widget-4x2')" style="grid-column: span 2">
+                        <div class="wl-preview" style="height: 100px; width: 100%; background: #111; border-radius: 4px; display:flex; align-items:center; justify-content:space-around; padding: 5px; box-sizing:border-box; position:relative; overflow:hidden;">
+                            <div style="width:100%; height:8px; border-bottom: 2px dashed #333; position:absolute; top:0;"></div>
+                            <div style="width:100%; height:8px; border-top: 2px dashed #333; position:absolute; bottom:0;"></div>
+                            <div style="width:30%; height:70px; background:#fff; margin:0 2px;"></div>
+                            <div style="width:30%; height:70px; background:#fff; margin:0 2px;"></div>
+                            <div style="width:30%; height:70px; background:#fff; margin:0 2px;"></div>
                         </div>
-                        <div class="wl-info">极简语录 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                        <span class="wl-name">胶片相册</span>
                     </div>
-                    <div class="wl-item" onclick="addWidget('k-calendar', 'widget-2x2')">
-                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fff; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-                            <div style="font-size:10px; color:#222; font-weight:600; letter-spacing:1px;">OCT</div>
-                            <div style="font-size:28px; color:#222; font-weight:300; margin:2px 0; line-height:1;">24</div>
+                    <div class="wl-item" onclick="addWidget('k-stamp', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fff; padding: 6px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; border: 1px dashed #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                            <div style="width:100%; flex:1; background:#eee;"></div>
+                            <div style="font-size:10px; color:#999; margin-top:4px;">SEOUL</div>
                         </div>
-                        <div class="wl-info">艺术日历 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                        <span class="wl-name">邮票照片</span>
                     </div>
-                    <div class="wl-item" onclick="addWidget('k-shortcuts', 'widget-4x1')">
-                        <div class="wl-preview" style="height: 50px; background: #fff; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; justify-content:space-around; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); padding: 0 20px;">
-                            <div style="width:24px; height:24px; border-radius:50%; background:#f5f5f5; display:flex; justify-content:center; align-items:center; color:#222; font-size:10px;"><i class="fas fa-comment"></i></div>
-                            <div style="width:24px; height:24px; border-radius:50%; background:#f5f5f5; display:flex; justify-content:center; align-items:center; color:#222; font-size:10px;"><i class="fas fa-music"></i></div>
-                            <div style="width:24px; height:24px; border-radius:50%; background:#f5f5f5; display:flex; justify-content:center; align-items:center; color:#222; font-size:10px;"><i class="fas fa-camera"></i></div>
-                            <div style="width:24px; height:24px; border-radius:50%; background:#f5f5f5; display:flex; justify-content:center; align-items:center; color:#222; font-size:10px;"><i class="fas fa-heart"></i></div>
+                    <div class="wl-item" onclick="addWidget('k-polaroid', 'widget-2x3')" style="grid-column: span 2">
+                        <div class="wl-preview" style="aspect-ratio: 2/3; height: auto; width: 120px; margin: 0 auto; background: #fff; border: 1px solid #f5f5f5; border-radius: 12px; display:flex; flex-direction:column; box-shadow: 0 4px 20px rgba(0,0,0,0.03); padding: 8px; box-sizing:border-box; transform: rotate(-3deg); transition: transform 0.3s ease;" onmouseenter="this.style.transform='rotate(0deg) scale(1.05)'" onmouseleave="this.style.transform='rotate(-3deg) scale(1)'">
+                            <div style="flex:1; background:#f0f0f0; border-radius:4px; overflow:hidden; position: relative; display: flex; flex-direction: column;">
+                                <img src="https://images.unsplash.com/photo-1516483638261-f40af5aa3143?q=80&w=200&auto=format&fit=crop&grayscale" style="width:100%; height:100%; object-fit:cover; opacity:0.9;">
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to bottom, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%); mix-blend-mode: overlay; pointer-events: none;"></div>
+                            </div>
+                            <div style="height:20px; font-family:'Brush Script MT', cursive, sans-serif; font-size:12px; text-align:center; color:#444; margin-top:4px; display:flex; align-items:center; justify-content:center; letter-spacing: 1px; border-top: 1px dashed #eee; padding-top: 2px;">Memories</div>
                         </div>
-                        <div class="wl-info">快捷指令 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×1</span></div>
+                        <div class="wl-info" style="margin-top: 10px;">拍立得相框 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×3</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-vinyl', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+                            <div style="width:50px; height:50px; border-radius:50%; background:#222; display:flex; justify-content:center; align-items:center; box-shadow:inset 0 0 5px rgba(0,0,0,0.5);">
+                                <div style="width:12px; height:12px; border-radius:50%; background:#f5f5f5; border:1px solid #ccc; display:flex; justify-content:center; align-items:center;">
+                                    <div style="width:4px; height:4px; border-radius:50%; background:#222;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">黑胶唱片 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-receipt', 'widget-2x3')" style="grid-column: span 2">
+                        <div class="wl-preview" style="aspect-ratio: 2/3; height: auto; width: 120px; margin: 0 auto; background: #fff; border: 1px solid #eee; border-radius: 0; position: relative; display:flex; flex-direction:column; padding: 12px 10px 8px; box-sizing:border-box; box-shadow: 2px 4px 15px rgba(0,0,0,0.04); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05)); transform: rotate(2deg); transition: transform 0.3s ease;" onmouseenter="this.style.transform='rotate(0deg) scale(1.05)'" onmouseleave="this.style.transform='rotate(2deg) scale(1)'">
+                            <!-- 锯齿顶部 -->
+                            <div style="position: absolute; top: -4px; left: 0; right: 0; height: 4px; background: linear-gradient(-45deg, transparent 3px, #fff 0), linear-gradient(45deg, transparent 3px, #fff 0); background-repeat: repeat-x; background-size: 8px 8px; background-position: left bottom;"></div>
+                            <div style="text-align:center; font-size:9px; font-family:'Courier New', Courier, monospace; color:#333; letter-spacing:1px; margin-bottom:6px; font-weight:bold; text-transform: uppercase;">RECEIPT</div>
+                            <div style="border-top:1px dashed #ccc; margin-bottom:8px;"></div>
+                            <div style="display:flex; justify-content:space-between; font-size:8px; color:#555; font-family:'Courier New', Courier, monospace; margin-bottom:4px;"><span>COFFEE</span><span>$4.5</span></div>
+                            <div style="display:flex; justify-content:space-between; font-size:8px; color:#555; font-family:'Courier New', Courier, monospace; margin-bottom:4px;"><span>CAKE</span><span>$8.0</span></div>
+                            <div style="display:flex; justify-content:space-between; font-size:8px; color:#555; font-family:'Courier New', Courier, monospace;"><span>TEA</span><span>$3.5</span></div>
+                            <div style="border-top:1px dashed #ccc; margin-top:auto; margin-bottom:6px;"></div>
+                            <div style="display:flex; justify-content:space-between; align-items: flex-end;">
+                                <span style="font-size:7px; font-family:'Courier New', Courier, monospace; color:#888;">TOTAL</span>
+                                <span style="font-size:12px; font-family:'Courier New', Courier, monospace; color:#111; font-weight:bold;">$16.0</span>
+                            </div>
+                            <!-- 锯齿底部 -->
+                            <div style="position: absolute; bottom: -4px; left: 0; right: 0; height: 4px; background: linear-gradient(-135deg, transparent 3px, #fff 0), linear-gradient(135deg, transparent 3px, #fff 0); background-repeat: repeat-x; background-size: 8px 8px; background-position: left top;"></div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">购物小票 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×3</span></div>
                     </div>
                     <div class="wl-item" onclick="addWidget('k-mood', 'widget-2x2')">
-                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: url('https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?q=80&w=200&auto=format&fit=crop&grayscale'); background-size: cover; border: 1px solid #f5f5f5; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); position:relative;">
-                            <div style="position:absolute; bottom:8px; left:8px; font-size:8px; color:#fff; letter-spacing:1px; font-weight:300;">MOOD</div>
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #333; border-radius: 20px; display:flex; flex-direction:column; justify-content:center; align-items:center; position:relative;">
+                            <div style="font-size:20px; color:#fff; margin-bottom:4px;"><i class="fas fa-heart"></i></div>
+                            <div style="font-size:8px; color:#fff; letter-spacing:1px; font-weight:300;">MOOD</div>
                         </div>
-                        <div class="wl-info">情绪画框 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                        <div class="wl-info">情绪打卡 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
                     </div>
+                    <div class="wl-item" onclick="addWidget('k-wave-quote', 'widget-4x2')">
+                        <div class="wl-preview" style="height: 100px; background: #fff; border: 1px solid #f5f5f5; border-radius: 20px; display:flex; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 10px; box-sizing:border-box;">
+                            <div style="flex: 1; padding: 0 10px;">
+                                <div style="font-size: 14px; font-weight: bold; color: #333; font-style: italic;">"Ocean Breeze"</div>
+                                <div style="font-size: 10px; color: #999; margin-top: 4px;">Summertime</div>
+                            </div>
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); border-radius: 50%; opacity: 0.8;"></div>
+                        </div>
+                        <div class="wl-name">Wave Quote</div>
+                    </div>
+                    
+                    <div class="wl-item" onclick="addWidget('k-ticket', 'widget-4x2')" style="grid-column: span 2">
+                        <div class="wl-preview" style="height: 100px; width: 100%; background: #fff; border-radius: 8px; display:flex; padding: 0; box-sizing:border-box; position:relative; overflow:hidden; border: 1px solid #eaeaea; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                            <div style="flex:1; padding:10px; display:flex; flex-direction:column; justify-content:center;">
+                                <div style="font-size:10px; color:#aaa;">ADMIT ONE</div>
+                                <div style="font-size:16px; font-weight:bold; color:#333; margin-top:4px;">NIGHT IN SEOUL</div>
+                                <div style="font-size:10px; color:#999; margin-top:4px;">DATE: 2026.04.03</div>
+                            </div>
+                            <div style="width:1px; height:100%; border-left:2px dashed #ccc; position:relative;">
+                                <div style="width:12px; height:12px; background:#f5f5f5; border-radius:50%; position:absolute; top:-6px; left:-6px; border-bottom:1px solid #eaeaea;"></div>
+                                <div style="width:12px; height:12px; background:#f5f5f5; border-radius:50%; position:absolute; bottom:-6px; left:-6px; border-top:1px solid #eaeaea;"></div>
+                            </div>
+                            <div style="width:60px; display:flex; align-items:center; justify-content:center; padding:5px;">
+                                 <img src="https://images.unsplash.com/photo-1542204165-65bf26472b9b?q=80&w=200&auto=format&fit=crop" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">
+                            </div>
+                        </div>
+                        <div class="wl-name">Ticket</div>
+                    </div>
+                    
+                    <div class="wl-item" onclick="addWidget('k-cassette', 'widget-4x2')" style="grid-column: span 2">
+                        <div class="wl-preview" style="height: 100px; width: 100%; background: #e0e0e0; border-radius: 8px; padding: 6px; box-sizing:border-box; position:relative; border: 1px solid #ccc; box-shadow: inset 0 2px 5px rgba(255,255,255,0.5), 0 4px 10px rgba(0,0,0,0.1);">
+                            <div style="width:100%; height:100%; background:#fff; border-radius:4px; position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center;">
+                                <div style="width:100%; height:25px; background:#ff7675; display:flex; justify-content:center; align-items:center;">
+                                    <div style="font-size:10px; color:#fff; font-weight:bold;">MIX TAPE</div>
+                                </div>
+                                <div style="display:flex; justify-content:center; align-items:center; flex:1; width:100%; gap:20px;">
+                                    <div style="width:24px; height:24px; background:#fff; border-radius:50%; border:3px solid #333; position:relative;"><div style="width:8px;height:8px;background:#333;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"></div></div>
+                                    <div style="width:40px; height:16px; background:#333; border-radius:8px;"></div>
+                                    <div style="width:24px; height:24px; background:#fff; border-radius:50%; border:3px solid #333; position:relative;"><div style="width:8px;height:8px;background:#333;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-name">Cassette</div>
+                    </div>
+                    
+                    <div class="wl-item" onclick="addWidget('k-cd', 'widget-2x2')">
+                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: rgba(255,255,255,0.8); border: 2px solid rgba(255,255,255,0.5); border-radius: 8px; padding: 4px; box-sizing:border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.05); backdrop-filter: blur(5px); position:relative; display:flex; flex-direction:column;">
+                            <div style="width:10px; height:100%; background:rgba(200,200,200,0.2); position:absolute; left:0; top:0; border-right:1px solid rgba(255,255,255,0.5); border-radius: 8px 0 0 8px;"></div>
+                            <div style="flex:1; background:#111; border-radius:4px; margin-left:12px; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center;">
+                                 <div style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #eee, #ccc); border:1px solid #999; display:flex; align-items:center; justify-content:center;"><div style="width:15px; height:15px; background:#111; border-radius:50%; border:2px solid #ccc;"></div></div>
+                            </div>
+                        </div>
+                        <div class="wl-name">CD Case</div>
+                    </div>
+                </div>
                 </div>
 
                 <!-- 系统 -->
                 <div id="wl-content-system" class="wc-body-container" style="padding: 0 16px;">
-                    <div class="wl-item" onclick="addWidget('weather', 'widget-4x2')">
-                        <div class="wl-preview" style="height: 100px; background: linear-gradient(135deg, #74ebd5, #9face6); border-radius: 16px; color: #fff; align-items: center; font-size: 24px; font-weight: 700;">
-                            <i class="fas fa-cloud-sun"></i> 24°C
+                    <div class="wl-item" onclick="addWidget('weather', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="aspect-ratio: 2/1; height: auto; width: 100%; background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); border-radius: 16px; color: #fff; align-items: center; justify-content: center; display: flex; flex-direction: column; font-size: 24px; font-weight: 700; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
+                            <i class="fas fa-cloud-sun" style="font-size: 32px; margin-bottom: 5px;"></i>
+                            <div style="font-size: 12px; font-weight: 400; opacity: 0.9;">24°C Sunny</div>
+                            <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; filter: blur(5px);"></div>
                         </div>
-                        <div class="wl-info">天气 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                        <div class="wl-info" style="margin-top: 10px;">天气卡片 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
                     </div>
                     <div class="wl-item" onclick="addWidget('clock', 'widget-2x2')">
-                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: #fff; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.05); align-items: center; border: 4px solid #111;">
-                            <i class="far fa-clock" style="font-size: 32px; color: #111;"></i>
+                        <div class="wl-preview" style="aspect-ratio: 1/1; height: auto; width: 100%; max-width: 120px; margin: 0 auto; background: #fff; border-radius: 20px; box-shadow: inset 5px 5px 10px #e6e6e6, inset -5px -5px 10px #ffffff, 0 4px 15px rgba(0,0,0,0.05); align-items: center; justify-content: center; display: flex; position: relative;">
+                            <div style="width: 8px; height: 8px; background: #ff4d4f; border-radius: 50%; position: absolute;"></div>
+                            <div style="width: 2px; height: 30%; background: #333; position: absolute; top: 20%; border-radius: 2px;"></div>
+                            <div style="width: 20%; height: 2px; background: #666; position: absolute; right: 20%; border-radius: 2px;"></div>
+                            <div style="position: absolute; font-size: 10px; color: #ccc; top: 8px;">XII</div>
+                            <div style="position: absolute; font-size: 10px; color: #ccc; bottom: 8px;">VI</div>
                         </div>
-                        <div class="wl-info">大时钟 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                        <div class="wl-info" style="margin-top: 10px;">拟物时钟 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
                     </div>
                 </div>
                 
                 <!-- 多媒体 -->
                 <div id="wl-content-media" class="wc-body-container" style="padding: 0 16px; display: none;">
-                     <div class="wl-item" onclick="addWidget('music', 'widget-4x2')">
-                        <div class="wl-preview" style="height: 100px; background: #111; border-radius: 16px; color: #fff; display: flex; align-items: center; padding: 0 20px;">
-                            <div style="width: 60px; height: 60px; border-radius: 50%; background: #333; margin-right: 15px;"></div>
-                            <div>
-                                <div style="font-weight: 700; font-size: 16px;">Now Playing</div>
-                                <div style="font-size: 12px; color: #aaa; margin-top: 4px;">Artist Name</div>
+                     <div class="wl-item" onclick="addWidget('music', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="aspect-ratio: 2/1; height: auto; width: 100%; background: #1a1a1a; border-radius: 20px; color: #fff; display: flex; align-items: center; padding: 0 15px; box-sizing: border-box; box-shadow: 0 10px 20px rgba(0,0,0,0.15); position: relative; overflow: hidden;">
+                            <div style="position: absolute; top:0; left:0; right:0; bottom:0; background: linear-gradient(45deg, rgba(255,255,255,0.05) 0%, transparent 100%); pointer-events: none;"></div>
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: conic-gradient(#ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); margin-right: 15px; box-shadow: 0 0 10px rgba(255,255,255,0.2); position: relative;">
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 15px; height: 15px; background: #1a1a1a; border-radius: 50%; border: 2px solid #333;"></div>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 800; font-size: 14px; letter-spacing: 0.5px;">Vaporwave</div>
+                                <div style="font-size: 10px; color: #aaa; margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Retro</span>
+                                    <div style="display: flex; gap: 3px;">
+                                        <div style="width: 2px; height: 8px; background: #ff7e67; border-radius: 1px;"></div>
+                                        <div style="width: 2px; height: 12px; background: #ff7e67; border-radius: 1px;"></div>
+                                        <div style="width: 2px; height: 6px; background: #ff7e67; border-radius: 1px;"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="wl-info">音乐播放器卡片 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                        <div class="wl-info" style="margin-top: 10px;">黑胶律动 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
                     </div>
                     <div class="wl-item" onclick="addWidget('photo', 'widget-2x2')">
-                        <div class="wl-preview" style="height: 100px; width: 100px; margin: 0 auto; background: url('https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop'); background-size: cover; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                        <div class="wl-preview" style="aspect-ratio: 1/1; height: auto; width: 100%; max-width: 120px; margin: 0 auto; background: url('https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop'); background-size: cover; background-position: center; border-radius: 16px; box-shadow: 0 8px 15px rgba(0,0,0,0.1); border: 3px solid #fff; position: relative;">
+                            <div style="position: absolute; bottom: 5px; right: 5px; font-size: 16px; color: #ff4d4f; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));"><i class="fas fa-heart"></i></div>
                         </div>
-                        <div class="wl-info">照片相框 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                        <div class="wl-info" style="margin-top: 10px;">拍立得相框 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
                     </div>
                 </div>
                 
                 <!-- 工具 -->
                  <div id="wl-content-tool" class="wc-body-container" style="padding: 0 16px; display: none;">
-                    <div class="wl-item" onclick="addWidget('search', 'widget-4x1')">
-                        <div class="wl-preview" style="height: 50px; background: #f0f0f0; border-radius: 25px; color: #888; align-items: center; justify-content: flex-start; padding: 0 20px;">
-                            <i class="fas fa-search" style="margin-right: 10px;"></i> 搜索...
+                    <div class="wl-item" onclick="addWidget('search', 'widget-4x1')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="aspect-ratio: 4/1; height: auto; width: 100%; background: #fff; border-radius: 25px; color: #888; display: flex; align-items: center; justify-content: flex-start; padding: 0 15px; box-sizing: border-box; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02), 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #f5f5f5;">
+                            <i class="fab fa-google" style="margin-right: 10px; color: #4285F4; font-size: 14px;"></i>
+                            <span style="font-size: 12px; font-weight: 500; letter-spacing: 0.5px;">Search Google...</span>
+                            <i class="fas fa-microphone" style="margin-left: auto; color: #34A853; font-size: 14px;"></i>
                         </div>
-                        <div class="wl-info">搜索栏 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×1</span></div>
+                        <div class="wl-info" style="margin-top: 10px;">全局搜索栏 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×1</span></div>
                     </div>
                      <div class="wl-item" onclick="addWidget('shortcut', 'widget-1x1')">
-                        <div class="wl-preview" style="height: 60px; width: 60px; margin: 0 auto; background: #ffebee; border-radius: 16px; color: #ff6b6b; align-items: center; font-size: 24px;">
+                        <div class="wl-preview" style="aspect-ratio: 1/1; height: auto; width: 100%; max-width: 60px; margin: 0 auto; background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); border-radius: 16px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 6px 15px rgba(255, 154, 158, 0.4); transform: translateY(-2px);">
                             <i class="fas fa-bolt"></i>
                         </div>
-                        <div class="wl-info">快捷按钮 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">1×1</span></div>
+                        <div class="wl-info" style="margin-top: 10px;">快捷闪电 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">1×1</span></div>
                     </div>
                 </div>
             </div>
@@ -1088,7 +1136,7 @@
                                 <div class="stg-tr-sub">顶部时间与电量显示</div>
                             </div>
                             <label class="switch" style="margin:0; flex-shrink:0;">
-                                <input type="checkbox" id="show-statusbar-time-toggle" checked>
+                                <input type="checkbox" id="show-statusbar-time-toggle" checked onchange="toggleStatusBar(this.checked)">
                                 <span class="slider round"></span>
                             </label>
                         </div>

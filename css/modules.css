@@ -1656,15 +1656,12 @@ textarea#custom-css-input:focus {
     pointer-events: none;
 }
 
-
-/* 容器：相对定位，为了让里面的元素可以重叠 */
 .k-mood-board {
     position: relative;
     width: 100%;
-    height: 260px; /* 高度给足，让元素错落 */
-    margin-bottom: 10px;
-    margin-top: 10px;
+    height: 100%; /* 交给 Grid 控制 */
 }
+
 
 /* --- 1. CD播放器卡片 --- */
 .k-cd-player {
@@ -1776,11 +1773,10 @@ textarea#custom-css-input:focus {
    Page 4: 修复版样式 (滚动修复 + App样式统一)
    ========================================= */
 
-/* 1. 滚动组件优化 */
 .collection-ticker-widget {
     background: #fff;
     border-radius: 40px;
-    height: 56px;
+    height: 100%; /* 交给 Grid 控制 */
     display: flex;
     align-items: center;
     padding: 0 6px 0 20px;
@@ -1788,9 +1784,11 @@ textarea#custom-css-input:focus {
     border: var(--k-border);
     overflow: hidden;
     position: relative;
-    margin-bottom: 20px; /* 增加与下方发票的距离 */
     flex-shrink: 0;
+    max-width: 100%;
+    width: 100%;
 }
+
 
 /* 核心修复：滚动容器设置 */
 .ticker-wrapper {
@@ -1849,10 +1847,10 @@ textarea#custom-css-input:focus {
     display: block;
 }
 
-/* 2. 发票组件 (样式微调) */
 .receipt-widget.short-version {
     background: #fdfdfd;
     width: 100%;
+    height: 100%; /* 交给 Grid 控制 */
     border-radius: 12px 12px 0 0;
     padding: 20px 20px 30px 20px;
     position: relative;
@@ -1861,8 +1859,7 @@ textarea#custom-css-input:focus {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    
-    /* 锯齿边缘 */
+    max-width: 100%;
     mask-image: radial-gradient(circle at bottom, transparent 6px, black 6.5px);
     mask-size: 20px 100%;
     mask-position: bottom;
@@ -1871,19 +1868,10 @@ textarea#custom-css-input:focus {
     -webkit-mask-size: 20px 100%;
     -webkit-mask-position: bottom;
     -webkit-mask-repeat: repeat-x;
-    
-    padding-bottom: 25px;
     z-index: 2;
-    margin-bottom: 0; /* 贴紧下方 */
 }
 
-/* 3. App 网格样式统一与布局调整 */
-.grid-apps.p4-apps {
-    margin-top: 10px; /* 【修改】正边距，往下移，不再拥挤 */
-    padding-top: 10px;
-    position: relative;
-    z-index: 1;
-}
+
 
 /* 【关键】强制统一 Page 4 的图标风格为深黑色 */
 .page#p4 .icon-box i {
