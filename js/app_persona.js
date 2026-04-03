@@ -155,7 +155,8 @@ Trust: ${d.pb_trust} | Deepest Fear in Rel: ${d.pb_fearRelation}`;
     // 手写优先：只要手写框不为空，就直接用手写框作为最终 persona
     p.persona = (manualPersona && manualPersona.length > 0) ? manualPersona : prompt.trim();
     
-    // 保存进数据库await IDB.set(PERSONA_META_KEY, personasMeta);
+    // 保存进数据库
+    await IDB.set(PERSONA_META_KEY, personasMeta);
     
     // 应用到微信等界面的名字同步
     if(typeof applyPersonaToUI === 'function') applyPersonaToUI();
