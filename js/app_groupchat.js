@@ -759,10 +759,25 @@ ${historyText || '(暂无历史记录)'}
             });
         }
 
+        // 过滤掉非群成员的消息（防止 AI 幻觉凭空造人）
+        messages = messages.filter(msg => {
+            if (!msg.name || !msg.content) return false;
+            const mem = findMemberByName(msg.name, group.members);
+            if (!mem) {
+                console.warn(`[GroupChat] 拦截非群成员的消息: ${msg.name}`);
+                return false;
+            }
+            // 不要扮演用户本人
+            if (msg.name === myName) {
+                console.warn(`[GroupChat] 拦截 AI 扮演用户的消息: ${msg.name}`);
+                return false;
+            }
+            return true;
+        });
+
         // 逐条延迟展示
         let cumulativeDelay = 0;
         messages.forEach((msg, index) => {
-            if (!msg.name || !msg.content) return;
             const delay = index === 0 ? 300 : (600 + Math.random() * 800);
             cumulativeDelay += delay;
 
@@ -900,11 +915,31 @@ ${historyText}`;
 
 // 通过名字在群成员中查找 friendsData 对象
 function findMemberByName(name, memberIds) {
-    if (!memberIds) return null;
+    if (!memberIds || !name) return null;
+    const searchName = String(name).trim().toLowerCase();
+    
+    // 1. 完全匹配
     for (const id of memberIds) {
         const f = friendsData[id];
-        if (f && (f.realName === name || f.remark === name)) return f;
+        if (!f) continue;
+        if ((f.realName && f.realName.trim().toLowerCase() === searchName) || 
+            (f.remark && f.remark.trim().toLowerCase() === searchName)) {
+            return f;
+        }
     }
+    
+    // 2. 包含匹配（应对AI擅自加上姓氏、头衔、空格或大小写不一致的情况）
+    for (const id of memberIds) {
+        const f = friendsData[id];
+        if (!f) continue;
+        const rName = (f.realName || '').trim().toLowerCase();
+        const remName = (f.remark || '').trim().toLowerCase();
+        if (rName && searchName.includes(rName)) return f;
+        if (remName && searchName.includes(remName)) return f;
+        if (rName && rName.includes(searchName)) return f;
+        if (remName && remName.includes(searchName)) return f;
+    }
+    
     return null;
 }
 
@@ -1038,6 +1073,10 @@ ${recent || '(暂无)'}
         for (const msg of messages) {
             if (!msg.name || !msg.content) continue;
             const mem = findMemberByName(msg.name, group.members);
+            if (!mem || msg.name === myName) {
+                console.warn(`[GroupBgChat] 拦截非群成员或用户的消息: ${msg.name}`);
+                continue;
+            }
             const avatarUrl = mem && mem.avatar ? mem.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.name)}`;
             const msgId = 'msg_bg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
@@ -1071,6 +1110,7 @@ ${recent || '(暂无)'}
             messages.forEach(msg => {
                 if (!msg.name || !msg.content) return;
                 const mem = findMemberByName(msg.name, group.members);
+                if (!mem || msg.name === myName) return;
                 const avatarUrl = mem && mem.avatar ? mem.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.name)}`;
                 appendMessage(msg.content, 'received', avatarUrl, msg.name);
             });
@@ -3756,13 +3796,18 @@ ${optionsInstr}
         for (let i = 0; i < messages.length; i++) {
             const msg = messages[i];
             if (!msg.name || !msg.content) continue;
+            
+            const mem = findMemberByName(msg.name, group.members);
+            if (!mem || msg.name === myName) {
+                console.warn(`[GroupOffline] 拦截非群成员或用户的动作: ${msg.name}`);
+                continue;
+            }
 
             // 首条无延迟，后续条目模拟打字节奏
             if (i > 0) {
                 await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 500));
             }
 
-            const mem = findMemberByName(msg.name, group.members);
             const avatarUrl = (mem && mem.avatar)
                 ? mem.avatar
                 : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.name)}`;

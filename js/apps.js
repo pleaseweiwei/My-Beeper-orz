@@ -3261,7 +3261,16 @@ if (!avatarUrl) {
                 if (typeof PatApp !== 'undefined' && PatApp.parseAndHandleAIPat) {
                     finalContent = PatApp.parseAndHandleAIPat(finalContent, currentChatId);
                 }
-                // 1. 按换行符拆分正文 (过滤空行)
+                
+                // 1. 先将富媒体标签强制提行，防止混排导致 startsWith 检测失败
+                finalContent = finalContent
+                    .replace(/(\[VOICE\])/gi, '\n$1')
+                    .replace(/(\[IMAGE\])/gi, '\n$1\n')
+                    .replace(/(\[WC_TRANSFER:.*?\])/gi, '\n$1\n')
+                    .replace(/(\[表情:.*?\])/gi, '\n$1\n')
+                    .replace(/(\[PAT_NOTICE\])/gi, '\n$1');
+
+                // 2. 按换行符拆分正文 (过滤空行)
                 let textSegments = finalContent.split('\n').map(s => s.trim()).filter(s => s);
                 // 回复条数区间控制 (replyMin ~ replyMax)
                 const _replyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
