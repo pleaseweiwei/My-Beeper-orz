@@ -198,19 +198,29 @@ window.generateOfflineMsgsForFriend = async function(friendId, forceGenerate) {
     if (!forceGenerate && !settings.offlineMsgEnabled) return false;
 
     const intervalHours = parseFloat(settings.offlineMsgInterval) || 2;
-    const msgCount      = Math.max(1, Math.min(20, parseInt(settings.offlineMsgCount) || 3));
-    const lastTime      = settings.lastOfflineMsgTime || 0;
     const nowTs         = Date.now();
+    
+    const lastOffTime   = settings.lastOfflineMsgTime || 0;
+    const lastChatTime  = settings.lastChatTime || 0;
+    const globalActive  = parseInt(localStorage.getItem('myCoolPhone_lastActive') || 0, 10);
+    
+    // 基本时间取：上次生成时间、上次聊天时间、上次离开APP时间中最近的一个
+    let baseTime = Math.max(lastOffTime, lastChatTime, globalActive);
 
     // 首次开启：记录当前时间，不立即生成（避免一开启就刷屏）
-    if (lastTime === 0 && !forceGenerate) {
+    if (lastOffTime === 0 && !forceGenerate) {
         if (!friend.chatSettings) friend.chatSettings = {};
         friend.chatSettings.lastOfflineMsgTime = nowTs;
         await saveFriendsData();
         return false;
     }
 
-    const elapsedMs    = nowTs - (lastTime || nowTs - 3600000);
+    // 若无基准时间或强行生成，默认使用前1小时
+    if (!baseTime || forceGenerate) {
+        baseTime = nowTs - 3600000;
+    }
+
+    const elapsedMs    = nowTs - baseTime;
     const elapsedHours = elapsedMs / 3600000;
 
     if (!forceGenerate && elapsedHours < intervalHours) return false;
@@ -291,7 +301,7 @@ ${friend.persona || '（无特殊人设）'}`;
 
         // ── 用户指令 ───────────────────────────────────────────────
         const userMessage = `用户已经有${hoursDesc}没有打开这个应用了。
-现在用户刚刚重新打开了手机，请作为${friendName}，生成你在这段时间内主动发给用户的微信消息，共 ${msgCount} 条。
+现在用户刚刚重新打开了手机，请作为${friendName}，生成你在这段时间内主动发给用户的微信消息，条数由你自由发挥。
 
 【近期聊天记录（供参考）】：
 ${historyContext}
@@ -300,9 +310,9 @@ ${historyContext}
 1. 直接输出消息内容，每条独立一行，条与条空一行。
 2. 不加序号、引号、前缀，不生成用户回复。
 3. 请控制每条消息的字数在 ${limit} 字以内。
-3. 严格遵循人设。拒绝OOC，保持角色的独立生活感。
-4. 必须符合微信聊天习惯：严禁长篇大论，把想说的话拆分成一小段一小段的短消息发送。
-5. 恰好生成 ${msgCount} 条消息，话题自然且避免重复。`;
+4. 严格遵循人设。拒绝OOC，保持角色的独立生活感。
+5. 必须符合微信聊天习惯：严禁长篇大论，把想说的话拆分成一小段一小段的短消息发送。
+6. 发送的消息条数自由发挥，话题自然且避免重复。`;
 
         // ── 调用 AI ────────────────────────────────────────────────
         let rawText = '';
@@ -334,8 +344,7 @@ ${historyContext}
                 }
                 return l;
             })
-            .filter(l => l.length > 0)
-            .slice(0, msgCount);
+            .filter(l => l.length > 0);
 
         if (parsedLines.length === 0) {
             delete friend._offlineMsgGenerating;
@@ -408,6 +417,18 @@ ${historyContext}
         return false;
     }
 };
+
+// ─────────────────────────────────────────────────────────────────────
+// 记录APP全局活跃时间（用于离线消息的时间判断基准）
+// ─────────────────────────────────────────────────────────────────────
+function _updateAppGlobalActiveTime() {
+    localStorage.setItem('myCoolPhone_lastActive', Date.now().toString());
+}
+window.addEventListener('beforeunload', _updateAppGlobalActiveTime);
+window.addEventListener('visibilitychange', () => {
+    if (document.hidden) _updateAppGlobalActiveTime();
+});
+setInterval(_updateAppGlobalActiveTime, 60000);
 
 // ─────────────────────────────────────────────────────────────────────
 // 模式一：APP 打开时检查所有好友，生成到期的离线消息
