@@ -61,6 +61,45 @@ function updateClock() {
             updateBattery();
             battery.addEventListener('levelchange', updateBattery);
             battery.addEventListener('chargingchange', updateBattery);
+            
+            // 加入电量状态提示触发逻辑 (防抖/状态保存)
+            let lastBatteryState = {
+                level: Math.round(battery.level * 100),
+                charging: battery.charging
+            };
+            
+            function handleBatteryStatusChange() {
+                const currentLevel = Math.round(battery.level * 100);
+                const isCharging = battery.charging;
+                
+                // 充电状态改变
+                if (isCharging !== lastBatteryState.charging) {
+                    if (isCharging) {
+                        triggerBatteryNotification('charging', currentLevel);
+                    } else {
+                        triggerBatteryNotification('discharging', currentLevel);
+                    }
+                } 
+                // 电量过低警告 (例如 20% 和 10%)
+                else if (!isCharging && currentLevel <= 20 && lastBatteryState.level > 20) {
+                     triggerBatteryNotification('low_20', currentLevel);
+                } else if (!isCharging && currentLevel <= 10 && lastBatteryState.level > 10) {
+                     triggerBatteryNotification('low_10', currentLevel);
+                }
+                // 充满电提示
+                else if (isCharging && currentLevel === 100 && lastBatteryState.level < 100) {
+                     triggerBatteryNotification('full', currentLevel);
+                }
+
+                lastBatteryState = {
+                    level: currentLevel,
+                    charging: isCharging
+                };
+            }
+            
+            battery.addEventListener('levelchange', handleBatteryStatusChange);
+            battery.addEventListener('chargingchange', handleBatteryStatusChange);
+            
         }).catch(function() {});
     }
 
