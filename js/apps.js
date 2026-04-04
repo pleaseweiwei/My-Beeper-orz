@@ -2750,9 +2750,11 @@ if (f.relationshipLog && f.relationshipLog.length > 0) {
 
     let finalMessages = [
         { role: "system", content: systemPrompt + _trPending },
-        ...contextMessages,
-        { role: "user", content: userMessage }
+        ...contextMessages
     ];
+    if (userMessage && userMessage.trim() !== '') {
+        finalMessages.push({ role: "user", content: userMessage });
+    }
 
     // === 【处理表情包视觉解析】 ===
     finalMessages = finalMessages.map(msg => {
@@ -8333,7 +8335,9 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
             content: h.isOffline ? h.text : `(Online Memory: ${h.text})`
         });
     });
-    chatMessagesArr.push({ role: "user", content: text });
+    if (text) {
+        chatMessagesArr.push({ role: "user", content: text });
+    }
 
     const payload = { 
         model: settings.model, 
@@ -9113,26 +9117,9 @@ window.savePresetEditor = function() {
 // [新增] 线下模式：重回与动画逻辑补丁
 // =========================================
 
-// 1. 打开重回确认弹窗
-window.regenerateOfflineMessage = function(msgId) {
-    pendingRegenMsgId = msgId; // 记录要重回哪条消息
-    document.getElementById('offline-regen-modal').classList.add('active');
-}
-
-// 2. 关闭弹窗
-window.closeRegenModal = function() {
-    document.getElementById('offline-regen-modal').classList.remove('active');
-    pendingRegenMsgId = null;
-}
-
-// 3. 确定重回 (完美修复版)
-window.confirmRegenAction = async function() {
-    if (!pendingRegenMsgId) return;
-
-    // 关键修复：先缓存，再关闭弹窗
-    const msgId = pendingRegenMsgId;
-    document.getElementById('offline-regen-modal').classList.remove('active');
-    pendingRegenMsgId = null;
+// 1. 线下模式重回 (和酒馆一样)
+window.regenerateOfflineMessage = async function(msgId) {
+    if (!msgId) return;
 
     const targetEl = document.querySelector(`.offline-entry[data-msg-id="${msgId}"]`);
 
@@ -9157,28 +9144,21 @@ window.confirmRegenAction = async function() {
         if (index !== -1) {
             history = history.slice(0, index);
             await IDB.set(scopedChatKey(currentChatId), history);
-                        await triggerOfflineRetry(); 
-
         }
     }
-};
 
-
-
-// 4. 重回专用续写逻辑 (完美修复版)
-async function triggerOfflineRetry() {
-    const friend = friendsData[currentChatId];
-    if (!friend) return;
-
-    // 【修复2】优化重回提示词 (换成中文加强指令，防止大模型抽风)
-    const regenInstruction = "【系统指令：用户对上一条回复不满意，时间线已重置。请根据上文历史记录，重新生成一个完全不同的剧情发展和动作描写。不要提及你在重试。】";
-    
-    // 将隐藏指令塞入输入框
-    document.getElementById('offline-input').value = regenInstruction;
-    
-    // 【修复3】加上 await 确保异步调用不冲突
+    // C. 清理输入框，直接触发重新生成
+    document.getElementById('offline-input').value = '';
     await sendOfflineMessage(true);
 }
+
+window.closeRegenModal = function() {
+    document.getElementById('offline-regen-modal')?.classList.remove('active');
+    pendingRegenMsgId = null;
+}
+
+window.confirmRegenAction = async function() {}
+async function triggerOfflineRetry() {}
 
 /* =========================================
    [新增] 线下模式剧情选项分支系统 (VN Options)
@@ -9217,9 +9197,9 @@ window.selectOfflineOption = function(optionText) {
     // 自动发送
     sendOfflineMessage();
 }
+// 线上模式重回 (和酒馆一样)
 async function performOnlineRegen(rowElement) {
     if (!rowElement || !currentChatId) return;
-    if (!confirm('重回将删除此条及后续消息，并重新生成回复。继续？')) return;
 
     // 删除当前行及后续DOM
     let node = rowElement;
@@ -9232,8 +9212,22 @@ async function performOnlineRegen(rowElement) {
     // 根据当前DOM重建历史
     await rebuildHistoryFromChatDom(currentChatId);
 
-    // 重新触发AI回复
-    await triggerAIReplyForPendingContext();
+    // 重新触发AI回复 (不附加新的用户消息)
+    const aiBtn = document.getElementById('triggerAiReply');
+    if (aiBtn) {
+        aiBtn.classList.add('processing');
+        aiBtn.classList.remove('fa-star');
+        aiBtn.classList.add('fa-stop-circle');
+        aiBtn.style.color = '#ff4444';
+    }
+    sendMessageToAI('').finally(() => {
+        if (aiBtn) {
+            aiBtn.classList.remove('processing');
+            aiBtn.classList.remove('fa-stop-circle');
+            aiBtn.classList.add('fa-star');
+            aiBtn.style.color = '';
+        }
+    });
 }
 
 async function rebuildHistoryFromChatDom(chatId) {
@@ -9264,45 +9258,6 @@ async function rebuildHistoryFromChatDom(chatId) {
     });
 
     await IDB.set(scopedChatKey(chatId), rebuilt);
-}
-
-
-async function triggerAIReplyForPendingContext() {
-    const history = await loadChatHistory(currentChatId);
-    if (!history || history.length === 0) return;
-
-    let contextMessages = [];
-    for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i].type === 'received') break;
-        if (history[i].type === 'sent') contextMessages.unshift(history[i].text);
-    }
-
-    if (contextMessages.length === 0) {
-        for (let i = history.length - 1; i >= 0; i--) {
-            if (history[i].type === 'sent') {
-                contextMessages = [history[i].text];
-                break;
-            }
-        }
-    }
-
-    if (contextMessages.length > 0) {
-        const aiBtn = document.getElementById('triggerAiReply');
-        if (aiBtn) {
-            aiBtn.classList.add('processing');
-            aiBtn.classList.remove('fa-star');
-            aiBtn.classList.add('fa-stop-circle');
-            aiBtn.style.color = '#ff4444';
-        }
-        sendMessageToAI(contextMessages.join('\n')).finally(() => {
-            if (aiBtn) {
-                aiBtn.classList.remove('processing');
-                aiBtn.classList.remove('fa-stop-circle');
-                aiBtn.classList.add('fa-star');
-                aiBtn.style.color = '';
-            }
-        });
-    }
 }
 /* =========================================
    [重构] 语音交互逻辑 (弹窗控制与气泡渲染)

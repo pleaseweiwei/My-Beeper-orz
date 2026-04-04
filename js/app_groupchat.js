@@ -590,7 +590,7 @@ window.sendGroupMessageToAI = async function (userMessage) {
         const myName = group.myNickname || (me ? me.name : '我') || '用户';
         
         let presetPrompt = '';
-        if (currentSystemPresetId && systemPresets[currentSystemPresetId]) {
+        if (typeof currentSystemPresetId !== 'undefined' && currentSystemPresetId && typeof systemPresets !== 'undefined' && systemPresets[currentSystemPresetId]) {
             const preset = systemPresets[currentSystemPresetId];
             presetPrompt = `[系统预设 (遵循)]\n${preset.systemPrompt || ''}\n`;
             if (preset.jailbreakPrompt) {
