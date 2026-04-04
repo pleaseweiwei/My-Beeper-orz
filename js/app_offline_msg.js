@@ -253,6 +253,7 @@ window.generateOfflineMsgsForFriend = async function(friendId, forceGenerate) {
 
         // ── 7. 最近聊天记录（上下文） ──────────────────────────────
         const memoryLimit = parseInt(settings.memoryLimit || 20);
+        const limit = parseInt(offlineConfig.maxLength) || 200;
         let historyContext = '（暂无历史记录）';
         if (typeof loadChatHistory === 'function') {
             const allHistory = (await loadChatHistory(friendId)) || [];
@@ -298,6 +299,7 @@ ${historyContext}
 【生成要求】：
 1. 直接输出消息内容，每条独立一行，条与条空一行。
 2. 不加序号、引号、前缀，不生成用户回复。
+3. 请控制每条消息的字数在 ${limit} 字以内。
 3. 严格遵循人设。拒绝OOC，保持角色的独立生活感。
 4. 必须符合微信聊天习惯：严禁长篇大论，把想说的话拆分成一小段一小段的短消息发送。
 5. 恰好生成 ${msgCount} 条消息，话题自然且避免重复。`;

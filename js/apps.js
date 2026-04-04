@@ -264,7 +264,12 @@ function parseAndApplyMindStateBlock(friendId, statusBlock) {
     ensureFriendMindFields(friend, friendId);
 
     const getVal = (key) => {
-        const reg = new RegExp(`${key}[:：]\\s*(.*)`, 'i');
+        // 支持多行捕获：抓取当前字段直到下一个字段名或块结尾
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const reg = new RegExp(
+            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n[A-Za-z]+[:：]|$)`,
+            'i'
+        );
         const m = statusBlock.match(reg);
         return m ? m[1].trim() : '';
     };
@@ -1745,7 +1750,7 @@ function getEffectiveGreeting(friend) {
     
     const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
     const charName = friend.realName || '助手';
-    return raw.replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
+    return String(raw).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
 }
 
 
@@ -2391,7 +2396,7 @@ AI 原始输出示例 2：[表情:嫌弃]
         
         const parseMacros = (str) => {
             if (!str) return '';
-            return str.replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
+            return String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
         };
 
         const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
@@ -8289,7 +8294,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
     const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
     const parseMacros = (str) => {
         if (!str) return '';
-        return str.replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
+        return String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
     };
 
 let systemPrompt = `你是${charName}，正在与用户面对面相处，地点：${currentLocation}。
@@ -8301,7 +8306,8 @@ ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) 
 ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingStyle}` : ''}
 
 ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。\n【重要】：你就是角色。\n格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。'}
-你的正文回复必须控制在 ${limit} 字左右。`;
+
+【字数要求】：你的正文回复总字数必须控制在 ${limit} 字左右。`;
 
     // === 注入剧情总结 ===
     if (friend.summaries && friend.summaries.length > 0) {
@@ -8462,7 +8468,7 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
             });
 
             // 【修复】渲染选项分支
-            const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
+            const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId;
             if (isLookingOfflineNow && isOfflineOptionsOn && extractedOptions.length > 0) {
                 const container = document.getElementById('offline-log-container');
                 const optDiv = document.createElement('div');
@@ -8477,8 +8483,7 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
                 });
                 const dmArea = container.querySelector('.offline-danmaku-area');
                 if (dmArea) {
-                    if (dmArea.nextSibling) container.insertBefore(optDiv, dmArea.nextSibling);
-                    else container.appendChild(optDiv);
+                    container.insertBefore(optDiv, dmArea);
                 } else {
                     container.appendChild(optDiv);
                 }
@@ -8630,15 +8635,13 @@ if (!rawReply.trim()) {
                     btn.onclick = () => selectOfflineOption(opt);
                     optDiv.appendChild(btn);
                 });
-              const dmArea = container.querySelector('.offline-danmaku-area');
-if (dmArea) {
-    if (dmArea.nextSibling) container.insertBefore(optDiv, dmArea.nextSibling);
-    else container.appendChild(optDiv);
-} else {
-    container.appendChild(optDiv);
-}
-
-                
+                const dmArea = container.querySelector('.offline-danmaku-area');
+                if (dmArea) {
+                    container.insertBefore(optDiv, dmArea);
+                } else {
+                    container.appendChild(optDiv);
+                }
+                setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
 
             // 后台静默生成状态和选项等，不阻塞主流程
@@ -11608,9 +11611,9 @@ Affection: （0-100，当前对用户的好感度，如果互动良好可增加�
 User: ${userInput}
 ${friend.realName}: ${aiReply}
 
-请基于以上最新互动，严格按照以下格式补充状态信息：
+请基于以上最新互动，严格按照以下格式补充信息：
 ${requests.join('\n')}
-注意：只输出格式要求的内容，不要有多余解释。`;
+注意：请严格直接输出上述格式块，不要输出任何多余的解释、问候或 markdown 代码块标记。`;
 
     try {
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
@@ -11619,11 +11622,10 @@ ${requests.join('\n')}
         const payload = {
             model: settings.model,
             messages: [
-                { role: "system", content: sysPrompt },
-                { role: "user", content: "请补充状态信息。" }
+                { role: "user", content: sysPrompt }
             ],
             temperature: 0.8,
-            max_tokens: 600
+            max_tokens: 1500
         };
 
         const response = await fetch(apiUrl, {
@@ -11632,10 +11634,16 @@ ${requests.join('\n')}
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.error("Background extras API failed:", response.status, await response.text());
+            return;
+        }
 
         const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || '';
+        let content = data.choices?.[0]?.message?.content || '';
+        
+        // 去除可能的 markdown 代码块包裹
+        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
 
         // 1. 解析 STATUS
         const statusRegStr = '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
@@ -11651,7 +11659,7 @@ ${requests.join('\n')}
             const optMatch = content.match(optRegex);
             if (optMatch) {
                 const extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
-                const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === chatId && currentChatType === 'single';
+                const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === chatId;
                 if (isLookingOfflineNow && extractedOptions.length > 0) {
                     const container = document.getElementById('offline-log-container');
                     let optDiv = document.getElementById('vn-options-box');
@@ -11661,8 +11669,7 @@ ${requests.join('\n')}
                         optDiv.className = 'vn-options-container';
                         const dmArea = container.querySelector('.offline-danmaku-area');
                         if (dmArea) {
-                            if (dmArea.nextSibling) container.insertBefore(optDiv, dmArea.nextSibling);
-                            else container.appendChild(optDiv);
+                            container.insertBefore(optDiv, dmArea);
                         } else {
                             container.appendChild(optDiv);
                         }
