@@ -197,7 +197,12 @@ function applyMindMarqueeIfOverflow() {
 
 function updateAffectionUI(score) {
     const text = document.getElementById('affection-percent-text');
-    if (text) text.innerText = score !== undefined && score !== null ? String(score) : '???';
+    if (text) text.innerText = score !== undefined && score !== null ? String(score) + '%' : '???';
+    
+    const fill = document.getElementById('affection-fill');
+    if (fill && score !== undefined && score !== null) {
+        fill.style.width = Math.min(100, Math.max(0, parseInt(score))) + '%';
+    }
 }
 
 function syncMindBgmToPlayer(bgmText) {
@@ -266,7 +271,10 @@ function parseAndApplyMindStateBlock(friendId, statusBlock) {
 
     const affectionVal = getVal('Affection');
     if (affectionVal) {
-        friend.affection = affectionVal;
+        const match = affectionVal.match(/\d+/);
+        if (match) {
+            friend.affection = parseInt(match[0]);
+        }
     }
 
     friend.mindState.action = getVal('Action') || friend.mindState.action;
@@ -2389,6 +2397,7 @@ AI 原始输出示例 2：[表情:嫌弃]
         【角色人设】
         名字：${f.realName || '助手'}
         人设描述：${f.persona || '乐于助人的助手'}
+        当前对用户的好感度：${currentAffection}/100 （请根据本次对话内容，决定好感度是上升还是下降，并在STATUS块中更新输出最新值）
 
         ${f.worldbook ? `【世界观设定】：${f.worldbook}` : ''}
 
@@ -2470,6 +2479,7 @@ Weather: (current weather)
 BGM: (one fitting bgm title, format: Title - Artist/Style)
 Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
 Kaomoji: (one matching kaomoji)
+Affection: (0-100, current affection level towards user)
 [STATUS_END]
 Rules:
 - Do not explain the status block
@@ -2485,6 +2495,7 @@ Weather: 小雨
 BGM: cardigan - Taylor Swift
 Murmur: 他今天倒是来得比我想象中早一点。我本来还想装作无所谓，结果还是第一时间去看消息了。真烦，明明不该这么在意的。可我就是忍不住。
 Kaomoji: ( ｡•̀ᴗ-)✧
+Affection: 65
 [STATUS_END]
 `;
 
@@ -2928,6 +2939,14 @@ if (statusMatch) {
     friendsData[targetChatId].mindState.bgm = readStatusValue('BGM') || friendsData[targetChatId].mindState.bgm || 'No BGM';
     friendsData[targetChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[targetChatId].mindState.murmur || '...';
     friendsData[targetChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[targetChatId].mindState.kaomoji || '( ˙W˙ )';
+
+    const extractedAff = readStatusValue('Affection');
+    if (extractedAff) {
+        const match = extractedAff.match(/\d+/);
+        if (match) {
+            friendsData[targetChatId].affection = parseInt(match[0]);
+        }
+    }
 
     saveFriendsData();
 
@@ -8255,6 +8274,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
 
 let systemPrompt = `你是${friend.realName}，正在与用户面对面相处，地点：${currentLocation}。
 ${friend.persona}
+当前对用户的好感度：${Number(friend.affection || 0)}/100 （请根据剧情发展和用户行为，合理增减好感度，并在STATUS块中输出更新后的值）
 ${worldbookContent ? `\n【世界观 / 背景设定】：\n${worldbookContent}` : ''}
 ${preset.jailbreak || ''}
 ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n【用户身份】：${me.persona}` : ''; })()}
@@ -8274,6 +8294,7 @@ Weather: （天气）
 BGM: （歌名 - 歌手）
 Murmur: （3-4句表层心声，符合人设）
 Kaomoji: （颜文字）
+Affection: （0-100，当前对用户的好感度）
 [STATUS_END]`;
     // 弹幕 OFF 时：不要求生成弹幕块；弹幕 ON 时：才要求生成
 if (isDanmakuOn) {
