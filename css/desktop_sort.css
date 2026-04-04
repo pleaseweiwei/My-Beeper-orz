@@ -38,7 +38,7 @@
     grid-template-rows: repeat(7, 75px) !important; /* 同步改为 7 行 */
     gap: 8px 10px !important; /* 同步减小网格间隙 */
     
-    padding: calc(env(safe-area-inset-top) + 65px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px !important;
+    padding: calc(env(safe-area-inset-top) + 35px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px !important;
     
     width: 100%;
     max-width: 100%;

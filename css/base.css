@@ -127,9 +127,9 @@ body {
 /* 第一页音乐组件：网格依然占两行，但视觉上改窄并垂直居中 */
 .page > .music-widget.sortable-item {
     height: 125px !important; /* 降低高度使其变窄 */
-    margin: auto !important; /* 在两行的网格空间内居中 */
+    margin: -10px auto auto auto !important; /* 在两行的网格空间内偏上对齐，再往上一点 */
     transform: scale(0.98);
-    transform-origin: center center;
+    transform-origin: center top; /* 修改变换原点 */
 }
 
 /* 第三页韩系组件：网格升为占四行，但保持原来三行(255px)的大小并垂直居中 */
@@ -177,12 +177,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 25px; /* 增加固定间距，使其不那么拥挤 */
+    gap: 15px; /* 减少间距，使头像和名字离时间更近 */
 }
 
 .time-block {
     font-family: 'Playfair Display', serif;
-    font-size: calc(90px * var(--font-scale)); /* 调小一点时间字体 */
+    font-size: calc(75px * var(--font-scale)); /* 调小时间字体，避免撑出屏幕 */
     line-height: 1;
     color: var(--theme-text-color); /* 应用变量 */
     letter-spacing: -3px;
