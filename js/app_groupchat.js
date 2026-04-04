@@ -617,13 +617,13 @@ window.sendGroupMessageToAI = async function (userMessage) {
             if (isMuted) tags.push('已被禁言，禁止让他发言');
             else if (!dispatchedMemberIds.includes(memberId)) tags.push('当前潜水中，尽量不发言');
             
-            const tagStr = tags.length > 0 ? ` [${tags.join(' | ')}]` : '';
-            
-            const shard = dispatchedMemberIds.includes(memberId) ? await getShardedMemoryForMember(memberId, targetGroupId) : null;
-            const shardNote = shard ? `\n  [私人记忆]: ${shard}` : '';
-            
-            membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || '普通的群成员'}${shardNote}\n`;
-        }
+        const tagStr = tags.length > 0 ? ` [${tags.join(' | ')}]` : '';
+        
+        const shard = dispatchedMemberIds.includes(memberId) ? await getShardedMemoryForMember(memberId, targetGroupId) : null;
+        const shardNote = shard ? `\n  [私人记忆]: ${shard}` : '';
+        
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${parseMacros(mem.persona || '普通的群成员', mem.realName || '助手')}${shardNote}\n`;
+    }
 
         // 长期记忆（对话总结）
         const longTermMemoryStr = group.longTermSummary ? `\n[长期记忆摘要]\n${group.longTermSummary}` : '';
@@ -3448,10 +3448,27 @@ async function sendGroupOfflineMessage(isRegen = false) {
     const perCharLen = Math.max(60, Math.round(maxLen / Math.max(dispatched.length, 1)));
 
     // ── 选项指令 ──
-    const optionsInstr = ''; // 群聊暂不生成主流程选项，移入后台
+    const optionsInstr = (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn)
+        ? `\n[选项分支指令（强烈要求）]
+你必须在回复的最末尾（JSON 数组之外，或如果无法放在外面，则作为一个特殊消息对象，或者直接包含在回复文本末尾，但为了格式兼容，请严格按照以下格式附加在全部 JSON 文本之后），提供 2-3 个供用户选择的行动选项。
+格式必须严格为：
+[OPTIONS_START]
+1. 选项一
+2. 选项二
+[OPTIONS_END]`
+        : '';
 
     // ── 弹幕指令 ──
-    const danmakuInstr = ''; // 群聊暂不生成主流程弹幕，移入后台
+    const danmakuInstr = (typeof isDanmakuOn !== 'undefined' && isDanmakuOn)
+        ? `\n[实时弹幕指令（强烈要求）]
+你必须在回复的末尾（紧接在 JSON 之后，或在 OPTIONS_START 之前），提供 3-5 条旁观者视角的"实时弹幕"（即网络观众的吐槽）。
+格式必须严格为：
+[DANMAKU_START]
+弹幕内容一
+弹幕内容二
+弹幕内容三
+[DANMAKU_END]`
+        : '';
 
     // ── 群公告 ──
     const announcementStr = group.announcement ? `\n[群公告（最高优先级，所有人必须遵守）]: ${group.announcement}` : '';
@@ -3565,9 +3582,6 @@ ${optionsInstr}
             return;
         }
 
-        // ── 清理 Markdown ──
-        rawReply = rawReply.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-
         // ── 提取选项分支 ──
         let extractedOptions = [];
         const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
@@ -3588,6 +3602,9 @@ ${optionsInstr}
             }
             rawReply = rawReply.replace(danmakuRegex, '').trim();
         }
+
+        // ── 清理 Markdown ──
+        rawReply = rawReply.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
 
         // ── 解析 JSON ──
         let messages = [];

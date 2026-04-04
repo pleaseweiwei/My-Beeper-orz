@@ -1731,16 +1731,21 @@ function getEffectiveGreeting(friend) {
     if (!friend) return '';
     const mode = friend.greetingMode || ((friend.greetingList && friend.greetingList.length) ? 'tavern' : (friend.tavernGreeting ? 'tavern' : 'custom'));
 
+    let raw = '';
     if (mode === 'none') return '';
 
     if (mode === 'tavern') {
         const list = Array.isArray(friend.greetingList) ? friend.greetingList : [];
         const idx = Number.isInteger(friend.greetingSelected) ? friend.greetingSelected : 0;
         const pick = list[idx] || list[0] || friend.tavernGreeting || '';
-        return String(pick).trim();
+        raw = String(pick).trim();
+    } else {
+        raw = (friend.greetingCustom || friend.greeting || '').trim();
     }
-
-    return (friend.greetingCustom || friend.greeting || '').trim();
+    
+    const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
+    const charName = friend.realName || '助手';
+    return raw.replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
 }
 
 
@@ -2381,6 +2386,14 @@ AI 原始输出示例 2：[表情:嫌弃]
          // ------ 单聊逻辑 (Single Chat Logic) ------
         const currentAffection = Number(f.affection || 0);
         
+        const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
+        const charName = f.realName || '助手';
+        
+        const parseMacros = (str) => {
+            if (!str) return '';
+            return str.replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
+        };
+
         const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
         const _promptReplyMax = Math.max(_promptReplyMin, parseInt(chatSettings.replyMax) || 5);
         let replyInstruction = "";
@@ -2395,11 +2408,11 @@ AI 原始输出示例 2：[表情:嫌弃]
         角色定义：你是一个真实的人，正在通过聊天软件和我进行对话。
 
         【角色人设】
-        名字：${f.realName || '助手'}
-        人设描述：${f.persona || '乐于助人的助手'}
+        名字：${charName}
+        人设描述：${parseMacros(f.persona || '乐于助人的助手')}
         当前对用户的好感度：${currentAffection}/100 （请根据本次对话内容，决定好感度是上升还是下降，并在STATUS块中更新输出最新值）
 
-        ${f.worldbook ? `【世界观设定】：${f.worldbook}` : ''}
+        ${f.worldbook ? `【世界观设定】：${parseMacros(f.worldbook)}` : ''}
 
         ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `【用户身份——正在和你聊天的人】：\n        ${me.persona}` : ''; })()}
 
@@ -8272,15 +8285,22 @@ window.sendOfflineMessage = async function(isRegen = false) {
         }
     } catch (e) { /* 静默 */ }
 
-let systemPrompt = `你是${friend.realName}，正在与用户面对面相处，地点：${currentLocation}。
-${friend.persona}
+    const charName = friend.realName || '助手';
+    const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
+    const parseMacros = (str) => {
+        if (!str) return '';
+        return str.replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
+    };
+
+let systemPrompt = `你是${charName}，正在与用户面对面相处，地点：${currentLocation}。
+${parseMacros(friend.persona)}
 当前对用户的好感度：${Number(friend.affection || 0)}/100
-${worldbookContent ? `\n【世界观 / 背景设定】：\n${worldbookContent}` : ''}
-${preset.jailbreak || ''}
-${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n【用户身份】：${me.persona}` : ''; })()}
+${worldbookContent ? `\n【世界观 / 背景设定】：\n${parseMacros(worldbookContent)}` : ''}
+${parseMacros(preset.jailbreak || '')}
+${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n【用户身份】：${parseMacros(me.persona)}` : ''; })()}
 ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingStyle}` : ''}
 
-${preset.systemPrompt || '以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。\n【重要】：你就是角色。\n格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。'}
+${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。\n【重要】：你就是角色。\n格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。'}
 你的正文回复必须控制在 ${limit} 字左右。`;
 
     // === 注入剧情总结 ===
@@ -11599,7 +11619,8 @@ ${requests.join('\n')}
         const payload = {
             model: settings.model,
             messages: [
-                { role: "system", content: sysPrompt }
+                { role: "system", content: sysPrompt },
+                { role: "user", content: "请补充状态信息。" }
             ],
             temperature: 0.8,
             max_tokens: 600
