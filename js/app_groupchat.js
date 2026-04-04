@@ -588,7 +588,17 @@ window.sendGroupMessageToAI = async function (userMessage) {
         // 获取我的人设
         const me = personasMeta[currentPersonaId];
         const myName = group.myNickname || (me ? me.name : '我') || '用户';
-        const myPersonaStr = `[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
+        
+        let presetPrompt = '';
+        if (currentSystemPresetId && systemPresets[currentSystemPresetId]) {
+            const preset = systemPresets[currentSystemPresetId];
+            presetPrompt = `[系统预设 (遵循)]\n${preset.systemPrompt || ''}\n`;
+            if (preset.jailbreakPrompt) {
+                presetPrompt += `[强制指令]\n${preset.jailbreakPrompt}\n`;
+            }
+        }
+        
+        const myPersonaStr = `${presetPrompt}[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
 
         // 主要发言角色人设（包含禁言标签）
         let membersInfo = '';
@@ -3021,7 +3031,23 @@ window.confirmAiGenerateMembers = async function () {
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
         const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
+        let existingMembersInfo = '';
+        if (group.members && group.members.length > 0) {
+            existingMembersInfo = '\n[当前群聊已有成员人设]:\n';
+            for (const memberId of group.members) {
+                const mem = friendsData[memberId];
+                if (mem) {
+                    existingMembersInfo += `- ${mem.remark || mem.realName}: ${mem.persona || '无'}\n`;
+                }
+            }
+        }
+        const worldInfoText = (typeof constructWorldInfoPrompt === 'function')
+            ? constructWorldInfoPrompt('', groupId)
+            : '';
+
         const systemPrompt = `请生成 ${count} 个群聊成员，场景：${promptText}。
+${worldInfoText ? `\n[世界观设定]:\n${worldInfoText}\n` : ''}${existingMembersInfo}
+请根据上述世界观和已有成员的人设，生成符合设定和群体氛围的新成员。
 每个成员输出JSON格式：{"name":"名字","persona":"性格与背景（50字以内）","avatar":"（留空）"}
 只输出JSON数组，无多余文字。`;
 
@@ -3339,7 +3365,17 @@ async function sendGroupOfflineMessage(isRegen = false) {
     // ── 用户人设 ──
     const me = personasMeta[currentPersonaId];
     const myName = group.myNickname || (me ? me.name : '我') || '用户';
-    const myPersonaStr = `[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
+    
+    let presetPrompt = '';
+    if (typeof currentSystemPresetId !== 'undefined' && currentSystemPresetId && typeof systemPresets !== 'undefined' && systemPresets[currentSystemPresetId]) {
+        const preset = systemPresets[currentSystemPresetId];
+        presetPrompt = `[系统预设 (遵循)]\n${preset.systemPrompt || ''}\n`;
+        if (preset.jailbreakPrompt) {
+            presetPrompt += `[强制指令]\n${preset.jailbreakPrompt}\n`;
+        }
+    }
+    
+    const myPersonaStr = `${presetPrompt}[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
 
     // ── 构建成员人设 ──
     const allMemberIds = group.members || [];
@@ -3412,14 +3448,10 @@ async function sendGroupOfflineMessage(isRegen = false) {
     const perCharLen = Math.max(60, Math.round(maxLen / Math.max(dispatched.length, 1)));
 
     // ── 选项指令 ──
-    const optionsInstr = (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn)
-        ? `\n[OPTIONS_INSTRUCTION]\n在全部叙事结束后，生成3个用户可执行的动作选项（从用户视角写）：\n[OPTIONS_START]\n1. (选项1)\n2. (选项2)\n3. (选项3)\n[OPTIONS_END]`
-        : '';
+    const optionsInstr = ''; // 群聊暂不生成主流程选项，移入后台
 
     // ── 弹幕指令 ──
-    const danmakuInstr = (typeof isDanmakuOn !== 'undefined' && isDanmakuOn)
-        ? `\n[DANMAKU_START]\n生成5-8条简体中文网友弹幕，评论这场多人线下互动（禁止辱女或歧视类词汇）\n[DANMAKU_END]`
-        : '';
+    const danmakuInstr = ''; // 群聊暂不生成主流程弹幕，移入后台
 
     // ── 群公告 ──
     const announcementStr = group.announcement ? `\n[群公告（最高优先级，所有人必须遵守）]: ${group.announcement}` : '';
@@ -3647,6 +3679,11 @@ ${optionsInstr}
             if (dmAreaFinal) container.insertBefore(optDiv, dmAreaFinal);
             else container.appendChild(optDiv);
             setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+        }
+        
+        // --- 后台生成状态等 ---
+        if (typeof generateOfflineExtrasBackground === 'function') {
+            generateOfflineExtrasBackground(targetGroupId, userText, rawReply, settings, friendsData[(group.members||[])[0]] || {realName:group.name, persona:''});
         }
 
     } catch (e) {

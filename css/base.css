@@ -182,7 +182,7 @@ body {
 
 .time-block {
     font-family: 'Playfair Display', serif;
-    font-size: calc(75px * var(--font-scale)); /* 调小时间字体，避免撑出屏幕 */
+    font-size: calc(90px * var(--font-scale)); /* 调大时间字体，使其更显眼 */
     line-height: 1;
     color: var(--theme-text-color); /* 应用变量 */
     letter-spacing: -3px;

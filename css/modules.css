@@ -7591,3 +7591,23 @@ img.msg-sticker-img {
   border:1px solid #ffd3d3;
   box-shadow: 0 4px 15px rgba(255,77,79,0.12);
 }
+
+/* =========================================
+   [修复] 聊天气泡主题色 (Bubble Themes)
+   ========================================= */
+
+/* 粉蓝 (pink-blue) */
+.bubble-theme-pink-blue .message-bubble.received:not(.rich-bubble) { background: linear-gradient(135deg,#fce4ec,#e3f2fd) !important; color: #333 !important; border: none !important; }
+.bubble-theme-pink-blue .message-bubble.sent:not(.rich-bubble) { background: linear-gradient(135deg,#e3f2fd,#fce4ec) !important; color: #333 !important; border: none !important; }
+
+/* 黑白 (dark) */
+.bubble-theme-dark .message-bubble.received:not(.rich-bubble) { background: #333 !important; color: #fff !important; border: none !important; }
+.bubble-theme-dark .message-bubble.sent:not(.rich-bubble) { background: #111 !important; color: #fff !important; border: none !important; }
+
+/* 绿黑 (green-black) */
+.bubble-theme-green-black .message-bubble.received:not(.rich-bubble) { background: linear-gradient(135deg,#e8f5e9,#c8e6c9) !important; color: #1b5e20 !important; border: none !important; }
+.bubble-theme-green-black .message-bubble.sent:not(.rich-bubble) { background: linear-gradient(135deg,#212121,#111) !important; color: #4caf50 !important; border: none !important; }
+
+/* 紫梦 (purple) */
+.bubble-theme-purple .message-bubble.received:not(.rich-bubble) { background: linear-gradient(135deg,#f3e5f5,#ede7f6) !important; color: #4a148c !important; border: none !important; }
+.bubble-theme-purple .message-bubble.sent:not(.rich-bubble) { background: linear-gradient(135deg,#ede7f6,#d1c4e9) !important; color: #311b92 !important; border: none !important; }

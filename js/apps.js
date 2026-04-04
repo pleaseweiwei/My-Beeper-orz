@@ -8274,38 +8274,15 @@ window.sendOfflineMessage = async function(isRegen = false) {
 
 let systemPrompt = `你是${friend.realName}，正在与用户面对面相处，地点：${currentLocation}。
 ${friend.persona}
-当前对用户的好感度：${Number(friend.affection || 0)}/100 （请根据剧情发展和用户行为，合理增减好感度，并在STATUS块中输出更新后的值）
+当前对用户的好感度：${Number(friend.affection || 0)}/100
 ${worldbookContent ? `\n【世界观 / 背景设定】：\n${worldbookContent}` : ''}
 ${preset.jailbreak || ''}
 ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n【用户身份】：${me.persona}` : ''; })()}
 ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingStyle}` : ''}
 
-以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。
-【重要】：严格基于【角色人设】进行推演。绝不可擅自OOC加戏。
-你的回复【必须】是一个完整的、连贯的叙事长句，减少零散的短句。
-格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。
-你的正文回复必须控制在 ${limit} 字左右。
+${preset.systemPrompt || '以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。\n【重要】：你就是角色。\n格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。'}
+你的正文回复必须控制在 ${limit} 字左右。`;
 
-回复末尾附状态块：
-[STATUS_START]
-Action: （当前动作）
-Location: （地点）
-Weather: （天气）
-BGM: （歌名 - 歌手）
-Murmur: （3-4句表层心声，符合人设）
-Kaomoji: （颜文字）
-Affection: （0-100，当前对用户的好感度）
-[STATUS_END]`;
-    // 弹幕 OFF 时：不要求生成弹幕块；弹幕 ON 时：才要求生成
-if (isDanmakuOn) {
-    systemPrompt += `
-[DANMAKU_START]
-（生成5-8条搞笑的简体中文网友评论。不得出现厌女或侮辱性内容。）
-[DANMAKU_END]
-`;
-}
-
-    
     // === 注入剧情总结 ===
     if (friend.summaries && friend.summaries.length > 0) {
         const summaryText = friend.summaries.map((s, i) => `- (第${i+1}阶段) ${s.text}`).join('\n');
@@ -8322,26 +8299,21 @@ if (isDanmakuOn) {
         systemPrompt += `\n\n[World Setting / Lorebook Data]:\n${offlineWorldInfo}\n`;
     }
 
-    // 【修复】根据开关状态决定是否添加选项指令
-    if (isOfflineOptionsOn) {
-        systemPrompt += `
-        [选项指令]
-        由于用户已开启"选项分支"功能，你【必须】生成3个用户接下来可以执行的不同行动。
-        请从用户的视角来写这些行动选项。
-        格式：
-        [OPTIONS_START]
-        1. （行动1）
-        2. （行动2）
-        3. （行动3）
-        [OPTIONS_END]
-        `;
-    }
+    const recentHistory = history.slice(-memoryLimit);
+    let chatMessagesArr = [];
+    recentHistory.forEach(h => {
+        chatMessagesArr.push({
+            role: h.type === 'sent' ? 'user' : 'assistant',
+            content: h.isOffline ? h.text : `(Online Memory: ${h.text})`
+        });
+    });
+    chatMessagesArr.push({ role: "user", content: text });
 
     const payload = { 
         model: settings.model, 
         messages: [ 
             { role: "system", content: systemPrompt },
-            { role: "user", content: `[History]:\n${historyContext}\n\n[User Input]: ${text}` }
+            ...chatMessagesArr
         ], 
         temperature: parseFloat(settings.temperature || 0.8),
         max_tokens: Math.max(Math.ceil(limit * 2.5) + 700, 700)
@@ -8494,6 +8466,9 @@ if (isDanmakuOn) {
                 // 【修复】选项出现后自动滚动到底部，确保能看到
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
+            
+            // 后台静默生成状态和选项等，不阻塞主流程
+            generateOfflineExtrasBackground(targetChatId, text, cleanReply, settings, friend);
 
        } catch (e) {
     if (e.name === 'AbortError') {
@@ -8645,6 +8620,9 @@ if (dmArea) {
 
                 
             }
+
+            // 后台静默生成状态和选项等，不阻塞主流程
+            generateOfflineExtrasBackground(targetChatId, text, rawReply, settings, friend);
 
         } catch (e) {
     if (e.name === 'AbortError') {
@@ -11572,3 +11550,130 @@ Return ONLY the formatted blocks. Do not explain yourself.`;
         }
     }
 }, 60000); // 每分钟检查一次
+
+// === [新增] 线下模式后台静默生成系统 ===
+async function generateOfflineExtrasBackground(chatId, userInput, aiReply, settings, friend) {
+    let requests = [];
+    
+    // Status 永远需要
+    requests.push(`[STATUS_START]
+Action: （当前${friend.realName}的动作）
+Location: （地点）
+Weather: （天气）
+BGM: （歌名 - 歌手）
+Murmur: （3-4句表层心声，符合人设）
+Kaomoji: （颜文字）
+Affection: （0-100，当前对用户的好感度，如果互动良好可增加，反之减少）
+[STATUS_END]`);
+
+    if (isDanmakuOn) {
+        requests.push(`[DANMAKU_START]
+（生成5-8条搞笑的简体中文网友评论。不得出现厌女或侮辱性内容。）
+[DANMAKU_END]`);
+    }
+
+    if (isOfflineOptionsOn) {
+        requests.push(`[OPTIONS_START]
+1. （用户可以执行的行动1）
+2. （行动2）
+3. （行动3）
+[OPTIONS_END]`);
+    }
+
+    const sysPrompt = `你是一个辅助分析系统，正在支持一个角色扮演游戏。
+当前角色：${friend.realName}
+角色人设：${friend.persona}
+
+【最新对话互动】
+User: ${userInput}
+${friend.realName}: ${aiReply}
+
+请基于以上最新互动，严格按照以下格式补充状态信息：
+${requests.join('\n')}
+注意：只输出格式要求的内容，不要有多余解释。`;
+
+    try {
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+        
+        const payload = {
+            model: settings.model,
+            messages: [
+                { role: "system", content: sysPrompt }
+            ],
+            temperature: 0.8,
+            max_tokens: 600
+        };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || '';
+
+        // 1. 解析 STATUS
+        const statusRegStr = '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
+        const statusRegex = new RegExp(statusRegStr, 'i');
+        const statusMatch = content.match(statusRegex);
+        if (statusMatch) {
+            updateMindStateFromText(statusMatch[1], chatId); 
+        }
+
+        // 2. 解析 OPTIONS
+        if (isOfflineOptionsOn) {
+            const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
+            const optMatch = content.match(optRegex);
+            if (optMatch) {
+                const extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
+                const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === chatId && currentChatType === 'single';
+                if (isLookingOfflineNow && extractedOptions.length > 0) {
+                    const container = document.getElementById('offline-log-container');
+                    let optDiv = document.getElementById('vn-options-box');
+                    if (!optDiv) {
+                        optDiv = document.createElement('div');
+                        optDiv.id = 'vn-options-box';
+                        optDiv.className = 'vn-options-container';
+                        const dmArea = container.querySelector('.offline-danmaku-area');
+                        if (dmArea) {
+                            if (dmArea.nextSibling) container.insertBefore(optDiv, dmArea.nextSibling);
+                            else container.appendChild(optDiv);
+                        } else {
+                            container.appendChild(optDiv);
+                        }
+                    } else {
+                        optDiv.innerHTML = '';
+                    }
+                    extractedOptions.forEach(opt => {
+                        const btn = document.createElement('div');
+                        btn.className = 'vn-option-btn';
+                        btn.innerText = opt;
+                        btn.onclick = () => selectOfflineOption(opt);
+                        optDiv.appendChild(btn);
+                    });
+                    setTimeout(() => container.scrollTop = container.scrollHeight, 150);
+                }
+            }
+        }
+
+        // 3. 解析 DANMAKU
+        if (isDanmakuOn) {
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
+            const danmakuMatch = content.match(danmakuRegex);
+            if (danmakuMatch) {
+                const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
+                if (dList.length > 0) {
+                    danmakuPool = dList;
+                    startDanmakuBatch(0);
+                }
+            }
+        }
+
+    } catch (e) {
+        console.error("Background offline extras generation failed:", e);
+    }
+}

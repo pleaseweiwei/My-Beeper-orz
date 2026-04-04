@@ -761,11 +761,10 @@ const NexusApp = (() => {
 
     // Try AI, fallback to local
     let generated = false;
-    const aiCall = window.callAI || window.aiChat;
-    if (typeof aiCall === 'function') {
+    if (typeof window.callAIAPI === 'function') {
       const systemMsg = '你是一个专业的角色扮演角色创造者，擅长创造有深度、有层次的 NPC 角色。';
       Promise.resolve().then(function() {
-        return aiCall(context, '', { system: systemMsg, temperature: 0.9, maxTokens: 600 });
+        return window.callAIAPI(systemMsg, context, null, 600, null, true);
       }).then(function(raw) {
         try {
           const m = (raw || '').match(/\{[\s\S]*\}/);
@@ -1027,20 +1026,24 @@ const NexusApp = (() => {
     if (nodeId) {
       gestureMode = 'node-start';
       dragNodeId = nodeId;
-      const node = nodes.find(function(n) { return n.id === nodeId; });
-      if (node) {
-        dragOffsetX = e.clientX - (panX + node.x * zoom);
-        dragOffsetY = e.clientY - (panY + node.y * zoom);
+      let nodeX = 0, nodeY = 0;
+      if (nodeId === '__me__') {
+        const c = getMeCenter();
+        nodeX = c.x; nodeY = c.y;
+      } else {
+        const node = nodes.find(function(n) { return n.id === nodeId; });
+        if (node) { nodeX = node.x; nodeY = node.y; }
       }
-      if (nodeId !== '__me__') {
-        longPressTimer = setTimeout(function() {
-          if (gestureMode === 'node-start' && !isDragConfirmed) {
-            gestureMode = 'long-press';
-            closeActionMenu();
-            startLinking(nodeId);
-          }
-        }, 650);
-      }
+      dragOffsetX = e.clientX - (panX + nodeX * zoom);
+      dragOffsetY = e.clientY - (panY + nodeY * zoom);
+
+      longPressTimer = setTimeout(function() {
+        if (gestureMode === 'node-start' && !isDragConfirmed) {
+          gestureMode = 'long-press';
+          closeActionMenu();
+          startLinking(nodeId);
+        }
+      }, 650);
     } else {
       gestureMode = 'pan';
       panStartX = e.clientX; panStartY = e.clientY;
@@ -1114,13 +1117,17 @@ const NexusApp = (() => {
       const nodeId = dragNodeId;
       gestureMode = null; dragNodeId = null;
       if (!nodeId) return;
-      if (nodeId === '__me__') {
-        if (linkingSourceId) { cancelLinking(); return; }
-        return;
-      }
-      if (linkingSourceId && linkingSourceId !== nodeId) {
-        setLinkTarget(nodeId);
-      } else if (!linkingSourceId) {
+
+      if (linkingSourceId) {
+        if (linkingSourceId !== nodeId) {
+          setLinkTarget(nodeId);
+        } else {
+          cancelLinking();
+        }
+      } else {
+        if (nodeId === '__me__') {
+          return;
+        }
         if (actionMenuNodeId === nodeId) {
           closeActionMenu();
         } else {
