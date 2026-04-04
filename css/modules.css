@@ -938,6 +938,13 @@ textarea#custom-css-input:focus {
 }
 .thought-bubble.murmur .bubble-label { font-size: 9px; color: #aaa; margin-bottom: 3px; font-weight: 700; }
 
+.thought-bubble.dark-murmur {
+    background: #2b2b2b; color: #f0f0f0; border-bottom-left-radius: 4px; margin-top: 10px;
+    border: 1px solid #111;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.thought-bubble.dark-murmur .dark-label { font-size: 10px; color: #ff4d4f; margin-bottom: 4px; font-weight: 800; letter-spacing: 1px; text-shadow: 0 0 5px rgba(255,77,79,0.3); }
+
 /* 小心思：修改为灰色背景 + 虚线框 */
 .thought-bubble.hidden-thought {
     background: #fcfcfc;      /* <--- 修改：极淡的灰白 */

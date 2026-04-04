@@ -216,6 +216,27 @@ function syncMindBgmToPlayer(bgmText) {
     applyMindMarqueeIfOverflow();
 }
 
+window.saveHomeMusicText = async function() {
+    const homeTitle = document.getElementById('home-music-title');
+    const homeArtist = document.getElementById('home-music-artist');
+    if (!homeTitle || !homeArtist) return;
+
+    const titleText = homeTitle.innerText.trim() || 'No Title';
+    const artistText = homeArtist.innerText.trim() || 'No Artist';
+    const bgmText = titleText + ' - ' + artistText;
+
+    // Use a primary target friend to store the BGM if applicable
+    const targetChatId = typeof currentChatId !== 'undefined' && currentChatId ? currentChatId : (typeof window.primaryChatId !== 'undefined' ? window.primaryChatId : null);
+    
+    if (targetChatId && typeof friendsData !== 'undefined' && friendsData[targetChatId]) {
+        friendsData[targetChatId].mindState = friendsData[targetChatId].mindState || {};
+        friendsData[targetChatId].mindState.bgm = bgmText;
+        if (typeof saveFriendsData === 'function') {
+            await saveFriendsData();
+        }
+    }
+};
+
 function refreshMindCardUI(friendId, useTyping = false) {
     const friend = friendsData[friendId];
     if (!friend) return;
@@ -241,6 +262,8 @@ function refreshMindCardUI(friendId, useTyping = false) {
     const bgmEl = document.getElementById('now-playing-bgm');
     const kaoEl = document.getElementById('mind-kaomoji-display');
     const murEl = document.getElementById('mind-murmur-text');
+    const darkMurContainer = document.getElementById('mind-dark-murmur-container');
+    const darkMurEl = document.getElementById('mind-dark-murmur-text');
 
     if (locEl) locEl.innerText = state.location || "未知地点";
     if (actEl) actEl.innerText = state.action || "正在发呆";
@@ -248,10 +271,22 @@ function refreshMindCardUI(friendId, useTyping = false) {
     if (bgmEl) bgmEl.innerText = state.bgm || "No BGM";
     if (kaoEl) kaoEl.innerText = state.kaomoji || "( ˙W˙ )";
 
-    if (useTyping && typeof typeWriterEffect === 'function') {
-        typeWriterEffect(state.murmur || "...", 'mind-murmur-text', 18);
-    } else {
+        // if (useTyping && typeof typeWriterEffect === 'function') {
+        //     typeWriterEffect(state.murmur || "...", 'mind-murmur-text', 18);
+        //     if (state.hiddenThought && state.hiddenThought.trim() !== '') {
+        //         if (darkMurContainer) darkMurContainer.style.display = 'block';
+        //         typeWriterEffect(state.hiddenThought, 'mind-dark-murmur-text', 18);
+        //     } else {
+        //         if (darkMurContainer) darkMurContainer.style.display = 'none';
+        //     }
+        // } else {
         if (murEl) murEl.innerText = state.murmur || "...";
+        if (state.hiddenThought && state.hiddenThought.trim() !== '') {
+            if (darkMurContainer) darkMurContainer.style.display = 'block';
+            if (darkMurEl) darkMurEl.innerText = state.hiddenThought;
+        } else {
+            if (darkMurContainer) darkMurContainer.style.display = 'none';
+        // }
     }
 
     applyMindMarqueeIfOverflow();
@@ -267,7 +302,7 @@ function parseAndApplyMindStateBlock(friendId, statusBlock) {
         // 支持多行捕获：抓取当前字段直到下一个字段名或块结尾
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const reg = new RegExp(
-            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n[A-Za-z]+[:：]|$)`,
+            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n[A-Za-z]+[:：]|\\n\\[(?:\\/)?STATUS_END\\]|$)`,
             'i'
         );
         const m = statusBlock.match(reg);
@@ -2145,6 +2180,7 @@ window.confirmAddFriend = function() {
         location: "聊天界面",
         weather: "晴",
         murmur: "我刚出现。先看看你会怎么和我说第一句话。也许接下来会变得有意思。",
+        hiddenThought: "（默默评估着你）",
         kaomoji: "( ˙W˙ )",
         bgm: "No BGM"
     },
@@ -2399,6 +2435,27 @@ AI 原始输出示例 2：[表情:嫌弃]
             return String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
         };
 
+        let worldbookContent = '';
+        try {
+            const wbIds = Array.isArray(f.worldbook) ? f.worldbook : (f.worldbook ? [f.worldbook] : []);
+            if (wbIds.length && typeof worldBooks !== 'undefined' && worldBooks.length) {
+                worldbookContent = wbIds.map(id => {
+                    const wb = worldBooks.find(w => w.id === id);
+                    if (!wb) return '';
+                    if (wb.entries && wb.entries.length) {
+                        return wb.entries.filter(e => e.enabled !== false).map(e => e.content || '').filter(Boolean).join('\n');
+                    }
+                    return wb.description || wb.content || wb.title || '';
+                }).filter(Boolean).join('\n\n');
+            } else if (typeof f.worldbook === 'string' && f.worldbook) {
+                worldbookContent = f.worldbook;
+            }
+            if (typeof worldBooks !== 'undefined') {
+                const globalContent = worldBooks.filter(wb => wb.global).flatMap(wb => (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || '')).filter(Boolean).join('\n');
+                if (globalContent) worldbookContent = (worldbookContent ? worldbookContent + '\n\n' : '') + globalContent;
+            }
+        } catch (e) {}
+
         const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
         const _promptReplyMax = Math.max(_promptReplyMin, parseInt(chatSettings.replyMax) || 5);
         let replyInstruction = "";
@@ -2417,7 +2474,7 @@ AI 原始输出示例 2：[表情:嫌弃]
         人设描述：${parseMacros(f.persona || '乐于助人的助手')}
         当前对用户的好感度：${currentAffection}/100 （请根据本次对话内容，决定好感度是上升还是下降，并在STATUS块中更新输出最新值）
 
-        ${f.worldbook ? `【世界观设定】：${parseMacros(f.worldbook)}` : ''}
+        ${worldbookContent ? `【世界观设定】：${parseMacros(worldbookContent)}` : ''}
 
         ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `【用户身份——正在和你聊天的人】：\n        ${me.persona}` : ''; })()}
 
@@ -2496,6 +2553,7 @@ Location: (current location)
 Weather: (current weather)
 BGM: (one fitting bgm title, format: Title - Artist/Style)
 Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
+HiddenThought: (Optional. Only use if the character has dark, secret, or contradictory inner thoughts they would never say out loud. If used, write 1-2 short, impactful sentences. If not applicable, leave blank or omit this line.)
 Kaomoji: (one matching kaomoji)
 Affection: (0-100, current affection level towards user)
 [STATUS_END]
@@ -2512,6 +2570,7 @@ Location: 卧室
 Weather: 小雨
 BGM: cardigan - Taylor Swift
 Murmur: 他今天倒是来得比我想象中早一点。我本来还想装作无所谓，结果还是第一时间去看消息了。真烦，明明不该这么在意的。可我就是忍不住。
+HiddenThought: 把他锁起来，就永远不会离开我了吧。
 Kaomoji: ( ｡•̀ᴗ-)✧
 Affection: 65
 [STATUS_END]
@@ -2930,7 +2989,7 @@ if (!aiReply.trim()) {
                 });
             }
 
-const statusRegex = /\[STATUS_START\]([\s\S]*?)\[STATUS_END\]/i;
+const statusRegex = /\[STATUS_START\]([\s\S]*?)\[(?:\/)?STATUS_END\]/i;
 const statusMatch = rawReply.match(statusRegex);
 if (statusMatch) {
     const statusBlock = statusMatch[1];
@@ -2939,7 +2998,7 @@ if (statusMatch) {
         // 支持多行捕获：抓取当前字段直到下一个字段名或块结尾
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const reg = new RegExp(
-            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n[A-Za-z]+[:：]|\\n\\[STATUS_END\\]|$)`,
+            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n[A-Za-z]+[:：]|\\n\\[(?:\\/)?STATUS_END\\]|$)`,
             'i'
         );
         const m = statusBlock.match(reg);
@@ -2958,6 +3017,7 @@ if (statusMatch) {
     friendsData[targetChatId].mindState.weather = readStatusValue('Weather') || friendsData[targetChatId].mindState.weather || '晴';
     friendsData[targetChatId].mindState.bgm = readStatusValue('BGM') || friendsData[targetChatId].mindState.bgm || 'No BGM';
     friendsData[targetChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[targetChatId].mindState.murmur || '...';
+    friendsData[targetChatId].mindState.hiddenThought = readStatusValue('HiddenThought') || friendsData[targetChatId].mindState.hiddenThought || '';
     friendsData[targetChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[targetChatId].mindState.kaomoji || '( ˙W˙ )';
 
     const extractedAff = readStatusValue('Affection');
@@ -3015,7 +3075,7 @@ if (statusMatch) {
             }
 
             // 2. 提取弹幕 [DANMAKU_START]...[DANMAKU_END]，并从 rawReply 中移除
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[DANMAKU_END\]/i;
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
             const danmakuMatch = rawReply.match(danmakuRegex);
             if (danmakuMatch) {
                 const danmakuText = danmakuMatch[1];
@@ -8322,9 +8382,11 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
         systemPrompt += `\n\n[OUR RELATIONSHIP HISTORY]:\n${relationshipText}\n`;
     }
     // === 注入世界书关键词触发 ===
-    const offlineWorldInfo = constructWorldInfoPrompt(text, targetChatId);
-    if (offlineWorldInfo) {
-        systemPrompt += `\n\n[World Setting / Lorebook Data]:\n${offlineWorldInfo}\n`;
+    if (typeof constructWorldInfoPrompt === 'function') {
+        const offlineWorldInfo = constructWorldInfoPrompt(text, targetChatId);
+        if (offlineWorldInfo) {
+            systemPrompt += `\n\n[World Setting / Lorebook Data]:\n${offlineWorldInfo}\n`;
+        }
     }
 
     const recentHistory = history.slice(-memoryLimit);
@@ -8443,7 +8505,8 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
                 cleanReply = cleanReply.replace(optRegex, '').trim();
             }
 
-            const statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
+            let statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
+            statusRegStr = statusRegStr.replace('\\[STATUS_END\\]', '\\[(?:\\/)?STATUS_END\\]');
             const statusRegex = new RegExp(statusRegStr, 'i');
             const statusMatch = cleanReply.match(statusRegex);
             if (statusMatch) {
@@ -8595,7 +8658,8 @@ if (!rawReply.trim()) {
                 rawReply = rawReply.replace(optRegex, '').trim();
             }
 
-            const statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
+            let statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
+            statusRegStr = statusRegStr.replace('\\[STATUS_END\\]', '\\[(?:\\/)?STATUS_END\\]');
             const statusRegex = new RegExp(statusRegStr, 'i');
             const statusMatch = rawReply.match(statusRegex);
             if (statusMatch) {
@@ -11558,15 +11622,58 @@ Affection: （0-100，当前对用户的好感度，如果互动良好可增加�
 [OPTIONS_END]`);
     }
 
+    // --- 收集世界书全文内容 ---
+    let worldbookContent = '';
+    try {
+        const wbIds = Array.isArray(friend.worldbook)
+            ? friend.worldbook
+            : (friend.worldbook ? [friend.worldbook] : []);
+        if (wbIds.length && typeof worldBooks !== 'undefined' && worldBooks.length) {
+            worldbookContent = wbIds.map(id => {
+                const wb = worldBooks.find(w => w.id === id);
+                if (!wb) return '';
+                if (wb.entries && wb.entries.length) {
+                    return wb.entries
+                        .filter(e => e.enabled !== false)
+                        .map(e => e.content || '')
+                        .filter(Boolean)
+                        .join('\n');
+                }
+                return wb.description || wb.content || wb.title || '';
+            }).filter(Boolean).join('\n\n');
+        } else if (typeof friend.worldbook === 'string' && friend.worldbook) {
+            worldbookContent = friend.worldbook;
+        }
+        // 补充全局世界书
+        if (typeof worldBooks !== 'undefined') {
+            const globalContent = worldBooks
+                .filter(wb => wb.global)
+                .flatMap(wb => (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || ''))
+                .filter(Boolean)
+                .join('\n');
+            if (globalContent) worldbookContent = (worldbookContent ? worldbookContent + '\n\n' : '') + globalContent;
+        }
+    } catch (e) { /* 静默 */ }
+
+    const charName = friend.realName || '助手';
+    const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
+    const parseMacros = (str) => {
+        if (!str) return '';
+        return String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
+    };
+
     const sysPrompt = `你是一个辅助分析系统，正在支持一个角色扮演游戏。
 当前角色：${friend.realName}
-角色人设：${friend.persona}
+角色人设：${parseMacros(friend.persona)}
+${worldbookContent ? `\n【世界观 / 背景设定】：\n${parseMacros(worldbookContent)}` : ''}
+${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n【用户身份】：${parseMacros(me.persona)}` : ''; })()}
+${(typeof constructWorldInfoPrompt === 'function') ? `\n【动态世界书】：\n${constructWorldInfoPrompt(userInput, chatId)}` : ''}
 
 【最新对话互动】
 User: ${userInput}
 ${friend.realName}: ${aiReply}
 
-请基于以上最新互动，严格按照以下格式补充信息：
+请基于以上设定和最新互动，严格按照以下格式补充信息：
 ${requests.join('\n')}
 注意：请严格直接输出上述格式块，不要输出任何多余的解释、问候或 markdown 代码块标记。`;
 
@@ -11598,10 +11705,10 @@ ${requests.join('\n')}
         let content = data.choices?.[0]?.message?.content || '';
         
         // 去除可能的 markdown 代码块包裹
-        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        content = content.replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '').trim();
 
         // 1. 解析 STATUS
-        const statusRegStr = '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
+        const statusRegStr = '\\[STATUS_START\\]([\\s\\S]*?)\\[(?:\\/)?STATUS_END\\]';
         const statusRegex = new RegExp(statusRegStr, 'i');
         const statusMatch = content.match(statusRegex);
         if (statusMatch) {

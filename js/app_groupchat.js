@@ -3835,9 +3835,9 @@ window.refreshGroupMindCardUI = function(groupId, useTyping = false) {
         
         listContainer.insertAdjacentHTML('beforeend', itemHtml);
 
-        if (useTyping && typeof typeWriterEffect === 'function') {
-            typeWriterEffect(murmur, `gm-text-${memberId}`, 18);
-        }
+        // if (useTyping && typeof typeWriterEffect === 'function') {
+        //     typeWriterEffect(murmur, `gm-text-${memberId}`, 18);
+        // }
     });
 };
 

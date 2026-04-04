@@ -65,7 +65,7 @@
     <link rel="stylesheet" href="css/overrides.css">
     <link rel="stylesheet" href="css/desktop_sort.css">
         <!-- 新增：读取 DOCX 需要的库 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js" crossorigin="anonymous"></script>
 
     <!-- [新增] 这里专门用来放你输入的自定义CSS -->
     <style id="dynamic-custom-css"></style>
@@ -304,6 +304,18 @@
 
                 <!-- 时钟 (System -> 时钟) -->
                 <div id="wl-content-system" class="wc-body-container" style="padding: 0 16px;">
+                    <div class="wl-item" onclick="addWidget('k-dday', 'widget-2x2')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
+                                <div class="k-dday-widget widget-2x2" style="margin: 0; height: 100%;">
+                                    <div class="k-dday-title">Anniversary</div>
+                                    <div class="k-dday-days">100</div>
+                                    <div class="k-dday-heart">❤️</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">纪念日倒数 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
                      <div class="wl-item" onclick="addWidget('unified-header', 'widget-4x2')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
@@ -333,6 +345,86 @@
 
                 <!-- 照片 (Aesthetic -> 照片) -->
                 <div id="wl-content-aesthetic" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('k-four-cuts', 'widget-2x4')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 310px;">
+                                <div class="k-four-cuts-widget widget-2x4" style="margin: 0; height: 100%;">
+                                    <div class="fc-photo" style="background-image: url('https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200');"></div>
+                                    <div class="fc-photo" style="background-image: url('https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=200');"></div>
+                                    <div class="fc-photo" style="background-image: url('https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=200');"></div>
+                                    <div class="fc-photo" style="background-image: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=200');"></div>
+                                    <div class="fc-text">Life 4 Cuts</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">人生四格 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×4</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-scrapbook', 'widget-4x3')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 230px;">
+                                <div class="k-scrapbook-widget widget-4x3" style="margin: 0; height: 100%;">
+                                    <div class="sb-title">Memory</div>
+                                    <div class="sb-text">Good times with you. We made it happen!</div>
+                                    <div class="sb-tape"></div>
+                                    <div class="sb-photo" style="background-image: url('https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=300');"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">撕纸手账 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×3</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-keyring', 'widget-2x3')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 230px;">
+                                <div class="k-keyring-widget widget-2x3" style="margin: 0; height: 100%;">
+                                    <div class="kr-ring"></div>
+                                    <div class="kr-hole"></div>
+                                    <div class="kr-img" style="background-image: url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200');"></div>
+                                    <div class="kr-text">Love It!</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">亚克力钥匙扣 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×3</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-journal', 'widget-2x2')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
+                                <div class="k-journal-widget widget-2x2" style="margin: 0; height: 100%;">
+                                    <div class="k-j-img" style="background-image: url('https://images.unsplash.com/photo-1505682614136-0a12f9f7beea?q=80&w=200&auto=format&fit=crop');"></div>
+                                    <div class="k-j-text">"Make it happen."</div>
+                                    <div class="k-j-date">2026.04.05</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">图文日记 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-ticket', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-ticket-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="k-t-img" style="background-image: url('https://images.unsplash.com/photo-1544928147-79a2dbc1f389?q=80&w=200&auto=format&fit=crop');"></div>
+                                    <div class="k-t-info">
+                                        <div class="k-t-header">ADMIT ONE</div>
+                                        <div class="k-t-title">Exhibition</div>
+                                        <div class="k-t-date">Date: 2026.10.24</div>
+                                        <div class="k-t-barcode">||| | || ||| || |</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">入场券 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('k-polaroid', 'widget-2x3')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 230px;">
+                                <div class="k-polaroid-widget widget-2x3" style="margin: 0; height: 100%;">
+                                    <div class="k-tape-top"></div>
+                                    <div class="k-photo-img" style="background-image: url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop');"></div>
+                                    <div class="k-handwriting-text">Smile!</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">韩系拍立得 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×3</span></div>
+                    </div>
                     <div class="wl-item" onclick="addWidget('photo-stack', 'widget-4x3')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 230px;">
@@ -349,6 +441,22 @@
 
                 <!-- 文字 (Text -> 文字) -->
                 <div id="wl-content-text" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('k-todo', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-todo-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="k-todo-tape"></div>
+                                    <div class="k-todo-title">📝 TO-DO LIST</div>
+                                    <div class="k-todo-list">
+                                        <div class="k-todo-item"><div class="k-todo-check checked">✓</div><div class="k-todo-text">Buy some coffee</div></div>
+                                        <div class="k-todo-item"><div class="k-todo-check">✓</div><div class="k-todo-text">Read a book</div></div>
+                                        <div class="k-todo-item"><div class="k-todo-check">✓</div><div class="k-todo-text">Call Mom</div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">碎碎念便签 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
                     <div class="wl-item" onclick="addWidget('collection-ticker', 'widget-4x1')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 70px;">
@@ -382,6 +490,21 @@
 
                 <!-- 音乐 (Media -> 音乐) -->
                 <div id="wl-content-media" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('k-cassette', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-cassette-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="c-sticker">
+                                        <div class="c-img" style="background-image:url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=400')"></div>
+                                        <div class="c-hole"></div>
+                                        <div class="c-text">Y2K MIXTAPE</div>
+                                        <div class="c-hole"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">Y2K 透明磁带 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
                     <div class="wl-item" onclick="addWidget('music-card', 'widget-4x2')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
@@ -430,6 +553,17 @@
 
                 <!-- 工具 -->
                  <div id="wl-content-tool" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('k-mood', 'widget-2x2')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
+                                <div class="k-mood-widget widget-2x2" style="margin: 0; height: 100%;">
+                                    <div class="k-mood-emoji">☁️</div>
+                                    <div class="k-mood-text">Feeling Good</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">每日情绪 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
                     <div class="wl-item" onclick="addWidget('receipt-short', 'widget-4x3')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 230px;">
@@ -3791,7 +3925,7 @@
     </div>
 </div>
 
-    <script>window.onerror = function(msg, url, lineNo, columnNo, error) { alert('Error: ' + msg + '\nLine: ' + lineNo + '\nColumn: ' + columnNo + '\nError object: ' + JSON.stringify(error)); return false; }; window.onunhandledrejection = function(event) { alert('Unhandled promise rejection: ' + event.reason); };</script><script src="js/app_battery_notify.js"></script>
+    <script>window.onerror = function(msg, url, lineNo, columnNo, error) { if (msg === 'Script error.' && lineNo == 0) return false; alert('Error: ' + msg + '\nLine: ' + lineNo + '\nColumn: ' + columnNo + '\nError object: ' + JSON.stringify(error)); return false; }; window.onunhandledrejection = function(event) { alert('Unhandled promise rejection: ' + event.reason); };</script><script src="js/app_battery_notify.js"></script>
     <script src="js/core.js"></script>
     <script src="js/app_imagegen.js"></script>
     <script src="js/apps.js"></script>
@@ -3817,7 +3951,7 @@
 <script src="js/app_tracker.js"></script>
 <script src="js/app_novel.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" crossorigin="anonymous"></script>
 <script src="js/app_floatpet.js"></script>
 <script src="js/app_sms.js"></script>
 <script src="js/app_phone_call.js"></script>
@@ -4270,6 +4404,11 @@ function switchCsTab(id) {
             <div class="thought-bubble murmur">
                 <div class="bubble-label">💭 碎碎念</div>
                 <div class="bubble-content" id="mind-murmur-text">...</div>
+            </div>
+            <!-- 新增：暗心声 -->
+            <div class="thought-bubble dark-murmur" id="mind-dark-murmur-container" style="display: none;">
+                <div class="bubble-label dark-label">🖤 阴暗面</div>
+                <div class="bubble-content" id="mind-dark-murmur-text">...</div>
             </div>
         </div>
         

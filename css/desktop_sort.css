@@ -79,9 +79,12 @@
 .page.ds-flat > .widget-1x1 { grid-column: span 1 !important; grid-row: span 1 !important; }
 .page.ds-flat > .widget-2x2 { grid-column: span 2 !important; grid-row: span 2 !important; }
 .page.ds-flat > .widget-2x3 { grid-column: span 2 !important; grid-row: span 3 !important; }
+.page.ds-flat > .widget-2x4 { grid-column: span 2 !important; grid-row: span 4 !important; }
 .page.ds-flat > .widget-4x1 { grid-column: span 4 !important; grid-row: span 1 !important; }
 .page.ds-flat > .widget-4x2 { grid-column: span 4 !important; grid-row: span 2 !important; }
 .page.ds-flat > .widget-4x3 { grid-column: span 4 !important; grid-row: span 3 !important; }
+.page.ds-flat > .widget-4x4 { grid-column: span 4 !important; grid-row: span 4 !important; }
+.page.ds-flat > .widget-2x1 { grid-column: span 2 !important; grid-row: span 1 !important; }
 
 /* 动态添加的组件基类 */
 .dynamic-widget {
@@ -320,6 +323,523 @@
     overflow: hidden;
     background: #fff;
 }
+
+/* ── 韩系新增小组件样式 (Korean Aesthetic Widgets) ── */
+
+/* 1. 韩系拍立得 (Polaroid 2x3) */
+.k-polaroid-widget {
+    background: #fff;
+    padding: 8px 8px 30px 8px;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    transform: rotate(-2deg);
+    transition: transform 0.3s;
+}
+.k-polaroid-widget:hover {
+    transform: rotate(0deg) scale(1.02);
+}
+.k-polaroid-widget .k-tape-top {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%) rotate(2deg);
+    width: 60px;
+    height: 25px;
+    background: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 2;
+}
+.k-polaroid-widget .k-photo-img {
+    width: 100%;
+    flex: 1;
+    background-size: cover;
+    background-position: center;
+    background-color: #eee;
+    border-radius: 2px;
+}
+.k-polaroid-widget .k-handwriting-text {
+    font-family: 'Alex Brush', cursive, sans-serif;
+    font-size: 24px;
+    color: #444;
+    margin-top: 15px;
+    text-align: center;
+    width: 100%;
+    outline: none;
+    line-height: 1;
+}
+
+/* 2. D-Day 纪念日 (System 2x2) */
+.k-dday-widget {
+    background: linear-gradient(135deg, #fce4ec 0%, #ffebee 100%);
+    border-radius: 24px;
+    box-shadow: 0 8px 20px rgba(252, 228, 236, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    position: relative;
+    overflow: hidden;
+}
+.k-dday-widget::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 60px;
+    height: 60px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.k-dday-widget .k-dday-title {
+    font-size: 11px;
+    color: #888;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    outline: none;
+}
+.k-dday-widget .k-dday-days {
+    font-size: 36px;
+    font-weight: 800;
+    color: #ff7e67;
+    font-family: 'Montserrat', sans-serif;
+    outline: none;
+    line-height: 1;
+    text-shadow: 2px 2px 0px #fff;
+}
+.k-dday-widget .k-dday-heart {
+    position: absolute;
+    bottom: 15px;
+    font-size: 12px;
+    color: #ffb3ba;
+    animation: heartBeat 2s infinite;
+}
+
+/* 3. To-Do List 碎碎念便签 (Text 4x2) */
+.k-todo-widget {
+    background: #fffdf5;
+    border-radius: 12px;
+    box-shadow: 2px 4px 12px rgba(0,0,0,0.06);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    /* 网格线背景 */
+    background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+    background-size: 100% 28px;
+    background-position: 0 45px;
+}
+.k-todo-widget .k-todo-tape {
+    position: absolute;
+    top: 5px;
+    left: 15px;
+    width: 40px;
+    height: 15px;
+    background: #ffccbc;
+    transform: rotate(-5deg);
+    opacity: 0.8;
+}
+.k-todo-widget .k-todo-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 12px;
+    outline: none;
+    font-family: 'Montserrat', 'PingFang SC', sans-serif;
+}
+.k-todo-widget .k-todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.k-todo-widget .k-todo-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #555;
+}
+.k-todo-widget .k-todo-check {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: transparent;
+    font-size: 10px;
+    transition: 0.2s;
+}
+.k-todo-widget .k-todo-check.checked {
+    background: #4facfe;
+    border-color: #4facfe;
+    color: #fff;
+}
+.k-todo-widget .k-todo-text {
+    flex: 1;
+    outline: none;
+}
+.k-todo-widget .k-todo-item.checked .k-todo-text {
+    text-decoration: line-through;
+    color: #aaa;
+}
+
+/* 4. Daily Mood 情绪板 (Tool 2x2) */
+.k-mood-widget {
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    position: relative;
+    border: 2px solid #f0f0f0;
+}
+.k-mood-widget .k-mood-emoji {
+    font-size: 42px;
+    line-height: 1.2;
+    outline: none;
+    margin-bottom: 5px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+}
+.k-mood-widget .k-mood-text {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    width: 100%;
+}
+
+/* 5. 韩系图文日记 (Aesthetic 2x2) */
+.k-journal-widget {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 8px;
+}
+.k-journal-widget .k-j-img {
+    flex: 1;
+    width: 100%;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    background-color: #f5f5f5;
+}
+.k-journal-widget .k-j-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    color: #333;
+    text-align: center;
+    outline: none;
+    font-style: italic;
+}
+.k-journal-widget .k-j-date {
+    font-size: 9px;
+    color: #999;
+    text-align: center;
+    letter-spacing: 1px;
+    outline: none;
+}
+
+/* 6. 韩系展览门票 (Aesthetic 4x2) */
+.k-ticket-widget {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    overflow: hidden;
+    border: 1px solid #f0f0f0;
+}
+.k-ticket-widget .k-t-img {
+    width: 40%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    border-right: 2px dashed #eee;
+    position: relative;
+}
+.k-ticket-widget .k-t-info {
+    width: 60%;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #fff;
+}
+.k-ticket-widget .k-t-header { font-size: 8px; color: #aaa; letter-spacing: 2px; outline: none; margin-bottom: 5px; text-transform: uppercase; }
+.k-ticket-widget .k-t-title { font-family: 'Playfair Display', serif; font-size: 16px; color: #111; font-weight: bold; outline: none; margin-bottom: 8px; }
+.k-ticket-widget .k-t-date { font-size: 10px; color: #666; outline: none; margin-bottom: 10px; }
+.k-ticket-widget .k-t-barcode { font-family: monospace; font-size: 18px; color: #333; letter-spacing: -1px; opacity: 0.3; }
+
+/* === 7. 人生四格 (Life Four Cuts 2x4) === */
+.k-four-cuts-widget {
+    background: #fdfdfd;
+    border-radius: 12px;
+    padding: 12px 12px 45px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 
+        0 4px 15px rgba(0,0,0,0.06),
+        0 1px 3px rgba(0,0,0,0.04),
+        inset 0 0 0 1px rgba(0,0,0,0.03);
+    position: relative;
+    border: 1px solid #f0f0f0;
+}
+.k-four-cuts-widget::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-1deg);
+    width: 45px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 2;
+    border-radius: 1px;
+}
+.k-four-cuts-widget .fc-photo {
+    width: 100%;
+    flex: 1;
+    background-color: #f5f5f5;
+    background-size: cover;
+    background-position: center;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+    filter: sepia(10%) contrast(1.05);
+}
+.k-four-cuts-widget .fc-text {
+    position: absolute;
+    bottom: 14px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+    color: #444;
+    font-size: 16px;
+    font-weight: 600;
+    outline: none;
+    line-height: 1;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* === 8. 复古撕纸手账 (Scrapbook 4x3) === */
+.k-scrapbook-widget {
+    background: #fdfbf7;
+    border-radius: 4px;
+    padding: 15px;
+    box-shadow: 2px 4px 15px rgba(0,0,0,0.08);
+    position: relative;
+    /* 模拟撕纸边缘 */
+    border-image: repeating-linear-gradient(45deg, #eee, #eee 2px, transparent 2px, transparent 6px) 1;
+    border-left: 4px dotted #e0dcd3;
+}
+.k-scrapbook-widget .sb-photo {
+    width: 45%;
+    height: 70%;
+    background-size: cover;
+    background-position: center;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: rotate(3deg);
+    border: 4px solid #fff;
+}
+.k-scrapbook-widget .sb-tape {
+    position: absolute;
+    top: 5px;
+    right: 35%;
+    width: 40px;
+    height: 15px;
+    background: rgba(255, 235, 153, 0.6);
+    transform: rotate(-10deg);
+    z-index: 2;
+}
+.k-scrapbook-widget .sb-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    outline: none;
+    margin-bottom: 5px;
+    width: 50%;
+}
+.k-scrapbook-widget .sb-text {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.5;
+    outline: none;
+    width: 50%;
+}
+
+/* === 9. Y2K 透明磁带 (Cassette 4x2) === */
+.k-cassette-widget {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.4);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 10px;
+}
+.k-cassette-widget .c-sticker {
+    background: #fff;
+    width: 80%;
+    height: 50%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    position: relative;
+    box-shadow: inset 0 0 0 1px #eee;
+}
+.k-cassette-widget .c-hole {
+    width: 16px;
+    height: 16px;
+    background: #333;
+    border-radius: 50%;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+.k-cassette-widget .c-text {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 700;
+    font-size: 12px;
+    color: #111;
+    outline: none;
+    text-transform: uppercase;
+}
+.k-cassette-widget .c-img {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+/* === 10. 透明亚克力钥匙扣 (Keyring 2x3) === */
+.k-keyring-widget {
+    background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.15) 100%);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: 
+        inset 1px 1px 2px rgba(255,255,255,0.9),
+        inset -1px -1px 3px rgba(255,255,255,0.3),
+        0 8px 24px rgba(0,0,0,0.15),
+        0 2px 8px rgba(0,0,0,0.08);
+    position: relative;
+    padding: 15px 10px 15px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 24px; /* 为连接件和环留出空间 */
+}
+/* 亚克力表面斜向高光 */
+.k-keyring-widget::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 20px;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 45%, rgba(255,255,255,0.6) 50%, transparent 54%);
+    pointer-events: none;
+    z-index: 5;
+}
+.k-keyring-widget .kr-ring {
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 26px;
+    border: 3px solid #ccc;
+    border-color: #f5f5f5 #b5b5b5 #b5b5b5 #f5f5f5; /* 3D质感 */
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 2px 4px rgba(0,0,0,0.1);
+    z-index: -1;
+}
+/* 连接金属件 */
+.k-keyring-widget .kr-ring::after {
+    content: '';
+    position: absolute;
+    bottom: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 10px;
+    background: linear-gradient(90deg, #d0d0d0, #fcfcfc, #a0a0a0);
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.k-keyring-widget .kr-hole {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 50%;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.8);
+}
+.k-keyring-widget .kr-img {
+    width: calc(100% - 8px);
+    flex: 1;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    margin-top: 14px;
+    border: 2px solid rgba(255,255,255,0.8); /* 类似拍立得或相纸夹心 */
+    position: relative;
+    z-index: 1;
+}
+.k-keyring-widget .kr-text {
+    font-size: 15px;
+    font-weight: 800;
+    color: #ff6b6b;
+    margin-top: 12px;
+    text-align: center;
+    outline: none;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 5px rgba(255, 107, 107, 0.4);
+    position: relative;
+    z-index: 1;
+}
+
 
 /* 底部抽屉弹窗样式 */
 #widget-library {
