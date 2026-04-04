@@ -600,7 +600,7 @@ window.sendGroupMessageToAI = async function (userMessage) {
         
         const myPersonaStr = `${presetPrompt}[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
 
-        const parseMacros = (str, charName) => {
+        const safeParseMacros = (str, charName) => {
             if (!str) return '';
             return String(str).replace(/{{char}}/gi, charName || '助手').replace(/{{user}}/gi, myName);
         };
@@ -627,7 +627,7 @@ window.sendGroupMessageToAI = async function (userMessage) {
         const shard = dispatchedMemberIds.includes(memberId) ? await getShardedMemoryForMember(memberId, targetGroupId) : null;
         const shardNote = shard ? `\n  [私人记忆]: ${shard}` : '';
         
-        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${parseMacros(mem.persona || '普通的群成员', mem.realName || '助手')}${shardNote}\n`;
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${safeParseMacros(mem.persona || '普通的群成员', mem.realName || '助手')}${shardNote}\n`;
     }
 
         // 长期记忆（对话总结）
@@ -991,6 +991,11 @@ async function triggerGroupBgChat(groupId) {
     const myName = group.myNickname || (me ? me.name : '我') || '用户';
     const myPersonaStr = `[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
 
+    const safeParseMacros = (str, charName) => {
+        if (!str) return '';
+        return String(str).replace(/{{char}}/gi, charName || '助手').replace(/{{user}}/gi, myName);
+    };
+
     const allMemberIds = group.members || [];
     let membersInfo = '';
     for (const memberId of allMemberIds) {
@@ -1007,7 +1012,7 @@ async function triggerGroupBgChat(groupId) {
         if (isMuted) tags.push('已被禁言，禁止让他发言');
         
         const tagStr = tags.length > 0 ? ` [${tags.join(' | ')}]` : '';
-        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || ''}\n`;
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${safeParseMacros(mem.persona || '', mem.realName || '助手')}\n`;
     }
 
     const history = await loadChatHistory(groupId);
@@ -3382,6 +3387,11 @@ async function sendGroupOfflineMessage(isRegen = false) {
     
     const myPersonaStr = `${presetPrompt}[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
 
+    const safeParseMacros = (str, charName) => {
+        if (!str) return '';
+        return String(str).replace(/{{char}}/gi, charName || '助手').replace(/{{user}}/gi, myName);
+    };
+
     // ── 构建成员人设 ──
     const allMemberIds = group.members || [];
     const activeMemberIds = allMemberIds.filter(id => !((group.mutedMembers || []).includes(id)));
@@ -3407,7 +3417,7 @@ async function sendGroupOfflineMessage(isRegen = false) {
         const shard = dispatched.includes(memberId) ? await getShardedMemoryForMember(memberId, targetGroupId, []) : null;
         const shardNote = shard ? `\n  [私人记忆]: ${shard}` : '';
         
-        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || '普通的聚会成员'}${shardNote}\n---\n`;
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${safeParseMacros(mem.persona || '普通的聚会成员', mem.realName || '助手')}${shardNote}\n---\n`;
     }
 
     // ── 历史记录 ──
