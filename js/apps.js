@@ -73,15 +73,6 @@ let currentMindState = {
     weather: "晴",
     murmur: "..."
 };
-function getAffectionStage(score) {
-    score = Number(score) || 0;
-    if (score < 20) return "疏离";
-    if (score < 40) return "熟悉";
-    if (score < 60) return "亲近";
-    if (score < 80) return "偏爱";
-    return "上头";
-}
-
 // ─── 微信风格时间气泡辅助函数 ──────────────────────────────────────────────
 let _lastChatMsgTimestamp = 0; // 记录上一条渲染消息的时间戳
 
@@ -135,8 +126,6 @@ function _formatChatTime(ts) {
 
 function ensureFriendMindFields(friend, friendId = 'AI') {
     if (!friend) return;
-
-    if (typeof friend.affection !== 'number') friend.affection = 0;
 
     if (!friend.mindState) friend.mindState = {};
 
@@ -207,156 +196,8 @@ function applyMindMarqueeIfOverflow() {
 }
 
 function updateAffectionUI(score) {
-    const s = Math.max(0, Math.min(100, Number(score) || 0));
-    const fill = document.getElementById('affection-fill');
     const text = document.getElementById('affection-percent-text');
-    if (fill) fill.style.width = `${s}%`;
-    if (text) text.innerText = `${s}%`;
-}
-
-/**
- * 首次对话时，根据角色人设、剧情开场白、世界书、用户人设，
- * 通过 AI 判断初始好感度并写入 friend.affection
- * 仅在 history.length === 0 时调用，且每个角色只执行一次
- */
-async function initializeAffectionScore(friendId) {
-    const friend = friendsData[friendId];
-    if (!friend || friend._affectionInitialized) return;
-
-    // 立即标记，防止并发重入
-    friend._affectionInitialized = true;
-
-    const settingsJSON = localStorage.getItem(SETTINGS_KEY);
-    if (!settingsJSON) return;
-    const settings = JSON.parse(settingsJSON);
-    if (!settings.apiKey || !settings.endpoint || !settings.model) return;
-
-    // === 显示"判定中"占位状态 ===
-    const affFillEl = document.getElementById('affection-fill');
-    const affTextEl = document.getElementById('affection-percent-text');
-    if (affTextEl) affTextEl.innerText = '判定中...';
-    if (affFillEl) { affFillEl.style.transition = 'none'; affFillEl.style.width = '0%'; }
-
-    // === 收集角色人设 ===
-    const persona = friend.persona || '';
-
-    // === 收集开场白 ===
-    const greeting = getEffectiveGreeting(friend);
-
-    // === 收集世界书全文内容（不做关键词过滤，让AI获得完整背景） ===
-    let worldbookContent = '';
-    try {
-        const wbIds = Array.isArray(friend.worldbook)
-            ? friend.worldbook
-            : (friend.worldbook ? [friend.worldbook] : []);
-        if (wbIds.length && typeof worldBooks !== 'undefined' && worldBooks.length) {
-            worldbookContent = wbIds.map(id => {
-                const wb = worldBooks.find(w => w.id === id);
-                if (!wb) return '';
-                if (wb.entries && wb.entries.length) {
-                    return wb.entries
-                        .filter(e => e.enabled !== false)
-                        .map(e => e.content || '')
-                        .filter(Boolean)
-                        .join('\n');
-                }
-                return wb.description || wb.content || wb.title || '';
-            }).filter(Boolean).join('\n\n');
-        } else if (typeof friend.worldbook === 'string' && friend.worldbook) {
-            worldbookContent = friend.worldbook;
-        }
-        // 补充全局世界书
-        if (typeof worldBooks !== 'undefined') {
-            const globalContent = worldBooks
-                .filter(wb => wb.global)
-                .flatMap(wb => (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || ''))
-                .filter(Boolean)
-                .join('\n');
-            if (globalContent) worldbookContent = (worldbookContent ? worldbookContent + '\n\n' : '') + globalContent;
-        }
-    } catch (e) { /* 静默 */ }
-
-    // === 收集用户人设 ===
-    let myPersona = '';
-    try {
-        const me = personasMeta[currentPersonaId];
-        myPersona = me ? (me.persona || '') : '';
-    } catch (e) { /* 静默 */ }
-
-    const prompt = `请根据以下角色信息，判断该角色在初次相遇时对用户的初始好感度（0~100分）。
-
-【角色人设】
-${persona || '（未设置）'}
-
-【剧情开场白（角色的第一句话）】
-${greeting || '（无）'}
-
-【世界书 / 背景设定】
-${worldbookContent || '（无）'}
-
-【用户的人设 / 身份】
-${myPersona || '（普通用户，无特殊设定）'}
-
-评分参考：
-- 0~19：极度冷漠、敌视或对立（反派、天生仇视、绝对陌生人）
-- 20~39：疏远冷淡，保持距离（高冷角色、初次接触陌生人）
-- 40~59：中性偏友好（普通认识、同事、邻居）
-- 60~79：已有较好印象（老朋友、青梅竹马、有渊源的关系）
-- 80~100：非常亲密或深情（恋人关系、深厚纽带、命中注定型设定）
-
-请只输出一个 0 到 100 之间的整数，不要输出任何其他内容。`;
-
-    try {
-        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
-        const apiUrl = baseUrl.endsWith('/v1')
-            ? `${baseUrl}/chat/completions`
-            : `${baseUrl}/v1/chat/completions`;
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${settings.apiKey}`
-            },
-            body: JSON.stringify({
-                model: settings.model,
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.3,
-                max_tokens: 10
-            })
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
-        const raw = (data?.choices?.[0]?.message?.content || '').trim();
-        const match = raw.match(/\d+/);
-        const score = match ? Math.max(0, Math.min(100, parseInt(match[0], 10))) : 0;
-
-        friend.affection = score;
-        await saveFriendsData();
-
-        // 动画写入进度条
-        if (affFillEl) {
-            affFillEl.style.transition = 'width 1.2s ease';
-            affFillEl.style.width = `${score}%`;
-        }
-        if (affTextEl) affTextEl.innerText = `${score}%`;
-
-        console.log(`[initAffection] ${friendId} 初始好感度 AI 判定结果：${score}`);
-
-        // 若心声卡片已打开则刷新
-        const mindCard = document.getElementById('mind-card-overlay');
-        if (mindCard && mindCard.classList.contains('active')) {
-            refreshMindCardUI(friendId, false);
-        }
-    } catch (e) {
-        console.warn('[initAffection] 静默失败，保持默认值 0:', e);
-        // 恢复默认显示
-        if (affFillEl) { affFillEl.style.transition = ''; affFillEl.style.width = '0%'; }
-        if (affTextEl) affTextEl.innerText = '0%';
-        // 标记仍为已初始化，避免反复重试
-    }
+    if (text) text.innerText = score !== undefined && score !== null ? String(score) : '???';
 }
 
 function syncMindBgmToPlayer(bgmText) {
@@ -376,7 +217,6 @@ function refreshMindCardUI(friendId, useTyping = false) {
 
     ensureFriendMindFields(friend, friendId);
     const state = friend.mindState;
-    const affection = Math.max(0, Math.min(100, Number(friend.affection) || 0));
 
     const avatarEl = document.querySelector('.mind-big-avatar');
     const nameEl = document.querySelector('.mind-name');
@@ -388,7 +228,7 @@ function refreshMindCardUI(friendId, useTyping = false) {
         nameEl.innerText = friend.remark || friend.realName || friendId;
     }
 
-    updateAffectionUI(affection);
+    updateAffectionUI(friend.affection);
 
     const locEl = document.getElementById('mind-location-val');
     const actEl = document.getElementById('mind-action-val');
@@ -424,17 +264,10 @@ function parseAndApplyMindStateBlock(friendId, statusBlock) {
         return m ? m[1].trim() : '';
     };
 
-    // 一次对话最多 ±2，前端强制钳制
-    const deltaRaw = parseInt(
-        getVal('AffectionDelta') ||
-        getVal('FavorDelta') ||
-        getVal('Affection') ||
-        '0',
-        10
-    );
-    const delta = Math.max(-2, Math.min(2, isNaN(deltaRaw) ? 0 : deltaRaw));
-
-    friend.affection = Math.max(0, Math.min(100, (Number(friend.affection) || 0) + delta));
+    const affectionVal = getVal('Affection');
+    if (affectionVal) {
+        friend.affection = affectionVal;
+    }
 
     friend.mindState.action = getVal('Action') || friend.mindState.action;
     friend.mindState.location = getVal('Location') || friend.mindState.location;
@@ -2095,11 +1928,6 @@ window.openChatDetail = async function(name) {
         } else {
             chatMessages.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">Today</span></div>`;
         }
-        // 首次对话：通过 AI 分析人设/开场白/世界书/用户人设，动态生成初始好感度
-        const _friend = friendsData[name];
-        if (_friend && !_friend._affectionInitialized) {
-            initializeAffectionScore(name);
-        }
     }
 }
 
@@ -2294,7 +2122,6 @@ window.confirmAddFriend = function() {
     worldbook: worldbook,
     greeting: greeting,
     avatar: '',
-    affection: 0,
     mindState: {
         action: "正在观察你",
         location: "聊天界面",
@@ -2545,7 +2372,6 @@ AI 原始输出示例 2：[表情:嫌弃]
     } else {
          // ------ 单聊逻辑 (Single Chat Logic) ------
         const currentAffection = Number(f.affection || 0);
-        const affectionStage = getAffectionStage(currentAffection);
         
         const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
         const _promptReplyMax = Math.max(_promptReplyMin, parseInt(chatSettings.replyMax) || 5);
@@ -2563,10 +2389,6 @@ AI 原始输出示例 2：[表情:嫌弃]
         【角色人设】
         名字：${f.realName || '助手'}
         人设描述：${f.persona || '乐于助人的助手'}
-        
-        【关系状态】
-        对用户的当前好感度：${currentAffection}/100
-        - 本轮对话中，好感度变化值必须是 -2 到 2 之间的整数。
 
         ${f.worldbook ? `【世界观设定】：${f.worldbook}` : ''}
 
@@ -2642,7 +2464,6 @@ Generate EXACTLY 6 to 8 comments from Chinese netizens watching this chat.
 // 状态块（永远要）
 systemPrompt += `
 [STATUS_START]
-AffectionDelta: (integer only, from -2 to 2)
 Action: (current action, short)
 Location: (current location)
 Weather: (current weather)
@@ -2651,7 +2472,6 @@ Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in c
 Kaomoji: (one matching kaomoji)
 [STATUS_END]
 Rules:
-- AffectionDelta must be one of: -2, -1, 0, 1, 2
 - Do not explain the status block
 - Murmur must be character self-talk, not narration.
 - Murmur must contain 3 to 4 sentences.
@@ -2659,7 +2479,6 @@ Rules:
 
 [Example Status Block]
 [STATUS_START]
-AffectionDelta: 1
 Action: 正在靠着窗边发消息
 Location: 卧室
 Weather: 小雨
@@ -3102,14 +2921,6 @@ if (statusMatch) {
     } else {
     if (!friendsData[targetChatId].mindState) friendsData[targetChatId].mindState = {};
     if (typeof friendsData[targetChatId].affection !== 'number') friendsData[targetChatId].affection = 0;
-
-    const deltaRaw = parseInt(readStatusValue('AffectionDelta') || '0', 10);
-    const delta = Math.max(-2, Math.min(2, isNaN(deltaRaw) ? 0 : deltaRaw));
-
-    friendsData[targetChatId].affection = Math.max(
-        0,
-        Math.min(100, friendsData[targetChatId].affection + delta)
-    );
 
     friendsData[targetChatId].mindState.action = readStatusValue('Action') || friendsData[targetChatId].mindState.action || '正在发呆';
     friendsData[targetChatId].mindState.location = readStatusValue('Location') || friendsData[targetChatId].mindState.location || '未知地点';
@@ -4694,6 +4505,11 @@ function restoreFriendListUI() {
         // 调用统一的添加函数
         addChatListEntry(id, friend.remark || friend.realName, previewMsg, avatarUrl, 'single');
     });
+
+    // 恢复群聊列表
+    if (typeof window.restoreGroupListUI === 'function') {
+        window.restoreGroupListUI();
+    }
 }
 
 /* =========================================
@@ -7460,7 +7276,6 @@ ${mesExample}
     greetingCustom: '',
     greeting: firstMes || '',
     avatar: finalAvatar,
-    affection: 0,
     mindState: {
         action: "正在整理刚导入的人设",
         location: "角色初始化空间",
@@ -8403,8 +8218,6 @@ window.sendOfflineMessage = async function(isRegen = false) {
     ).join('\n');
 
     const limit = parseInt(offlineConfig.maxLength) || 200;
-    const currentAffection = Number(friend.affection || 0);
-    const affectionStage = getAffectionStage(currentAffection);
     const currentLocation = friend.mindState?.location || '当前约会场景';
 
     // --- 收集世界书全文内容（与线上模式保持一致） ---
@@ -8440,7 +8253,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
         }
     } catch (e) { /* 静默 */ }
 
-let systemPrompt = `你是${friend.realName}，正在与用户面对面相处，地点：${currentLocation}，好感度${currentAffection}/100（${affectionStage}阶段）。
+let systemPrompt = `你是${friend.realName}，正在与用户面对面相处，地点：${currentLocation}。
 ${friend.persona}
 ${worldbookContent ? `\n【世界观 / 背景设定】：\n${worldbookContent}` : ''}
 ${preset.jailbreak || ''}
@@ -8448,14 +8261,13 @@ ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) 
 ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingStyle}` : ''}
 
 以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。
-【重要】：严格基于【角色人设】及好感度进行推演。绝不可擅自OOC加戏。
+【重要】：严格基于【角色人设】进行推演。绝不可擅自OOC加戏。
 你的回复【必须】是一个完整的、连贯的叙事长句，减少零散的短句。
 格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。
 你的正文回复必须控制在 ${limit} 字左右。
 
 回复末尾附状态块：
 [STATUS_START]
-AffectionDelta: （-2到2整数）
 Action: （当前动作）
 Location: （地点）
 Weather: （天气）
@@ -9945,8 +9757,7 @@ window.clearCurrentChatHistory = async function() {
             if (friend) {
                 friend.summaries = [];
                 friend.relationshipLog = [];
-                friend.affection = 0;
-                delete friend._affectionInitialized; // 允许下次重新判断初始好感度
+                delete friend.affection;
                 // 重置心声状态为默认值
                 friend.mindState = {
                     action: "正在发呆",
@@ -11198,7 +11009,7 @@ window.refreshEmojiPanels = function() {
    [新增] 无损强制更新 App (不丢失本地数据)
    ========================================= */
 window.forceUpdateAppLossless = function() {
-    if (confirm("这将会获取 GitHub 上的最新界面代码，你的聊天记录和好感度数据【绝对不会】丢失。是否继续？")) {
+    if (confirm("这将会获取 GitHub 上的最新界面代码。是否继续？")) {
         let hasServiceWorker = false;
         
         // 1. 注销所有的 Service Worker (解决缓存锁死)

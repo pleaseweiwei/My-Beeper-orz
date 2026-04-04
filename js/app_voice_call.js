@@ -185,10 +185,6 @@ async function _buildCallSystemPrompt(userMessage) {
     const aiPersona  = friend.persona  || '你是一个温柔的 AI。';
     const aiName     = friend.remark   || friend.realName || 'AI';
 
-    // ── 好感度 ──
-    const affection      = Number(friend.affection || 0);
-    const affectionStage = (typeof getAffectionStage === 'function') ? getAffectionStage(affection) : '普通';
-
     // ── 历史记忆总结 ──
     const memorySummaries = (friend.summaries || []).map((s, i) => `- [第${i+1}段] ${s.text}`).join('\n');
     const memoryLimit     = parseInt(chatSettings.memoryLimit) || 20;
@@ -225,10 +221,6 @@ This is a REAL-TIME VIDEO call — NOT text chat. Speak accordingly (short, warm
 
 [YOUR PERSONA]
 ${aiPersona}
-
-[RELATIONSHIP STATUS]
-Affection: ${affection}/100 (Stage: ${affectionStage})
-Let this naturally shape your warmth, tone, and physical boundaries.
 
 ${myPersona ? `[USER IDENTITY (the person calling you)]\n${myPersona}\n` : ''}
 
@@ -797,8 +789,7 @@ window.startVideoCall = async function(chatId, isGroup) {
 
     // 构建接听判断 prompt
     const acceptPrompt = `[HIDDEN SYSTEM COMMAND]
-The user is calling you via video call. Based on your current mood, relationship stage, and persona, decide whether to answer.
-Current affection: ${Number(friend.affection || 0)}/100
+The user is calling you via video call. Based on your current mood and persona, decide whether to answer.
 Your persona: ${friend.persona || ''}
 
 Reply with EXACTLY one word (no punctuation): ACCEPT or REJECT`;

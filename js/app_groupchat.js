@@ -50,7 +50,7 @@ async function loadGroupsData() {
 /* =========================================
    恢复群聊列表 UI
    ========================================= */
-function restoreGroupListUI() {
+window.restoreGroupListUI = function() {
     Object.keys(groupsData).forEach(groupId => {
         const group = groupsData[groupId];
         if (!group) return;
@@ -3366,11 +3366,7 @@ async function sendGroupOfflineMessage(isRegen = false) {
         const shard = dispatched.includes(memberId) ? await getShardedMemoryForMember(memberId, targetGroupId, []) : null;
         const shardNote = shard ? `\n  [私人记忆]: ${shard}` : '';
         
-        // 读取好感度
-        const affection = Math.max(0, Math.min(100, Number(mem.affection || 0)));
-        const affStage = (typeof getAffectionStage === 'function') ? getAffectionStage(affection) : '普通';
-        
-        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || '普通的聚会成员'}\n  好感度: ${affection}/100 (关系阶段: ${affStage})  ← 据此决定对用户的亲密度、眼神接触、肢体界限，不得跨越当前阶段${shardNote}\n---\n`;
+        membersInfo += `- 本名: ${mem.realName || memberId}，群昵称: ${mem.remark || mem.realName}${tagStr}\n  人设: ${mem.persona || '普通的聚会成员'}${shardNote}\n---\n`;
     }
 
     // ── 历史记录 ──
@@ -3461,11 +3457,9 @@ ${historyText || '（刚刚开始聚会）'}
 2. 【沉浸叙事】：用 *星号* 包裹动作/肢体语言，用 「」 包裹直接对话，不能只有台词。
 3. 【场景融入】：叙事要自然融入当前场景（${currentLocation}），注意灯光/声音/空间感。
 4. 【字数要求】：每位角色叙事约${perCharLen}字，总长度控制在${maxLen}字以内。
-5. 【输出格式】：必须输出纯 JSON 数组，每项格式：{"name":"角色名","content":"叙事正文","affection_delta":整数}
-   - affection_delta：本次互动后该角色对用户好感度的变化，整数范围 -2 ~ +2（0 表示无变化）
+5. 【输出格式】：必须输出纯 JSON 数组，每项格式：{"name":"角色名","content":"叙事正文"}
    - 不要在 JSON 数组外添加任何多余文字。
-6. 【好感度驱动】：好感度低的角色应表现出更多保留/疏离；高好感角色自然更亲近，但仍需符合人设与场景。
-7. 【防出戏死命令】：你绝对不能扮演用户（${myName}），严禁生成用户的对话！
+6. 【防出戏死命令】：你绝对不能扮演用户（${myName}），严禁生成用户的对话！
 
 ${danmakuInstr}
 ${optionsInstr}
@@ -3633,22 +3627,6 @@ ${optionsInstr}
                 groupsData[targetGroupId].lastMessage = `${msg.name}: ${msg.content.substring(0, 30)}`;
                 saveGroupsData();
             }
-
-            // ── 处理好感度变化 ──
-            if (typeof msg.affection_delta === 'number' && msg.affection_delta !== 0 && mem) {
-                const delta = Math.max(-2, Math.min(2, Math.round(msg.affection_delta)));
-                const memberId = Object.keys(friendsData).find(id => friendsData[id] === mem);
-                if (memberId && typeof friendsData[memberId].affection === 'number') {
-                    const oldVal = friendsData[memberId].affection;
-                    friendsData[memberId].affection = Math.max(0, Math.min(100, oldVal + delta));
-                    if (typeof saveFriendsData === 'function') saveFriendsData();
-                    // 浮动提示
-                    const sign = delta > 0 ? '+' : '';
-                    if (typeof showToast === 'function') {
-                        showToast(`${msg.name} 好感度 ${sign}${delta} → ${friendsData[memberId].affection}`);
-                    }
-                }
-            }
         }
 
         // ── 渲染选项分支 ──
@@ -3764,7 +3742,6 @@ window.refreshGroupMindCardUI = function(groupId, useTyping = false) {
             friend.mindState = { murmur: "...", hiddenThought: "..." };
         }
         const state = friend.mindState;
-        const affection = Math.max(0, Math.min(100, Number(friend.affection) || 0));
         
         const avatarUrl = friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(friend.realName || memberId)}`;
         const name = friend.remark || friend.realName || memberId;
@@ -3778,14 +3755,6 @@ window.refreshGroupMindCardUI = function(groupId, useTyping = false) {
                     </div>
                     <div style="margin-left: 12px; flex: 1;">
                         <div style="font-size: 14px; font-weight: 800; color: #111; letter-spacing: 0.5px; margin-bottom: 4px;">${name}</div>
-                        <div class="affection-bar-container" style="background: transparent; padding: 0;">
-                            <div class="affection-bar-label" style="font-size: 10px; color: #888; font-weight: 600; margin-bottom: 4px; display:flex; justify-content:space-between; letter-spacing: 0.5px;">
-                                <span>AFFECTION</span> <span style="color: #ff7e67;">${affection}%</span>
-                            </div>
-                            <div class="affection-progress-bar" style="height: 4px; background: #eee; border-radius: 2px; overflow: hidden;">
-                                <div style="height: 100%; background: linear-gradient(90deg, #ffb3c6, #ff7e67); width: ${affection}%; transition: width 0.3s ease;"></div>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 <div style="background: #f9f9f9; border-radius: 12px; padding: 12px 14px; position: relative;">

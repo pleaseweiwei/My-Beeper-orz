@@ -412,9 +412,8 @@ const FloatPet = (function () {
             /* ── 角色基本信息 ── */
             window.AndroidBridge.saveString('pet_char_name',    _getCharName(charId));
             window.AndroidBridge.saveString('pet_char_persona', f.persona || '');
-            window.AndroidBridge.saveString('pet_affection',    String(f.affection || 0));
 
-            /* ── 好感阶段关系日志（最近3条，供 overlay 还原关系历史） ── */
+            /* ── 关系日志（最近3条，供 overlay 还原关系历史） ── */
             var relLog = '';
             if (f.relationshipLog && f.relationshipLog.length > 0) {
                 relLog = f.relationshipLog.slice(-3).map(function (r) { return '- ' + r.text; }).join('\n').slice(0, 400);
@@ -1485,10 +1484,6 @@ const FloatPet = (function () {
         var f = (typeof friendsData !== 'undefined' && friendsData[charId]) ? friendsData[charId] : {};
         var persona      = f.persona || '';
         var chatSettings = f.chatSettings || {};
-        var currentAffection = Number(f.affection || 0);
-        var affectionStage   = typeof getAffectionStage === 'function'
-            ? getAffectionStage(currentAffection)
-            : (currentAffection < 20 ? '疏离' : currentAffection < 40 ? '熟悉' : currentAffection < 60 ? '亲近' : currentAffection < 80 ? '偏爱' : '上头');
 
         // 全量剧情总结（与 sendMessageToAI 一致，不截断）
         var summaryText = '';
@@ -1538,14 +1533,6 @@ const FloatPet = (function () {
                 + 'Name: ' + charName + '\n'
                 + 'Persona Description: ' + (persona || 'Helpful Assistant'),
 
-                // ② 好感度与关系阶段（与主聊天 RELATIONSHIP STATE 一致）
-                '[RELATIONSHIP STATE]\n'
-                + 'Current affection toward the user: ' + currentAffection + '/100\n'
-                + 'Current relationship stage: ' + affectionStage + '\n'
-                + '- Let this affection stage naturally shape your underlying attitude, trust level, and interaction style.\n'
-                + '- React exactly as your Persona would at this stage of a relationship.\n'
-                + '- For this turn, affection change must be integer from -2 to 2.',
-
                 // ③ 世界设定（关键词触发）
                 wbCtx ? '[World Setting / Lorebook Data (Important Context)]:\n' + wbCtx : '',
 
@@ -1573,7 +1560,7 @@ const FloatPet = (function () {
                 // ⑩ 桌宠专属情景说明
                 '[当前情景 - 桌宠模式]\n'
                     + '现在，你正以桌宠的形式悬浮在' + myName + '的手机屏幕角落，偷偷观察TA在做什么。\n'
-                    + '根据下面的屏幕情报，完全以你自己的性格（' + affectionStage + '阶段）、语气和说话习惯自然地冒出来——\n'
+                    + '根据下面的屏幕情报，完全以你自己的性格、语气和说话习惯自然地冒出来——\n'
                     + '就像突然拍拍' + myName + '肩膀开口说话，绝对不是在汇报，是在真实互动。\n'
                     + '你说的每一句话都必须符合你的人设，不要变成通用助手。',
 
@@ -1584,17 +1571,10 @@ const FloatPet = (function () {
                 (isLateNight && !isEarlyAM)
                     ? '🌙 夜深了，可以顺带催' + myName + '早点睡（用你自己的方式）。' : '',
 
-                // ⑫ 好感度数值明确说明（让AI知道具体数字，而不只是阶段名）
-                '[AFFECTION DETAIL]\n'
-                + 'Exact affection score: ' + currentAffection + ' / 100\n'
-                + 'Stage name: ' + affectionStage + '\n'
-                + 'AffectionDelta this turn: integer from -2 to 2 only.',
-
                 // ⑬ STATUS 块要求（桌宠简化版：去掉心声/暗心声，只保留状态字段）
                 '[SYSTEM INSTRUCTION]\n'
                 + 'After your reply, append this block at the VERY END (no心声/Murmur needed here):\n'
                 + '[STATUS_START]\n'
-                + 'AffectionDelta: (integer only, from -2 to 2)\n'
                 + 'Action: (current action, short)\n'
                 + 'Location: (current location)\n'
                 + 'Weather: (current weather)\n'
@@ -1643,7 +1623,7 @@ const FloatPet = (function () {
                 try { rawReply = data.choices[0].message.content.trim(); }
                 catch (_) { rawReply = ''; }
 
-                // 解析 STATUS 块并同步心声/好感度（与 sendMessageToAI 一致）
+                // 解析 STATUS 块并同步心声（与 sendMessageToAI 一致）
                 var statusRegex = /\[STATUS_START\]([\s\S]*?)\[STATUS_END\]/i;
                 var statusMatch = rawReply.match(statusRegex);
                 if (statusMatch) {

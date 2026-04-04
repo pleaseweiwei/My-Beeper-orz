@@ -416,7 +416,6 @@ const PhoneCallApp = (() => {
     const friend = (typeof friendsData !== 'undefined') ? (friendsData[chatId] || {}) : {};
     const aiName    = friend.remark || friend.realName || '对方';
     const aiPersona = friend.persona || '你是一个真实的人，正在接一通电话。';
-    const affection = Number(friend.affection || 0);
 
     const myPersona = (() => {
       if (typeof personasMeta === 'undefined' || typeof currentPersonaId === 'undefined') return '';
@@ -434,7 +433,6 @@ const PhoneCallApp = (() => {
 
 【你的人设】
 ${aiPersona}
-好感度：${affection}/100
 
 ${myPersona ? `【用户身份】\n${myPersona}\n` : ''}
 ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}

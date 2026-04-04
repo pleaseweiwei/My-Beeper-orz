@@ -228,18 +228,6 @@ window.generateOfflineMsgsForFriend = async function(friendId, forceGenerate) {
             if (preset && preset.jailbreak) presetJailbreak = preset.jailbreak;
         }
 
-        // ── 2. 好感度阶段 ──────────────────────────────────────────
-        const currentAffection = Number(friend.affection || 0);
-        let affectionStage = '普通朋友';
-        if (typeof getAffectionStage === 'function') {
-            affectionStage = getAffectionStage(currentAffection);
-        } else {
-            if      (currentAffection >= 80) affectionStage = '热恋期';
-            else if (currentAffection >= 60) affectionStage = '亲密期';
-            else if (currentAffection >= 40) affectionStage = '好感期';
-            else if (currentAffection >= 20) affectionStage = '友好期';
-        }
-
         // ── 3. 用户人设 ────────────────────────────────────────────
         let myPersonaText = '';
         if (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined') {
@@ -296,7 +284,6 @@ ${friend.persona || '（无特殊人设）'}`;
 
         if (worldbookText) systemPrompt += `\n\n【世界观/背景设定】：\n${worldbookText}`;
         if (presetJailbreak) systemPrompt += `\n\n${presetJailbreak}`;
-        systemPrompt += `\n\n【好感度】：${currentAffection}/100（当前阶段：${affectionStage}）`;
         if (myPersonaText)    systemPrompt += `\n\n【用户身份】：${myPersonaText}`;
         if (writingStyleText) systemPrompt += `\n\n【文风要求】：${writingStyleText}`;
         systemPrompt += summaryBlock;
