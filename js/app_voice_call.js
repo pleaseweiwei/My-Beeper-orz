@@ -555,6 +555,7 @@ function _buildInfoStrip(chatId) {
 function _buildVisualUI(chatId) {
     const friend     = (typeof friendsData !== 'undefined') ? (friendsData[chatId] || {}) : {};
     const aiAvatar   = friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatId}`;
+    const bgSrc      = friend.chatSettings?.callBg || aiAvatar;
     const aiName     = friend.remark || friend.realName || chatId;
     const mePersona  = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined')
         ? (personasMeta[currentPersonaId] || {}) : {};
@@ -565,7 +566,7 @@ function _buildVisualUI(chatId) {
 <div class="vc-visual-interface">
   <!-- AI 背景 -->
   <div class="vc-main-view">
-    <img class="vc-main-img" id="vc-main-img" src="${aiAvatar}" alt="">
+    <img class="vc-main-img" id="vc-main-img" src="${bgSrc}" alt="">
   </div>
 
   <!-- PiP 用户画面 -->
@@ -589,6 +590,19 @@ function _buildVisualUI(chatId) {
     </div>
   </div>
 
+  <!-- 侧边功能栏 -->
+  <div class="vc-side-tools">
+    <div class="vc-side-btn" onclick="changeCallBg()" title="更换背景">
+      <i class="fas fa-image"></i>
+    </div>
+    <div class="vc-side-btn" onclick="rerollCallReply()" title="重新生成">
+      <i class="fas fa-redo"></i>
+    </div>
+    <div class="vc-side-btn" onclick="flipCallCamera()" title="翻转">
+      <i class="fas fa-sync-alt"></i>
+    </div>
+  </div>
+
   <!-- 记忆/世界书信息条 -->
   <div class="vc-info-strip">${infoStrip}</div>
 
@@ -602,13 +616,12 @@ function _buildVisualUI(chatId) {
            id="vc-cam-btn" onclick="toggleCallCamera()" title="摄像头">
         <i class="fas fa-video"></i>
       </div>
-      <span>摄像头</span>
+      <span>镜头</span>
     </div>
-    <div class="vc-ctrl-label">
-      <div class="vc-ctrl-btn" onclick="flipCallCamera()" title="翻转">
-        <i class="fas fa-sync-alt"></i>
+    <div class="vc-ctrl-label" style="margin: 0 20px;">
+      <div class="vc-ctrl-btn end" onclick="hangUpCall()" title="挂断">
+        <i class="fas fa-phone-slash"></i>
       </div>
-      <span>翻转</span>
     </div>
     <div class="vc-ctrl-label">
       <div class="vc-ctrl-btn ${VideoCallState.ttsEnabled ? 'active' : ''}"
@@ -616,18 +629,6 @@ function _buildVisualUI(chatId) {
         <i class="fas fa-volume-up"></i>
       </div>
       <span>语音</span>
-    </div>
-    <div class="vc-ctrl-label">
-      <div class="vc-ctrl-btn" onclick="rerollCallReply()" title="重新生成">
-        <i class="fas fa-redo"></i>
-      </div>
-      <span>重回</span>
-    </div>
-    <div class="vc-ctrl-label">
-      <div class="vc-ctrl-btn end" onclick="hangUpCall()" title="挂断">
-        <i class="fas fa-phone-slash"></i>
-      </div>
-      <span>挂断</span>
     </div>
   </div>
 
@@ -1015,6 +1016,33 @@ window.rerollCallReply = function() {
         }
     }
     _sendCallAI('[重新生成一段表现]', null);
+};
+
+window.changeCallBg = function() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const dataUrl = ev.target.result;
+            const img = document.getElementById('vc-main-img');
+            if (img) img.src = dataUrl;
+            
+            const chatId = VideoCallState.chatId;
+            if (chatId && typeof friendsData !== 'undefined' && friendsData[chatId]) {
+                if (!friendsData[chatId].chatSettings) {
+                    friendsData[chatId].chatSettings = {};
+                }
+                friendsData[chatId].chatSettings.callBg = dataUrl;
+                if (typeof saveData === 'function') saveData();
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
 };
 
 /* ─────────────────────────────────────────────

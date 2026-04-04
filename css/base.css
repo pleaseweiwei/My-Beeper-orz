@@ -96,7 +96,8 @@ body {
 .page {
     min-width: 100%;
     height: 100%;
-    padding: calc(env(safe-area-inset-top) + 15px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
+    padding: calc(env(safe-area-inset-top) + 5px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
+    margin-top: -10px; /* 整体往上移 */
     scroll-snap-align: start;
     scroll-snap-stop: always; 
     overflow-y: hidden;
@@ -105,7 +106,7 @@ body {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(7, 75px); /* 【修改】减去最后一行，避免和底栏重叠 */
-    gap: 15px 12px; 
+    gap: 8px 10px; /* 减小网格间隙 */
     align-content: start; 
     position: relative;
 }
@@ -117,10 +118,18 @@ body {
 }
 
 /* === 特定小组件尺寸微调 === */
+/* 第一页统一头部组件：整体缩小一点点 */
+.page > .unified-header-widget.sortable-item {
+    transform: scale(0.80);
+    transform-origin: left center;
+}
+
 /* 第一页音乐组件：网格依然占两行，但视觉上改窄并垂直居中 */
 .page > .music-widget.sortable-item {
     height: 125px !important; /* 降低高度使其变窄 */
     margin: auto !important; /* 在两行的网格空间内居中 */
+    transform: scale(0.98);
+    transform-origin: center center;
 }
 
 /* 第三页韩系组件：网格升为占四行，但保持原来三行(255px)的大小并垂直居中 */
@@ -167,12 +176,13 @@ body {
 .clock-profile-combo {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 25px; /* 增加固定间距，使其不那么拥挤 */
 }
 
 .time-block {
     font-family: 'Playfair Display', serif;
-    font-size: calc(100px * var(--font-scale)); /* 再调大一点点 */
+    font-size: calc(90px * var(--font-scale)); /* 调小一点时间字体 */
     line-height: 1;
     color: var(--theme-text-color); /* 应用变量 */
     letter-spacing: -3px;
@@ -186,7 +196,7 @@ body {
     width: 1px;
     height: 50px;
     background: rgba(0,0,0,0.08);
-    margin: 0 10px;
+    margin: 0;
 }
 
 .profile-stack {
@@ -528,6 +538,7 @@ input:checked + .slider:before { transform: translateX(18px); }
     
     .page {
         padding: calc(env(safe-area-inset-top) + 0px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px;
+        margin-top: -15px;
     }
 
     .dock-bar {

@@ -4418,8 +4418,8 @@ function renderMomentsFeed() {
 
         const imagesHtml = imgs.map((img, idx) => {
            if (img.isAI) {
-                const safeDesc = (img.desc || '').replace(/"/g, '&quot;');
-                return `<div class="moment-image-ai" data-desc="${safeDesc}"></div>`;
+                const safeDesc = (img.desc || '').replace(/"/g, '"');
+                return `<div class="moment-image-ai" data-desc="${safeDesc}" title="${safeDesc}"></div>`;
             } else if (img.url) {
                 const safeUrl = img.url.replace(/"/g, '&quot;');
                 if (count === 1) return `<img src="${safeUrl}" class="single-img">`;

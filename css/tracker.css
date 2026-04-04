@@ -699,9 +699,9 @@
   margin-bottom: 4px; font-weight: 700;
 }
 .tr-desktop-big-time {
-  font-size: 68px; font-weight: 100;
+  font-size: 56px; font-weight: 100;
   color: var(--white); line-height: .9;
-  letter-spacing: -4px; font-family: var(--font);
+  letter-spacing: -3px; font-family: var(--font);
 }
 .tr-remark-pill {
   display: inline-flex; align-items: center; gap: 6px;
