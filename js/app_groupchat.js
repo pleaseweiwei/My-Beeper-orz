@@ -3769,16 +3769,6 @@ window.refreshGroupMindCardUI = function(groupId, useTyping = false) {
         const avatarUrl = friend.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(friend.realName || memberId)}`;
         const name = friend.remark || friend.realName || memberId;
         const murmur = state.murmur || "...";
-        const hiddenThought = state.hiddenThought || "";
-        
-        // 只要一两句话，这里直接取 murmur，如果太短再结合 hiddenThought
-        let thoughtText = murmur;
-        if (thoughtText === "..." && hiddenThought !== "...") {
-            thoughtText = hiddenThought;
-        } else if (hiddenThought && hiddenThought !== "..." && hiddenThought !== murmur) {
-            // 合并为一句简单的话，去掉明显的括号区分，或者只保留 murmur
-            thoughtText += ` ${hiddenThought}`;
-        }
 
         const itemHtml = `
             <div class="group-mind-item" style="padding: 16px; border-bottom: 1px dashed #f0f0f0; display: flex; flex-direction: column; gap: 12px;">
@@ -3800,15 +3790,14 @@ window.refreshGroupMindCardUI = function(groupId, useTyping = false) {
                 </div>
                 <div style="background: #f9f9f9; border-radius: 12px; padding: 12px 14px; position: relative;">
                     <i class="fas fa-quote-left" style="color: #ddd; font-size: 12px; position: absolute; top: -6px; left: 12px; background: #fff; padding: 0 4px;"></i>
-                    <div class="group-mind-text" id="gm-text-${memberId}" style="font-size: 13px; color: #444; line-height: 1.6; font-style: normal;">${thoughtText}</div>
+                    <div class="group-mind-text" id="gm-text-${memberId}" style="font-size: 13px; color: #444; line-height: 1.6; font-style: normal;">${murmur}</div>
                 </div>
             </div>
         `;
         
         listContainer.insertAdjacentHTML('beforeend', itemHtml);
 
-        if (useTyping && typeof typeWriterEffect === 'function' && thoughtText === murmur) {
-            // 如果没有 hiddenThought 混合格式，就使用打字机效果
+        if (useTyping && typeof typeWriterEffect === 'function') {
             typeWriterEffect(murmur, `gm-text-${memberId}`, 18);
         }
     });

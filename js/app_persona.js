@@ -4,12 +4,11 @@
 
 // 定义所有的 input id 键值，用于保存和AI回填
 const PB_KEYS = [
-    'pb_name', 'pb_realName', 'pb_gender', 'pb_age', 'pb_location', 'pb_occupation', 'pb_education', 'pb_income', 'pb_routine', 'pb_tags',
-    'pb_vibeTags', 'pb_physique', 'pb_face', 'pb_hair', 'pb_style', 'pb_colors', 'pb_accessories', 'pb_voice', 'pb_expression', 'pb_aura',
-    'pb_family', 'pb_wealth', 'pb_childhood', 'pb_hometown', 'pb_prosCons', 'pb_pastExp', 'pb_turningPoint',
-    'pb_coreTrait', 'pb_apparentTrait', 'pb_hiddenTrait', 'pb_thinking', 'pb_emotion', 'pb_weakness', 'pb_values', 'pb_desire','pb_fear', 'pb_secret',
-    'pb_livingHabit', 'pb_socialHabit', 'pb_languageHabit', 'pb_hobbies', 'pb_likesDislikes', 'pb_diet', 'pb_soloTime', 'pb_quirks', 'pb_dailySchedule',
-    'pb_romance', 'pb_friendType', 'pb_hateType', 'pb_strangerAttitude', 'pb_fearRelation', 'pb_socialCircle', 'pb_familyAttitude', 'pb_colleagueAttitude', 'pb_trust'
+    'pb_name', 'pb_realName', 'pb_gender', 'pb_age', 'pb_occupation', 'pb_tags',
+    'pb_physique', 'pb_face', 'pb_hair', 'pb_style', 'pb_voice', 'pb_aura',
+    'pb_family', 'pb_pastExp', 'pb_turningPoint',
+    'pb_coreTrait', 'pb_apparentTrait', 'pb_hiddenTrait', 'pb_weakness', 'pb_values', 'pb_desire','pb_fear', 'pb_secret',
+    'pb_hobbies', 'pb_likesDislikes', 'pb_quirks', 'pb_romance'
 ];
 const PB_MANUAL_KEY = 'pb_manual_persona';
 
@@ -119,37 +118,26 @@ window.savePersonaBuilder = async function() {
     let prompt = `[User Identity Profile]
 Name/Nickname: ${d.pb_name} | Real Name: ${d.pb_realName}
 Gender/Orientation: ${d.pb_gender} | Age: ${d.pb_age}
-Location: ${d.pb_location} | Edu: ${d.pb_education} | Occ: ${d.pb_occupation} | Income: ${d.pb_income}
-Routine: ${d.pb_routine} | Tags: ${d.pb_tags}
+Occ: ${d.pb_occupation} | Tags: ${d.pb_tags}
 
 [Physical Appearance]
 Physique: ${d.pb_physique} | Face: ${d.pb_face} | Hair: ${d.pb_hair}
-Style: ${d.pb_style} | Colors: ${d.pb_colors} | Accessories: ${d.pb_accessories}
-Aura: ${d.pb_aura} | Expression: ${d.pb_expression} | Voice: ${d.pb_voice} | Vibe Tags:${d.pb_vibeTags}
+Style: ${d.pb_style} | Voice: ${d.pb_voice}
+Aura: ${d.pb_aura}
 
 [Background & Past]
-Family: ${d.pb_family} | Wealth: ${d.pb_wealth} | Hometown: ${d.pb_hometown}
-Childhood: ${d.pb_childhood} | Pros/Cons from Past: ${d.pb_prosCons}
+Family: ${d.pb_family}
 Past Exp: ${d.pb_pastExp}
 Turning Point: ${d.pb_turningPoint}
 
 [Internal Character]
 Core: ${d.pb_coreTrait} | Apparent: ${d.pb_apparentTrait} | Hidden:${d.pb_hiddenTrait}
-Thinking: ${d.pb_thinking} | Emotion: ${d.pb_emotion} | Weakness/Limits: ${d.pb_weakness}
-Values: ${d.pb_values}
+Weakness/Limits: ${d.pb_weakness} | Values: ${d.pb_values}
 Desire: ${d.pb_desire}| Fear: ${d.pb_fear} | Secret/Knot: ${d.pb_secret}
 
-[Habits & Routines]
-Living: ${d.pb_livingHabit} | Social: ${d.pb_socialHabit} | Language: ${d.pb_languageHabit}
-Hobbies: ${d.pb_hobbies} | Likes/Dislikes: ${d.pb_likesDislikes} | Diet: ${d.pb_diet}
-Schedule: ${d.pb_dailySchedule}
-Solo Time: ${d.pb_soloTime} | Quirks: ${d.pb_quirks}
-
-[Relationships]
-Circle: ${d.pb_socialCircle} | Romance: ${d.pb_romance}
-Friends: ${d.pb_friendType} | Hate: ${d.pb_hateType}
-Family Attitude: ${d.pb_familyAttitude} | Stranger: ${d.pb_strangerAttitude} | Colleague: ${d.pb_colleagueAttitude}
-Trust: ${d.pb_trust} | Deepest Fear in Rel: ${d.pb_fearRelation}`;
+[Habits & Social]
+Hobbies: ${d.pb_hobbies} | Likes/Dislikes: ${d.pb_likesDislikes} | Quirks: ${d.pb_quirks}
+Romance: ${d.pb_romance}`;
 
     const manualPersona = d[PB_MANUAL_KEY];
     // 手写优先：只要手写框不为空，就直接用手写框作为最终 persona
@@ -180,12 +168,11 @@ window.generatePersonaByAI = async function() {
 
     // 构造严格的 JSON 请求结构
     const jsonFormat = `{
-  "pb_name": "", "pb_realName": "", "pb_gender": "", "pb_age": "", "pb_location": "", "pb_occupation": "", "pb_education": "", "pb_income": "", "pb_routine": "", "pb_tags": "",
-  "pb_vibeTags": "", "pb_physique": "", "pb_face": "", "pb_hair": "", "pb_style": "", "pb_colors": "", "pb_accessories": "", "pb_voice": "", "pb_expression": "", "pb_aura": "",
-  "pb_family": "", "pb_wealth": "", "pb_childhood": "", "pb_hometown": "", "pb_prosCons": "", "pb_pastExp": "","pb_turningPoint": "",
-  "pb_coreTrait": "", "pb_apparentTrait": "", "pb_hiddenTrait": "", "pb_thinking": "", "pb_emotion": "", "pb_weakness": "", "pb_values": "", "pb_desire": "", "pb_fear": "", "pb_secret": "",
-  "pb_livingHabit": "", "pb_socialHabit": "", "pb_languageHabit": "", "pb_hobbies": "", "pb_likesDislikes": "", "pb_diet": "", "pb_soloTime": "","pb_quirks": "", "pb_dailySchedule": "",
-  "pb_romance": "", "pb_friendType": "", "pb_hateType": "", "pb_strangerAttitude": "", "pb_fearRelation": "", "pb_socialCircle": "", "pb_familyAttitude": "", "pb_colleagueAttitude": "", "pb_trust": ""
+  "pb_name": "", "pb_realName": "", "pb_gender": "", "pb_age": "", "pb_occupation": "", "pb_tags": "",
+  "pb_physique": "", "pb_face": "", "pb_hair": "", "pb_style": "", "pb_voice": "", "pb_aura": "",
+  "pb_family": "", "pb_pastExp": "", "pb_turningPoint": "",
+  "pb_coreTrait": "", "pb_apparentTrait": "", "pb_hiddenTrait": "", "pb_weakness": "", "pb_values": "", "pb_desire": "", "pb_fear": "", "pb_secret": "",
+  "pb_hobbies": "", "pb_likesDislikes": "", "pb_quirks": "", "pb_romance": ""
 }`;
 
     const megaPrompt = `
@@ -196,7 +183,7 @@ ${wb ? `[World Setting Reference]:\n${wb}\nMake sure the occupation, style, and 
 ${charPersona ? `[Interaction Target Reference]:\n${charPersona}\nThis is the AIcharacter the user will interact with. Design the user's personality and secrets so they have interesting chemistry/conflict with this character.` : ''}
 
 [Task]
-Expand the brief idea into a fully detailed 55-point profile. Fill in creative, logically consistent, and charming details. 
+Expand the brief idea into a fully detailed profile. Fill in creative, logically consistent, and charming details. 
 - UseSimplified Chinese (简体中文).
 - Be specific (e.g. instead of "Likes music", write "Always wears wired earphones listening to city pop").
 - STRICT REQUIREMENT: Output NOTHING ELSE BUT a pure JSON object matching this exact structure:

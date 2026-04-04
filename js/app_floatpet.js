@@ -1592,7 +1592,7 @@ const FloatPet = (function () {
 
                 // ⑬ STATUS 块要求（桌宠简化版：去掉心声/暗心声，只保留状态字段）
                 '[SYSTEM INSTRUCTION]\n'
-                + 'After your reply, append this block at the VERY END (no心声/Murmur/Secret needed here):\n'
+                + 'After your reply, append this block at the VERY END (no心声/Murmur needed here):\n'
                 + '[STATUS_START]\n'
                 + 'AffectionDelta: (integer only, from -2 to 2)\n'
                 + 'Action: (current action, short)\n'

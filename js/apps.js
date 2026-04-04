@@ -71,8 +71,7 @@ let currentMindState = {
     action: "正在发呆",
     location: "未知地点",
     weather: "晴",
-    murmur: "...",
-    hiddenThought: "..."
+    murmur: "..."
 };
 function getAffectionStage(score) {
     score = Number(score) || 0;
@@ -146,8 +145,6 @@ function ensureFriendMindFields(friend, friendId = 'AI') {
         location: friend.mindState.location || "未知地点",
         weather: friend.mindState.weather || "晴",
         murmur: friend.mindState.murmur || "我还没想好要说什么。不过我在看着你。也在等你继续靠近一点。",
-        hiddenThought: friend.mindState.hiddenThought || "现在先不告诉你。再多聊几句，也许我会慢慢松口。",
-        darkThought: friend.mindState.darkThought || "如果能把你完全困在这里就好了，只能看着我一个人...",
         kaomoji: friend.mindState.kaomoji || "( ˙W˙ )",
         bgm: friend.mindState.bgm || "No BGM"
     };
@@ -399,8 +396,6 @@ function refreshMindCardUI(friendId, useTyping = false) {
     const bgmEl = document.getElementById('now-playing-bgm');
     const kaoEl = document.getElementById('mind-kaomoji-display');
     const murEl = document.getElementById('mind-murmur-text');
-    const secEl = document.getElementById('mind-hidden-text');
-    const darkEl = document.getElementById('mind-dark-hidden-text');
 
     if (locEl) locEl.innerText = state.location || "未知地点";
     if (actEl) actEl.innerText = state.action || "正在发呆";
@@ -410,16 +405,8 @@ function refreshMindCardUI(friendId, useTyping = false) {
 
     if (useTyping && typeof typeWriterEffect === 'function') {
         typeWriterEffect(state.murmur || "...", 'mind-murmur-text', 18);
-        setTimeout(() => {
-            typeWriterEffect(state.hiddenThought || "...", 'mind-hidden-text', 18);
-        }, 150);
-        setTimeout(() => {
-            typeWriterEffect(state.darkThought || "...", 'mind-dark-hidden-text', 18);
-        }, 300);
     } else {
         if (murEl) murEl.innerText = state.murmur || "...";
-        if (secEl) secEl.innerText = state.hiddenThought || "...";
-        if (darkEl) darkEl.innerText = state.darkThought || "...";
     }
 
     applyMindMarqueeIfOverflow();
@@ -454,8 +441,6 @@ function parseAndApplyMindStateBlock(friendId, statusBlock) {
     friend.mindState.weather = getVal('Weather') || friend.mindState.weather;
     friend.mindState.bgm = getVal('BGM') || friend.mindState.bgm;
     friend.mindState.murmur = getVal('Murmur') || friend.mindState.murmur;
-    friend.mindState.hiddenThought = getVal('Secret') || friend.mindState.hiddenThought;
-    friend.mindState.darkThought = getVal('DarkSecret') || friend.mindState.darkThought;
     friend.mindState.kaomoji = getVal('Kaomoji') || friend.mindState.kaomoji;
 
     saveFriendsData();
@@ -2315,8 +2300,6 @@ window.confirmAddFriend = function() {
         location: "聊天界面",
         weather: "晴",
         murmur: "我刚出现。先看看你会怎么和我说第一句话。也许接下来会变得有意思。",
-        hiddenThought: "先保留一点距离。别急，让我再确认一下，你是不是值得我靠近。",
-        darkThought: "想要完全占有你，不让任何人碰触，看着你在我面前哭泣的样子...",
         kaomoji: "( ˙W˙ )",
         bgm: "No BGM"
     },
@@ -2665,15 +2648,13 @@ Location: (current location)
 Weather: (current weather)
 BGM: (one fitting bgm title, format: Title - Artist/Style)
 Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
-Secret: (3 to 4 longer sentences, first-person self-talk, hidden deeper thoughts, in character voice)
-DarkSecret: (3 to 4 longer sentences, first-person self-talk, hidden thoughts or deep feelings about the user, strictly adhering to the character's persona and relationship with the user)
 Kaomoji: (one matching kaomoji)
 [STATUS_END]
 Rules:
 - AffectionDelta must be one of: -2, -1, 0, 1, 2
 - Do not explain the status block
-- Murmur, Secret and DarkSecret must be character self-talk, not narration
-- Murmur, Secret and DarkSecret must each contain 3 to 4 sentences
+- Murmur must be character self-talk, not narration.
+- Murmur must contain 3 to 4 sentences.
 - BGM must match the current mood, setting, or conversation scene
 
 [Example Status Block]
@@ -2684,8 +2665,6 @@ Location: 卧室
 Weather: 小雨
 BGM: cardigan - Taylor Swift
 Murmur: 他今天倒是来得比我想象中早一点。我本来还想装作无所谓，结果还是第一时间去看消息了。真烦，明明不该这么在意的。可我就是忍不住。
-Secret: 其实我有一点高兴。不是一点，是比我愿意承认的还要更多。要是他再多说几句好听的，我可能真的会心软得很快。现在先藏着吧，至少我还不想让他看得太明白。
-DarkSecret: 他刚刚的样子真的很有趣，不过如果他知道我现在脑子里在想什么，会不会被吓跑呢？还是先保持现在的距离慢慢来吧。
 Kaomoji: ( ｡•̀ᴗ-)✧
 [STATUS_END]
 `;
@@ -3137,8 +3116,6 @@ if (statusMatch) {
     friendsData[targetChatId].mindState.weather = readStatusValue('Weather') || friendsData[targetChatId].mindState.weather || '晴';
     friendsData[targetChatId].mindState.bgm = readStatusValue('BGM') || friendsData[targetChatId].mindState.bgm || 'No BGM';
     friendsData[targetChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[targetChatId].mindState.murmur || '...';
-    friendsData[targetChatId].mindState.hiddenThought = readStatusValue('Secret') || friendsData[targetChatId].mindState.hiddenThought || '...';
-    friendsData[targetChatId].mindState.darkThought = readStatusValue('DarkSecret') || friendsData[targetChatId].mindState.darkThought || '...';
     friendsData[targetChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[targetChatId].mindState.kaomoji || '( ˙W˙ )';
 
     saveFriendsData();
@@ -7489,8 +7466,6 @@ ${mesExample}
         location: "角色初始化空间",
         weather: "晴",
         murmur: "新的人设已经套上来了。我在适应你的世界，也在确认要怎么和你开口。",
-        hiddenThought: "先不把真正的心思露出来。看看你会把我带进怎样的剧情里。",
-        darkThought: "不管是什么剧情，最后你都只能属于我，休想逃离我的手心。",
         kaomoji: "( ˙W˙ )",
         bgm: "No BGM"
     },
@@ -8486,8 +8461,6 @@ Location: （地点）
 Weather: （天气）
 BGM: （歌名 - 歌手）
 Murmur: （3-4句表层心声，符合人设）
-Secret: （3-4句深层想法，符合人设）
-DarkSecret: （3-4句最深层的隐秘心思，必须绝对契合人设，切勿OOC）
 Kaomoji: （颜文字）
 [STATUS_END]`;
     // 弹幕 OFF 时：不要求生成弹幕块；弹幕 ON 时：才要求生成
@@ -9980,8 +9953,6 @@ window.clearCurrentChatHistory = async function() {
                     location: "未知地点",
                     weather: "晴",
                     murmur: "我还没想好要说什么。不过我在看着你。也在等你继续靠近一点。",
-                    hiddenThought: "现在先不告诉你。再多聊几句，也许我会慢慢松口。",
-                    darkThought: "如果能把你完全困在这里就好了，只能看着我一个人...",
                     kaomoji: "( ˙W˙ )",
                     bgm: "No BGM"
                 };
