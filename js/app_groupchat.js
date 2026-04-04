@@ -600,6 +600,11 @@ window.sendGroupMessageToAI = async function (userMessage) {
         
         const myPersonaStr = `${presetPrompt}[你的身份 (群主/用户)]\n- 群昵称: ${myName}\n- 专属人设: ${(me && me.persona) ? me.persona : '普通用户'}\n[防出戏死命令]: 你绝对不能扮演用户（${myName}），严禁以用户的名字生成对话！`;
 
+        const parseMacros = (str, charName) => {
+            if (!str) return '';
+            return String(str).replace(/{{char}}/gi, charName || '助手').replace(/{{user}}/gi, myName);
+        };
+
         // 主要发言角色人设（包含禁言标签）
         let membersInfo = '';
         const allMemberIds = group.members || [];
