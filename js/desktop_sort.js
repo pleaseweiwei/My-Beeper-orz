@@ -470,7 +470,9 @@
             }
         });
         sortableInstances.push(s);
+        return newPage; // <--- 【新增这行】返回新创建的页面
     }
+
 
     // 【新增】智能清理多余的空页（像苹果一样）
     function cleanupEmptyPages(force) {
@@ -616,7 +618,7 @@
         if(saveOrder) saveOrder();
     }
 
-    function toggleOpacityControls(item) {
+      function toggleOpacityControls(item) {
         document.querySelectorAll('.tw-controls').forEach(function(ctrl) {
             if (ctrl.parentElement !== item) ctrl.remove();
         });
@@ -630,14 +632,13 @@
         var controls = document.createElement('div');
         controls.className = 'tw-controls';
         
-                var bgLayer = item.querySelector('.tw-bg-layer');
+        var bgLayer = item.querySelector('.tw-bg-layer');
         if (!bgLayer) {
             bgLayer = document.createElement('div');
             bgLayer.className = 'tw-bg-layer';
             bgLayer.dataset.color = '255,255,255';
-            bgLayer.dataset.opacity = '0.8'; // 👈 修改：初始给一个 0.8 的半透明度
-            bgLayer.style.backgroundColor = 'rgba(255,255,255,0.8)'; // 👈 修改：同步这里的 0.8
-            // 确保插在组件的最外层底部
+            bgLayer.dataset.opacity = '0.8';
+            bgLayer.style.backgroundColor = 'rgba(255,255,255,0.8)'; 
             if (item.firstChild) {
                 item.insertBefore(bgLayer, item.firstChild);
             } else {
@@ -646,22 +647,16 @@
         }
         
         var color = bgLayer.dataset.color || '255,255,255';
-        var opacity = parseFloat(bgLayer.dataset.opacity || '0.8'); // 👈 修改：这里也改成 0.8
-
-        
+        var opacity = parseFloat(bgLayer.dataset.opacity || '0.8'); 
         var btnClass = color === '255,255,255' ? 'tw-white' : 'tw-black';
         
-        // 新增了后方的数字输入框
-        controls.innerHTML = '<div class="tw-ctrl-btn tw-color-toggle ' + btnClass + '"><i class="fas fa-adjust"></i></div>' +
-                             '<input type="range" class="tw-slider" min="0" max="100" value="' + (opacity * 100) + '">' +
-                             '<input type="number" class="tw-num-input" min="0" max="100" value="' + (opacity * 100) + '" style="width: 44px; border: 1px solid #ddd; border-radius: 6px; padding: 4px; text-align: center; font-size: 12px; margin-left: 2px; outline: none; background: #fff;">' + 
-                             '<span style="font-size:12px; color:#666; margin-left:-2px;">%</span>';
+        // 【修改】去掉了滑块，换成点击按钮
+        controls.innerHTML = '<div class="tw-ctrl-btn tw-color-toggle ' + btnClass + '" style="margin-right:8px;"><i class="fas fa-adjust"></i></div>' +
+                             '<div class="tw-ctrl-btn tw-opacity-toggle" style="background:#f0f0f0; color:#333; padding:4px 8px; border-radius:12px; font-size:12px; cursor:pointer; user-select:none;">' + Math.round(opacity * 100) + '%</div>';
         
         var colorToggle = controls.querySelector('.tw-color-toggle');
-        var slider = controls.querySelector('.tw-slider');
-        var numInput = controls.querySelector('.tw-num-input'); // 获取新建的输入框
+        var opacityToggle = controls.querySelector('.tw-opacity-toggle');
 
-        // 更新暗色模式类，只有当颜色为黑色且透明度大于一定阈值时才添加
         function updateDarkModeClass() {
             if (color === '0,0,0' && opacity > 0.3) {
                 item.classList.add('tw-dark-mode');
@@ -670,11 +665,9 @@
             }
         }
 
-        // 封装一个更新透明度的通用函数
         function updateOpacityValue(val) {
-            val = Math.max(0, Math.min(100, parseInt(val) || 0)); // 限制在 0-100 之间
-            slider.value = val;
-            numInput.value = val;
+            val = Math.max(0, Math.min(100, parseInt(val) || 0));
+            opacityToggle.innerText = val + '%';
             opacity = val / 100;
             bgLayer.dataset.opacity = opacity;
             bgLayer.style.backgroundColor = 'rgba(' + color + ', ' + opacity + ')';
@@ -686,51 +679,31 @@
             color = color === '255,255,255' ? '0,0,0' : '255,255,255';
             colorToggle.className = 'tw-ctrl-btn tw-color-toggle ' + (color === '255,255,255' ? 'tw-white' : 'tw-black');
             bgLayer.dataset.color = color;
-            bgLayer.style.backgroundColor = 'rgba(' + color + ', ' + (slider.value / 100) + ')';
+            bgLayer.style.backgroundColor = 'rgba(' + color + ', ' + opacity + ')';
             updateDarkModeClass();
             saveOrder();
         });
         
-        // 滑块拖动时
-        slider.addEventListener('input', function(e) {
+        // 【新增】点击切换透明度 (每次加 20%)
+        opacityToggle.addEventListener('click', function(e) {
             e.stopPropagation();
-            updateOpacityValue(e.target.value);
-        });
-        slider.addEventListener('change', function(e) {
+            var currentVal = Math.round(opacity * 100);
+            var nextVal = currentVal + 20;
+            if (nextVal > 100) nextVal = 0;
+            updateOpacityValue(nextVal);
             saveOrder();
         });
 
-        // 文本框输入时
-        numInput.addEventListener('input', function(e) {
-            e.stopPropagation();
-            updateOpacityValue(e.target.value);
-        });
-        numInput.addEventListener('change', function(e) {
-            e.stopPropagation();
-            updateOpacityValue(e.target.value);
-            saveOrder(); // 失焦或回车时保存
-        });
-
-        // 防止在输入框里按键触发其他系统功能
-        numInput.addEventListener('keydown', function(e) { e.stopPropagation(); });
-        numInput.addEventListener('keyup', function(e) { e.stopPropagation(); });
-
-          controls.addEventListener('mousedown', function(e) { e.stopPropagation(); });
-          controls.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
-          controls.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: false });
-          controls.addEventListener('click', function(e) { e.stopPropagation(); });
-          controls.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
-          controls.addEventListener('pointermove', function(e) { e.stopPropagation(); });
-
-          // 关键修复：阻止事件冒泡到SortableJS引起拖拽
-          slider.addEventListener('mousedown', function(e) { e.stopPropagation(); });
-          slider.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
-          slider.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: false });
-          slider.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
-          slider.addEventListener('pointermove', function(e) { e.stopPropagation(); });
+        controls.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+        controls.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
+        controls.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: false });
+        controls.addEventListener('click', function(e) { e.stopPropagation(); });
+        controls.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+        controls.addEventListener('pointermove', function(e) { e.stopPropagation(); });
         
         item.appendChild(controls);
     }
+
 
     window.DesktopSort = {
         enterEditMode: enterEditMode,
@@ -740,7 +713,8 @@
         isEditMode: function () { return editMode; },
         flatten: flattenAllPages,
         cycleWidgetColor: cycleWidgetColor,
-        toggleOpacityControls: toggleOpacityControls
+       toggleOpacityControls: toggleOpacityControls,
+        createNewPage: createNewPage // <--- 【新增这行】暴露创建页面的方法
     };
 
 })();
@@ -883,9 +857,39 @@ window.createCustomWidget = function() {
     var sl = screen.scrollLeft;
     var curIdx = Math.round(sl / pw);
     var pages = document.querySelectorAll('.page');
-    var page = pages[curIdx];
-    if (!page) page = pages[0];
     
+    // 从当前页开始往后找，看看哪页能放下 (w * h 就是这个组件需要的格子数)
+    var requiredArea = w * h;
+    var targetPage = null;
+    for (var i = curIdx; i < pages.length; i++) {
+        var pageNode = pages[i];
+        // 算出这页已经被占用了多少格子
+        var items = Array.from(pageNode.children);
+        var totalUsed = 0;
+        items.forEach(function(el) { 
+            if (el.classList.contains('sortable-item') && !el.classList.contains('ds-empty-slot')) {
+                var m = el.className.match(/widget-(\d+)x(\d+)/);
+                totalUsed += m ? parseInt(m[1]) * parseInt(m[2]) : 1;
+            }
+        });
+        
+        // 每页最多28格，如果剩余空间够放，就放在这页
+        if (28 - totalUsed >= requiredArea) {
+            targetPage = pageNode;
+            break;
+        }
+    }
+    
+    // 如果找了一圈都没有足够的空位，就自动开新页
+    if (!targetPage) {
+        targetPage = window.DesktopSort.createNewPage();
+        // 稍微延迟一下，把屏幕自动滑到新加的那一页去
+        setTimeout(function() {
+            screen.scrollTo({ left: targetPage.offsetLeft, behavior: 'smooth' });
+        }, 100);
+    }
+    var page = targetPage;
+
     var el = document.createElement('div');
     el.className = 'sortable-item dynamic-widget ' + sizeClass;
     el.style.setProperty('grid-column', 'span ' + w, 'important');
@@ -968,13 +972,44 @@ window.switchWidgetCategory = function(cat, btn) {
 window.addWidget = function(type, sizeClass) {
     var screen = document.getElementById('screen');
     if (!screen) return;
+    
+    // 先从 sizeClass (比如 'widget-2x2') 里面提取出宽和高，算出需要的格子数
+    var match = sizeClass.match(/widget-(\d+)x(\d+)/);
+    var w = match ? parseInt(match[1]) : 1;
+    var h = match ? parseInt(match[2]) : 1;
+    var requiredArea = w * h;
+
     var pw = screen.clientWidth;
     var sl = screen.scrollLeft;
     var curIdx = Math.round(sl / pw);
     var pages = document.querySelectorAll('.page');
-    var page = pages[curIdx];
-    if (!page) page = pages[0];
     
+    var targetPage = null;
+    for (var i = curIdx; i < pages.length; i++) {
+        var pageNode = pages[i];
+        var items = Array.from(pageNode.children);
+        var totalUsed = 0;
+        items.forEach(function(el) { 
+            if (el.classList.contains('sortable-item') && !el.classList.contains('ds-empty-slot')) {
+                var m = el.className.match(/widget-(\d+)x(\d+)/);
+                totalUsed += m ? parseInt(m[1]) * parseInt(m[2]) : 1;
+            }
+        });
+        
+        if (28 - totalUsed >= requiredArea) {
+            targetPage = pageNode;
+            break;
+        }
+    }
+    
+    if (!targetPage) {
+        targetPage = window.DesktopSort.createNewPage();
+        setTimeout(function() {
+            screen.scrollTo({ left: targetPage.offsetLeft, behavior: 'smooth' });
+        }, 100);
+    }
+    var page = targetPage;
+
     var el = document.createElement('div');
     el.className = 'sortable-item dynamic-widget ' + sizeClass;
     el.dataset.widgetType = type;
