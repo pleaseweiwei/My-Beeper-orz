@@ -109,7 +109,8 @@
    ├─ app_nexus.js           # 羁绊星图（Nexus）— 角色关系网络可视化
    ├─ app_favorites.js       # 收藏夹功能模块
    ├─ app_offline_msg.js     # 离线消息辅助函数模块
-   └─ app_pat.js             # 摸头互动模块
+   ├─ app_pat.js             # 摸头互动模块
+   └─ app_battery_notify.js  # 电量提示模块
 ```
 
 ---
@@ -208,6 +209,7 @@
 <script src="js/app_favorites.js"></script>
 <script src="js/app_offline_msg.js"></script>
 <script src="js/app_pat.js"></script>
+<script src="js/app_battery_notify.js"></script>
 ```
 
 ### 结论
@@ -217,7 +219,7 @@
 - 中间的 `app_*.js` 是分模块扩展
 - 后半段新增模块依赖前面的全局变量（`friendsData`、`IDB`、`appendMessage` 等）
 - `app_imagegen.js` 是纯工具函数集合，挂钩到聊天气泡系统
-- `app_nexus.js`、`app_favorites.js`、`app_offline_msg.js`、`app_pat.js` 在最末尾加载
+- `app_nexus.js`、`app_favorites.js`、`app_offline_msg.js`、`app_pat.js`、`app_battery_notify.js` 在最末尾加载
 - **不要随便调整顺序**，否则可能打破全局函数依赖
 
 ---
@@ -1020,6 +1022,13 @@ AI 回复中嵌入 `[NAIIMAG:prompt]`、`[REALIMAG:prompt]` 等格式触发自�
 
 ---
 
+### EE. 电量状态提示 ⭐ 新增
+先看：`js/app_battery_notify.js`
+搜索：`triggerBatteryNotification`、`showBatteryBanner`
+作用：当手机电量变化时，通过调用 AI 接口生成符合当前设定角色的吐槽或提示横幅。
+
+---
+
 ## 6. `index.html` 中的重要 App 容器 ID
 
 | 功能 | 关键容器 ID |
@@ -1229,6 +1238,7 @@ AI 回复中嵌入 `[NAIIMAG:prompt]`、`[REALIMAG:prompt]` 等格式触发自�
    - js/app_favorites.js      收藏夹（FavoritesApp，聊天+朋友圈收藏）
    - js/app_offline_msg.js    离线消息辅助函数
    - js/app_pat.js            摸头互动（PatApp）
+   - js/app_battery_notify.js 电量提示（调用AI根据电量变化吐槽）
    - js/desktop_sort.js       桌面图标拖拽排序（DesktopSort）
 6. 修改前先判断功能归属到哪个文件。
 7. 涉及界面时同时检查 index.html 和对应 JS 文件。

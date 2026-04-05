@@ -285,14 +285,14 @@
         </div>
 
   
-        <!-- 小组件库面板 -->
+     <!-- 小组件库面板 -->
         <div id="widget-library" style="z-index: 1000000000; position: absolute;">
-            <div class="k-modal-header" style="border-bottom: none; padding-top: 15px;">
+            <div class="k-modal-header" style="border-bottom: none; padding-top: 15px; flex-shrink: 0;">
                 <i class="fas fa-chevron-down" onclick="closeWidgetLibrary()" style="font-size: 18px; cursor: pointer;"></i>
                 <span style="font-size: 16px; font-weight: 700;">添加小组件</span>
                 <div style="width: 20px;"></div>
             </div>
-            <div style="display: flex; padding: 0 16px; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; overflow-x: auto; white-space: nowrap;">
+            <div style="display: flex; padding: 0 16px; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; overflow-x: auto; white-space: nowrap; flex-shrink: 0;">
                 <button class="wl-tab active" onclick="switchWidgetCategory('system', this)">时钟</button>
                 <button class="wl-tab" onclick="switchWidgetCategory('aesthetic', this)">照片</button>
                 <button class="wl-tab" onclick="switchWidgetCategory('text', this)">文字</button>
@@ -301,7 +301,7 @@
                 <button class="wl-tab" onclick="switchWidgetCategory('custom', this)">自定义</button>
             </div>
             
-            <div style="flex:1; overflow-y:auto;">
+           <div style="flex:1; overflow-y:auto; padding-bottom: 30px;">
 
                 <!-- 时钟 (System -> 时钟) -->
                 <div id="wl-content-system" class="wc-body-container" style="padding: 0 16px;">
@@ -314,7 +314,7 @@
                                         <div class="tc-date" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Sun, Apr 05</div>
                                     </div>
                                     <div class="tc-right">
-                                        <div class="tc-img" style="background-image:url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop')"></div>
+                                       <div class="tc-img" data-edit-key="tcimg_default" onclick="event.stopPropagation(); triggerChangeImage(this, 'bg')" style="background-image:url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop')"></div>
                                         <div class="tc-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Good Afternoon ☕️</div>
                                     </div>
                                 </div>
@@ -734,18 +734,18 @@
                     <div class="wl-item" onclick="addWidget('receipt-short', 'widget-4x3')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
-                                <div class="k-profile-card-widget widget-4x2" style="margin: 0; height: 100%;">
-                                    <div class="pc-avatar-wrap">
-                                        <div class="pc-avatar" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop')"></div>
+                                <div class="receipt-widget short-version widget-4x3" style="margin: 0; height: 100%; transform: scale(0.95); transform-origin: top center;">
+                                    <div class="receipt-hole"></div>
+                                    <div class="receipt-header">
+                                        <div class="receipt-title">RECEIPT</div>
+                                        <div class="receipt-date">NO.2026-02-22</div>
                                     </div>
-                                    <div class="pc-info">
-                                        <div class="pc-name">Hannah</div>
-                                        <div class="pc-sign">Dreamer ☁️ & Creator</div>
-                                    </div>
-                                    <div class="pc-tag">PROFILE</div>
-                                </div>
-                            </div>
-                        </div>
+                                    <div class="receipt-divider-dashed"></div>
+                                    <div class="receipt-list">
+                                        <div class="receipt-item">
+                                            <div class="r-item-name"><span class="r-qty">01</span><span>SHOPPING (Taobao)</span></div>
+                                            <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
+                                        </div>
                                         <div class="receipt-item">
                                             <div class="r-item-name"><span class="r-qty">02</span><span>DELIVERY (Meituan)</span></div>
                                             <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
@@ -761,7 +761,90 @@
                         </div>
                         <div class="wl-info" style="margin-top: 10px;">购物小票 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×3</span></div>
                     </div>
-                </div>
+                                        <!-- 新增：透明咖啡小票 -->
+                    <div class="wl-item" onclick="addWidget('k-receipt-clear', 'widget-2x3')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 230px;">
+                                <div class="k-receipt-clear-widget widget-2x3" style="margin: 0; height: 100%;">
+                                    <div class="k-rc-barcode">||| || |</div>
+                                    <div class="k-rc-img" style="background-image: url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=200');"></div>
+                                    <div class="k-rc-text"><span>ORDER:</span><span>Life</span></div>
+                                    <div class="k-rc-dash"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">透明小票 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×3</span></div>
+                    </div>
+
+                    <!-- 新增：情绪日历立牌 -->
+                    <div class="wl-item" onclick="addWidget('k-mood-stand', 'widget-2x2')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
+                                <div class="k-mood-stand-widget widget-2x2" style="margin: 0; height: 100%;">
+                                    <div class="k-ms-top"><div class="k-ms-date">24</div><div class="k-ms-img" style="background-image: url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200');"></div></div>
+                                    <div class="k-ms-bottom">GOOD TODAY</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">日历立牌 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+
+                    <!-- 新增：亚克力唱片封套 -->
+                    <div class="wl-item" onclick="addWidget('k-acrylic-cd', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-acrylic-cd-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="k-acd-cover" style="background-image: url('https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=200');"></div>
+                                    <div class="k-acd-info">
+                                        <div class="k-acd-title">Ditto</div><div class="k-acd-artist">NewJeans</div><div class="k-acd-bar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">亚克力唱片 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
+
+                    <!-- 新增：描图纸手账拼接 -->
+                    <div class="wl-item" onclick="addWidget('k-tracing-scrapbook', 'widget-4x3')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 230px;">
+                                <div class="k-tracing-scrapbook-widget widget-4x3" style="margin: 0; height: 100%;">
+                                    <div class="k-ts-paper k-ts-paper1"><div class="k-ts-text">Gift.</div></div>
+                                    <div class="k-ts-paper k-ts-paper2"><div class="k-ts-tape"></div><div class="k-ts-img" style="background-image: url('https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=200');"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">描图纸手账 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×3</span></div>
+                    </div>
+
+                    <!-- 新增：横版主页风 -->
+                    <div class="wl-item" onclick="addWidget('k-banner-profile', 'widget-4x3')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 230px;">
+                                <div class="k-banner-profile-widget widget-4x3" style="margin: 0; height: 100%;">
+                                    <div class="k-bp-banner" style="background-image: url('https://images.unsplash.com/photo-1505682614136-0a12f9f7beea?q=80&w=400');"></div>
+                                    <div class="k-bp-avatar" style="background-image: url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200');"></div>
+                                    <div class="k-bp-info"><div class="k-bp-name">Hannah Kim</div><div class="k-bp-bio">Art Director</div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">透明主页卡 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×3</span></div>
+                    </div>
+
+                    <!-- 新增：双人气泡对话 -->
+                    <div class="wl-item" onclick="addWidget('k-dialogue-bubbles', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-dialogue-bubbles-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="k-db-row left"><div class="k-db-avatar" style="background-image: url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100');"></div><div class="k-db-bubble">今天天气真好呀 ☁️</div></div>
+                                    <div class="k-db-row right"><div class="k-db-avatar" style="background-image: url('https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=100');"></div><div class="k-db-bubble">去海边走走？</div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">气泡对话 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
+
+</div>
 
                 <!-- 自定义 (Custom) -->
                 <div id="wl-content-custom" class="wc-body-container" style="padding: 0 16px; display: none;">
@@ -835,10 +918,11 @@
                             </div>
                         </div>
 
-                        <button class="btn-confirm" style="width:100%; margin-top:10px; background:#111; color:#fff;" onclick="createCustomWidget()">生成并添加到桌面</button>
+                         <button class="btn-confirm" style="width:100%; margin-top:10px; background:#111; color:#fff;" onclick="createCustomWidget()">生成并添加到桌面</button>
                     </div>
                 </div>
 
+            </div>
             </div>
         </div>
 
@@ -7247,7 +7331,7 @@ function switchCsTab(id) {
   </div>
   <div class="flb-setting-row">
     <label>背景透明度</label>
-    <input type="range" min="0" max="100" value="60" id="flb-bg-opacity" oninput="applyFlbStyle()">
+    <input type="range" min="0" max="100" value="60" id="flb-bg-opacity" oninput="applyFlbStyle()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
     <span id="flb-bg-opacity-val">60%</span>
   </div>
   <button class="flb-close-settings-btn" onclick="toggleFlbSettings(event)">关闭</button>

@@ -207,6 +207,22 @@
             });
         });
         
+        // 恢复透明小组件的颜色和透明度
+        document.querySelectorAll('.transparent-widget').forEach(function(item) {
+            var match = item.innerHTML.match(/<div class="tw-bg-layer" data-color="([^"]+)" data-opacity="([^"]+)"/);
+            if (match) {
+                var bgLayer = item.querySelector('.tw-bg-layer');
+                if (bgLayer) {
+                    bgLayer.style.backgroundColor = 'rgba(' + match[1] + ', ' + match[2] + ')';
+                    if (match[1] === '0,0,0' && parseFloat(match[2]) > 0.3) {
+                        item.classList.add('tw-dark-mode');
+                    } else {
+                        item.classList.remove('tw-dark-mode');
+                    }
+                }
+            }
+        });
+
         // 恢复完后兜底计算一次，确保刚好铺满
         window.adjustEmptySlots();
     }
@@ -261,6 +277,13 @@
         document.querySelectorAll('.page.ds-flat > .sortable-item').forEach(function(item) {
             // APP图标和透明占位格子不加删除按钮
             if (item.classList.contains('app-cell') || item.classList.contains('ds-empty-slot')) return;
+            
+            // 只允许指定的固定组件（音乐播放器、滚动便签）调整透明度，其他固定组件不予干涉
+            if (item.classList.contains('music-widget') || item.classList.contains('collection-ticker-widget')) {
+                item.classList.add('transparent-widget');
+            }
+            // (移除了原先强制给所有组件添加 transparent-widget 的一刀切逻辑)
+
             if (item.querySelector('.ds-delete-btn')) return;
             var delBtn = document.createElement('div');
             delBtn.className = 'ds-delete-btn';
@@ -302,10 +325,23 @@
                 });
                 item.appendChild(colorBtn);
             }
+
+            if (item.classList.contains('transparent-widget')) {
+                var opacityBtn = document.createElement('div');
+                opacityBtn.className = 'ds-opacity-btn';
+                opacityBtn.innerHTML = '<i class="fas fa-sliders-h"></i>';
+                opacityBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (window.DesktopSort && window.DesktopSort.toggleOpacityControls) {
+                        window.DesktopSort.toggleOpacityControls(item);
+                    }
+                });
+                item.appendChild(opacityBtn);
+            }
         });
     }
 
-    function exitEditMode() {
+       function exitEditMode() {
         if (!editMode) return;
         editMode = false;
 
@@ -317,8 +353,12 @@
         if (addBtn) addBtn.remove();
         document.querySelectorAll('.ds-delete-btn').forEach(function(btn) { btn.remove(); });
         document.querySelectorAll('.ds-color-btn').forEach(function(btn) { btn.remove(); });
+        // 👇 新增这两行，退出时清理残留的透明按钮和滑块，防止下次点击事件重叠失效
+        document.querySelectorAll('.ds-opacity-btn').forEach(function(btn) { btn.remove(); });
+        document.querySelectorAll('.tw-controls').forEach(function(ctrl) { ctrl.remove(); });
 
         removeEdgeIndicators();
+
         stopEdgeScroll();
 
         sortableInstances.forEach(function (s) { try { s.destroy(); } catch (e) {} });
@@ -329,6 +369,10 @@
             screen.style.scrollSnapType = screen.dataset.origSnapType || 'x mandatory';
             screen.style.overflowX = screen.dataset.origOverflow || '';
         }
+        
+        // 【新增】退出编辑模式时，执行强制清理
+        window.adjustEmptySlots();
+        cleanupEmptyPages(true); 
         saveOrder();
     }
 
@@ -341,9 +385,9 @@
         if (rightIndicator) { rightIndicator.remove(); rightIndicator = null; }
     }
 
-    var EDGE_THRESHOLD = 40;
-    var EDGE_SCROLL_DELAY = 600;
-    function onDragMove(evt) {
+    var EDGE_THRESHOLD = 80;
+    var EDGE_SCROLL_DELAY = 300;
+       function onDragMove(evt) {
         if (!editMode) return;
         var e = evt.originalEvent || evt;
         var touch = e.touches ? e.touches[0] : e;
@@ -361,8 +405,19 @@
             if (!edgeScrollTimer) {
                 edgeScrollTimer = setTimeout(function () {
                     var curIdx = getCurrentPageIndex();
-                    if (nearLeft && curIdx > 0) { scrollToPage(curIdx - 1); } 
-                    else if (nearRight && curIdx < getPages().length - 1) { scrollToPage(curIdx + 1); }
+                    var pages = getPages();
+                    if (nearLeft && curIdx > 0) { 
+                        scrollToPage(curIdx - 1); 
+                    } 
+                    else if (nearRight) {
+                        if (curIdx < pages.length - 1) { 
+                            scrollToPage(curIdx + 1); 
+                        } else {
+                            // 【新增】如果拖到了最后一页的最右边，自动创建新页！
+                            createNewPage();
+                            scrollToPage(curIdx + 1);
+                        }
+                    }
                     edgeScrollTimer = null;
                 }, EDGE_SCROLL_DELAY);
             }
@@ -370,6 +425,74 @@
             stopEdgeScroll();
         }
     }
+    // 【新增】动态创建桌面新页
+    function createNewPage() {
+        var screen = getScreen();
+        var newPageIdx = getPages().length + 1;
+        var newPage = document.createElement('div');
+        newPage.className = 'page ds-flat';
+        newPage.id = 'p' + newPageIdx;
+        screen.appendChild(newPage);
+        
+        // 铺满 28 个透明占位格
+        for(var i=0; i<28; i++) {
+            var emptySlot = document.createElement('div');
+            emptySlot.className = 'ds-empty-slot widget-1x1 sortable-item';
+            emptySlot.dataset.sortId = 'empty-' + newPage.id + '-' + Date.now() + '-' + i;
+            newPage.appendChild(emptySlot);
+        }
+        
+        // 给新页面赋予可拖拽灵魂
+        var s = new Sortable(newPage, {
+            group: 'desktop',
+            animation: 350,
+            easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+            draggable: '.sortable-item',
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            fallbackOnBody: true,
+            swap: true,
+            swapClass: 'sortable-swap-highlight',
+            swapThreshold: 0.55,
+            onStart: function(e) {
+                if ('vibrate' in navigator) navigator.vibrate(50);
+                e.item.style.transform = 'scale(0.85)';
+                e.item.style.opacity = '0.8';
+            },
+            onMove: function (evt) { onDragMove(evt); },
+            onEnd: function (e) {
+                e.item.style.transform = '';
+                e.item.style.opacity = '';
+                stopEdgeScroll();
+                window.adjustEmptySlots(); 
+                cleanupEmptyPages(); // 结束时清理空页
+                saveOrder();
+            }
+        });
+        sortableInstances.push(s);
+    }
+
+    // 【新增】智能清理多余的空页（像苹果一样）
+    function cleanupEmptyPages(force) {
+        var pages = getPages();
+        var curIdx = getCurrentPageIndex();
+        // 永远保留第一页，从后往前检查
+        for (var i = pages.length - 1; i > 0; i--) {
+            var page = pages[i];
+            var hasRealItem = Array.from(page.children).some(function(el) {
+                return !el.classList.contains('ds-empty-slot') && el.classList.contains('sortable-item');
+            });
+            // 如果是强制清理（如点击完成时），或者当前并没有看着这页，就销毁它
+            if (!hasRealItem && (force || curIdx !== i)) {
+                // 如果销毁的刚好是你当前看着的页面，自动帮你平滑滚动到上一页
+                if (curIdx === i) {
+                    scrollToPage(i - 1);
+                }
+                page.remove();
+            }
+        }
+    }
+
     function stopEdgeScroll() {
         if (edgeScrollTimer) { clearTimeout(edgeScrollTimer); edgeScrollTimer = null; }
         if (leftIndicator) leftIndicator.classList.remove('active');
@@ -402,6 +525,7 @@
                     e.item.style.opacity = '';
                     stopEdgeScroll();
                     window.adjustEmptySlots(); // 拖完计算是否需要补格子
+                    cleanupEmptyPages();
                     saveOrder();
                 }
             });
@@ -442,7 +566,7 @@
     function onGlobalClick(e) {
         if (isLongPressTriggered) { isLongPressTriggered = false; e.preventDefault(); e.stopPropagation(); return; }
         if (editMode) {
-            if (e.target.closest('.ds-delete-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.desktop-add-btn') || e.target.closest('.desktop-done-btn')) return;
+            if (e.target.closest('.ds-delete-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.ds-opacity-btn') || e.target.closest('.tw-controls') || e.target.closest('.desktop-add-btn') || e.target.closest('.desktop-done-btn')) return;
             if (e.target.closest('.app-cell') || e.target.closest('.sortable-item')) { e.preventDefault(); e.stopPropagation(); }
         }
     }
@@ -492,6 +616,122 @@
         if(saveOrder) saveOrder();
     }
 
+    function toggleOpacityControls(item) {
+        document.querySelectorAll('.tw-controls').forEach(function(ctrl) {
+            if (ctrl.parentElement !== item) ctrl.remove();
+        });
+
+        var existing = item.querySelector('.tw-controls');
+        if (existing) {
+            existing.remove();
+            return;
+        }
+
+        var controls = document.createElement('div');
+        controls.className = 'tw-controls';
+        
+                var bgLayer = item.querySelector('.tw-bg-layer');
+        if (!bgLayer) {
+            bgLayer = document.createElement('div');
+            bgLayer.className = 'tw-bg-layer';
+            bgLayer.dataset.color = '255,255,255';
+            bgLayer.dataset.opacity = '0.8'; // 👈 修改：初始给一个 0.8 的半透明度
+            bgLayer.style.backgroundColor = 'rgba(255,255,255,0.8)'; // 👈 修改：同步这里的 0.8
+            // 确保插在组件的最外层底部
+            if (item.firstChild) {
+                item.insertBefore(bgLayer, item.firstChild);
+            } else {
+                item.appendChild(bgLayer);
+            }
+        }
+        
+        var color = bgLayer.dataset.color || '255,255,255';
+        var opacity = parseFloat(bgLayer.dataset.opacity || '0.8'); // 👈 修改：这里也改成 0.8
+
+        
+        var btnClass = color === '255,255,255' ? 'tw-white' : 'tw-black';
+        
+        // 新增了后方的数字输入框
+        controls.innerHTML = '<div class="tw-ctrl-btn tw-color-toggle ' + btnClass + '"><i class="fas fa-adjust"></i></div>' +
+                             '<input type="range" class="tw-slider" min="0" max="100" value="' + (opacity * 100) + '">' +
+                             '<input type="number" class="tw-num-input" min="0" max="100" value="' + (opacity * 100) + '" style="width: 44px; border: 1px solid #ddd; border-radius: 6px; padding: 4px; text-align: center; font-size: 12px; margin-left: 2px; outline: none; background: #fff;">' + 
+                             '<span style="font-size:12px; color:#666; margin-left:-2px;">%</span>';
+        
+        var colorToggle = controls.querySelector('.tw-color-toggle');
+        var slider = controls.querySelector('.tw-slider');
+        var numInput = controls.querySelector('.tw-num-input'); // 获取新建的输入框
+
+        // 更新暗色模式类，只有当颜色为黑色且透明度大于一定阈值时才添加
+        function updateDarkModeClass() {
+            if (color === '0,0,0' && opacity > 0.3) {
+                item.classList.add('tw-dark-mode');
+            } else {
+                item.classList.remove('tw-dark-mode');
+            }
+        }
+
+        // 封装一个更新透明度的通用函数
+        function updateOpacityValue(val) {
+            val = Math.max(0, Math.min(100, parseInt(val) || 0)); // 限制在 0-100 之间
+            slider.value = val;
+            numInput.value = val;
+            opacity = val / 100;
+            bgLayer.dataset.opacity = opacity;
+            bgLayer.style.backgroundColor = 'rgba(' + color + ', ' + opacity + ')';
+            updateDarkModeClass();
+        }
+
+        colorToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            color = color === '255,255,255' ? '0,0,0' : '255,255,255';
+            colorToggle.className = 'tw-ctrl-btn tw-color-toggle ' + (color === '255,255,255' ? 'tw-white' : 'tw-black');
+            bgLayer.dataset.color = color;
+            bgLayer.style.backgroundColor = 'rgba(' + color + ', ' + (slider.value / 100) + ')';
+            updateDarkModeClass();
+            saveOrder();
+        });
+        
+        // 滑块拖动时
+        slider.addEventListener('input', function(e) {
+            e.stopPropagation();
+            updateOpacityValue(e.target.value);
+        });
+        slider.addEventListener('change', function(e) {
+            saveOrder();
+        });
+
+        // 文本框输入时
+        numInput.addEventListener('input', function(e) {
+            e.stopPropagation();
+            updateOpacityValue(e.target.value);
+        });
+        numInput.addEventListener('change', function(e) {
+            e.stopPropagation();
+            updateOpacityValue(e.target.value);
+            saveOrder(); // 失焦或回车时保存
+        });
+
+        // 防止在输入框里按键触发其他系统功能
+        numInput.addEventListener('keydown', function(e) { e.stopPropagation(); });
+        numInput.addEventListener('keyup', function(e) { e.stopPropagation(); });
+
+          controls.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+          controls.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
+          controls.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: false });
+          controls.addEventListener('click', function(e) { e.stopPropagation(); });
+          controls.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+          controls.addEventListener('pointermove', function(e) { e.stopPropagation(); });
+
+          // 关键修复：阻止事件冒泡到SortableJS引起拖拽
+          slider.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+          slider.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
+          slider.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: false });
+          slider.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+          slider.addEventListener('pointermove', function(e) { e.stopPropagation(); });
+        
+        item.appendChild(controls);
+    }
+
     window.DesktopSort = {
         enterEditMode: enterEditMode,
         exitEditMode: exitEditMode,
@@ -499,38 +739,45 @@
         restoreOrder: restoreOrder,
         isEditMode: function () { return editMode; },
         flatten: flattenAllPages,
-        cycleWidgetColor: cycleWidgetColor
+        cycleWidgetColor: cycleWidgetColor,
+        toggleOpacityControls: toggleOpacityControls
     };
 
 })();
-
 /* === 小组件库逻辑 === */
 window.openWidgetLibrary = function() {
     var modal = document.getElementById('widget-library');
-    var overlay = document.getElementById('widget-library-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'widget-library-overlay';
-        overlay.className = 'widget-library-overlay';
-        overlay.addEventListener('click', window.closeWidgetLibrary);
-        var phone = document.querySelector('.phone') || document.body;
-        phone.appendChild(overlay);
+    var phone = document.querySelector('.phone');
+    
+    // 核心修复：强制将小组件页面塞入手机屏幕内部，解决跑到外面的问题
+    if (modal && phone && modal.parentNode !== phone) {
+        phone.appendChild(modal);
     }
+
     if(modal) {
         modal.style.display = 'flex';
         void modal.offsetWidth;
         modal.classList.add('active');
-        if (overlay) overlay.classList.add('active');
+    }
+
+    // 【修改】：瞬间隐藏 dock 栏（无渐变动画）
+    var dock = document.getElementById('main-dock-bar');
+    if (dock) {
+        dock.style.display = 'none';
     }
 };
 
 window.closeWidgetLibrary = function() {
     var modal = document.getElementById('widget-library');
-    var overlay = document.getElementById('widget-library-overlay');
     if(modal) {
         modal.classList.remove('active');
-        if (overlay) overlay.classList.remove('active');
         setTimeout(function() { modal.style.display = 'none'; }, 300);
+    }
+
+    // 【修改】：关闭面板时，瞬间恢复显示 dock 栏
+    var dock = document.getElementById('main-dock-bar');
+    if (dock) {
+        dock.style.display = 'flex'; // 恢复为 flex 布局
     }
 };
 
@@ -586,13 +833,18 @@ window.createCustomWidget = function() {
     var type = typeSelect ? typeSelect.value : 'image';
     var contentHtml = '';
 
-    var w = parseInt(document.getElementById('custom-widget-w').value) || 2;
+      var w = parseInt(document.getElementById('custom-widget-w').value) || 2;
     var h = parseInt(document.getElementById('custom-widget-h').value) || 2;
     if (w < 1) w = 1;
     if (w > 4) w = 4;
     if (h < 1) h = 1;
     if (h > 7) h = 7;
     var sizeClass = 'widget-' + w + 'x' + h;
+    // 新增：如果是图片类型，给它加上透明专属类名
+    if (type === 'image') {
+        sizeClass += ' transparent-widget';
+    }
+
 
     var actionTypeEl = document.getElementById('custom-widget-action-type');
     var actionType = actionTypeEl ? actionTypeEl.value : 'none';
@@ -657,8 +909,22 @@ window.createCustomWidget = function() {
         });
         el.appendChild(delBtn);
     }
-    
-    page.appendChild(el);
+        var firstEmpty = page.querySelector('.ds-empty-slot');
+    if (firstEmpty) {
+        page.insertBefore(el, firstEmpty);
+    } else {
+        page.appendChild(el);
+    }
+
+    if (type === 'image') {
+        var bgLayer = document.createElement('div');
+        bgLayer.className = 'tw-bg-layer';
+        bgLayer.dataset.color = '255,255,255';
+        bgLayer.dataset.opacity = '0'; 
+        bgLayer.style.backgroundColor = 'rgba(255,255,255,0)';
+        el.insertBefore(bgLayer, el.firstChild);
+    }
+
     window.adjustEmptySlots();
     closeWidgetLibrary();
     if (window.DesktopSort && window.DesktopSort.saveOrder) {
@@ -718,39 +984,39 @@ window.addWidget = function(type, sizeClass) {
         el.className = 'unified-header-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div class="greeting-text" id="greetingText"></div><div class="clock-profile-combo"><div class="time-block"><span id="h">14</span><span class="time-colon">:</span><span id="m">30</span></div><div class="vertical-divider"></div><div class="profile-stack"><div class="mini-profile-row"><div class="editable-name" contenteditable="true">Hannah</div><div class="avatar-circle-sm" data-edit-key="avatar" onclick="triggerChangeImage(this, \'img\')"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop"></div></div><div class="date-pill" id="fullDate">Jan 30</div></div></div>';
     } else if (type === 'music-card') {
-        el.className = 'music-widget sortable-item ' + sizeClass;
+        el.className = 'music-widget sortable-item transparent-widget ' + sizeClass;
         el.setAttribute('onclick', 'openMusicPlayer()');
         el.innerHTML = '<div class="music-info"><div style="font-size:9px; color:#aaa; margin-bottom:5px; letter-spacing:1px;">NOW PLAYING</div><div class="music-title" id="home-music-title" contenteditable="true" onclick="event.stopPropagation()" onblur="saveHomeMusicText()">Lover</div><div class="music-artist" id="home-music-artist" contenteditable="true" onclick="event.stopPropagation()" onblur="saveHomeMusicText()">Taylor Swift</div><div class="wave-box"><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div></div></div><div class="vinyl-record"><div class="vinyl-inner" data-edit-key="music" onclick="event.stopPropagation(); triggerChangeImage(this, \'bg\')"></div></div>';
     } else if (type === 'photo-stack') {
-        el.className = 'photo-stack sortable-item ' + sizeClass;
+        el.className = 'photo-stack sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="stack-item"><img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=200&auto=format&fit=crop" data-edit-key="photo1" onclick="triggerChangeImage(this, \'self\')"></div><div class="stack-item"><img src="https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=200&auto=format&fit=crop" data-edit-key="photo2" onclick="triggerChangeImage(this, \'self\')"></div><div class="stack-item"><img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=200&auto=format&fit=crop" data-edit-key="photo3" onclick="triggerChangeImage(this, \'self\')"></div>';
     } else if (type === 'k-mood-board') {
-        el.className = 'k-mood-board sortable-item ' + sizeClass;
+        el.className = 'k-mood-board sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="k-cd-player"><div class="k-disc-wrap"><div class="k-disc" data-edit-key="k_cd_cover" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=200&auto=format&fit=crop\');"><div class="k-disc-center"></div></div></div><div class="k-song-info"><div class="k-play-btn"><i class="fas fa-play"></i></div><div style="flex:1;"><div contenteditable="true" class="k-song-title" id="p3-song">Palette</div><div contenteditable="true" class="k-artist" id="p3-artist">IU (아이유)</div></div></div></div><div class="k-polaroid"><div class="k-tape"></div><div class="k-photo-frame" data-edit-key="k_polaroid_img" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop\');"></div><div class="k-handwriting" contenteditable="true" id="p3-handwriting">Vibe ☁️</div></div>';
     } else if (type === 'collection-ticker') {
-        el.className = 'collection-ticker-widget sortable-item ' + sizeClass;
+        el.className = 'collection-ticker-widget sortable-item transparent-widget ' + sizeClass;
         el.style.transform = 'scale(0.95)';
         el.style.transformOrigin = 'top center';
         el.innerHTML = '<div class="ticker-icon"><i class="fas fa-quote-left"></i></div><div class="ticker-wrapper"><div class="ticker-content"><span>记得给阳台的花浇水</span><span class="dot">·</span><span>下周五去看展</span><span class="dot">·</span><span>密码 123456</span><span class="dot">·</span><span>Stay foolish</span><span class="dot">·</span><span>买猫粮</span><span class="dot">·</span></div><div class="ticker-content"><span>记得给阳台的花浇水</span><span class="dot">·</span><span>下周五去看展</span><span class="dot">·</span><span>密码 123456</span><span class="dot">·</span><span>Stay foolish</span><span class="dot">·</span><span>买猫粮</span><span class="dot">·</span></div></div><div class="ticker-img-circle"><img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop" data-edit-key="p4_ticker_img" onclick="triggerChangeImage(this, \'self\')"></div>';
     } else if (type === 'k-time-carousel') {
-        el.className = 'k-time-carousel-widget sortable-item ' + sizeClass;
+        el.className = 'k-time-carousel-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="tc-left"><div class="tc-time" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">14:30</div><div class="tc-date" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Sun, Apr 05</div></div><div class="tc-right"><div class="tc-polaroid"><div class="tc-tape"></div><div class="tc-img" data-edit-key="tcimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image:url(\'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop\')"></div><div class="tc-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Good Afternoon ☕️</div></div></div>';
     } else if (type === 'k-badge') {
         el.className = 'k-badge-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div class="badge-lace"></div><div class="badge-inner" data-edit-key="bdgimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image:url(\'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop\')"></div><div class="badge-highlight"></div><div class="badge-pin"></div><div class="badge-ribbon badge-ribbon-left"></div><div class="badge-ribbon badge-ribbon-right"></div>';
     } else if (type === 'k-profile-card') {
-        el.className = 'k-profile-card-widget sortable-item widget-4x2'; // 强制改为横版尺寸
+        el.className = 'k-profile-card-widget sortable-item transparent-widget widget-4x2'; // 强制改为横版尺寸
         el.innerHTML = '<div class="pc-avatar-wrap"><div class="pc-avatar" data-edit-key="pcav_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image:url(\'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop\')"></div></div><div class="pc-info"><div class="pc-name" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Hannah</div><div class="pc-sign" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Dreamer ☁️ & Creator</div></div><div class="pc-tag">PROFILE</div>';
     } else if (type === 'k-gameboy') {
         el.className = 'k-gameboy-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div class="gb-screen-container"><div class="gb-screen" data-edit-key="gbimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image:url(\'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=300&auto=format&fit=crop\')"></div></div><div class="gb-controls"><div class="gb-dpad"><div class="gb-dpad-center"></div></div><div class="gb-buttons"><div class="gb-btn-wrap"><div class="gb-btn"></div></div><div class="gb-btn-wrap"><div class="gb-btn"></div></div></div></div><div class="gb-speaker"><div class="gb-speaker-hole"></div><div class="gb-speaker-hole"></div><div class="gb-speaker-hole"></div><div class="gb-speaker-hole"></div></div><div class="gb-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">GAMEBOY</div><div class="gb-sticker" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">🌷</div><div class="gb-power-light"></div>';
     } else if (type === 'receipt-short') {
-        el.className = 'receipt-widget short-version sortable-item ' + sizeClass;
+        el.className = 'receipt-widget short-version sortable-item transparent-widget ' + sizeClass;
         el.style.transform = 'scale(0.95)';
         el.style.transformOrigin = 'top center';
         el.innerHTML = '<div class="receipt-hole"></div><div class="receipt-header"><div class="receipt-title">RECEIPT</div><div class="receipt-date">NO.2026-02-22</div></div><div class="receipt-divider-dashed"></div><div class="receipt-list"><div class="receipt-item" onclick="openSimulatedApp(\'taobao\')"><div class="r-item-name"><span class="r-qty">01</span><span>SHOPPING (Taobao)</span></div><div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div></div><div class="receipt-item" onclick="openSimulatedApp(\'meituan\')"><div class="r-item-name"><span class="r-qty">02</span><span>DELIVERY (Meituan)</span></div><div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div></div></div><div class="receipt-divider-line"></div><div class="receipt-footer"><div class="receipt-total"><span>TOTAL</span><span style="font-weight:700;">¥ 999.00</span></div><div class="receipt-barcode">||| || ||| | |||| || || | |||| |||</div></div>';
     } else if (type === 'k-dday') {
-        el.className = 'k-dday-widget sortable-item ' + sizeClass;
+        el.className = 'k-dday-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="k-dday-title" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Anniversary</div><div class="k-dday-days" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">100</div><div class="k-dday-heart">❤️</div>';
     } else if (type === 'k-polaroid') {
         el.className = 'k-polaroid-widget sortable-item ' + sizeClass;
@@ -762,22 +1028,22 @@ window.addWidget = function(type, sizeClass) {
         el.className = 'k-mood-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div><div class="k-mood-emoji" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">☁️</div><div class="k-mood-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Feeling Good</div></div>';
     } else if (type === 'k-journal') {
-        el.className = 'k-journal-widget sortable-item ' + sizeClass;
+        el.className = 'k-journal-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="k-j-img" data-edit-key="k_journal_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1505682614136-0a12f9f7beea?q=80&w=200&auto=format&fit=crop\');"></div><div class="k-j-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">"Make it happen."</div><div class="k-j-date" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">2026.04.05</div>';
     } else if (type === 'k-ticket') {
-        el.className = 'k-ticket-widget sortable-item ' + sizeClass;
+        el.className = 'k-ticket-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="k-t-img" data-edit-key="k_ticket_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1544928147-79a2dbc1f389?q=80&w=200&auto=format&fit=crop\');"></div><div class="k-t-info"><div class="k-t-header" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">ADMIT ONE</div><div class="k-t-title" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Exhibition</div><div class="k-t-date" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Date: 2026.10.24</div><div class="k-t-barcode">||| | || ||| || |</div></div>';
     } else if (type === 'k-four-cuts') {
-        el.className = 'k-four-cuts-widget sortable-item ' + sizeClass;
+        el.className = 'k-four-cuts-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="fc-photo" data-edit-key="fc1_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200\');"></div><div class="fc-photo" data-edit-key="fc2_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=200\');"></div><div class="fc-photo" data-edit-key="fc3_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=200\');"></div><div class="fc-photo" data-edit-key="fc4_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=200\');"></div><div class="fc-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Life 4 Cuts</div>';
     } else if (type === 'k-scrapbook') {
         el.className = 'k-scrapbook-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div class="sb-title" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Memory</div><div class="sb-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Good times with you. We made it happen!</div><div class="sb-tape"></div><div class="sb-photo" data-edit-key="sb_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=300\');"></div>';
     } else if (type === 'k-cassette') {
-        el.className = 'k-cassette-widget sortable-item ' + sizeClass;
+        el.className = 'k-cassette-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="c-sticker"><div class="c-img" data-edit-key="cimg_' + Date.now() + '" style="background-image:url(\'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=400\')"></div><div class="c-hole"></div><div class="c-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()" data-edit-key="ctext" onclick="triggerChangeImage(this.previousSibling.previousSibling, \'bg\')">Y2K MIXTAPE</div><div class="c-hole"></div></div>';
     } else if (type === 'k-keyring') {
-        el.className = 'k-keyring-widget sortable-item ' + sizeClass;
+        el.className = 'k-keyring-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="kr-ring"></div><div class="kr-hole"></div><div class="kr-img" data-edit-key="kr_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200\');"></div><div class="kr-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Love It!</div>';
     } else if (type === 'k-cafe-stamp') {
         el.className = 'k-cafe-stamp-widget sortable-item ' + sizeClass;
@@ -786,10 +1052,10 @@ window.addWidget = function(type, sizeClass) {
         el.className = 'k-train-ticket-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div class="tt-top"><span contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Train Ticket</span><span contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">No.0824</span></div><div class="tt-middle"><div class="tt-station" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Reality</div><div class="tt-arrow">➔</div><div class="tt-station" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Dream</div></div><div class="tt-bottom" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">DATE: 2026.04.05</div>';
     } else if (type === 'k-photocard') {
-        el.className = 'k-photocard-widget sortable-item ' + sizeClass;
+        el.className = 'k-photocard-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="pc-img" data-edit-key="pcimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200\');"></div><div class="pc-name" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Love</div>';
     } else if (type === 'k-cdcase') {
-        el.className = 'k-cdcase-widget sortable-item ' + sizeClass;
+        el.className = 'k-cdcase-widget sortable-item transparent-widget ' + sizeClass;
         el.innerHTML = '<div class="cd-spine"></div><div class="cd-cover" data-edit-key="cdimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200\');"><div class="cd-marker" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">VOL.1</div></div>';
     } else if (type === 'k-envelope') {
         el.className = 'k-envelope-widget sortable-item ' + sizeClass;
@@ -797,6 +1063,25 @@ window.addWidget = function(type, sizeClass) {
     } else if (type === 'k-planner') {
         el.className = 'k-planner-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div class="pl-header"><div class="pl-polaroid"><div class="pl-tape"></div><div class="pl-polaroid-img" data-edit-key="plimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1505682614136-0a12f9f7beea?q=80&w=200\');"></div></div><div class="pl-title" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">My Daily Plan</div></div><div class="pl-lines"><div class="pl-line" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">1. Wake up early</div><div class="pl-line" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">2. Drink coffee</div><div class="pl-line" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">3. Be happy</div></div>';
+       } else if (type === 'k-receipt-clear') {
+        el.className = 'k-receipt-clear-widget sortable-item transparent-widget ' + sizeClass;
+        el.innerHTML = '<div class="k-rc-barcode">||| || | |||</div><div class="k-rc-img" data-edit-key="rcimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=200&auto=format&fit=crop\');"></div><div class="k-rc-text"><span contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">ORDER:</span><span contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">My Life</span></div><div class="k-rc-dash"></div><div class="k-rc-text"><span contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">1x Iced Americano</span></div>';
+    } else if (type === 'k-acrylic-cd') {
+        el.className = 'k-acrylic-cd-widget sortable-item transparent-widget ' + sizeClass;
+        el.innerHTML = '<div class="k-acd-cover" data-edit-key="acdimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=200&auto=format&fit=crop\');"></div><div class="k-acd-info"><div class="k-acd-title" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Ditto</div><div class="k-acd-artist" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">NewJeans</div><div class="k-acd-bar"></div></div>';
+    } else if (type === 'k-tracing-scrapbook') {
+        el.className = 'k-tracing-scrapbook-widget sortable-item transparent-widget ' + sizeClass;
+        el.innerHTML = '<div class="k-ts-paper k-ts-paper1"><div class="k-ts-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Today is<br>a gift.</div></div><div class="k-ts-paper k-ts-paper2"><div class="k-ts-tape"></div><div class="k-ts-img" data-edit-key="tsimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=300&auto=format&fit=crop\');"></div><div style="font-family:\'Montserrat\'; font-size:8px; color:#aaa; text-align:center; margin-top:4px; font-weight:bold;">MEMORIES</div></div>';
+    } else if (type === 'k-mood-stand') {
+        el.className = 'k-mood-stand-widget sortable-item transparent-widget ' + sizeClass;
+        el.innerHTML = '<div class="k-ms-top"><div class="k-ms-date" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">24</div><div class="k-ms-img" data-edit-key="msimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop\');"></div></div><div class="k-ms-bottom" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">FEELING GOOD TODAY</div>';
+    } else if (type === 'k-banner-profile') {
+        el.className = 'k-banner-profile-widget sortable-item transparent-widget ' + sizeClass;
+        el.innerHTML = '<div class="k-bp-banner" data-edit-key="bpbg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1505682614136-0a12f9f7beea?q=80&w=400&auto=format&fit=crop\');"></div><div class="k-bp-avatar" data-edit-key="bpav_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop\');"></div><div class="k-bp-info"><div class="k-bp-name" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Hannah Kim</div><div class="k-bp-bio" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Art Director & Dreamer</div></div>';
+    } else if (type === 'k-dialogue-bubbles') {
+        el.className = 'k-dialogue-bubbles-widget sortable-item transparent-widget ' + sizeClass;
+        el.innerHTML = '<div class="k-db-row left"><div class="k-db-avatar" data-edit-key="dbav1_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100\');"></div><div class="k-db-bubble" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">今天天气真好呀 ☁️</div></div><div class="k-db-row right"><div class="k-db-avatar" data-edit-key="dbav2_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=100\');"></div><div class="k-db-bubble" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">那我们要不要去海边走走？</div></div>';
+
     } else {
         el.innerHTML = '<div style="padding:10px; outline:none; text-align:center;" contenteditable="true" onblur="window.DesktopSort.saveOrder()">New Widget</div>';
     }
@@ -829,10 +1114,36 @@ window.addWidget = function(type, sizeClass) {
                 }
             });
             el.appendChild(colorBtn);
+        } else {
+            // 新创建的组件如果不在排除列表中，自动加上 transparent-widget
+            if (!el.classList.contains('transparent-widget')) {
+                el.classList.add('transparent-widget');
+            }
+        }
+
+        if (el.classList.contains('transparent-widget')) {
+            var opacityBtn = document.createElement('div');
+            opacityBtn.className = 'ds-opacity-btn';
+            opacityBtn.innerHTML = '<i class="fas fa-sliders-h"></i>';
+            opacityBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (window.DesktopSort && window.DesktopSort.toggleOpacityControls) {
+                    window.DesktopSort.toggleOpacityControls(el);
+                }
+            });
+            el.appendChild(opacityBtn);
         }
     }
     
-    page.appendChild(el);
+        var firstEmpty = page.querySelector('.ds-empty-slot');
+    if (firstEmpty) {
+        page.insertBefore(el, firstEmpty);
+    } else {
+        page.appendChild(el);
+    }
+
+   
+
     window.adjustEmptySlots(); // 增加组件后，挤掉多余的透明空格子，保持完美网格！
     closeWidgetLibrary();
     if (window.DesktopSort && window.DesktopSort.saveOrder) {

@@ -36,6 +36,7 @@
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
     grid-template-rows: repeat(7, 75px) !important; /* 同步改为 7 行 */
+    grid-auto-rows: 75px !important; 
     gap: 8px 10px !important; /* 同步减小网格间隙 */
     
     padding: calc(env(safe-area-inset-top) + 35px) 20px calc(env(safe-area-inset-bottom) + 115px) 20px !important;
@@ -98,6 +99,70 @@
 /* ── 编辑模式抖动 —— 更长周期 + 更有机的随机感 ── */
 .desktop-edit-mode .page.ds-flat > .sortable-item {
     animation: jiggle 0.3s ease-in-out infinite;
+}
+
+/* === 透明度控制 UI === */
+.ds-opacity-btn {
+    position: absolute;
+    top: -6px;
+    right: 24px;
+    width: 24px;
+    height: 24px;
+    background: rgba(180, 180, 180, 0.95);
+    color: #fff;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    z-index: 100;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    line-height: 1;
+}
+.desktop-edit-mode .sortable-item .ds-opacity-btn {
+    display: flex;
+}
+.tw-controls {
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    z-index: 101;
+    white-space: nowrap;
+}
+.tw-controls .tw-color-toggle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    font-size: 12px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+}
+.tw-controls .tw-color-toggle.tw-black {
+    background: #333;
+}
+.tw-controls .tw-color-toggle.tw-white {
+    background: #fff;
+    color: #333;
+}
+.tw-controls input[type=range] {
+    width: 80px;
+    accent-color: #666;
     will-change: transform;
     transform-origin: center center;
 }
@@ -339,7 +404,8 @@
     position: relative;
     cursor: pointer;
 }
-.dynamic-widget > div:first-child {
+/* 把 :first-child 换成排除我们的调节按钮和背景层，避免误伤 */
+.dynamic-widget > div:not(.tw-bg-layer):not(.ds-delete-btn):not(.ds-opacity-btn):not(.ds-color-btn):not(.tw-controls) {
     width: 100%;
     height: 100%;
     border-radius: 16px;
@@ -565,9 +631,13 @@
         inset 0 2px 4px rgba(255,255,255,0.8);
     transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     transform-style: preserve-3d;
-    width: 130px;
-    height: 130px;
-    margin: 10px auto;
+    
+    /* 修复1：使用百分比自适应配合 max-width，解决网格适配问题 */
+    width: 100%;
+    height: 100%;
+    max-width: 140px;
+    max-height: 140px;
+    margin: auto;
 }
 .k-mood-widget::before {
     display: none;
@@ -575,7 +645,9 @@
 .k-mood-widget::after {
     display: none;
 }
-.k-mood-widget > div {
+
+/* 修复2：只对内部的第一个包裹层生效，千万不要误伤编辑模式的“删除按钮” */
+.k-mood-widget > div:first-child {
     width: 96%;
     height: 96%;
     border-radius: 50%;
@@ -593,6 +665,7 @@
     justify-content: center;
     background-color: white;
 }
+
 .k-mood-widget .k-mood-emoji {
     font-size: 48px;
     line-height: 1.2;
@@ -2136,39 +2209,227 @@
 .k-planner-widget.theme-black .pl-title { color: #eee; text-shadow: 1px 1px 0 #000; }
 .k-planner-widget.theme-black .pl-line { border-bottom-color: #555; color: #ccc; }
 
-/* 底部抽屉弹窗样式 */
+/* 底部半屏抽屉样式 */
 #widget-library {
     position: absolute;
-    bottom: 0;
+    top: auto;          /* 取消吸顶 */
+    bottom: 0;          /* 靠底显示 */
     left: 0;
     width: 100%;
-    height: 75vh;
-    background: rgba(255,255,255,0.98);
+    height: 75%;        /* 控制高度，这里设为屏幕的 75% */
+    background: #fcfcfc;
     z-index: 10500;
-    border-radius: 24px 24px 0 0;
-    box-shadow: none;
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    max-height: 100%; /* 防止超出手机框高度 */
-    overflow: hidden; /* 防止内容超出 */
+    overflow: hidden;
+    border-radius: 24px 24px 0 0; /* 顶部左右加上圆角，更像现代抽屉 */
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.15); /* 顶部加上阴影区分层级 */
 }
 #widget-library.active {
     transform: translateY(0);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
 }
-.widget-library-overlay {
+
+/* 透明图片小组件专属样式 */
+.transparent-widget:has(.tw-bg-layer) {
+    box-shadow: none !important;
+    background: transparent !important;
+    isolation: isolate; /* 建立层叠上下文，保证 bg-layer 在组件内部最底层 */
+}
+/* 同样避开透明度控制层，并且排除黑胶唱片，保留其原本颜色 */
+.transparent-widget:has(.tw-bg-layer) > div:not(.tw-bg-layer):not(.ds-delete-btn):not(.ds-opacity-btn):not(.ds-color-btn):not(.tw-controls):not(.vinyl-record):not(.tc-right) {
+    background-color: transparent !important;
+}
+
+
+.transparent-widget:has(.tw-bg-layer)::before {
+    display: none !important;
+}
+.transparent-widget:has(.tw-bg-layer)::after {
+    display: none !important;
+}
+
+
+/* ====== 透明小组件底色控制 ====== */
+.tw-bg-layer {
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 10499;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    z-index: -1;
+    border-radius: inherit;
     pointer-events: none;
+    transition: background-color 0.2s ease;
 }
-.widget-library-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
+/* =========================================
+   透明小组件暗黑模式适配
+   ========================================= */
+.tw-dark-mode .music-title,
+.tw-dark-mode .music-artist,
+.tw-dark-mode #p3-song,
+.tw-dark-mode #p3-artist,
+.tw-dark-mode #p3-handwriting,
+.tw-dark-mode .ticker-content span,
+.tw-dark-mode .ticker-content .dot,
+.tw-dark-mode .tc-time,
+.tw-dark-mode .tc-date,
+.tw-dark-mode .tc-text,
+.tw-dark-mode .pc-name,
+.tw-dark-mode .pc-sign,
+.tw-dark-mode .gb-text,
+.tw-dark-mode .receipt-title,
+.tw-dark-mode .receipt-date,
+.tw-dark-mode .r-qty,
+.tw-dark-mode .r-item-name span,
+.tw-dark-mode .r-item-price,
+.tw-dark-mode .receipt-total span,
+.tw-dark-mode .receipt-barcode,
+.tw-dark-mode .k-dday-title,
+.tw-dark-mode .k-polaroid-widget .k-handwriting-text,
+.tw-dark-mode .k-mood-text,
+.tw-dark-mode .k-j-text,
+.tw-dark-mode .k-j-date,
+.tw-dark-mode .k-t-header,
+.tw-dark-mode .k-t-title,
+.tw-dark-mode .k-t-date,
+.tw-dark-mode .k-t-barcode,
+.tw-dark-mode .fc-text,
+.tw-dark-mode .c-text,
+.tw-dark-mode .kr-text,
+.tw-dark-mode .c-title,
+.tw-dark-mode .k-acd-title,
+.tw-dark-mode .k-acd-artist,
+.tw-dark-mode .k-ts-text,
+.tw-dark-mode .k-ms-date,
+.tw-dark-mode .k-ms-bottom,
+.tw-dark-mode .k-bp-name,
+.tw-dark-mode .k-bp-bio,
+.tw-dark-mode .k-db-bubble {
+    color: #fff !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
 }
+
+.tw-dark-mode .k-dday-days {
+    text-shadow: 2px 3px 0px rgba(0,0,0,0.3) !important;
+}
+
+.tw-dark-mode .c-stamp-circle {
+    border-color: rgba(255,255,255,0.4);
+    background: rgba(0,0,0,0.2);
+}
+
+.tw-dark-mode .k-db-row.left .k-db-bubble { 
+    background: rgba(43,43,43,0.85); 
+    color: #fff !important; 
+}
+.tw-dark-mode .k-db-row.right .k-db-bubble { 
+    background: rgba(255,255,255,0.85); 
+    color: #333 !important; 
+    text-shadow: none !important;
+}
+
+.tw-dark-mode .k-acd-bar {
+    background: rgba(255,255,255,0.2);
+}
+.tw-dark-mode .k-acd-bar::after {
+    background: #fff;
+}
+
+.tw-dark-mode .ticker-icon {
+    color: rgba(255,255,255,0.8);
+}
+
+
+/* =========================================
+   [新增] 韩系半透明亚克力小组件系列
+   ========================================= */
+
+/* 1. 透明咖啡馆小票 (2x3) */
+.k-receipt-clear-widget {
+    background: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.1) 100%);
+    backdrop-filter: blur(15px) saturate(120%);
+    -webkit-backdrop-filter: blur(15px) saturate(120%);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.05), inset 1px 1px 2px rgba(255,255,255,0.8);
+    display: flex; flex-direction: column; align-items: center; padding: 15px 12px;
+}
+.k-rc-barcode { font-family: 'Libre Barcode 39', monospace; font-size: 28px; color: #555; opacity: 0.6; line-height: 0.8; margin-bottom: 8px; letter-spacing: 1px;}
+.k-rc-img { width: 100%; aspect-ratio: 1; border-radius: 8px; background-size: cover; background-position: center; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.k-rc-text { font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 600; color: #444; width: 100%; margin-bottom: 4px; display: flex; justify-content: space-between;}
+.k-rc-dash { width: 100%; border-top: 1px dashed rgba(0,0,0,0.15); margin: 8px 0; }
+
+/* 2. 亚克力唱片封套 (4x2) */
+.k-acrylic-cd-widget {
+    background: linear-gradient(120deg, rgba(255,255,255,0.5), rgba(255,255,255,0.05));
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px; border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    display: flex; align-items: center; padding: 15px; gap: 15px;
+}
+.k-acd-cover { width: 60px; height: 60px; border-radius: 8px; background-size: cover; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
+.k-acd-cover::after { content:''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%); border-radius: 8px;}
+.k-acd-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.k-acd-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 800; color: #222; margin-bottom: 4px; outline: none; }
+.k-acd-artist { font-family: 'Montserrat', sans-serif; font-size: 10px; color: #666; letter-spacing: 1px; outline: none; }
+.k-acd-bar { width: 100%; height: 2px; background: rgba(0,0,0,0.05); margin-top: 10px; position: relative; border-radius: 1px;}
+.k-acd-bar::after { content:''; position: absolute; left:0; top:0; height:100%; width:40%; background:#222; border-radius: 1px;}
+
+/* 3. 描图纸手账拼接 (4x3) */
+.k-tracing-scrapbook-widget {
+    background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+    border-radius: 16px; border: 1px solid rgba(255,255,255,0.3);
+    padding: 15px; position: relative; overflow: hidden;
+}
+.k-ts-paper { position: absolute; background: rgba(255,255,255,0.5); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+.k-ts-paper1 { top: 10px; left: 10px; width: 55%; height: 80%; border-radius: 8px; transform: rotate(-3deg); padding: 15px; display:flex; flex-direction:column; justify-content:center;}
+.k-ts-paper2 { bottom: 10px; right: 10px; width: 45%; height: 70%; border-radius: 4px; transform: rotate(4deg); padding: 6px; background: #fff;}
+.k-ts-img { width: 100%; height: calc(100% - 20px); background-size: cover; background-position: center; background-color:#eee; }
+.k-ts-tape { position: absolute; top: -5px; left: 50%; transform: translateX(-50%) rotate(-5deg); width: 40px; height: 15px; background: rgba(200,200,200,0.4); backdrop-filter: blur(2px); border-radius: 2px; }
+.k-ts-text { font-family: 'Alex Brush', cursive; font-size: 24px; color: #333; line-height: 1.2; outline: none; text-shadow: 0 1px 2px rgba(255,255,255,0.8);}
+
+/* 4. 情绪日历立牌 (2x2) */
+.k-mood-stand-widget {
+    background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0.3));
+    backdrop-filter: blur(15px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.7);
+    padding: 15px; display: flex; flex-direction: column; justify-content: space-between;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.04); position: relative;
+}
+.k-ms-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.k-ms-date { font-family: 'Montserrat', sans-serif; font-size: 38px; font-weight: 200; color: #222; line-height: 0.8; outline: none; }
+.k-ms-img { width: 36px; height: 36px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);}
+.k-ms-bottom { font-size: 8px; font-weight: 700; color: #777; letter-spacing: 2px; text-transform: uppercase; outline: none; }
+
+/* 5. 横版主页风 (Banner Profile 4x3) */
+.k-banner-profile-widget {
+    background: rgba(255,255,255,0.4); backdrop-filter: blur(15px);
+    border-radius: 24px; border: 1px solid rgba(255,255,255,0.6);
+    position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+.k-bp-banner { height: 50%; width: 100%; background-size: cover; background-position: center; position: relative;}
+.k-bp-banner::after { content:''; position:absolute; inset:0; background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.3)); }
+.k-bp-avatar { 
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 64px; height: 64px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.85);
+    background-size: cover; background-position: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 2;
+}
+.k-bp-info { height: 50%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 20px; }
+.k-bp-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 800; color: #222; outline: none; }
+.k-bp-bio { font-family: 'Montserrat', sans-serif; font-size: 10px; color: #666; margin-top: 4px; letter-spacing: 1px; outline: none; }
+
+/* 6. 双人气泡对话 (4x2) */
+.k-dialogue-bubbles-widget {
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(12px);
+    border-radius: 20px; border: 1px solid rgba(255,255,255,0.4);
+    padding: 15px 20px; display: flex; flex-direction: column; justify-content: center; gap: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.03);
+}
+.k-db-row { display: flex; align-items: flex-end; gap: 10px; }
+.k-db-row.right { flex-direction: row-reverse; }
+.k-db-avatar { width: 32px; height: 32px; border-radius: 50%; background-size: cover; background-position: center; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 2px solid #fff;}
+.k-db-bubble { 
+    padding: 8px 14px; border-radius: 14px; font-size: 12px; font-family: 'PingFang SC', sans-serif;
+    outline: none; max-width: 75%; line-height: 1.4; box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.k-db-row.left .k-db-bubble { background: rgba(255,255,255,0.85); color: #333; border-bottom-left-radius: 4px; }
+.k-db-row.right .k-db-bubble { background: rgba(43,43,43,0.85); color: #fff; border-bottom-right-radius: 4px; }
