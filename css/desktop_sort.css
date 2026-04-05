@@ -2219,7 +2219,7 @@
     height: 75%;        /* 控制高度，这里设为屏幕的 75% */
     background: #fcfcfc;
     z-index: 10500;
-    transform: translateY(100%);
+    transform: translateY(calc(100% + 50px));
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;
     flex-direction: column;
@@ -2433,3 +2433,25 @@
 }
 .k-db-row.left .k-db-bubble { background: rgba(255,255,255,0.85); color: #333; border-bottom-left-radius: 4px; }
 .k-db-row.right .k-db-bubble { background: rgba(43,43,43,0.85); color: #fff; border-bottom-right-radius: 4px; }
+/* 1. 默认禁用桌面小组件整体的长按菜单和文本选中，防止长按背景时误触 */
+.app-cell, 
+.dynamic-widget, 
+.unified-header-widget, 
+.music-widget, 
+.photo-stack, 
+.k-mood-board, 
+.collection-ticker-widget {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* 2. 但是！把权限还给可编辑的文字和输入框，允许打字、选中、复制 */
+[contenteditable="true"], 
+input, 
+textarea {
+    -webkit-touch-callout: default !important; /* 恢复原生系统菜单(复制/粘贴) */
+    -webkit-user-select: text !important;      /* 允许选中文本 */
+    user-select: text !important;
+    cursor: text;                              /* 鼠标变成输入指针 */
+}
