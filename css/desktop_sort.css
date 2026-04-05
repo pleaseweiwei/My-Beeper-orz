@@ -2152,6 +2152,8 @@
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    max-height: 100%; /* 防止超出手机框高度 */
+    overflow: hidden; /* 防止内容超出 */
 }
 #widget-library.active {
     transform: translateY(0);

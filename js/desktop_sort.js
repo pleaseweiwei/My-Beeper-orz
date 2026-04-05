@@ -51,14 +51,10 @@
     }
 
     function getWidgetArea(el) {
-        if (el.classList.contains('widget-4x4')) return 16;
-        if (el.classList.contains('widget-4x3')) return 12;
-        if (el.classList.contains('widget-4x2')) return 8;
-        if (el.classList.contains('widget-4x1')) return 4;
-        if (el.classList.contains('widget-2x4')) return 8;
-        if (el.classList.contains('widget-2x3')) return 6;
-        if (el.classList.contains('widget-2x2')) return 4;
-        if (el.classList.contains('widget-2x1')) return 2;
+        var match = el.className.match(/widget-(\d+)x(\d+)/);
+        if (match) {
+            return parseInt(match[1]) * parseInt(match[2]);
+        }
         return 1;
     }
 
@@ -198,6 +194,14 @@
                     el.dataset.widgetType = widgetData.type || 'unknown';
                     el.dataset.sortId = sortId;
                     el.innerHTML = widgetData.html || '';
+                    
+                    var match = el.className.match(/widget-(\d+)x(\d+)/);
+                    if (match) {
+                        el.style.setProperty('grid-column', 'span ' + match[1], 'important');
+                        el.style.setProperty('grid-row', 'span ' + match[2], 'important');
+                    }
+                    el.style.maxWidth = '100%';
+                    el.style.boxSizing = 'border-box';
                 }
                 if (el) { page.appendChild(el); }
             });
@@ -530,6 +534,145 @@ window.closeWidgetLibrary = function() {
     }
 };
 
+window.handleCustomWidgetUpload = function(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var base64 = e.target.result;
+            document.getElementById('custom-widget-base64').value = base64;
+            var preview = document.getElementById('custom-widget-preview');
+            preview.innerHTML = '<img src="' + base64 + '" style="width:100%; height:100%; object-fit:cover;">';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+};
+
+window.toggleCustomWidgetType = function(val) {
+    var imgPanel = document.getElementById('custom-widget-image-panel');
+    var codePanel = document.getElementById('custom-widget-code-panel');
+    var actionGroup = document.getElementById('custom-widget-action-group');
+    if (imgPanel) imgPanel.style.display = (val === 'image') ? 'block' : 'none';
+    if (codePanel) codePanel.style.display = (val === 'code') ? 'block' : 'none';
+    if (actionGroup) actionGroup.style.display = (val === 'image') ? 'block' : 'none';
+};
+
+window.toggleCustomWidgetActionInput = function(val) {
+    var appBox = document.getElementById('custom-widget-action-app-box');
+    var urlBox = document.getElementById('custom-widget-action-url-box');
+    if (appBox) appBox.style.display = (val === 'app') ? 'block' : 'none';
+    if (urlBox) urlBox.style.display = (val === 'url') ? 'block' : 'none';
+};
+
+window.executeCustomWidgetAction = function(type, param) {
+    if (type === 'app') {
+        if (param === 'wechat') { if(window.openWeChatApp) window.openWeChatApp(); }
+        else if (param === 'live') { if(window.openLiveApp) window.openLiveApp(); }
+        else if (param === 'music') { if(window.openMusicPlayer) window.openMusicPlayer(); }
+        else if (param === 'game') { if(window.openGameApp) window.openGameApp(); }
+        else if (param === 'pet') { if(window.openPetApp) window.openPetApp(); }
+        else if (param === 'novel') { if(window.openNovelApp) window.openNovelApp(); }
+        else if (param === 'pay') { if(window.openPayApp) window.openPayApp(); }
+        else if (param === 'lovespace') { if(window.openLoveSpaceApp) window.openLoveSpaceApp(); }
+        else if (param === 'backpack') { if(window.openBackpackApp) window.openBackpackApp(); }
+    } else if (type === 'url') {
+        if (param && param.trim() !== '') {
+            window.open(param, '_blank');
+        }
+    }
+};
+
+window.createCustomWidget = function() {
+    var typeSelect = document.getElementById('custom-widget-type');
+    var type = typeSelect ? typeSelect.value : 'image';
+    var contentHtml = '';
+
+    var w = parseInt(document.getElementById('custom-widget-w').value) || 2;
+    var h = parseInt(document.getElementById('custom-widget-h').value) || 2;
+    if (w < 1) w = 1;
+    if (w > 4) w = 4;
+    if (h < 1) h = 1;
+    if (h > 7) h = 7;
+    var sizeClass = 'widget-' + w + 'x' + h;
+
+    var actionTypeEl = document.getElementById('custom-widget-action-type');
+    var actionType = actionTypeEl ? actionTypeEl.value : 'none';
+    var actionParam = '';
+    if (actionType === 'app') {
+        actionParam = document.getElementById('custom-widget-action-app') ? document.getElementById('custom-widget-action-app').value : '';
+    } else if (actionType === 'url') {
+        actionParam = document.getElementById('custom-widget-action-url') ? document.getElementById('custom-widget-action-url').value : '';
+    }
+
+    var clickStr = '';
+    if (actionType !== 'none' && type === 'image') {
+        clickStr = ' onclick="executeCustomWidgetAction(\'' + actionType + '\', \'' + actionParam + '\')"';
+    }
+
+    if (type === 'image') {
+        var base64 = document.getElementById('custom-widget-base64') ? document.getElementById('custom-widget-base64').value : '';
+        if (!base64) {
+            alert('请先上传图片！');
+            return;
+        }
+        contentHtml = '<div style="width:100%; height:100%; border-radius:16px; overflow:hidden; background-image:url(\'' + base64 + '\'); background-size:contain; background-repeat:no-repeat; background-position:center; cursor:pointer;"' + clickStr + '></div>';
+    } else {
+        var codeInput = document.getElementById('custom-widget-code-input');
+        var code = codeInput ? codeInput.value : '';
+        if (!code.trim()) {
+            alert('请先输入代码！');
+            return;
+        }
+        contentHtml = '<div style="width:100%; height:100%; overflow:hidden; border-radius:16px; cursor:pointer;"' + clickStr + '>' + code + '</div>';
+    }
+
+    var screen = document.getElementById('screen');
+    if (!screen) return;
+    var pw = screen.clientWidth;
+    var sl = screen.scrollLeft;
+    var curIdx = Math.round(sl / pw);
+    var pages = document.querySelectorAll('.page');
+    var page = pages[curIdx];
+    if (!page) page = pages[0];
+    
+    var el = document.createElement('div');
+    el.className = 'sortable-item dynamic-widget ' + sizeClass;
+    el.style.setProperty('grid-column', 'span ' + w, 'important');
+    el.style.setProperty('grid-row', 'span ' + h, 'important');
+    el.style.maxWidth = '100%';
+    el.style.boxSizing = 'border-box';
+    el.dataset.widgetType = 'custom-user';
+    el.dataset.sortId = 'widget-custom-' + Date.now() + Math.random().toString(36).substr(2, 5);
+    
+    el.innerHTML = contentHtml;
+
+    if (window.DesktopSort && window.DesktopSort.isEditMode()) {
+        var delBtn = document.createElement('div');
+        delBtn.className = 'ds-delete-btn';
+        delBtn.innerHTML = '<i class="fas fa-minus"></i>';
+        delBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            el.remove();
+            window.adjustEmptySlots();
+            if (window.DesktopSort.saveOrder) window.DesktopSort.saveOrder();
+        });
+        el.appendChild(delBtn);
+    }
+    
+    page.appendChild(el);
+    window.adjustEmptySlots();
+    closeWidgetLibrary();
+    if (window.DesktopSort && window.DesktopSort.saveOrder) {
+        window.DesktopSort.saveOrder();
+    }
+
+    // 重置表单
+    document.getElementById('custom-widget-base64').value = '';
+    document.getElementById('custom-widget-preview').innerHTML = '<i class="fas fa-image" style="color:#ccc; font-size:24px;"></i>';
+    document.getElementById('custom-widget-action-type').value = 'none';
+    toggleCustomWidgetActionInput('none');
+};
+
+
 window.switchWidgetCategory = function(cat, btn) {
     try {
         var tabs = document.querySelectorAll('.wl-tab');
@@ -543,7 +686,7 @@ window.switchWidgetCategory = function(cat, btn) {
         if (btn && btn.classList) {
             btn.classList.add('active');
         }
-        var categories = ['system', 'aesthetic', 'text', 'media', 'tool'];
+        var categories = ['system', 'aesthetic', 'text', 'media', 'tool', 'custom'];
         for (var j = 0; j < categories.length; j++) {
             var c = categories[j];
             var el = document.getElementById('wl-content-' + c);

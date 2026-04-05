@@ -197,6 +197,26 @@
 
             <!-- === 第三页 (P3): 韩系CD机 + 实用APP === -->
             <div class="page ds-flat" id="p3">
+                <div class="k-mood-board widget-4x4 sortable-item">
+                    <div class="k-cd-player">
+                        <div class="k-disc-wrap">
+                            <div class="k-disc" data-edit-key="k_cd_cover" onclick="triggerChangeImage(this, 'bg')" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=200&auto=format&fit=crop');"><div class="k-disc-center"></div></div>
+                        </div>
+                        <div class="k-song-info">
+                            <div class="k-play-btn"><i class="fas fa-play"></i></div>
+                            <div style="flex:1;">
+                                <div contenteditable="true" class="k-song-title" id="p3-song">Palette</div>
+                                <div contenteditable="true" class="k-artist" id="p3-artist">IU (아이유)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="k-polaroid">
+                        <div class="k-tape"></div>
+                        <div class="k-photo-frame" data-edit-key="k_polaroid_img" onclick="triggerChangeImage(this, 'bg')" style="background-image: url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop');"></div>
+                        <div class="k-handwriting" contenteditable="true" id="p3-handwriting">Vibe ☁️</div>
+                    </div>
+                </div>
+
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="galgame" onclick="openGalgameApp()"><div class="icon-box"><i class="fas fa-gamepad"></i></div><span class="app-label">Galgame</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="pet" onclick="openPetApp()"><div class="icon-box"><i class="fas fa-paw"></i></div><span class="app-label">Pet</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="tracker" onclick="TrackerApp.open()"><div class="icon-box"><i class="fas fa-user-secret"></i></div><span class="app-label">Spy</span></div>
@@ -232,7 +252,7 @@
                     </div>
                 </div>
 
-                <div class="receipt-widget short-version widget-4x3 sortable-item" style="transform: scale(0.95); transform-origin: top center; pointer-events: auto;">
+                <div class="receipt-widget short-version widget-4x3 sortable-item" style="transform: scale(0.95); transform-origin: top center;">
                     <div class="receipt-hole"></div>
                     <div class="receipt-header">
                         <div class="receipt-title">RECEIPT</div>
@@ -240,11 +260,11 @@
                     </div>
                     <div class="receipt-divider-dashed"></div>
                     <div class="receipt-list">
-                        <div class="receipt-item" style="pointer-events: auto;" onclick="event.stopPropagation(); openSimulatedApp('taobao')">
+                        <div class="receipt-item" onclick="openSimulatedApp('taobao')">
                             <div class="r-item-name"><span class="r-qty">01</span><span>SHOPPING (Taobao)</span></div>
                             <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
                         </div>
-                        <div class="receipt-item" style="pointer-events: auto;" onclick="event.stopPropagation(); openSimulatedApp('meituan')">
+                        <div class="receipt-item" onclick="openSimulatedApp('meituan')">
                             <div class="r-item-name"><span class="r-qty">02</span><span>DELIVERY (Meituan)</span></div>
                             <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
                         </div>
@@ -266,18 +286,19 @@
 
   
         <!-- 小组件库面板 -->
-        <div id="widget-library" style="z-index: 1000000002;">
+        <div id="widget-library" style="z-index: 1000000000; position: absolute;">
             <div class="k-modal-header" style="border-bottom: none; padding-top: 15px;">
                 <i class="fas fa-chevron-down" onclick="closeWidgetLibrary()" style="font-size: 18px; cursor: pointer;"></i>
                 <span style="font-size: 16px; font-weight: 700;">添加小组件</span>
                 <div style="width: 20px;"></div>
             </div>
-            <div style="display: flex; padding: 0 16px; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0;">
+            <div style="display: flex; padding: 0 16px; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; overflow-x: auto; white-space: nowrap;">
                 <button class="wl-tab active" onclick="switchWidgetCategory('system', this)">时钟</button>
                 <button class="wl-tab" onclick="switchWidgetCategory('aesthetic', this)">照片</button>
                 <button class="wl-tab" onclick="switchWidgetCategory('text', this)">文字</button>
                 <button class="wl-tab" onclick="switchWidgetCategory('media', this)">音乐</button>
                 <button class="wl-tab" onclick="switchWidgetCategory('tool', this)">工具</button>
+                <button class="wl-tab" onclick="switchWidgetCategory('custom', this)">自定义</button>
             </div>
             
             <div style="flex:1; overflow-y:auto;">
@@ -626,6 +647,32 @@
                         </div>
                         <div class="wl-info" style="margin-top: 10px;">音乐播放器 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
                     </div>
+                    <div class="wl-item" onclick="addWidget('k-mood-board', 'widget-4x4')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 310px;">
+                                <div class="k-mood-board widget-4x4" style="margin: 0; height: 100%;">
+                                    <div class="k-cd-player">
+                                        <div class="k-disc-wrap">
+                                            <div class="k-disc" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=200&auto=format&fit=crop');"><div class="k-disc-center"></div></div>
+                                        </div>
+                                        <div class="k-song-info">
+                                            <div class="k-play-btn"><i class="fas fa-play"></i></div>
+                                            <div style="flex:1;">
+                                                <div class="k-song-title">Palette</div>
+                                                <div class="k-artist">IU (아이유)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="k-polaroid">
+                                        <div class="k-tape"></div>
+                                        <div class="k-photo-frame" style="background-image: url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop');"></div>
+                                        <div class="k-handwriting">Vibe ☁️</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">韩系情绪板 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×4</span></div>
+                    </div>
                 </div>
 
                 <!-- 工具 -->
@@ -671,22 +718,35 @@
                         <div class="wl-info">咖啡集点卡 (4x2)</div>
                     </div>
 
-                    <div class="wl-item" onclick="addWidget('receipt-short', 'widget-4x3')" style="grid-column: span 2; z-index: 10;">
-                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box; pointer-events: auto;">
-                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 230px;">
-                                <div class="receipt-widget short-version widget-4x3" style="margin: 0; height: 100%; pointer-events: auto;">
-                                    <div class="receipt-hole"></div>
-                                    <div class="receipt-header">
-                                        <div class="receipt-title">RECEIPT</div>
-                                        <div class="receipt-date">NO.2026-02-22</div>
+                    <div class="wl-item" onclick="addWidget('k-mood', 'widget-2x2')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
+                                <div class="k-mood-widget widget-2x2" style="margin: 0; height: 100%;">
+                                    <div>
+                                        <div class="k-mood-emoji">☁️</div>
+                                        <div class="k-mood-text">Feeling Good</div>
                                     </div>
-                                    <div class="receipt-divider-dashed"></div>
-                                    <div class="receipt-list">
-                                        <div class="receipt-item" style="pointer-events: auto;" onclick="event.stopPropagation(); openSimulatedApp('taobao')">
-                                            <div class="r-item-name"><span class="r-qty">01</span><span>SHOPPING (Taobao)</span></div>
-                                            <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
-                                        </div>
-                                        <div class="receipt-item" style="pointer-events: auto;" onclick="event.stopPropagation(); openSimulatedApp('meituan')">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">每日情绪 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+                    <div class="wl-item" onclick="addWidget('receipt-short', 'widget-4x3')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-profile-card-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="pc-avatar-wrap">
+                                        <div class="pc-avatar" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop')"></div>
+                                    </div>
+                                    <div class="pc-info">
+                                        <div class="pc-name">Hannah</div>
+                                        <div class="pc-sign">Dreamer ☁️ & Creator</div>
+                                    </div>
+                                    <div class="pc-tag">PROFILE</div>
+                                </div>
+                            </div>
+                        </div>
+                                        <div class="receipt-item">
                                             <div class="r-item-name"><span class="r-qty">02</span><span>DELIVERY (Meituan)</span></div>
                                             <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
                                         </div>
@@ -702,11 +762,88 @@
                         <div class="wl-info" style="margin-top: 10px;">购物小票 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×3</span></div>
                     </div>
                 </div>
+
+                <!-- 自定义 (Custom) -->
+                <div id="wl-content-custom" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div style="background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                        <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 15px;">✨ 创建自定义小组件</div>
+                        
+                        <div class="form-group">
+                            <label>1. 选择类型</label>
+                            <select id="custom-widget-type" style="width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none; background:#fafafa; margin-bottom: 10px;" onchange="if(window.toggleCustomWidgetType) window.toggleCustomWidgetType(this.value)">
+                                <option value="image">图片小组件</option>
+                                <option value="code">代码小组件 (HTML/CSS)</option>
+                            </select>
+                        </div>
+
+                        <!-- 图片模式 -->
+                        <div id="custom-widget-image-panel">
+                            <div class="form-group">
+                                <label>上传图片 (支持透明PNG)</label>
+                                <div style="display:flex; gap:10px; align-items: center;">
+                                    <div id="custom-widget-preview" style="width:60px; height:60px; background:#f0f0f0; border-radius:12px; display:flex; justify-content:center; align-items:center; overflow:hidden;">
+                                        <i class="fas fa-image" style="color:#ccc; font-size:24px;"></i>
+                                    </div>
+                                    <button class="btn-secondary" style="flex:1;" onclick="document.getElementById('custom-widget-file').click()">选择图片</button>
+                                    <input type="file" id="custom-widget-file" accept="image/*" style="display:none;" onchange="handleCustomWidgetUpload(this)">
+                                    <input type="hidden" id="custom-widget-base64" value="">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 代码模式 -->
+                        <div id="custom-widget-code-panel" style="display:none;">
+                            <div class="form-group">
+                                <label>输入 HTML/CSS 代码</label>
+                                <textarea id="custom-widget-code-input" rows="4" placeholder="<div style='background:pink; width:100%; height:100%; border-radius:16px;'>自定义代码</div>" style="width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none; background:#fafafa; font-family:monospace; box-sizing:border-box;"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>2. 选择尺寸 (最大 4x7)</label>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="number" id="custom-widget-w" placeholder="宽(1-4)" min="1" max="4" value="2" style="flex:1; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none; background:#fafafa; text-align:center;">
+                                <span>×</span>
+                                <input type="number" id="custom-widget-h" placeholder="高(1-7)" min="1" max="7" value="2" style="flex:1; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none; background:#fafafa; text-align:center;">
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="custom-widget-action-group">
+                            <label>3. 点击事件 (可选)</label>
+                            <select id="custom-widget-action-type" style="width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none; background:#fafafa; margin-bottom: 10px;" onchange="toggleCustomWidgetActionInput(this.value)">
+                                <option value="none">无动作 (纯展示)</option>
+                                <option value="app">打开应用</option>
+                                <option value="url">跳转网页 (URL)</option>
+                            </select>
+                            
+                            <div id="custom-widget-action-app-box" style="display:none;">
+                                <select id="custom-widget-action-app" style="width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none; background:#fafafa;">
+                                    <option value="wechat">WeChat / 消息</option>
+                                    <option value="live">Live / 动态</option>
+                                    <option value="music">Music / 音乐</option>
+                                    <option value="game">Arcade / 游戏</option>
+                                    <option value="pet">Pet / 宠物</option>
+                                    <option value="novel">Novel / 异世界</option>
+                                    <option value="pay">Pay / 钱包</option>
+                                    <option value="lovespace">Love Space / 双人宇宙</option>
+                                    <option value="backpack">Backpack / 背包</option>
+                                </select>
+                            </div>
+                            
+                            <div id="custom-widget-action-url-box" style="display:none;">
+                                <input type="text" id="custom-widget-action-url" placeholder="https://..." style="width:100%; border:1px solid #eee; border-radius:12px; padding:10px; font-size:13px; outline:none; background:#fafafa;">
+                            </div>
+                        </div>
+
+                        <button class="btn-confirm" style="width:100%; margin-top:10px; background:#111; color:#fff;" onclick="createCustomWidget()">生成并添加到桌面</button>
+                    </div>
+                </div>
+
             </div>
         </div>
 
            <!-- Dock Bar -->
-        <div id="main-dock-bar" class="dock-bar" style="opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out; z-index: 1000000001;">
+        <div id="main-dock-bar" class="dock-bar" style="opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out;">
             <div style="position:relative;display:inline-flex;align-items:center;cursor:pointer;" onclick="PhoneCallApp.openDialer()">
                 <i class="fas fa-phone-alt" style="font-size:20px; color:#555;"></i>
                 <div id="dock-phone-dot" class="dock-notif-dot" style="display:none;"></div>
