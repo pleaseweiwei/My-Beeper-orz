@@ -136,6 +136,7 @@
                         dynamicWidgets[sortId] = {
                             type: el.dataset.widgetType,
                             sizeClass: Array.from(el.classList).find(c => c.startsWith('widget-')),
+                            className: el.className,
                             html: el.innerHTML
                         };
                     }
@@ -193,7 +194,7 @@
                 } else if (!el && dynamicWidgets && dynamicWidgets[sortId]) {
                     const widgetData = dynamicWidgets[sortId];
                     el = document.createElement('div');
-                    el.className = 'sortable-item dynamic-widget ' + (widgetData.sizeClass || '');
+                    el.className = widgetData.className || ('sortable-item dynamic-widget ' + (widgetData.sizeClass || ''));
                     el.dataset.widgetType = widgetData.type || 'unknown';
                     el.dataset.sortId = sortId;
                     el.innerHTML = widgetData.html || '';
@@ -279,6 +280,24 @@
                 saveOrder();
             });
             item.appendChild(delBtn);
+
+            // Add color switch button for specific widgets
+            if (item.classList.contains('k-scrapbook-widget') || 
+                item.classList.contains('k-todo-widget') || 
+                item.classList.contains('k-train-ticket-widget') || 
+                item.classList.contains('k-envelope-widget') ||
+                item.classList.contains('k-planner-widget')) {
+                var colorBtn = document.createElement('div');
+                colorBtn.className = 'ds-color-btn';
+                colorBtn.innerHTML = '<i class="fas fa-palette"></i>';
+                colorBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if(window.DesktopSort.cycleWidgetColor) {
+                        window.DesktopSort.cycleWidgetColor(item);
+                    }
+                });
+                item.appendChild(colorBtn);
+            }
         });
     }
 
@@ -293,6 +312,7 @@
         var addBtn = document.querySelector('.desktop-add-btn');
         if (addBtn) addBtn.remove();
         document.querySelectorAll('.ds-delete-btn').forEach(function(btn) { btn.remove(); });
+        document.querySelectorAll('.ds-color-btn').forEach(function(btn) { btn.remove(); });
 
         removeEdgeIndicators();
         stopEdgeScroll();
@@ -371,8 +391,6 @@
                     if ('vibrate' in navigator) navigator.vibrate(50);
                     e.item.style.transform = 'scale(0.85)';
                     e.item.style.opacity = '0.8';
-                    var isWidget = !e.item.classList.contains('app-cell') && !e.item.classList.contains('ds-empty-slot');
-                    this.option('swap', !isWidget);
                 },
                 onMove: function (evt) { onDragMove(evt); },
                 onEnd: function (e) {
@@ -420,7 +438,7 @@
     function onGlobalClick(e) {
         if (isLongPressTriggered) { isLongPressTriggered = false; e.preventDefault(); e.stopPropagation(); return; }
         if (editMode) {
-            if (e.target.closest('.ds-delete-btn') || e.target.closest('.desktop-add-btn') || e.target.closest('.desktop-done-btn')) return;
+            if (e.target.closest('.ds-delete-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.desktop-add-btn') || e.target.closest('.desktop-done-btn')) return;
             if (e.target.closest('.app-cell') || e.target.closest('.sortable-item')) { e.preventDefault(); e.stopPropagation(); }
         }
     }
@@ -452,13 +470,32 @@
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); } 
     else { requestAnimationFrame(init); }
 
+    function cycleWidgetColor(item) {
+        var colors = ['theme-default', 'theme-pink', 'theme-blue', 'theme-green', 'theme-purple', 'theme-white', 'theme-black'];
+        var currentTheme = 'theme-default';
+        for (var i = 0; i < colors.length; i++) {
+            if (item.classList.contains(colors[i])) {
+                currentTheme = colors[i];
+                item.classList.remove(colors[i]);
+                break;
+            }
+        }
+        var nextIndex = (colors.indexOf(currentTheme) + 1) % colors.length;
+        var nextTheme = colors[nextIndex];
+        if (nextTheme !== 'theme-default') {
+            item.classList.add(nextTheme);
+        }
+        if(saveOrder) saveOrder();
+    }
+
     window.DesktopSort = {
         enterEditMode: enterEditMode,
         exitEditMode: exitEditMode,
         saveOrder: saveOrder,
         restoreOrder: restoreOrder,
         isEditMode: function () { return editMode; },
-        flatten: flattenAllPages
+        flatten: flattenAllPages,
+        cycleWidgetColor: cycleWidgetColor
     };
 
 })();
@@ -552,6 +589,18 @@ window.addWidget = function(type, sizeClass) {
         el.style.transform = 'scale(0.95)';
         el.style.transformOrigin = 'top center';
         el.innerHTML = '<div class="ticker-icon"><i class="fas fa-quote-left"></i></div><div class="ticker-wrapper"><div class="ticker-content"><span>记得给阳台的花浇水</span><span class="dot">·</span><span>下周五去看展</span><span class="dot">·</span><span>密码 123456</span><span class="dot">·</span><span>Stay foolish</span><span class="dot">·</span><span>买猫粮</span><span class="dot">·</span></div><div class="ticker-content"><span>记得给阳台的花浇水</span><span class="dot">·</span><span>下周五去看展</span><span class="dot">·</span><span>密码 123456</span><span class="dot">·</span><span>Stay foolish</span><span class="dot">·</span><span>买猫粮</span><span class="dot">·</span></div></div><div class="ticker-img-circle"><img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop" data-edit-key="p4_ticker_img" onclick="triggerChangeImage(this, \'self\')"></div>';
+    } else if (type === 'k-time-carousel') {
+        el.className = 'k-time-carousel-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="tc-left"><div class="tc-time" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">14:30</div><div class="tc-date" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Sun, Apr 05</div></div><div class="tc-right"><div class="tc-polaroid"><div class="tc-tape"></div><div class="tc-img" data-edit-key="tcimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image:url(\'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop\')"></div><div class="tc-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Good Afternoon ☕️</div></div></div>';
+    } else if (type === 'k-badge') {
+        el.className = 'k-badge-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="badge-lace"></div><div class="badge-inner" data-edit-key="bdgimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image:url(\'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop\')"></div><div class="badge-highlight"></div><div class="badge-pin"></div><div class="badge-ribbon badge-ribbon-left"></div><div class="badge-ribbon badge-ribbon-right"></div>';
+    } else if (type === 'k-profile-card') {
+        el.className = 'k-profile-card-widget sortable-item widget-4x2'; // 强制改为横版尺寸
+        el.innerHTML = '<div class="pc-avatar-wrap"><div class="pc-avatar" data-edit-key="pcav_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image:url(\'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop\')"></div></div><div class="pc-info"><div class="pc-name" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Hannah</div><div class="pc-sign" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Dreamer ☁️ & Creator</div></div><div class="pc-tag">PROFILE</div>';
+    } else if (type === 'k-gameboy') {
+        el.className = 'k-gameboy-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="gb-screen-container"><div class="gb-screen" data-edit-key="gbimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image:url(\'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=300&auto=format&fit=crop\')"></div></div><div class="gb-controls"><div class="gb-dpad"><div class="gb-dpad-center"></div></div><div class="gb-buttons"><div class="gb-btn-wrap"><div class="gb-btn"></div></div><div class="gb-btn-wrap"><div class="gb-btn"></div></div></div></div><div class="gb-speaker"><div class="gb-speaker-hole"></div><div class="gb-speaker-hole"></div><div class="gb-speaker-hole"></div><div class="gb-speaker-hole"></div></div><div class="gb-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">GAMEBOY</div><div class="gb-sticker" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">🌷</div><div class="gb-power-light"></div>';
     } else if (type === 'receipt-short') {
         el.className = 'receipt-widget short-version sortable-item ' + sizeClass;
         el.style.transform = 'scale(0.95)';
@@ -568,7 +617,7 @@ window.addWidget = function(type, sizeClass) {
         el.innerHTML = '<div class="k-todo-tape"></div><div class="k-todo-title" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">📝 TO-DO LIST</div><div class="k-todo-list"><div class="k-todo-item"><div class="k-todo-check" onclick="this.classList.toggle(\'checked\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">✓</div><div class="k-todo-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Buy some coffee</div></div><div class="k-todo-item"><div class="k-todo-check" onclick="this.classList.toggle(\'checked\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">✓</div><div class="k-todo-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Read a book</div></div><div class="k-todo-item"><div class="k-todo-check" onclick="this.classList.toggle(\'checked\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">✓</div><div class="k-todo-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Call Mom</div></div></div>';
     } else if (type === 'k-mood') {
         el.className = 'k-mood-widget sortable-item ' + sizeClass;
-        el.innerHTML = '<div class="k-mood-emoji" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">☁️</div><div class="k-mood-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Feeling Good</div>';
+        el.innerHTML = '<div><div class="k-mood-emoji" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">☁️</div><div class="k-mood-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Feeling Good</div></div>';
     } else if (type === 'k-journal') {
         el.className = 'k-journal-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div class="k-j-img" data-edit-key="k_journal_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1505682614136-0a12f9f7beea?q=80&w=200&auto=format&fit=crop\');"></div><div class="k-j-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">"Make it happen."</div><div class="k-j-date" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">2026.04.05</div>';
@@ -587,6 +636,24 @@ window.addWidget = function(type, sizeClass) {
     } else if (type === 'k-keyring') {
         el.className = 'k-keyring-widget sortable-item ' + sizeClass;
         el.innerHTML = '<div class="kr-ring"></div><div class="kr-hole"></div><div class="kr-img" data-edit-key="kr_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200\');"></div><div class="kr-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Love It!</div>';
+    } else if (type === 'k-cafe-stamp') {
+        el.className = 'k-cafe-stamp-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="c-left"><div class="c-title" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">My Daily Cafe</div><div class="c-stamps"><div class="c-stamp-circle stamped" onclick="this.classList.toggle(\'stamped\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()"></div><div class="c-stamp-circle stamped" onclick="this.classList.toggle(\'stamped\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()"></div><div class="c-stamp-circle stamped" onclick="this.classList.toggle(\'stamped\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()"></div><div class="c-stamp-circle" onclick="this.classList.toggle(\'stamped\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()"></div><div class="c-stamp-circle" onclick="this.classList.toggle(\'stamped\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()"></div><div class="c-stamp-circle" onclick="this.classList.toggle(\'stamped\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()"></div><div class="c-stamp-circle" onclick="this.classList.toggle(\'stamped\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()"></div><div class="c-stamp-circle" onclick="this.classList.toggle(\'stamped\'); if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()"></div></div></div><div class="c-right" data-edit-key="cimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=200\');"></div>';
+    } else if (type === 'k-train-ticket') {
+        el.className = 'k-train-ticket-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="tt-top"><span contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Train Ticket</span><span contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">No.0824</span></div><div class="tt-middle"><div class="tt-station" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Reality</div><div class="tt-arrow">➔</div><div class="tt-station" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Dream</div></div><div class="tt-bottom" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">DATE: 2026.04.05</div>';
+    } else if (type === 'k-photocard') {
+        el.className = 'k-photocard-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="pc-img" data-edit-key="pcimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200\');"></div><div class="pc-name" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Love</div>';
+    } else if (type === 'k-cdcase') {
+        el.className = 'k-cdcase-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="cd-spine"></div><div class="cd-cover" data-edit-key="cdimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200\');"><div class="cd-marker" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">VOL.1</div></div>';
+    } else if (type === 'k-envelope') {
+        el.className = 'k-envelope-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="ev-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">To: My Dear</div><div class="ev-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">From: Yours</div><div class="ev-message" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Always with you.</div><div class="ev-seal" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">W</div>';
+    } else if (type === 'k-planner') {
+        el.className = 'k-planner-widget sortable-item ' + sizeClass;
+        el.innerHTML = '<div class="pl-header"><div class="pl-polaroid"><div class="pl-tape"></div><div class="pl-polaroid-img" data-edit-key="plimg_' + Date.now() + '" onclick="triggerChangeImage(this, \'bg\')" style="background-image: url(\'https://images.unsplash.com/photo-1505682614136-0a12f9f7beea?q=80&w=200\');"></div></div><div class="pl-title" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">My Daily Plan</div></div><div class="pl-lines"><div class="pl-line" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">1. Wake up early</div><div class="pl-line" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">2. Drink coffee</div><div class="pl-line" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">3. Be happy</div></div>';
     } else {
         el.innerHTML = '<div style="padding:10px; outline:none; text-align:center;" contenteditable="true" onblur="window.DesktopSort.saveOrder()">New Widget</div>';
     }
@@ -603,6 +670,23 @@ window.addWidget = function(type, sizeClass) {
             if (window.DesktopSort.saveOrder) window.DesktopSort.saveOrder();
         });
         el.appendChild(delBtn);
+
+        if (el.classList.contains('k-scrapbook-widget') || 
+            el.classList.contains('k-todo-widget') || 
+            el.classList.contains('k-train-ticket-widget') || 
+            el.classList.contains('k-envelope-widget') ||
+            el.classList.contains('k-planner-widget')) {
+            var colorBtn = document.createElement('div');
+            colorBtn.className = 'ds-color-btn';
+            colorBtn.innerHTML = '<i class="fas fa-palette"></i>';
+            colorBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if(window.DesktopSort.cycleWidgetColor) {
+                    window.DesktopSort.cycleWidgetColor(el);
+                }
+            });
+            el.appendChild(colorBtn);
+        }
     }
     
     page.appendChild(el);

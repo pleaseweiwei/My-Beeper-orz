@@ -197,26 +197,6 @@
 
             <!-- === 第三页 (P3): 韩系CD机 + 实用APP === -->
             <div class="page ds-flat" id="p3">
-                <div class="k-mood-board widget-4x4 sortable-item">
-                    <div class="k-cd-player">
-                        <div class="k-disc-wrap">
-                            <div class="k-disc" data-edit-key="k_cd_cover" onclick="triggerChangeImage(this, 'bg')" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=200&auto=format&fit=crop');"><div class="k-disc-center"></div></div>
-                        </div>
-                        <div class="k-song-info">
-                            <div class="k-play-btn"><i class="fas fa-play"></i></div>
-                            <div style="flex:1;">
-                                <div contenteditable="true" class="k-song-title" id="p3-song">Palette</div>
-                                <div contenteditable="true" class="k-artist" id="p3-artist">IU (아이유)</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="k-polaroid">
-                        <div class="k-tape"></div>
-                        <div class="k-photo-frame" data-edit-key="k_polaroid_img" onclick="triggerChangeImage(this, 'bg')" style="background-image: url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop');"></div>
-                        <div class="k-handwriting" contenteditable="true" id="p3-handwriting">Vibe ☁️</div>
-                    </div>
-                </div>
-
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="galgame" onclick="openGalgameApp()"><div class="icon-box"><i class="fas fa-gamepad"></i></div><span class="app-label">Galgame</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="pet" onclick="openPetApp()"><div class="icon-box"><i class="fas fa-paw"></i></div><span class="app-label">Pet</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="tracker" onclick="TrackerApp.open()"><div class="icon-box"><i class="fas fa-user-secret"></i></div><span class="app-label">Spy</span></div>
@@ -252,7 +232,7 @@
                     </div>
                 </div>
 
-                <div class="receipt-widget short-version widget-4x3 sortable-item" style="transform: scale(0.95); transform-origin: top center;">
+                <div class="receipt-widget short-version widget-4x3 sortable-item" style="transform: scale(0.95); transform-origin: top center; pointer-events: auto;">
                     <div class="receipt-hole"></div>
                     <div class="receipt-header">
                         <div class="receipt-title">RECEIPT</div>
@@ -260,11 +240,11 @@
                     </div>
                     <div class="receipt-divider-dashed"></div>
                     <div class="receipt-list">
-                        <div class="receipt-item" onclick="openSimulatedApp('taobao')">
+                        <div class="receipt-item" style="pointer-events: auto;" onclick="event.stopPropagation(); openSimulatedApp('taobao')">
                             <div class="r-item-name"><span class="r-qty">01</span><span>SHOPPING (Taobao)</span></div>
                             <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
                         </div>
-                        <div class="receipt-item" onclick="openSimulatedApp('meituan')">
+                        <div class="receipt-item" style="pointer-events: auto;" onclick="event.stopPropagation(); openSimulatedApp('meituan')">
                             <div class="r-item-name"><span class="r-qty">02</span><span>DELIVERY (Meituan)</span></div>
                             <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
                         </div>
@@ -286,7 +266,7 @@
 
   
         <!-- 小组件库面板 -->
-        <div id="widget-library" style="z-index: 1000000000;">
+        <div id="widget-library" style="z-index: 1000000002;">
             <div class="k-modal-header" style="border-bottom: none; padding-top: 15px;">
                 <i class="fas fa-chevron-down" onclick="closeWidgetLibrary()" style="font-size: 18px; cursor: pointer;"></i>
                 <span style="font-size: 16px; font-weight: 700;">添加小组件</span>
@@ -304,6 +284,24 @@
 
                 <!-- 时钟 (System -> 时钟) -->
                 <div id="wl-content-system" class="wc-body-container" style="padding: 0 16px;">
+                    <div class="wl-item" onclick="addWidget('k-time-carousel', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-time-carousel-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="tc-left">
+                                        <div class="tc-time" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">14:30</div>
+                                        <div class="tc-date" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Sun, Apr 05</div>
+                                    </div>
+                                    <div class="tc-right">
+                                        <div class="tc-img" style="background-image:url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop')"></div>
+                                        <div class="tc-text" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Good Afternoon ☕️</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">碎片时光 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
+                    
                     <div class="wl-item" onclick="addWidget('k-dday', 'widget-2x2')">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
@@ -345,6 +343,61 @@
 
                 <!-- 照片 (Aesthetic -> 照片) -->
                 <div id="wl-content-aesthetic" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('k-badge', 'widget-2x2')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
+                                <div class="k-badge-widget widget-2x2" style="margin: 0; height: 100%;">
+                                    <div class="badge-lace"></div>
+                                    <div class="badge-inner" style="background-image:url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop')"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">镭射吧唧 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
+                    </div>
+
+                    <div class="wl-item" onclick="addWidget('k-profile-card', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-profile-card-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="pc-avatar-wrap">
+                                        <div class="pc-avatar" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop')"></div>
+                                    </div>
+                                    <div class="pc-info">
+                                        <div class="pc-name" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Hannah</div>
+                                        <div class="pc-sign" contenteditable="true" onclick="event.stopPropagation()" onblur="if(window.DesktopSort && window.DesktopSort.saveOrder) window.DesktopSort.saveOrder()">Dreamer ☁️ & Creator</div>
+                                    </div>
+                                    <div class="pc-tag">PROFILE</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info" style="margin-top: 10px;">个人名片 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                    </div>
+
+                    <div class="wl-item" onclick="addWidget('k-train-ticket', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-train-ticket-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="tt-top"><span>Train Ticket</span><span>No.0824</span></div>
+                                    <div class="tt-middle"><div class="tt-station">Reality</div><div class="tt-arrow">➔</div><div class="tt-station">Dream</div></div>
+                                    <div class="tt-bottom">DATE: 2026.04.05</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">复古列车票 (4x2)</div>
+                    </div>
+                    
+                    <div class="wl-item" onclick="addWidget('k-photocard', 'widget-2x3')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 230px;">
+                                <div class="k-photocard-widget widget-2x3" style="margin: 0; height: 100%;">
+                                    <div class="pc-img" style="background-image: url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200');"></div>
+                                    <div class="pc-name">Love</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">镭射小卡 (2x3)</div>
+                    </div>
+
                     <div class="wl-item" onclick="addWidget('k-four-cuts', 'widget-2x4')">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 310px;">
@@ -441,6 +494,42 @@
 
                 <!-- 文字 (Text -> 文字) -->
                 <div id="wl-content-text" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('k-envelope', 'widget-4x2')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-envelope-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="ev-text">To: My Dear</div>
+                                    <div class="ev-text">From: Yours</div>
+                                    <div class="ev-message">Always with you.</div>
+                                    <div class="ev-seal">W</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">火漆印章信封 (4x2)</div>
+                    </div>
+
+                    <div class="wl-item" onclick="addWidget('k-planner', 'widget-4x3')" style="grid-column: span 2;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 230px;">
+                                <div class="k-planner-widget widget-4x3" style="margin: 0; height: 100%;">
+                                    <div class="pl-header">
+                                        <div class="pl-polaroid">
+                                            <div class="pl-tape"></div>
+                                            <div class="pl-polaroid-img" style="background-image: url('https://images.unsplash.com/photo-1505682614136-0a12f9f7beea?q=80&w=200');"></div>
+                                        </div>
+                                        <div class="pl-title">My Daily Plan</div>
+                                    </div>
+                                    <div class="pl-lines">
+                                        <div class="pl-line">1. Wake up early</div>
+                                        <div class="pl-line">2. Drink coffee</div>
+                                        <div class="pl-line">3. Be happy</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">网格手帐 (4x3)</div>
+                    </div>
+
                     <div class="wl-item" onclick="addWidget('k-todo', 'widget-4x2')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
@@ -490,6 +579,20 @@
 
                 <!-- 音乐 (Media -> 音乐) -->
                 <div id="wl-content-media" class="wc-body-container" style="padding: 0 16px; display: none;">
+                    <div class="wl-item" onclick="addWidget('k-cdcase', 'widget-2x2')">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
+                                <div class="k-cdcase-widget widget-2x2" style="margin: 0; height: 100%;">
+                                    <div class="cd-spine"></div>
+                                    <div class="cd-cover" style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200');">
+                                        <div class="cd-marker">VOL.1</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">透明CD盒 (2x2)</div>
+                    </div>
+
                     <div class="wl-item" onclick="addWidget('k-cassette', 'widget-4x2')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
@@ -523,51 +626,55 @@
                         </div>
                         <div class="wl-info" style="margin-top: 10px;">音乐播放器 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
                     </div>
-                    <div class="wl-item" onclick="addWidget('k-mood-board', 'widget-4x4')" style="grid-column: span 2;">
-                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
-                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 310px;">
-                                <div class="k-mood-board widget-4x4" style="margin: 0; height: 100%;">
-                                    <div class="k-cd-player">
-                                        <div class="k-disc-wrap">
-                                            <div class="k-disc" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=200&auto=format&fit=crop');"><div class="k-disc-center"></div></div>
-                                        </div>
-                                        <div class="k-song-info">
-                                            <div class="k-play-btn"><i class="fas fa-play"></i></div>
-                                            <div style="flex:1;">
-                                                <div class="k-song-title">Palette</div>
-                                                <div class="k-artist">IU (아이유)</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="k-polaroid">
-                                        <div class="k-tape"></div>
-                                        <div class="k-photo-frame" style="background-image: url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=300&auto=format&fit=crop');"></div>
-                                        <div class="k-handwriting">Vibe ☁️</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="wl-info" style="margin-top: 10px;">韩系情绪板 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×4</span></div>
-                    </div>
                 </div>
 
                 <!-- 工具 -->
-                 <div id="wl-content-tool" class="wc-body-container" style="padding: 0 16px; display: none;">
-                    <div class="wl-item" onclick="addWidget('k-mood', 'widget-2x2')">
+                <div id="wl-content-tool" class="wc-body-container" style="padding: 0 16px; display: none;">
+                        <div class="wl-item" onclick="addWidget('k-gameboy', 'widget-4x2')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
-                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 160px; height: 160px;">
-                                <div class="k-mood-widget widget-2x2" style="margin: 0; height: 100%;">
-                                    <div class="k-mood-emoji">☁️</div>
-                                    <div class="k-mood-text">Feeling Good</div>
+                            <div style="transform: scale(0.6); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-gameboy-widget widget-4x2" style="margin: 0; width: 100%; height: 100px;">
+                                    <div class="gb-screen-container">
+                                        <div class="gb-screen" style="background-image:url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=300&auto=format&fit=crop')"></div>
+                                    </div>
+                                    <div class="gb-controls">
+                                        <div class="gb-dpad"><div class="gb-dpad-center"></div></div>
+                                        <div class="gb-buttons">
+                                            <div class="gb-btn-wrap"><div class="gb-btn"></div></div>
+                                            <div class="gb-btn-wrap"><div class="gb-btn"></div></div>
+                                            <div class="gb-btn-wrap"><div class="gb-btn" style="background:#555;"></div></div>
+                                            <div class="gb-btn-wrap"><div class="gb-btn" style="background:#555;"></div></div>
+                                        </div>
+                                    </div>
+                                    <div class="gb-speaker" style="display:none;"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="wl-info" style="margin-top: 10px;">每日情绪 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">2×2</span></div>
-                    </div>
-                    <div class="wl-item" onclick="addWidget('receipt-short', 'widget-4x3')" style="grid-column: span 2;">
+                            <div class="wl-info" style="margin-top: 10px;">掌上游戏机 <span style="display:inline-block; margin-left:4px; padding:2px 6px; background:#f0f0f0; border-radius:4px; font-size:10px; color:#888;">4×2</span></div>
+                        </div>
+
+                        <div class="wl-item" onclick="addWidget('k-cafe-stamp', 'widget-4x2')" style="grid-column: span 2;">
                         <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box;">
+                            <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 150px;">
+                                <div class="k-cafe-stamp-widget widget-4x2" style="margin: 0; height: 100%;">
+                                    <div class="c-left">
+                                        <div class="c-title">My Daily Cafe</div>
+                                        <div class="c-stamps">
+                                            <div class="c-stamp-circle stamped"></div><div class="c-stamp-circle stamped"></div><div class="c-stamp-circle stamped"></div><div class="c-stamp-circle"></div>
+                                            <div class="c-stamp-circle"></div><div class="c-stamp-circle"></div><div class="c-stamp-circle"></div><div class="c-stamp-circle"></div>
+                                        </div>
+                                    </div>
+                                    <div class="c-right" style="background-image: url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=200');"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wl-info">咖啡集点卡 (4x2)</div>
+                    </div>
+
+                    <div class="wl-item" onclick="addWidget('receipt-short', 'widget-4x3')" style="grid-column: span 2; z-index: 10;">
+                        <div class="wl-preview" style="height: auto; width: 100%; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; padding: 10px; box-sizing: border-box; pointer-events: auto;">
                             <div style="transform: scale(0.45); transform-origin: center; pointer-events: none; width: 340px; height: 230px;">
-                                <div class="receipt-widget short-version widget-4x3" style="margin: 0; height: 100%;">
+                                <div class="receipt-widget short-version widget-4x3" style="margin: 0; height: 100%; pointer-events: auto;">
                                     <div class="receipt-hole"></div>
                                     <div class="receipt-header">
                                         <div class="receipt-title">RECEIPT</div>
@@ -575,11 +682,11 @@
                                     </div>
                                     <div class="receipt-divider-dashed"></div>
                                     <div class="receipt-list">
-                                        <div class="receipt-item">
+                                        <div class="receipt-item" style="pointer-events: auto;" onclick="event.stopPropagation(); openSimulatedApp('taobao')">
                                             <div class="r-item-name"><span class="r-qty">01</span><span>SHOPPING (Taobao)</span></div>
                                             <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
                                         </div>
-                                        <div class="receipt-item">
+                                        <div class="receipt-item" style="pointer-events: auto;" onclick="event.stopPropagation(); openSimulatedApp('meituan')">
                                             <div class="r-item-name"><span class="r-qty">02</span><span>DELIVERY (Meituan)</span></div>
                                             <div class="r-item-price">OPEN <i class="fas fa-chevron-right" style="font-size:8px;"></i></div>
                                         </div>
@@ -599,7 +706,7 @@
         </div>
 
            <!-- Dock Bar -->
-        <div id="main-dock-bar" class="dock-bar" style="opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out;">
+        <div id="main-dock-bar" class="dock-bar" style="opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out; z-index: 1000000001;">
             <div style="position:relative;display:inline-flex;align-items:center;cursor:pointer;" onclick="PhoneCallApp.openDialer()">
                 <i class="fas fa-phone-alt" style="font-size:20px; color:#555;"></i>
                 <div id="dock-phone-dot" class="dock-notif-dot" style="display:none;"></div>

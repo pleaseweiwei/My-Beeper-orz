@@ -188,6 +188,29 @@
     display: flex;
 }
 
+.ds-color-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 24px;
+    height: 24px;
+    background: rgba(180, 180, 180, 0.95);
+    color: #fff;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    z-index: 100;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    line-height: 1;
+}
+
+.desktop-edit-mode .sortable-item .ds-color-btn {
+    display: flex;
+}
+
 .desktop-edit-mode .sortable-item {
     position: relative;
     /* Ensure the delete button is not clipped */
@@ -329,517 +352,1789 @@
 /* 1. 韩系拍立得 (Polaroid 2x3) */
 .k-polaroid-widget {
     background: #fff;
-    padding: 8px 8px 30px 8px;
+    padding: 10px 10px 35px 10px;
     border-radius: 4px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 
+        0 8px 25px rgba(0,0,0,0.1), 
+        0 2px 6px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
     align-items: center;
     position: relative;
     transform: rotate(-2deg);
-    transition: transform 0.3s;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border: 1px solid #f0f0f0;
 }
 .k-polaroid-widget:hover {
     transform: rotate(0deg) scale(1.02);
 }
 .k-polaroid-widget .k-tape-top {
     position: absolute;
-    top: -10px;
+    top: -12px;
     left: 50%;
     transform: translateX(-50%) rotate(2deg);
-    width: 60px;
-    height: 25px;
-    background: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    width: 65px;
+    height: 28px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.3));
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 2;
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.5);
 }
 .k-polaroid-widget .k-photo-img {
     width: 100%;
     flex: 1;
     background-size: cover;
     background-position: center;
-    background-color: #eee;
+    background-color: #222;
     border-radius: 2px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
 }
 .k-polaroid-widget .k-handwriting-text {
     font-family: 'Alex Brush', cursive, sans-serif;
-    font-size: 24px;
-    color: #444;
-    margin-top: 15px;
+    font-size: 26px;
+    color: #333;
+    margin-top: 18px;
     text-align: center;
     width: 100%;
     outline: none;
     line-height: 1;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.1);
 }
 
 /* 2. D-Day 纪念日 (System 2x2) */
 .k-dday-widget {
-    background: linear-gradient(135deg, #fce4ec 0%, #ffebee 100%);
-    border-radius: 24px;
-    box-shadow: 0 8px 20px rgba(252, 228, 236, 0.5);
+    background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+    border-radius: 20px;
+    box-shadow: 
+        0 8px 25px rgba(255, 228, 225, 0.6),
+        0 2px 8px rgba(0,0,0,0.04);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 15px;
+    padding: 18px;
     position: relative;
     overflow: hidden;
+    border: 1px solid #fff;
 }
 .k-dday-widget::before {
     content: '';
     position: absolute;
-    top: -20px;
-    right: -20px;
-    width: 60px;
-    height: 60px;
-    background: rgba(255,255,255,0.4);
+    top: -25px;
+    right: -25px;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
     border-radius: 50%;
     pointer-events: none;
 }
 .k-dday-widget .k-dday-title {
-    font-size: 11px;
-    color: #888;
-    font-weight: 600;
-    letter-spacing: 1px;
-    margin-bottom: 5px;
+    font-size: 12px;
+    color: #997a8d;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
     text-transform: uppercase;
     outline: none;
 }
 .k-dday-widget .k-dday-days {
-    font-size: 36px;
+    font-size: 40px;
     font-weight: 800;
-    color: #ff7e67;
+    color: #ff6b81;
     font-family: 'Montserrat', sans-serif;
     outline: none;
     line-height: 1;
-    text-shadow: 2px 2px 0px #fff;
+    text-shadow: 2px 3px 0px #fff;
+    position: relative;
+    z-index: 1;
 }
 .k-dday-widget .k-dday-heart {
     position: absolute;
-    bottom: 15px;
-    font-size: 12px;
+    bottom: 12px;
+    font-size: 14px;
     color: #ffb3ba;
-    animation: heartBeat 2s infinite;
+    animation: heartBeat 1.5s infinite ease-in-out;
+    filter: drop-shadow(0 2px 4px rgba(255, 179, 186, 0.5));
 }
 
 /* 3. To-Do List 碎碎念便签 (Text 4x2) */
 .k-todo-widget {
-    background: #fffdf5;
-    border-radius: 12px;
-    box-shadow: 2px 4px 12px rgba(0,0,0,0.06);
-    padding: 20px;
+    background: #fff9e6;
+    border-radius: 2px 16px 16px 16px;
+    box-shadow: 
+        2px 8px 20px rgba(0,0,0,0.06),
+        0 2px 5px rgba(0,0,0,0.04),
+        inset -1px -1px 0 rgba(0,0,0,0.02);
+    padding: 22px;
     position: relative;
     overflow: hidden;
-    /* 网格线背景 */
-    background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+    background-image: linear-gradient(transparent 95%, rgba(0,0,0,0.04) 95%);
     background-size: 100% 28px;
     background-position: 0 45px;
+    border: 1px solid #f2e6c5;
+}
+.k-todo-widget::after {
+    content: '';
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 25px; height: 25px;
+    background: linear-gradient(135deg, transparent 45%, #e8dcb3 50%, #fef5d4 55%, #fff9e6 100%);
+    border-radius: 0 0 16px 0;
+    box-shadow: -2px -2px 5px rgba(0,0,0,0.04);
 }
 .k-todo-widget .k-todo-tape {
     position: absolute;
-    top: 5px;
-    left: 15px;
-    width: 40px;
-    height: 15px;
-    background: #ffccbc;
-    transform: rotate(-5deg);
-    opacity: 0.8;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-2deg);
+    width: 60px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-radius: 1px;
 }
 .k-todo-widget .k-todo-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
-    color: #333;
-    margin-bottom: 12px;
+    color: #3b3a37;
+    margin-bottom: 14px;
     outline: none;
     font-family: 'Montserrat', 'PingFang SC', sans-serif;
+    letter-spacing: 0.5px;
 }
 .k-todo-widget .k-todo-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 .k-todo-widget .k-todo-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    gap: 10px;
+    font-size: 14px;
     color: #555;
 }
 .k-todo-widget .k-todo-check {
-    width: 14px;
-    height: 14px;
-    border: 2px solid #ccc;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #dcd6ce;
     border-radius: 4px;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
     color: transparent;
-    font-size: 10px;
-    transition: 0.2s;
+    font-size: 11px;
+    transition: all 0.2s ease;
+    background: #fff;
 }
 .k-todo-widget .k-todo-check.checked {
-    background: #4facfe;
-    border-color: #4facfe;
+    background: #7bdcb5;
+    border-color: #7bdcb5;
     color: #fff;
+    box-shadow: 0 2px 5px rgba(123, 220, 181, 0.4);
 }
 .k-todo-widget .k-todo-text {
     flex: 1;
     outline: none;
+    font-family: 'PingFang SC', sans-serif;
 }
 .k-todo-widget .k-todo-item.checked .k-todo-text {
     text-decoration: line-through;
-    color: #aaa;
+    color: #b0aba5;
 }
 
 /* 4. Daily Mood 情绪板 (Tool 2x2) */
 .k-mood-widget {
-    background: #fff;
-    border-radius: 24px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    background: #f0f0f0;
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmMGYwZjAiLz48cGF0aCBkPSJNMCAwbDR2NE00IDBMMCA0IiBzdHJva2U9IiNlNGU0ZTQiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==');
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    box-shadow: 
+        0 8px 15px rgba(0,0,0,0.1),
+        inset 0 2px 4px rgba(255,255,255,0.8);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-style: preserve-3d;
+    width: 130px;
+    height: 130px;
+    margin: 10px auto;
+}
+.k-mood-widget::before {
+    display: none;
+}
+.k-mood-widget::after {
+    display: none;
+}
+.k-mood-widget > div {
+    width: 96%;
+    height: 96%;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 
+        inset 0 -15px 30px rgba(0,0,0,0.1),
+        inset 0 10px 20px rgba(255,255,255,0.8),
+        0 2px 4px rgba(0,0,0,0.2);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 15px;
-    position: relative;
-    border: 2px solid #f0f0f0;
+    background-color: white;
 }
 .k-mood-widget .k-mood-emoji {
-    font-size: 42px;
+    font-size: 48px;
     line-height: 1.2;
     outline: none;
-    margin-bottom: 5px;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+    margin-bottom: 4px;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 2;
+}
+.k-mood-widget:hover {
+    transform: scale(1.1) translateY(-4px);
+}
+.k-mood-widget:hover .k-mood-emoji {
+    transform: scale(1.1);
 }
 .k-mood-widget .k-mood-text {
     font-size: 12px;
     color: #666;
-    font-weight: 600;
+    font-weight: 700;
     text-align: center;
     outline: none;
     width: 100%;
+    letter-spacing: 0.5px;
+    z-index: 2;
 }
 
 /* 5. 韩系图文日记 (Aesthetic 2x2) */
 .k-journal-widget {
     background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-radius: 16px;
+    box-shadow: 
+        0 8px 25px rgba(0,0,0,0.06),
+        0 2px 8px rgba(0,0,0,0.03);
     display: flex;
     flex-direction: column;
-    padding: 10px;
-    gap: 8px;
+    padding: 12px;
+    gap: 10px;
+    border: 1px solid #f5f5f5;
 }
 .k-journal-widget .k-j-img {
     flex: 1;
     width: 100%;
-    border-radius: 12px;
+    border-radius: 10px;
     background-size: cover;
     background-position: center;
-    background-color: #f5f5f5;
+    background-color: #f0f0f0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
 }
 .k-journal-widget .k-j-text {
     font-family: 'Playfair Display', serif;
-    font-size: 13px;
-    color: #333;
+    font-size: 14px;
+    color: #444;
     text-align: center;
     outline: none;
     font-style: italic;
+    font-weight: 600;
 }
 .k-journal-widget .k-j-date {
-    font-size: 9px;
-    color: #999;
+    font-size: 10px;
+    color: #a09d98;
     text-align: center;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     outline: none;
+    font-family: 'Montserrat', sans-serif;
 }
 
 /* 6. 韩系展览门票 (Aesthetic 4x2) */
 .k-ticket-widget {
     background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-radius: 12px;
+    box-shadow: 
+        0 8px 25px rgba(0,0,0,0.08),
+        0 2px 6px rgba(0,0,0,0.04);
     display: flex;
     overflow: hidden;
-    border: 1px solid #f0f0f0;
+    border: 1px solid #eaeaea;
 }
 .k-ticket-widget .k-t-img {
-    width: 40%;
+    width: 42%;
     height: 100%;
     background-size: cover;
     background-position: center;
-    border-right: 2px dashed #eee;
+    border-right: 2px dashed #dcdcdc;
     position: relative;
 }
+.k-ticket-widget .k-t-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, transparent, rgba(0,0,0,0.05));
+}
 .k-ticket-widget .k-t-info {
-    width: 60%;
-    padding: 15px;
+    width: 58%;
+    padding: 18px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    background: #fff;
+    background: #fdfdfd;
 }
-.k-ticket-widget .k-t-header { font-size: 8px; color: #aaa; letter-spacing: 2px; outline: none; margin-bottom: 5px; text-transform: uppercase; }
-.k-ticket-widget .k-t-title { font-family: 'Playfair Display', serif; font-size: 16px; color: #111; font-weight: bold; outline: none; margin-bottom: 8px; }
-.k-ticket-widget .k-t-date { font-size: 10px; color: #666; outline: none; margin-bottom: 10px; }
-.k-ticket-widget .k-t-barcode { font-family: monospace; font-size: 18px; color: #333; letter-spacing: -1px; opacity: 0.3; }
+.k-ticket-widget .k-t-header { 
+    font-size: 9px; 
+    color: #a8a8a8; 
+    letter-spacing: 2.5px; 
+    outline: none; 
+    margin-bottom: 6px; 
+    text-transform: uppercase; 
+    font-weight: 700;
+}
+.k-ticket-widget .k-t-title { 
+    font-family: 'Playfair Display', serif; 
+    font-size: 18px; 
+    color: #222; 
+    font-weight: 800; 
+    outline: none; 
+    margin-bottom: 10px; 
+    line-height: 1.2;
+}
+.k-ticket-widget .k-t-date { 
+    font-size: 11px; 
+    color: #777; 
+    outline: none; 
+    margin-bottom: 12px; 
+    font-family: 'Montserrat', sans-serif;
+}
+.k-ticket-widget .k-t-barcode { 
+    font-family: 'Libre Barcode 39', monospace; 
+    font-size: 24px; 
+    color: #444; 
+    letter-spacing: 2px; 
+    opacity: 0.5; 
+    line-height: 0.8;
+}
 
 /* === 7. 人生四格 (Life Four Cuts 2x4) === */
 .k-four-cuts-widget {
-    background: #fdfdfd;
-    border-radius: 12px;
-    padding: 12px 12px 45px 12px;
+    background: #faf9f6;
+    border-radius: 4px;
+    padding: 10px 10px 45px 10px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     box-shadow: 
-        0 4px 15px rgba(0,0,0,0.06),
-        0 1px 3px rgba(0,0,0,0.04),
-        inset 0 0 0 1px rgba(0,0,0,0.03);
+        0 8px 25px rgba(0,0,0,0.08),
+        0 2px 5px rgba(0,0,0,0.04),
+        inset 0 0 0 1px rgba(255,255,255,1);
     position: relative;
-    border: 1px solid #f0f0f0;
+    border: 1px solid #ebe8e0;
 }
 .k-four-cuts-widget::before {
     content: '';
     position: absolute;
-    top: -8px;
+    top: -10px;
     left: 50%;
-    transform: translateX(-50%) rotate(-1deg);
-    width: 45px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.6);
+    transform: translateX(-50%) rotate(-2deg);
+    width: 55px;
+    height: 22px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.3));
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 2;
-    border-radius: 1px;
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.5);
 }
 .k-four-cuts-widget .fc-photo {
     width: 100%;
     flex: 1;
-    background-color: #f5f5f5;
+    background-color: #222;
     background-size: cover;
     background-position: center;
-    border-radius: 4px;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
-    filter: sepia(10%) contrast(1.05);
+    border-radius: 3px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+    position: relative;
+}
+.k-four-cuts-widget .fc-photo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, transparent 40%, rgba(0,0,0,0.1) 100%);
+    pointer-events: none;
+    border-radius: 3px;
 }
 .k-four-cuts-widget .fc-text {
     position: absolute;
-    bottom: 14px;
+    bottom: 12px;
     left: 0;
     width: 100%;
     text-align: center;
     font-family: 'Playfair Display', serif;
-    color: #444;
-    font-size: 16px;
-    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+    font-weight: 700;
     outline: none;
-    line-height: 1;
-    letter-spacing: 1px;
+    line-height: 1.2;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
+    text-shadow: 0 1px 1px rgba(255,255,255,0.8);
 }
 
 /* === 8. 复古撕纸手账 (Scrapbook 4x3) === */
 .k-scrapbook-widget {
-    background: #fdfbf7;
-    border-radius: 4px;
-    padding: 15px;
-    box-shadow: 2px 4px 15px rgba(0,0,0,0.08);
+    background: #f4ebd8;
+    background-image: 
+        radial-gradient(#d3c5b3 1.5px, transparent 1.5px),
+        linear-gradient(90deg, rgba(0,0,0,0.03) 15px, transparent 15px);
+    background-size: 15px 15px, 100% 100%;
+    border-radius: 4px 2px 2px 4px;
+    padding: 15px 15px 15px 25px;
+    box-shadow: 
+        4px 8px 20px rgba(0,0,0,0.08),
+        inset 4px 0 8px rgba(0,0,0,0.04);
     position: relative;
-    /* 模拟撕纸边缘 */
-    border-image: repeating-linear-gradient(45deg, #eee, #eee 2px, transparent 2px, transparent 6px) 1;
-    border-left: 4px dotted #e0dcd3;
+    border-left: 10px solid #d5c8b5;
+    border-top: 1px solid #e8dfcc;
+    border-bottom: 1px solid #e8dfcc;
+    overflow: visible;
+}
+.k-scrapbook-widget::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; right: -6px;
+    width: 6px;
+    background: 
+        linear-gradient(135deg, #f4ebd8 25%, transparent 25%) -3px 0,
+        linear-gradient(225deg, #f4ebd8 25%, transparent 25%) -3px 0,
+        linear-gradient(315deg, #f4ebd8 25%, transparent 25%),
+        linear-gradient(45deg, #f4ebd8 25%, transparent 25%);
+    background-size: 6px 6px;
+    background-color: transparent;
+    filter: drop-shadow(2px 0 1px rgba(0,0,0,0.05));
 }
 .k-scrapbook-widget .sb-photo {
-    width: 45%;
+    width: 48%;
     height: 70%;
     background-size: cover;
     background-position: center;
     position: absolute;
     top: 15px;
     right: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    transform: rotate(3deg);
-    border: 4px solid #fff;
+    box-shadow: 2px 6px 15px rgba(0,0,0,0.15);
+    transform: rotate(5deg);
+    border: 5px solid #faf8f5;
+    border-bottom-width: 22px;
+    border-radius: 2px;
+    background-color: #ddd;
 }
 .k-scrapbook-widget .sb-tape {
     position: absolute;
-    top: 5px;
-    right: 35%;
-    width: 40px;
-    height: 15px;
-    background: rgba(255, 235, 153, 0.6);
-    transform: rotate(-10deg);
+    top: -5px;
+    right: 32%;
+    width: 45px;
+    height: 18px;
+    background: rgba(160, 130, 100, 0.65);
+    transform: rotate(-6deg);
     z-index: 2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 2px dotted rgba(255,255,255,0.4);
+    border-right: 2px dotted rgba(255,255,255,0.4);
+    backdrop-filter: blur(2px);
 }
 .k-scrapbook-widget .sb-title {
     font-family: 'Playfair Display', serif;
-    font-size: 18px;
-    font-weight: 700;
-    color: #333;
+    font-size: 20px;
+    font-weight: 800;
+    color: #4a4138;
     outline: none;
-    margin-bottom: 5px;
-    width: 50%;
+    margin-bottom: 8px;
+    width: 45%;
+    line-height: 1.2;
+    position: relative;
+    z-index: 3;
+    text-shadow: 1px 1px 0px #fff;
 }
 .k-scrapbook-widget .sb-text {
-    font-size: 11px;
-    color: #666;
-    line-height: 1.5;
+    font-size: 12px;
+    color: #6b6258;
+    line-height: 1.6;
     outline: none;
-    width: 50%;
+    width: 45%;
+    position: relative;
+    z-index: 3;
+    background: rgba(253,250,245,0.6);
+    padding: 2px;
+    border-radius: 2px;
 }
 
 /* === 9. Y2K 透明磁带 (Cassette 4x2) === */
 .k-cassette-widget {
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.4);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 
+        0 8px 25px rgba(0,0,0,0.1),
+        inset 0 0 0 1px rgba(255,255,255,0.3),
+        inset 2px 2px 5px rgba(255,255,255,0.5);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     position: relative;
-    padding: 10px;
+    padding: 12px;
+}
+.k-cassette-widget::before {
+    content: '';
+    position: absolute;
+    top: 5px; left: 10px; right: 10px; bottom: 5px;
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 6px;
+    pointer-events: none;
 }
 .k-cassette-widget .c-sticker {
-    background: #fff;
-    width: 80%;
-    height: 50%;
-    border-radius: 8px;
+    background: linear-gradient(to bottom, #fff, #f5f5f5);
+    width: 75%;
+    height: 55%;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 10px;
+    padding: 0 15px;
     position: relative;
-    box-shadow: inset 0 0 0 1px #eee;
+    box-shadow: 
+        0 2px 5px rgba(0,0,0,0.05),
+        inset 0 1px 0 #fff;
+    border: 1px solid #ddd;
 }
 .k-cassette-widget .c-hole {
-    width: 16px;
-    height: 16px;
-    background: #333;
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, #222, #444);
     border-radius: 50%;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    box-shadow: 
+        inset 0 3px 6px rgba(0,0,0,0.6),
+        0 1px 0 rgba(255,255,255,1);
+    position: relative;
+}
+.k-cassette-widget .c-hole::after {
+    content: '';
+    position: absolute;
+    top: 4px; left: 4px; right: 4px; bottom: 4px;
+    background: transparent;
+    border: 2px dashed #666;
+    border-radius: 50%;
 }
 .k-cassette-widget .c-text {
     font-family: 'Courier New', Courier, monospace;
-    font-weight: 700;
-    font-size: 12px;
-    color: #111;
+    font-weight: 800;
+    font-size: 13px;
+    color: #222;
     outline: none;
     text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.5);
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 .k-cassette-widget .c-img {
     position: absolute;
-    top: 5px;
-    left: 5px;
-    right: 5px;
-    bottom: 5px;
+    top: 0; left: 0; right: 0; bottom: 0;
     background-size: cover;
     background-position: center;
     opacity: 0.15;
-    border-radius: 6px;
+    border-radius: 8px;
     pointer-events: none;
+    mix-blend-mode: multiply;
 }
 
 /* === 10. 透明亚克力钥匙扣 (Keyring 2x3) === */
 .k-keyring-widget {
-    background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.15) 100%);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    background: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.9);
     box-shadow: 
-        inset 1px 1px 2px rgba(255,255,255,0.9),
-        inset -1px -1px 3px rgba(255,255,255,0.3),
-        0 8px 24px rgba(0,0,0,0.15),
-        0 2px 8px rgba(0,0,0,0.08);
+        inset 1px 1px 3px rgba(255,255,255,1),
+        inset -2px -2px 5px rgba(0,0,0,0.05),
+        0 10px 30px rgba(0,0,0,0.12),
+        0 2px 8px rgba(0,0,0,0.05);
     position: relative;
-    padding: 15px 10px 15px 10px;
+    padding: 16px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-top: 24px; /* 为连接件和环留出空间 */
+    margin-top: 30px; 
 }
-/* 亚克力表面斜向高光 */
 .k-keyring-widget::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
     border-radius: 20px;
-    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 45%, rgba(255,255,255,0.6) 50%, transparent 54%);
+    background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,0.5) 45%, rgba(255,255,255,0.8) 50%, transparent 55%);
     pointer-events: none;
     z-index: 5;
 }
 .k-keyring-widget .kr-ring {
     position: absolute;
-    top: -28px;
+    top: -34px;
     left: 50%;
     transform: translateX(-50%);
-    width: 26px;
-    height: 26px;
-    border: 3px solid #ccc;
-    border-color: #f5f5f5 #b5b5b5 #b5b5b5 #f5f5f5; /* 3D质感 */
+    width: 30px;
+    height: 30px;
+    border: 4px solid #ccc;
+    border-color: #f0f0f0 #a0a0a0 #a0a0a0 #f0f0f0;
     border-radius: 50%;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15), inset 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 
+        0 5px 10px rgba(0,0,0,0.15), 
+        inset 0 2px 5px rgba(0,0,0,0.2),
+        inset 0 -1px 2px rgba(255,255,255,0.8);
     z-index: -1;
 }
-/* 连接金属件 */
 .k-keyring-widget .kr-ring::after {
     content: '';
     position: absolute;
-    bottom: -11px;
+    bottom: -14px;
     left: 50%;
     transform: translateX(-50%);
-    width: 6px;
-    height: 10px;
-    background: linear-gradient(90deg, #d0d0d0, #fcfcfc, #a0a0a0);
-    border-radius: 3px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    width: 8px;
+    height: 14px;
+    background: linear-gradient(90deg, #b0b0b0, #ffffff, #909090);
+    border-radius: 4px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.8);
 }
 .k-keyring-widget .kr-hole {
     position: absolute;
     top: 8px;
     left: 50%;
     transform: translateX(-50%);
-    width: 8px;
-    height: 8px;
-    background: rgba(0,0,0,0.1);
+    width: 10px;
+    height: 10px;
+    background: rgba(0,0,0,0.05);
     border-radius: 50%;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.8);
+    box-shadow: 
+        inset 0 2px 4px rgba(0,0,0,0.2), 
+        0 1px 0 rgba(255,255,255,1);
 }
 .k-keyring-widget .kr-img {
-    width: calc(100% - 8px);
+    width: 100%;
     flex: 1;
-    border-radius: 12px;
+    border-radius: 14px;
     background-size: cover;
     background-position: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    margin-top: 14px;
-    border: 2px solid rgba(255,255,255,0.8); /* 类似拍立得或相纸夹心 */
+    box-shadow: 
+        0 5px 15px rgba(0,0,0,0.1),
+        inset 0 0 0 1px rgba(0,0,0,0.05);
+    margin-top: 15px;
+    border: 3px solid rgba(255,255,255,0.95);
     position: relative;
     z-index: 1;
 }
 .k-keyring-widget .kr-text {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
-    color: #ff6b6b;
-    margin-top: 12px;
+    color: #ff5e5e;
+    margin-top: 14px;
     text-align: center;
     outline: none;
     font-family: 'Montserrat', sans-serif;
-    letter-spacing: 0.5px;
-    text-shadow: 0 2px 5px rgba(255, 107, 107, 0.4);
+    letter-spacing: 1px;
+    text-shadow: 0 2px 6px rgba(255, 94, 94, 0.3);
     position: relative;
     z-index: 1;
 }
 
+/* === 11. 韩系咖啡店集点卡 (Cafe Stamp Card 4x2) === */
+.k-cafe-stamp-widget {
+    background: #fcf8f2;
+    background-image: radial-gradient(rgba(139, 69, 19, 0.03) 1px, transparent 1px);
+    background-size: 10px 10px;
+    border-radius: 14px;
+    box-shadow: 
+        0 8px 20px rgba(0,0,0,0.06),
+        0 2px 6px rgba(0,0,0,0.03);
+    display: flex;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #efe6d5;
+}
+.k-cafe-stamp-widget .c-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-right: 15px;
+}
+.k-cafe-stamp-widget .c-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: #4a3627;
+    margin-bottom: 12px;
+    outline: none;
+    letter-spacing: 0.5px;
+}
+.k-cafe-stamp-widget .c-stamps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+.k-cafe-stamp-widget .c-stamp-circle {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1.5px dashed #d5c4af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.5);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+}
+.k-cafe-stamp-widget .c-stamp-circle.stamped {
+    border-style: solid;
+    border-color: #c9a982;
+    background: rgba(201, 169, 130, 0.1);
+}
+.k-cafe-stamp-widget .c-stamp-circle.stamped::after {
+    content: '☕';
+    font-size: 14px;
+    opacity: 0.9;
+    transform: rotate(-10deg);
+}
+.k-cafe-stamp-widget .c-right {
+    width: 35%;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 
+        inset 0 0 0 1px rgba(0,0,0,0.05),
+        0 4px 10px rgba(0,0,0,0.08);
+}
+
+/* === 12. 复古列车票 (Vintage Train Ticket 4x2) === */
+.k-train-ticket-widget {
+    background: #e8e2d5;
+    background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.01) 0px, rgba(0,0,0,0.01) 2px, transparent 2px, transparent 4px);
+    border-radius: 6px;
+    box-shadow: 
+        0 6px 20px rgba(0,0,0,0.08),
+        0 2px 4px rgba(0,0,0,0.04);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 20px;
+    border: 1px solid #d0c6b1;
+}
+.k-train-ticket-widget::before,
+.k-train-ticket-widget::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    background: #f4f5f7; /* 与背景融合的近似色，如果背景多变可用透明色截取，但 CSS 较难，用稍浅颜色模拟打孔 */
+    border-radius: 50%;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+}
+.k-train-ticket-widget::before { left: -12px; border-right: 1px solid #d0c6b1; }
+.k-train-ticket-widget::after { right: -12px; border-left: 1px solid #d0c6b1; }
+
+.k-train-ticket-widget .tt-top {
+    display: flex;
+    justify-content: space-between;
+    font-family: monospace;
+    font-size: 11px;
+    color: #7b6d5b;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border-bottom: 1px dashed #c0b5a1;
+    padding-bottom: 6px;
+}
+.k-train-ticket-widget .tt-middle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 5px 15px;
+}
+.k-train-ticket-widget .tt-station {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: #3e3323;
+    outline: none;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+}
+.k-train-ticket-widget .tt-arrow {
+    font-size: 16px;
+    color: #8b7d6b;
+    opacity: 0.6;
+}
+.k-train-ticket-widget .tt-bottom {
+    text-align: center;
+    font-size: 12px;
+    color: #6b5d4b;
+    margin-top: 12px;
+    outline: none;
+    font-family: monospace;
+    background: rgba(255,255,255,0.3);
+    padding: 4px;
+    border-radius: 4px;
+}
+
+/* === 13. 镭射追星小卡 (Holo Photocard 2x3) === */
+@keyframes holoGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.k-photocard-widget {
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 
+        0 10px 25px rgba(0,0,0,0.1),
+        0 2px 8px rgba(0,0,0,0.05);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #eee;
+}
+.k-photocard-widget .pc-img {
+    width: 100%;
+    flex: 1;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+}
+.k-photocard-widget .pc-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(125deg, 
+        rgba(255,182,193,0.4) 0%, 
+        rgba(255,255,255,0) 25%, 
+        rgba(135,206,235,0.4) 50%, 
+        rgba(255,255,255,0) 75%, 
+        rgba(221,160,221,0.4) 100%);
+    background-size: 200% 200%;
+    animation: holoGradient 4s ease infinite;
+    mix-blend-mode: color-dodge;
+    pointer-events: none;
+}
+.k-photocard-widget .pc-name {
+    font-family: 'Alex Brush', cursive;
+    font-size: 24px;
+    color: #ff5e7e;
+    text-align: center;
+    margin-top: 10px;
+    outline: none;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(255, 94, 126, 0.2);
+}
+
+/* === 14. 透明CD盒 (Jewel CD Case 2x2) === */
+.k-cdcase-widget {
+    background: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.9);
+    box-shadow: 
+        inset 1px 1px 3px rgba(255,255,255,1),
+        inset -1px -1px 3px rgba(0,0,0,0.05),
+        0 8px 20px rgba(0,0,0,0.12);
+    display: flex;
+    padding: 5px;
+    position: relative;
+}
+.k-cdcase-widget::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.4) 40%, rgba(255,255,255,0.8) 50%, transparent 55%);
+    pointer-events: none;
+    z-index: 10;
+}
+.k-cdcase-widget .cd-spine {
+    width: 15%;
+    height: 100%;
+    background: rgba(0,0,0,0.03);
+    border-right: 1px solid rgba(255,255,255,0.6);
+    border-radius: 4px 0 0 4px;
+    position: relative;
+    box-shadow: inset -1px 0 2px rgba(0,0,0,0.05);
+}
+.k-cdcase-widget .cd-spine::after {
+    content: '';
+    position: absolute;
+    top: 5%; bottom: 5%; left: 50%;
+    width: 2px;
+    background: linear-gradient(to right, rgba(255,255,255,0.8), rgba(200,200,200,0.4));
+    transform: translateX(-50%);
+    border-radius: 1px;
+}
+.k-cdcase-widget .cd-cover {
+    width: 85%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    border-radius: 0 4px 4px 0;
+    position: relative;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+}
+.k-cdcase-widget .cd-marker {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    font-family: 'Playfair Display', serif;
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+    background: rgba(0,0,0,0.7);
+    padding: 2px 6px;
+    border-radius: 2px;
+    outline: none;
+    backdrop-filter: blur(2px);
+}
+
+/* === 15. 火漆印章信封 (Wax Seal Envelope 4x2) === */
+.k-envelope-widget {
+    background: #e8ded3; 
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNlOGRlZDMiLz48cGF0aCBkPSJNMCAwbDR2NE00IDBMMCA0IiBzdHJva2U9IiNlMmQ2Y2IiIHN0cm9rZS13aWR0aD0iMC41Ii8+PC9zdmc+');
+    border-radius: 10px;
+    box-shadow: 
+        inset 0 0 15px rgba(0,0,0,0.03), 
+        0 8px 20px rgba(0,0,0,0.1);
+    position: relative;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid #dcd1c4;
+}
+.k-envelope-widget::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 55%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(0,0,0,0.06) 100%);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    z-index: 1;
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1));
+}
+.k-envelope-widget .ev-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    color: #5a4b42;
+    outline: none;
+    z-index: 2;
+    margin-bottom: 6px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+.k-envelope-widget .ev-message {
+    font-family: 'Alex Brush', cursive;
+    font-size: 20px;
+    color: #4a3b32;
+    text-align: center;
+    outline: none;
+    z-index: 2;
+    margin-top: 14px;
+    text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+}
+.k-envelope-widget .ev-seal {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 34px;
+    height: 34px;
+    background: radial-gradient(circle at 35% 35%, #e05252, #a12323 60%, #611010);
+    border-radius: 50%;
+    box-shadow: 
+        0 3px 8px rgba(0,0,0,0.3), 
+        inset 0 2px 4px rgba(255,255,255,0.4),
+        inset 0 -2px 4px rgba(0,0,0,0.4);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.8);
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-style: italic;
+    font-weight: bold;
+    text-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+}
+.k-envelope-widget .ev-seal::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: inset 0 0 4px rgba(0,0,0,0.5);
+}
+
+/* === 16. 网格手帐日程记录 (Grid Planner 4x3) === */
+.k-planner-widget {
+    background: #faf8f5;
+    border-radius: 4px 14px 14px 4px;
+    border-left: 22px solid #8c7a6b;
+    box-shadow: 
+        6px 8px 25px rgba(0,0,0,0.1),
+        inset 1px 0 2px rgba(255,255,255,0.6),
+        inset -1px -1px 2px rgba(0,0,0,0.02);
+    padding: 18px 18px 18px 28px;
+    position: relative;
+    background-image: 
+        linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 18px 18px;
+    background-position: 22px 18px;
+    border-top: 1px solid #e8e2d5;
+    border-right: 1px solid #e8e2d5;
+    border-bottom: 1px solid #e8e2d5;
+}
+.k-planner-widget::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 12px; bottom: 12px; width: 8px;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 16px,
+        #d4d0c8 16px,
+        #fdfdfc 18px,
+        #a39f98 21px,
+        transparent 21px,
+        transparent 32px
+    );
+    z-index: 5;
+    filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.2));
+}
+.k-planner-widget .pl-header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+.k-planner-widget .pl-polaroid {
+    width: 50px;
+    height: 60px;
+    background: #fff;
+    padding: 5px 5px 14px 5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transform: rotate(-3deg);
+    position: relative;
+    border: 1px solid #eee;
+}
+.k-planner-widget .pl-polaroid-img {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-color: #f5f5f5;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+}
+.k-planner-widget .pl-tape {
+    position: absolute;
+    top: -8px;
+    left: 12px;
+    width: 28px;
+    height: 12px;
+    background: rgba(182, 216, 228, 0.7);
+    transform: rotate(4deg);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.k-planner-widget .pl-title {
+    margin-left: 18px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: #3b3a37;
+    outline: none;
+    align-self: center;
+    text-shadow: 1px 1px 0 #fff;
+}
+.k-planner-widget .pl-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.k-planner-widget .pl-line {
+    border-bottom: 1.5px dotted #dcd6ce;
+    font-size: 14px;
+    color: #555;
+    outline: none;
+    min-height: 20px;
+    padding-bottom: 3px;
+    font-family: 'PingFang SC', sans-serif;
+}
+
+/* === 17. 横版白色掌机小组件 (Switch-like Console 4x2) === */
+.k-gameboy-widget {
+    background: linear-gradient(145deg, #ffffff, #f4f4f4);
+    border-radius: 36px;
+    padding: 10px 14px;
+    box-shadow: 
+        0 10px 30px rgba(0,0,0,0.1),
+        inset 0 4px 6px rgba(255,255,255,1),
+        inset 0 -4px 6px rgba(0,0,0,0.05),
+        0 1px 3px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    border: 1px solid #e8e8e8;
+}
+.k-gameboy-widget::before, .k-gameboy-widget::after {
+    display: none; /* 移除旧的凹槽线 */
+}
+.k-gameboy-widget:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 18px 36px rgba(0,0,0,0.15);
+}
+.k-gameboy-widget .gb-screen-container {
+    width: 60%;
+    height: 98%;
+    background: #111;
+    border-radius: 16px;
+    padding: 6px;
+    box-sizing: border-box;
+    margin: 0;
+    box-shadow: 
+        inset 0 4px 10px rgba(0,0,0,0.8), 
+        0 2px 5px rgba(255,255,255,1),
+        0 0 0 1px #222;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    order: 2;
+}
+/* 屏幕顶部的文字移除，改成更简约的设计 */
+.k-gameboy-widget .gb-screen-container::before {
+    display: none;
+}
+.k-gameboy-widget .gb-power-light {
+    display: none;
+}
+.k-gameboy-widget .gb-screen {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px; /* 屏幕内部圆角 */
+    background-color: #000; /* 默认黑屏 */
+    box-shadow: 
+        inset 0 2px 10px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+}
+/* 模拟屏幕反光 */
+.k-gameboy-widget .gb-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 35%, transparent 65%, rgba(255,255,255,0.05) 100%);
+    pointer-events: none;
+}
+.k-gameboy-widget .gb-controls {
+    display: contents; /* 移除包裹层，让内部元素直接参与 flex 布局 */
+}
+/* 左侧十字键优化为分离按钮风格，类似 Switch */
+.k-gameboy-widget .gb-dpad {
+    width: 44px;
+    height: 44px;
+    position: relative;
+    order: 1;
+    margin-left: 10px;
+    background: transparent;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+.k-gameboy-widget .gb-dpad::before,
+.k-gameboy-widget .gb-dpad::after {
+    display: block;
+}
+.k-gameboy-widget .gb-dpad-center {
+    display: block;
+}
+.k-gameboy-widget .gb-dpad::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 0; right: 0; height: 12px;
+    background: #e0e0e0;
+    transform: translateY(-50%);
+    border-radius: 4px;
+    box-shadow: inset 1px 1px 2px #fff, inset -1px -1px 2px rgba(0,0,0,0.1);
+}
+.k-gameboy-widget .gb-dpad::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 0; bottom: 0; width: 12px;
+    background: #e0e0e0;
+    transform: translateX(-50%);
+    border-radius: 4px;
+    box-shadow: inset 1px 1px 2px #fff, inset -1px -1px 2px rgba(0,0,0,0.1);
+}
+.k-gameboy-widget .gb-dpad-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px; height: 12px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    z-index: 2;
+}
+/* 左摇杆 */
+.k-gameboy-widget .gb-dpad .gb-joystick-left {
+    position: absolute;
+    top: -38px;
+    left: 6px;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #ffffff, #dcdcdc);
+    border-radius: 50%;
+    box-shadow: 
+        inset 0 -2px 4px rgba(0,0,0,0.2),
+        inset 0 2px 4px rgba(255,255,255,1),
+        0 4px 8px rgba(0,0,0,0.15),
+        0 0 0 1px #ccc;
+    z-index: 3;
+}
+.k-gameboy-widget .gb-dpad .gb-joystick-left::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.k-gameboy-widget .gb-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 18px);
+    grid-template-rows: repeat(2, 18px);
+    gap: 8px;
+    transform: rotate(45deg);
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    margin-top: -30px;
+    order: 3;
+    margin-right: 12px;
+    position: relative;
+}
+.k-gameboy-widget .gb-btn-wrap {
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.k-gameboy-widget .gb-btn {
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(135deg, #ffffff, #e0e0e0);
+    border-radius: 50%;
+    box-shadow: 
+        0 3px 6px rgba(0,0,0,0.15), 
+        inset 0 -2px 3px rgba(0,0,0,0.1), 
+        inset 0 2px 3px #fff,
+        0 0 0 1px #d0d0d0;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+/* 添加按钮字母指示 */
+.k-gameboy-widget .gb-btn-wrap:nth-child(1)::after { content: 'X'; transform: rotate(-45deg) translate(-10px, -10px); }
+.k-gameboy-widget .gb-btn-wrap:nth-child(2)::after { content: 'Y'; transform: rotate(-45deg) translate(5px, -10px); }
+.k-gameboy-widget .gb-btn-wrap:nth-child(3)::after { content: 'B'; transform: rotate(-45deg) translate(-10px, 5px); }
+.k-gameboy-widget .gb-btn-wrap:nth-child(4)::after { content: 'A'; transform: rotate(-45deg) translate(5px, 5px); }
+
+.k-gameboy-widget .gb-btn-wrap::after {
+    position: absolute;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 8px;
+    font-weight: 800;
+    color: #aaa;
+    pointer-events: none;
+}
+
+/* 右摇杆 */
+.k-gameboy-widget .gb-buttons .gb-joystick-right {
+    position: absolute;
+    bottom: -32px;
+    left: -18px;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #ffffff, #dcdcdc);
+    border-radius: 50%;
+    box-shadow: 
+        inset 0 -2px 4px rgba(0,0,0,0.2),
+        inset 0 2px 4px rgba(255,255,255,1),
+        0 4px 8px rgba(0,0,0,0.15),
+        0 0 0 1px #ccc;
+    transform: rotate(-45deg);
+    z-index: 3;
+}
+.k-gameboy-widget .gb-buttons .gb-joystick-right::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.k-gameboy-widget .gb-btn:active {
+    transform: translateY(2px);
+    box-shadow: 
+        0 0px 1px rgba(0,0,0,0.1), 
+        inset -1px -1px 2px rgba(0,0,0,0.05), 
+        inset 1px 1px 1px #fff;
+}
+.k-gameboy-widget .gb-text {
+    display: none;
+}
+/* 扬声器孔组优化 */
+.k-gameboy-widget .gb-speaker {
+    display: none; /* 隐藏扬声器 */
+}
+.k-gameboy-widget .gb-speaker-hole {
+    width: 6px; height: 35px; /* 孔更长一点 */
+    background: #c8bdae;
+    border-radius: 6px;
+    box-shadow: 
+        inset 2px 2px 5px rgba(0,0,0,0.2),
+        inset -1px -1px 2px rgba(0,0,0,0.1),
+        1px 1px 0 rgba(255,255,255,0.8);
+}
+/* 贴纸装饰移除以保持纯白简约 */
+.k-gameboy-widget .gb-sticker {
+    display: none;
+}
+
+/* === 18. 吧唧徽章小组件 (Badge 2x2) === */
+@keyframes floatBadge {
+    0% { transform: translateY(0px) rotate(2deg); }
+    50% { transform: translateY(-4px) rotate(4deg); }
+    100% { transform: translateY(0px) rotate(2deg); }
+}
+.k-badge-widget {
+    background: #f0f0f0; /* 有质感的背景 */
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmMGYwZjAiLz48cGF0aCBkPSJNMCAwbDR2NE00IDBMMCA0IiBzdHJva2U9IiNlNGU0ZTQiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg=='); /* 纸质纹理 */
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    box-shadow: 
+        0 8px 15px rgba(0,0,0,0.1),
+        inset 0 2px 4px rgba(255,255,255,0.8); /* 柔和阴影 */
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-style: preserve-3d;
+    width: 130px;
+    height: 130px;
+    margin: 10px auto;
+    animation: floatBadge 6s ease-in-out infinite;
+}
+/* 吧唧底托 - 移除 */
+.k-badge-widget::before {
+    display: none;
+}
+.k-badge-widget:hover {
+    transform: scale(1.1) rotate(0deg) translateY(-8px);
+    animation-play-state: paused;
+}
+.k-badge-widget .badge-inner {
+    width: 96%; /* 让画面占满更多区域，边缘金属边变窄 */
+    height: 96%;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+    /* 内部图片的高光和阴影，制造球面感 */
+    box-shadow: 
+        inset 0 -15px 30px rgba(0,0,0,0.4), /* 底部阴影更深 */
+        inset 0 10px 20px rgba(255,255,255,0.4), /* 顶部高光 */
+        0 2px 4px rgba(0,0,0,0.2);
+    /* 给图片加一个轻微的滤镜，模拟覆膜质感 */
+    filter: contrast(1.05) saturate(1.1);
+}
+/* 球面高光反光 (独立图层，避免和背景混合) */
+.k-badge-widget .badge-highlight {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(
+        ellipse at 30% 20%, 
+        rgba(255,255,255,0.7) 0%, 
+        rgba(255,255,255,0.1) 40%, 
+        transparent 60%
+    );
+    pointer-events: none;
+    z-index: 3;
+    mix-blend-mode: screen;
+}
+/* 精致蕾丝边 (Lace Border) - 移除 */
+.k-badge-widget .badge-lace {
+    display: none;
+}
+/* 蝴蝶结飘带 (Ribbons) - 移除 */
+.k-badge-widget .badge-ribbon {
+    display: none;
+}
+/* 别针装饰优化 - 移到底部侧边，像是个小挂饰 */
+.k-badge-widget .badge-pin {
+    display: none;
+}
+
+/* === 19. 个人名片小组件 (Profile Card 4x2) - 横版设计 === */
+.k-profile-card-widget {
+    background: linear-gradient(135deg, #ffffff 0%, #f9f9fb 100%);
+    border-radius: 20px;
+    box-shadow: 
+        0 10px 30px rgba(0,0,0,0.08),
+        0 2px 10px rgba(0,0,0,0.03),
+        inset 0 0 0 1px rgba(255,255,255,0.8);
+    display: flex;
+    flex-direction: row; /* 改为横向排列 */
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(220,225,235,0.5);
+    padding: 16px 20px;
+    align-items: center;
+    gap: 18px;
+}
+/* 背景光晕装饰 */
+.k-profile-card-widget::before {
+    content: '';
+    position: absolute;
+    top: -30%; right: -10%;
+    width: 150px; height: 150px;
+    background: radial-gradient(circle, rgba(255,192,203,0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+.k-profile-card-widget::after {
+    content: '';
+    position: absolute;
+    bottom: -30%; left: 10%;
+    width: 100px; height: 100px;
+    background: radial-gradient(circle, rgba(173,216,230,0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+.k-profile-card-widget .pc-bg {
+    display: none; /* 横版不需要大背景图 */
+}
+.k-profile-card-widget .pc-avatar-wrap {
+    width: 85px;
+    height: 85px;
+    border-radius: 50%; /* 圆形头像更百搭 */
+    background: #fff;
+    padding: 4px;
+    box-shadow: 
+        0 8px 15px rgba(0,0,0,0.08),
+        inset 0 0 0 1px rgba(0,0,0,0.03);
+    z-index: 2;
+    flex-shrink: 0;
+    position: relative;
+}
+/* 头像周围的光环 */
+.k-profile-card-widget .pc-avatar-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255,182,193,0.6), rgba(173,216,230,0.6));
+    z-index: -1;
+    filter: blur(4px);
+    opacity: 0.6;
+}
+.k-profile-card-widget .pc-avatar-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+    pointer-events: none;
+}
+.k-profile-card-widget .pc-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+}
+.k-profile-card-widget .pc-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    flex: 1;
+    background: transparent;
+    padding: 0;
+    z-index: 2;
+}
+.k-profile-card-widget .pc-name {
+    font-family: 'Playfair Display', serif; /* 名字用优雅的衬线体 */
+    font-size: 26px;
+    font-weight: 800;
+    color: #2c2c2c;
+    margin-bottom: 4px;
+    outline: none;
+    letter-spacing: -0.5px;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.8);
+}
+.k-profile-card-widget .pc-sign {
+    font-family: 'Alex Brush', cursive, 'PingFang SC', sans-serif; /* 签名用手写体 */
+    font-size: 16px; /* 手写体稍微大一点才好看 */
+    color: #666;
+    outline: none;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    letter-spacing: 0.5px;
+}
+/* 右侧的极简装饰线 */
+.k-profile-card-widget .pc-tag {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 40px;
+    background: linear-gradient(to bottom, transparent, #dcdcdc, transparent);
+    color: transparent; /* 隐藏原本的 PROFILE 文字，用线条代替 */
+    padding: 0;
+    border-radius: 0;
+}
+
+/* === 20. 碎片时光轮播 (Time Carousel 4x2) - 质感毛玻璃 === */
+.k-time-carousel-widget {
+    background: linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(240,240,245,0.6) 100%); /* 调整底色更通透 */
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border-radius: 32px; /* 更大的圆角 */
+    box-shadow: 
+        0 15px 40px rgba(0,0,0,0.08),
+        inset 0 0 0 1px rgba(255,255,255,0.8),
+        inset 2px 2px 8px rgba(255,255,255,1); /* 增加内发光 */
+    display: flex;
+    padding: 20px 24px;
+    align-items: center;
+    gap: 24px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.5); /* 增加极细的实线边框增强质感 */
+}
+.k-time-carousel-widget::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, transparent 60%);
+    opacity: 0.5;
+    pointer-events: none;
+}
+.k-time-carousel-widget .tc-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+.k-time-carousel-widget .tc-time {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 48px; /* 字体稍微加大 */
+    font-weight: 200; /* 更细的字体更优雅 */
+    color: #222;
+    line-height: 1;
+    margin-bottom: 6px;
+    letter-spacing: -2px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.k-time-carousel-widget .tc-date {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    color: #777;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+.k-time-carousel-widget .tc-right {
+    width: 125px; /* 拍立得框稍微变宽一点 */
+    height: 105%; /* 稍微高出一点，制造打破网格的感觉 */
+    background: #fff;
+    border-radius: 6px; /* 拍立得边缘通常偏方 */
+    padding: 6px 6px 22px 6px; /* 调整内边距，让图片更靠近边缘 */
+    box-shadow: 
+        0 12px 30px rgba(0,0,0,0.15), /* 更深的阴影 */
+        inset 0 0 0 1px rgba(0,0,0,0.03);
+    transform: rotate(6deg) translateY(-5px); /* 默认带一点旋转和偏移 */
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 2;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+}
+.k-time-carousel-widget:hover .tc-right {
+    transform: rotate(0deg) scale(1.08) translateY(0); /* hover动画优化 */
+    box-shadow: 
+        0 18px 40px rgba(0,0,0,0.2),
+        inset 0 0 0 1px rgba(0,0,0,0.03);
+}
+.k-time-carousel-widget:hover .tc-right {
+    transform: rotate(0deg) scale(1.05);
+}
+.k-time-carousel-widget .tc-right::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(circle, #fff, #e0e0e0);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 -1px 2px rgba(0,0,0,0.1);
+    z-index: 3;
+}
+.k-time-carousel-widget .tc-img {
+    width: 100%;
+    flex: 1;
+    background-size: cover;
+    background-position: center;
+    background-color: #eee;
+    border-radius: 4px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+}
+.k-time-carousel-widget .tc-text {
+    margin-top: 8px;
+    font-family: 'Alex Brush', 'PingFang SC', cursive;
+    font-size: 20px; /* 手写体字号加大 */
+    color: #444;
+    text-align: center;
+    outline: none;
+    line-height: 1.2;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.05);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* === 小组件多色主题 (Themes) === */
+/* To-Do List 碎碎念便签 */
+.k-todo-widget.theme-pink { background: #fff0f5; border-color: #f2c5e0; }
+.k-todo-widget.theme-pink::after { background: linear-gradient(135deg, transparent 45%, #e8b3cc 50%, #f4d4e4 55%, #fff0f5 100%); }
+.k-todo-widget.theme-blue { background: #f0f8ff; border-color: #c5dcf2; }
+.k-todo-widget.theme-blue::after { background: linear-gradient(135deg, transparent 45%, #b3cce8 50%, #d4e4f4 55%, #f0f8ff 100%); }
+.k-todo-widget.theme-green { background: #f0fff0; border-color: #c5f2d0; }
+.k-todo-widget.theme-green::after { background: linear-gradient(135deg, transparent 45%, #b3e8cc 50%, #d4f4e4 55%, #f0fff0 100%); }
+.k-todo-widget.theme-purple { background: #f8f0ff; border-color: #e0c5f2; }
+.k-todo-widget.theme-purple::after { background: linear-gradient(135deg, transparent 45%, #ccb3e8 50%, #e4d4f4 55%, #f8f0ff 100%); }
+.k-todo-widget.theme-white { background: #ffffff; border-color: #eeeeee; }
+.k-todo-widget.theme-white::after { background: linear-gradient(135deg, transparent 45%, #e0e0e0 50%, #f0f0f0 55%, #ffffff 100%); }
+.k-todo-widget.theme-black { background: #2a2a2a; border-color: #444; }
+.k-todo-widget.theme-black::after { background: linear-gradient(135deg, transparent 45%, #111 50%, #222 55%, #2a2a2a 100%); }
+.k-todo-widget.theme-black .k-todo-title, .k-todo-widget.theme-black .k-todo-text { color: #eee; }
+.k-todo-widget.theme-black .k-todo-item.checked .k-todo-text { color: #888; }
+.k-todo-widget.theme-black .k-todo-check { border-color: #555; background: #333; }
+.k-todo-widget.theme-black .k-todo-check.checked { background: #666; border-color: #666; color: #fff; }
+
+/* 复古撕纸手账 Scrapbook */
+.k-scrapbook-widget.theme-pink { background: #fcf4f6; border-left-color: #e8cdd5; border-top-color: #f5dfe5; border-bottom-color: #f5dfe5; }
+.k-scrapbook-widget.theme-pink::after { background-image: linear-gradient(135deg, #fcf4f6 25%, transparent 25%), linear-gradient(225deg, #fcf4f6 25%, transparent 25%), linear-gradient(315deg, #fcf4f6 25%, transparent 25%), linear-gradient(45deg, #fcf4f6 25%, transparent 25%); }
+.k-scrapbook-widget.theme-blue { background: #f4f8fc; border-left-color: #cdd5e8; border-top-color: #dfe5f5; border-bottom-color: #dfe5f5; }
+.k-scrapbook-widget.theme-blue::after { background-image: linear-gradient(135deg, #f4f8fc 25%, transparent 25%), linear-gradient(225deg, #f4f8fc 25%, transparent 25%), linear-gradient(315deg, #f4f8fc 25%, transparent 25%), linear-gradient(45deg, #f4f8fc 25%, transparent 25%); }
+.k-scrapbook-widget.theme-green { background: #f4fcf6; border-left-color: #cde8d5; border-top-color: #dff5e5; border-bottom-color: #dff5e5; }
+.k-scrapbook-widget.theme-green::after { background-image: linear-gradient(135deg, #f4fcf6 25%, transparent 25%), linear-gradient(225deg, #f4fcf6 25%, transparent 25%), linear-gradient(315deg, #f4fcf6 25%, transparent 25%), linear-gradient(45deg, #f4fcf6 25%, transparent 25%); }
+.k-scrapbook-widget.theme-purple { background: #f8f4fc; border-left-color: #d5cde8; border-top-color: #e5dff5; border-bottom-color: #e5dff5; }
+.k-scrapbook-widget.theme-purple::after { background-image: linear-gradient(135deg, #f8f4fc 25%, transparent 25%), linear-gradient(225deg, #f8f4fc 25%, transparent 25%), linear-gradient(315deg, #f8f4fc 25%, transparent 25%), linear-gradient(45deg, #f8f4fc 25%, transparent 25%); }
+.k-scrapbook-widget.theme-white { background: #ffffff; border-left-color: #eaeaea; border-top-color: #f5f5f5; border-bottom-color: #f5f5f5; }
+.k-scrapbook-widget.theme-white::after { background-image: linear-gradient(135deg, #ffffff 25%, transparent 25%), linear-gradient(225deg, #ffffff 25%, transparent 25%), linear-gradient(315deg, #ffffff 25%, transparent 25%), linear-gradient(45deg, #ffffff 25%, transparent 25%); }
+.k-scrapbook-widget.theme-black { background: #2a2a2a; border-left-color: #111; border-top-color: #333; border-bottom-color: #333; }
+.k-scrapbook-widget.theme-black::after { background-image: linear-gradient(135deg, #2a2a2a 25%, transparent 25%), linear-gradient(225deg, #2a2a2a 25%, transparent 25%), linear-gradient(315deg, #2a2a2a 25%, transparent 25%), linear-gradient(45deg, #2a2a2a 25%, transparent 25%); }
+.k-scrapbook-widget.theme-black .sb-title { color: #eee; text-shadow: 1px 1px 0px #000; }
+.k-scrapbook-widget.theme-black .sb-text { color: #bbb; background: rgba(0,0,0,0.6); }
+
+/* 复古列车票 Train Ticket */
+.k-train-ticket-widget.theme-pink { background: #f5ebed; border-color: #dcbcc5; }
+.k-train-ticket-widget.theme-pink::before { border-right-color: #dcbcc5; }
+.k-train-ticket-widget.theme-pink::after { border-left-color: #dcbcc5; }
+.k-train-ticket-widget.theme-blue { background: #ebf0f5; border-color: #bcd1dc; }
+.k-train-ticket-widget.theme-blue::before { border-right-color: #bcd1dc; }
+.k-train-ticket-widget.theme-blue::after { border-left-color: #bcd1dc; }
+.k-train-ticket-widget.theme-green { background: #ebf5ef; border-color: #bcc5dc; }
+.k-train-ticket-widget.theme-green::before { border-right-color: #bcc5dc; }
+.k-train-ticket-widget.theme-green::after { border-left-color: #bcc5dc; }
+.k-train-ticket-widget.theme-purple { background: #f2ebf5; border-color: #c5bcdc; }
+.k-train-ticket-widget.theme-purple::before { border-right-color: #c5bcdc; }
+.k-train-ticket-widget.theme-purple::after { border-left-color: #c5bcdc; }
+.k-train-ticket-widget.theme-white { background: #ffffff; border-color: #eeeeee; }
+.k-train-ticket-widget.theme-white::before { border-right-color: #eeeeee; }
+.k-train-ticket-widget.theme-white::after { border-left-color: #eeeeee; }
+.k-train-ticket-widget.theme-black { background: #2a2a2a; border-color: #444; }
+.k-train-ticket-widget.theme-black::before { border-right-color: #444; background: #1a1a1a; }
+.k-train-ticket-widget.theme-black::after { border-left-color: #444; background: #1a1a1a; }
+.k-train-ticket-widget.theme-black .tt-top { color: #aaa; border-bottom-color: #444; }
+.k-train-ticket-widget.theme-black .tt-station { color: #eee; text-shadow: 1px 1px 0 rgba(0,0,0,0.5); }
+.k-train-ticket-widget.theme-black .tt-arrow { color: #888; }
+.k-train-ticket-widget.theme-black .tt-bottom { color: #aaa; background: rgba(0,0,0,0.3); }
+
+/* 火漆印章信封 Envelope */
+.k-envelope-widget.theme-pink { background: #f5e4e8; border-color: #e8cdd5; }
+.k-envelope-widget.theme-blue { background: #e4eef5; border-color: #cddce8; }
+.k-envelope-widget.theme-green { background: #e4f5ea; border-color: #cde8d5; }
+.k-envelope-widget.theme-purple { background: #eee4f5; border-color: #d5cde8; }
+.k-envelope-widget.theme-white { background: #ffffff; border-color: #f0f0f0; }
+.k-envelope-widget.theme-black { background: #2a2a2a; border-color: #111; }
+.k-envelope-widget.theme-black .ev-text, .k-envelope-widget.theme-black .ev-message { color: #eee; text-shadow: 0 1px 1px rgba(0,0,0,0.5); }
+
+/* 网格手账日程 Planner */
+.k-planner-widget.theme-pink { background: #fffcfcfc; border-left-color: #d8aeb7; border-color: #f7e6ea; }
+.k-planner-widget.theme-blue { background: #fcfdff; border-left-color: #aebfd8; border-color: #e6eef7; }
+.k-planner-widget.theme-green { background: #fcfffc; border-left-color: #aed8b7; border-color: #e6f7ea; }
+.k-planner-widget.theme-purple { background: #fdfcff; border-left-color: #bfaed8; border-color: #eee6f7; }
+.k-planner-widget.theme-white { background: #ffffff; border-left-color: #e0e0e0; border-color: #f5f5f5; }
+.k-planner-widget.theme-black { background: #2a2a2a; border-left-color: #111; border-color: #444; }
+.k-planner-widget.theme-black .pl-title { color: #eee; text-shadow: 1px 1px 0 #000; }
+.k-planner-widget.theme-black .pl-line { border-bottom-color: #555; color: #ccc; }
 
 /* 底部抽屉弹窗样式 */
 #widget-library {
