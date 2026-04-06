@@ -115,7 +115,7 @@
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    z-index: 100;
+    z-index: 9999;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     line-height: 1;
@@ -137,7 +137,7 @@
     align-items: center;
     gap: 8px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    z-index: 101;
+    z-index: 9999;
     white-space: nowrap;
 }
 .tw-controls .tw-color-toggle {
@@ -2454,4 +2454,14 @@ textarea {
     -webkit-user-select: text !important;      /* 允许选中文本 */
     user-select: text !important;
     cursor: text;                              /* 鼠标变成输入指针 */
+}
+
+/* 3. 在编辑模式下，强制禁用所有文本选中和长按菜单，防止抖动时误触复制或编辑 */
+.desktop-edit-mode [contenteditable="true"], 
+.desktop-edit-mode input, 
+.desktop-edit-mode textarea {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    pointer-events: none !important; /* 直接禁用点击事件，彻底防止进入编辑状态 */
 }

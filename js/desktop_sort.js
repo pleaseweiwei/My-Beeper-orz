@@ -129,11 +129,22 @@
                 .map(function (el) {
                     const sortId = getSortId(el);
                     if (el.classList.contains('dynamic-widget')) {
+                        var attrs = {};
+                        for (var i = 0; i < el.attributes.length; i++) {
+                            var attr = el.attributes[i];
+                            attrs[attr.name] = attr.value;
+                        }
+                        
+                        var clone = el.cloneNode(true);
+                        var editBtns = clone.querySelectorAll('.ds-delete-btn, .ds-color-btn, .ds-opacity-btn, .tw-controls');
+                        editBtns.forEach(function(btn) { btn.remove(); });
+                        
                         dynamicWidgets[sortId] = {
                             type: el.dataset.widgetType,
                             sizeClass: Array.from(el.classList).find(c => c.startsWith('widget-')),
                             className: el.className,
-                            html: el.innerHTML
+                            html: clone.innerHTML,
+                            attributes: attrs
                         };
                     }
                     return sortId;
@@ -176,7 +187,46 @@
 
         Object.keys(data).forEach(function (pageId) {
             var page = pageMap[pageId];
-            if (!page) return;
+            if (!page) {
+                var screen = getScreen();
+                if (screen) {
+                    page = document.createElement('div');
+                    page.className = 'page ds-flat';
+                    page.id = pageId;
+                    screen.appendChild(page);
+                    pageMap[pageId] = page;
+                    
+                    var s = new Sortable(page, {
+                        group: 'desktop',
+                        animation: 350,
+                        easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+                        draggable: '.sortable-item',
+                        ghostClass: 'sortable-ghost',
+                        dragClass: 'sortable-drag',
+                        fallbackOnBody: true,
+                        swap: true,
+                        swapClass: 'sortable-swap-highlight',
+                        swapThreshold: 0.55,
+                        onStart: function(e) {
+                            if ('vibrate' in navigator) navigator.vibrate(50);
+                            e.item.style.transform = 'scale(0.85)';
+                            e.item.style.opacity = '0.8';
+                        },
+                        onMove: function (evt) { onDragMove(evt); },
+                        onEnd: function (e) {
+                            e.item.style.transform = '';
+                            e.item.style.opacity = '';
+                            stopEdgeScroll();
+                            window.adjustEmptySlots(); 
+                            cleanupEmptyPages();
+                            saveOrder();
+                        }
+                    });
+                    sortableInstances.push(s);
+                } else {
+                    return;
+                }
+            }
             var savedIds = data[pageId];
             if (!savedIds || !savedIds.length) return;
 
@@ -190,9 +240,15 @@
                 } else if (!el && dynamicWidgets && dynamicWidgets[sortId]) {
                     const widgetData = dynamicWidgets[sortId];
                     el = document.createElement('div');
-                    el.className = widgetData.className || ('sortable-item dynamic-widget ' + (widgetData.sizeClass || ''));
-                    el.dataset.widgetType = widgetData.type || 'unknown';
-                    el.dataset.sortId = sortId;
+                    if (widgetData.attributes) {
+                        Object.keys(widgetData.attributes).forEach(function(key) {
+                            el.setAttribute(key, widgetData.attributes[key]);
+                        });
+                    } else {
+                        el.className = widgetData.className || ('sortable-item dynamic-widget ' + (widgetData.sizeClass || ''));
+                        el.dataset.widgetType = widgetData.type || 'unknown';
+                        el.dataset.sortId = sortId;
+                    }
                     el.innerHTML = widgetData.html || '';
                     
                     var match = el.className.match(/widget-(\d+)x(\d+)/);
@@ -1121,6 +1177,10 @@ window.addWidget = function(type, sizeClass) {
         el.innerHTML = '<div style="padding:10px; outline:none; text-align:center;" contenteditable="true" onblur="window.DesktopSort.saveOrder()">New Widget</div>';
     }
     
+    // 修复：确保被各种类型覆盖的 className 不会丢失必需的核心类
+    if (!el.classList.contains('dynamic-widget')) el.classList.add('dynamic-widget');
+    if (!el.classList.contains('sortable-item')) el.classList.add('sortable-item');
+
     if (window.DesktopSort && window.DesktopSort.isEditMode()) {
         var delBtn = document.createElement('div');
         delBtn.className = 'ds-delete-btn';
@@ -1177,7 +1237,18 @@ window.addWidget = function(type, sizeClass) {
         page.appendChild(el);
     }
 
-   
+    if (!el.querySelector('.tw-bg-layer') && el.classList.contains('transparent-widget')) {
+        var bgLayer = document.createElement('div');
+        bgLayer.className = 'tw-bg-layer';
+        bgLayer.dataset.color = '255,255,255';
+        bgLayer.dataset.opacity = '0.8';
+        bgLayer.style.backgroundColor = 'rgba(255,255,255,0.8)';
+        if (el.firstChild) {
+            el.insertBefore(bgLayer, el.firstChild);
+        } else {
+            el.appendChild(bgLayer);
+        }
+    }
 
     window.adjustEmptySlots(); // 增加组件后，挤掉多余的透明空格子，保持完美网格！
     closeWidgetLibrary();
