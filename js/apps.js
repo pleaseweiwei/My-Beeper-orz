@@ -2503,6 +2503,13 @@ AI 原始输出示例 2：[表情:嫌弃]
         if (chatSettings.statusRegexEnabled && chatSettings.statusFormatReq) {
             systemPrompt += `\n[CUSTOM STATUS FORMAT INSTRUCTION]\n${chatSettings.statusFormatReq}\n`;
         }
+        // === [新增] 头像更换规则 ===
+        if (f.lastSharedImage) {
+            systemPrompt += `
+        \n[AVATAR SYSTEM]
+        The user recently sent you an image. If you agree or decide to change your profile picture to that image, include this exact tag anywhere in your reply: [CHANGE_AVATAR]
+        `;
+        }
 
         // === [新增] 定位发送与创建规则 ===
         systemPrompt += `
@@ -3087,6 +3094,34 @@ if (statusMatch) {
             rawReply = rawReply.replace(/\[DANMAKU_START\][\s\S]*/i, '');
             rawReply = rawReply.replace(/\[DANMAKU\][\s\S]*/i, '');
             rawReply = rawReply.replace(/\[STATUS_START\][\s\S]*/i, '');
+            // === [新增] 解析 AI 主动换头像的指令 ===
+            if (rawReply.includes('[CHANGE_AVATAR]')) {
+                rawReply = rawReply.replace(/\[CHANGE_AVATAR\]/gi, '').trim(); // 剔除暗号不显示在文字中
+                
+                // 检查刚才是不是发过图片
+                if (friendsData[targetChatId] && friendsData[targetChatId].lastSharedImage) {
+                    const newAvatar = friendsData[targetChatId].lastSharedImage;
+                    friendsData[targetChatId].avatar = newAvatar;
+                    saveFriendsData();
+                    
+                    // 延迟 1 秒，等文字发出来后再更换头像，显得更真实
+                    setTimeout(() => {
+                        // 1. 刷新全局 UI 中的头像 (气泡、心声卡、通讯录等)
+                        refreshFriendAvatarInUI(targetChatId, newAvatar);
+                        rebuildContactsList();
+                        restoreFriendListUI();
+                        if (document.getElementById('mind-card-overlay')?.classList.contains('active')) {
+                            refreshMindCardUI(targetChatId, false);
+                        }
+                        
+                        // 2. 在聊天界面发送一条居中的灰色系统提示
+                        const sysMsgId = 'msg_sys_' + Date.now();
+                        const sysMsg = `${friendsData[targetChatId].remark || friendsData[targetChatId].realName} 将你发送的图片设为了头像`;
+                        appendMessage(sysMsg, 'system', null, null, null, sysMsgId);
+                        saveMessageToHistory(targetChatId, { id: sysMsgId, text: sysMsg, type: 'system' });
+                    }, 1000);
+                }
+            }
 
             // === [新增] 解析 AI 给用户发亲密付的指令，生成交互卡片 ===
             const grantRegex = /\[GRANT_PAY:([\d\.]+|无限)\]/i;
@@ -4717,14 +4752,31 @@ window.handleChatImage = function(input) {
     const file = input.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
-        const imgHtml = `<div class="msg-image-content"><img src="${e.target.result}"></div>`;
-        // 告诉 AI 用户发了图
-        sendRichMessage(imgHtml, '', `[System: User sent an image. Simulate that you can see it and describe a generic beautiful scene or react to it happily.]`);
+    
+    // 【修改】加上 async 以便使用压缩功能，防止图片太大撑爆缓存
+    reader.onload = async function(e) {
+        let base64 = e.target.result;
+        if (typeof compressImage === 'function') {
+            base64 = await compressImage(base64, 500); // 压缩图片
+        }
+        
+        const imgHtml = `<div class="msg-image-content"><img src="${base64}"></div>`;
+        
+        // 1. 存下这张图，作为 AI 的“备选头像”
+        if (currentChatId && friendsData[currentChatId]) {
+            friendsData[currentChatId].lastSharedImage = base64;
+            saveFriendsData();
+        }
+
+        // 2. 告诉 AI 你发了图，并教它换头像的系统暗号
+        const hiddenPrompt = `[System: User sent an image. Simulate that you can see it and react to it. If the user suggests you use it as your avatar, or if you really like it, you MUST include the exact tag [CHANGE_AVATAR] anywhere in your reply to automatically set it as your profile picture.]`;
+        
+        sendRichMessage(imgHtml, 'sent', hiddenPrompt);
     };
     reader.readAsDataURL(file);
     input.value = '';
 }
+
 /* =========================================
    [新增] 描述图片发送功能
    ========================================= */
@@ -5004,7 +5056,6 @@ window.triggerNudge = function() {
     }
 }
 
-
 // --- 功能 D: 转账 ---
 window.sendRedPacket = function() {
     const amount = (Math.random() * 100 + 1).toFixed(2); // 随机金额
@@ -5020,9 +5071,8 @@ window.sendRedPacket = function() {
             <div class="transfer-bottom">WeChat Pay</div>
         </div>
     `;
-    sendRichMessage(html, '', `[System: User sent you money (¥${amount}). React with surprise and gratitude, or playfully refuse.]`);
+    sendRichMessage(html, 'sent', `[System: User sent you money (¥${amount}). React with surprise and gratitude, or playfully refuse.]`);
 }
-
 // --- 功能 E: 语音消息 ---
 window.sendVoiceMsg = function() {
     const seconds = Math.floor(Math.random() * 10 + 2);
@@ -5033,7 +5083,7 @@ window.sendVoiceMsg = function() {
         </div>
     `;
     // AI 回复语音的 Prompt
-    sendRichMessage(html, '', `[System: User sent a voice message. Reply with a text message, BUT imply that you listened to it. Optional: You can send a voice message back by adding [VOICE] at the start of your reply.]`);
+    sendRichMessage(html, 'sent', `[System: User sent a voice message. Reply with a text message, BUT imply that you listened to it. Optional: You can send a voice message back by adding [VOICE] at the start of your reply.]`);
 }
 
 // --- 功能 F: 一起听歌 ---
@@ -5048,14 +5098,15 @@ window.sendMusicShare = function() {
             <div class="music-icon"><i class="fas fa-play-circle"></i></div>
         </div>
     `;
-    sendRichMessage(html, '', `[System: User invited you to listen to "Midnight Rain" by Taylor Swift together. Comment on the song.]`);
+    sendRichMessage(html, 'sent', `[System: User invited you to listen to "Midnight Rain" by Taylor Swift together. Comment on the song.]`);
 }
 
 // --- 功能 G: 表情包 ---
 window.sendSticker = function(src) {
     const html = `<img src="${src}" class="msg-sticker-img">`;
-    sendRichMessage(html, '', `[System: User sent a funny sticker/GIF. React with an emoji or a short laugh.]`);
+    sendRichMessage(html, 'sent', `[System: User sent a funny sticker/GIF. React with an emoji or a short laugh.]`);
 }
+
 
 // === Galgame 入口 ===
 window.openGalgameApp = function() {
@@ -11621,101 +11672,53 @@ Return ONLY the formatted blocks. Do not explain yourself.`;
     }
 }, 60000); // 每分钟检查一次
 
-// === [新增] 线下模式后台静默生成系统 ===
+// === [新增] 线下模式后台静默生成系统 (修复加强版) ===
 async function generateOfflineExtrasBackground(chatId, userInput, aiReply, settings, friend) {
     let requests = [];
-    
-    // Status 永远需要
-    requests.push(`[STATUS_START]
-Action: （当前${friend.realName}的动作）
-Location: （地点）
-Weather: （天气）
-BGM: （歌名 - 歌手）
-Murmur: （3-4句表层心声，符合人设）
-Kaomoji: （颜文字）
-Affection: （0-100，当前对用户的好感度，如果互动良好可增加，反之减少）
-[STATUS_END]`);
 
-    if (isDanmakuOn) {
-        requests.push(`[DANMAKU_START]
-（生成5-8条搞笑的简体中文网友评论。不得出现厌女或侮辱性内容。）
-[DANMAKU_END]`);
+    // 1. 状态请求
+    requests.push(`[STATUS_START]\nAction: （当前角色的动作）\nLocation: （当前地点）\nWeather: （当前天气）\nBGM: （符合氛围的歌名 - 歌手）\nMurmur: （3-4句角色的内心真实想法或吐槽，这非常重要）\nKaomoji: （颜文字）\nAffection: （0-100的数字，当前好感度）\n[STATUS_END]`);
+
+    // 2. 弹幕请求
+    if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn) {
+        requests.push(`[DANMAKU_START]\n（在此生成3-5条搞笑的网友弹幕评论，每行一条，不要带任何序号）\n[DANMAKU_END]`);
     }
 
-    if (isOfflineOptionsOn) {
-        requests.push(`[OPTIONS_START]
-1. （用户可以执行的行动1）
-2. （行动2）
-3. （行动3）
-[OPTIONS_END]`);
+    // 3. 选项请求
+    if (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) {
+        requests.push(`[OPTIONS_START]\n1. （用户接下来可以执行的动作选项1）\n2. （用户可以执行的动作选项2）\n3. （用户可以执行的动作选项3）\n[OPTIONS_END]`);
     }
 
-    // --- 收集世界书全文内容 ---
-    let worldbookContent = '';
-    try {
-        const wbIds = Array.isArray(friend.worldbook)
-            ? friend.worldbook
-            : (friend.worldbook ? [friend.worldbook] : []);
-        if (wbIds.length && typeof worldBooks !== 'undefined' && worldBooks.length) {
-            worldbookContent = wbIds.map(id => {
-                const wb = worldBooks.find(w => w.id === id);
-                if (!wb) return '';
-                if (wb.entries && wb.entries.length) {
-                    return wb.entries
-                        .filter(e => e.enabled !== false)
-                        .map(e => e.content || '')
-                        .filter(Boolean)
-                        .join('\n');
-                }
-                return wb.description || wb.content || wb.title || '';
-            }).filter(Boolean).join('\n\n');
-        } else if (typeof friend.worldbook === 'string' && friend.worldbook) {
-            worldbookContent = friend.worldbook;
-        }
-        // 补充全局世界书
-        if (typeof worldBooks !== 'undefined') {
-            const globalContent = worldBooks
-                .filter(wb => wb.global)
-                .flatMap(wb => (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || ''))
-                .filter(Boolean)
-                .join('\n');
-            if (globalContent) worldbookContent = (worldbookContent ? worldbookContent + '\n\n' : '') + globalContent;
-        }
-    } catch (e) { /* 静默 */ }
-
-    const charName = friend.realName || '助手';
     const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
-    const parseMacros = (str) => {
-        if (!str) return '';
-        return String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
-    };
+    
+    // 构造符合标准 API 的 System Prompt (规则与要求)
+    const sysPrompt = `你是一个辅助分析系统，负责为角色扮演游戏生成后台的 UI 面板数据。
+【当前角色】：${friend.realName}
+【角色人设】：${friend.persona}
 
-    const sysPrompt = `你是一个辅助分析系统，正在支持一个角色扮演游戏。
-当前角色：${friend.realName}
-角色人设：${parseMacros(friend.persona)}
-${worldbookContent ? `\n【世界观 / 背景设定】：\n${parseMacros(worldbookContent)}` : ''}
-${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n【用户身份】：${parseMacros(me.persona)}` : ''; })()}
-${(typeof constructWorldInfoPrompt === 'function') ? `\n【动态世界书】：\n${constructWorldInfoPrompt(userInput, chatId)}` : ''}
+【核心指令】
+1. 根据刚刚发生的最新对话，推测角色的状态、生成的弹幕及选项。
+2. 绝对不要输出任何 markdown 代码块标记 (如 \`\`\`json )，不要加任何问候语。
+3. 直接输出规定的方括号结构！
 
-【最新对话互动】
-User: ${userInput}
-${friend.realName}: ${aiReply}
+需要输出的模块结构如下：
+${requests.join('\n\n')}`;
 
-请基于以上设定和最新互动，严格按照以下格式补充信息：
-${requests.join('\n')}
-注意：请严格直接输出上述格式块，不要输出任何多余的解释、问候或 markdown 代码块标记。`;
+    // 构造 User Prompt (提供上下文)
+    const userPrompt = `【最新对话互动】\nUser(${myName}): ${userInput}\n${friend.realName}: ${aiReply}\n\n请立刻按照规定格式生成所有后台数据块。`;
 
     try {
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
         const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
-        
+
         const payload = {
             model: settings.model,
             messages: [
-                { role: "user", content: sysPrompt }
+                { role: "system", content: sysPrompt },
+                { role: "user", content: userPrompt }
             ],
             temperature: 0.8,
-            max_tokens: 1500
+            max_tokens: 800
         };
 
         const response = await fetch(apiUrl, {
@@ -11725,73 +11728,87 @@ ${requests.join('\n')}
         });
 
         if (!response.ok) {
-            console.error("Background extras API failed:", response.status, await response.text());
+            console.error("后台数据生成接口调用失败:", response.status);
             return;
         }
 
         const data = await response.json();
         let content = data.choices?.[0]?.message?.content || '';
-        
+
         // 去除可能的 markdown 代码块包裹
         content = content.replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '').trim();
 
         // 1. 解析 STATUS
-        const statusRegStr = '\\[STATUS_START\\]([\\s\\S]*?)\\[(?:\\/)?STATUS_END\\]';
-        const statusRegex = new RegExp(statusRegStr, 'i');
+        const statusRegex = /\[STATUS_START\]([\s\S]*?)\[(?:\/)?STATUS_END\]/i;
         const statusMatch = content.match(statusRegex);
         if (statusMatch) {
-            updateMindStateFromText(statusMatch[1], chatId); 
+            if (typeof updateMindStateFromText === 'function') {
+                updateMindStateFromText(statusMatch[1], chatId);
+            }
         }
 
-        // 2. 解析 OPTIONS
-        if (isOfflineOptionsOn) {
+        // 2. 解析 OPTIONS (放宽了限制，AI 输出没带序号也能抓到)
+        if (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) {
             const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
             const optMatch = content.match(optRegex);
             if (optMatch) {
-                const extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
+                // 剔除空行以及开头的数字(1. )、破折号(- )或星号(* )
+                const extractedOptions = optMatch[1].split('\n')
+                    .map(s => s.replace(/^(\d+\.|-|\*)\s*/, '').trim())
+                    .filter(s => s.length > 0 && !s.toLowerCase().startsWith('option'));
+                
                 const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === chatId;
+                
                 if (isLookingOfflineNow && extractedOptions.length > 0) {
                     const container = document.getElementById('offline-log-container');
-                    let optDiv = document.getElementById('vn-options-box');
-                    if (!optDiv) {
-                        optDiv = document.createElement('div');
-                        optDiv.id = 'vn-options-box';
-                        optDiv.className = 'vn-options-container';
-                        const dmArea = container.querySelector('.offline-danmaku-area');
-                        if (dmArea) {
-                            container.insertBefore(optDiv, dmArea);
+                    if (container) {
+                        let optDiv = document.getElementById('vn-options-box');
+                        if (!optDiv) {
+                            optDiv = document.createElement('div');
+                            optDiv.id = 'vn-options-box';
+                            optDiv.className = 'vn-options-container';
+                            const dmArea = container.querySelector('.offline-danmaku-area');
+                            if (dmArea) {
+                                container.insertBefore(optDiv, dmArea);
+                            } else {
+                                container.appendChild(optDiv);
+                            }
                         } else {
-                            container.appendChild(optDiv);
+                            optDiv.innerHTML = ''; // 清空上一次的选项
                         }
-                    } else {
-                        optDiv.innerHTML = '';
+                        
+                        extractedOptions.forEach(opt => {
+                            const btn = document.createElement('div');
+                            btn.className = 'vn-option-btn';
+                            btn.innerText = opt;
+                            btn.onclick = () => {
+                                if (typeof selectOfflineOption === 'function') selectOfflineOption(opt);
+                            };
+                            optDiv.appendChild(btn);
+                        });
+                        setTimeout(() => container.scrollTop = container.scrollHeight, 150);
                     }
-                    extractedOptions.forEach(opt => {
-                        const btn = document.createElement('div');
-                        btn.className = 'vn-option-btn';
-                        btn.innerText = opt;
-                        btn.onclick = () => selectOfflineOption(opt);
-                        optDiv.appendChild(btn);
-                    });
-                    setTimeout(() => container.scrollTop = container.scrollHeight, 150);
                 }
             }
         }
 
-        // 3. 解析 DANMAKU
-        if (isDanmakuOn) {
+        // 3. 解析 DANMAKU (放宽限制)
+        if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn) {
             const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
             const danmakuMatch = content.match(danmakuRegex);
             if (danmakuMatch) {
-                const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
+                const dList = danmakuMatch[1].split('\n')
+                    .map(s => s.replace(/^(\d+\.|-|\*)\s*/, '').trim())
+                    .filter(s => s.length > 0);
+                    
                 if (dList.length > 0) {
-                    danmakuPool = dList;
-                    startDanmakuBatch(0);
+                    if (typeof danmakuPool !== 'undefined') danmakuPool = dList;
+                    if (typeof startDanmakuBatch === 'function') startDanmakuBatch(0);
                 }
             }
         }
 
     } catch (e) {
-        console.error("Background offline extras generation failed:", e);
+        console.error("线下模式后台扩展生成失败:", e);
     }
 }

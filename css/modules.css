@@ -7618,3 +7618,51 @@ img.msg-sticker-img {
 /* 紫梦 (purple) */
 .bubble-theme-purple .message-bubble.received:not(.rich-bubble) { background: linear-gradient(135deg,#f3e5f5,#ede7f6) !important; color: #4a148c !important; border: none !important; }
 .bubble-theme-purple .message-bubble.sent:not(.rich-bubble) { background: linear-gradient(135deg,#ede7f6,#d1c4e9) !important; color: #311b92 !important; border: none !important; }
+/* 3. 转账卡片 */
+.msg-transfer-card {
+    width: 220px;
+    background: #fa9d3b;
+    border-radius: 12px;
+    overflow: hidden;
+    color: #fff;
+    cursor: pointer;
+}
+/* ... 现有的 transfer 样式 ... */
+
+/* === 新增：群聊红包卡片样式 === */
+.group-red-packet-card {
+    width: 220px;
+    background: #fa9d3b;
+    border-radius: 12px;
+    overflow: hidden;
+    color: #fff;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.group-red-packet-card .rp-header {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.group-red-packet-card .rp-info {
+    display: flex;
+    flex-direction: column;
+}
+.group-red-packet-card .rp-note {
+    font-size: 15px;
+    font-weight: 600;
+}
+.group-red-packet-card .rp-type {
+    font-size: 11px;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+.group-red-packet-card .rp-footer {
+    background: rgba(255,255,255,0.15);
+    padding: 5px 15px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.9);
+    display: flex;
+    justify-content: space-between;
+}
