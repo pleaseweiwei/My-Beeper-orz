@@ -4,11 +4,11 @@
    ═══════════════════════════════════════════════════════════ */
 
 #novelApp {
-  --n-bg: #f8f9fa;
-  --n-surface: #ffffff;
-  --n-surface2: #f1f3f5;
-  --n-surface3: #e9ecef;
-  --n-border: #dee2e6;
+  --n-bg: rgba(255, 255, 255, 0.85);
+  --n-surface: rgba(255, 255, 255, 0.6);
+  --n-surface2: rgba(241, 243, 245, 0.6);
+  --n-surface3: rgba(233, 236, 239, 0.6);
+  --n-border: rgba(222, 226, 230, 0.5);
   --n-text1: #212529;
   --n-text2: #495057;
   --n-text3: #868e96;
@@ -18,15 +18,15 @@
   --n-radius-sm: 8px;
   --n-shadow: 0 10px 30px rgba(0,0,0,0.03);
   --n-shadow-hover: 0 15px 35px rgba(0,0,0,0.06);
-  --n-glass: rgba(255, 255, 255, 0.85);
-  --n-reader-bg: #ffffff;
+  --n-glass: rgba(255, 255, 255, 0.65);
+  --n-reader-bg: rgba(255, 255, 255, 0.8);
   --n-reader-text: #212529;
 }
 
 #novelApp {
   background: var(--n-bg);
-  background-image: radial-gradient(#e9ecef 2px, transparent 2px);
-  background-size: 24px 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'PingFang SC', sans-serif;
   display: flex;
   flex-direction: column;
@@ -746,3 +746,142 @@
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.03);
 }
 .novel-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* === Novel App 升级版：插画与互动选项 === */
+.novel-illustration {
+  width: 100%;
+  border-radius: 16px;
+  margin: 20px 0;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  overflow: hidden;
+  position: relative;
+  background: var(--n-surface2);
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.novel-illustration img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.novel-illustration-hint {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  background: rgba(0,0,0,0.5);
+  color: #fff; font-size: 9px; padding: 4px 8px;
+  border-radius: 8px; backdrop-filter: blur(4px);
+}
+.novel-choices-container {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--n-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.novel-choice-title {
+  font-size: 12px; font-weight: 700; color: var(--n-text3);
+  text-align: center; margin-bottom: 8px; letter-spacing: 1px;
+}
+.novel-choice-btn {
+  background: var(--n-surface2);
+  border: 1px solid var(--n-border);
+  color: var(--n-text1);
+  padding: 14px 20px;
+  border-radius: 16px;
+  font-size: 14px; font-weight: 600;
+  text-align: left; cursor: pointer;
+  transition: all 0.3s;
+  display: flex; align-items: center; gap: 10px;
+}
+.novel-choice-btn i { color: var(--n-text3); font-size: 16px; }
+.novel-choice-btn:hover { background: var(--n-surface); border-color: var(--n-text1); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
+.novel-choice-btn:active { transform: scale(0.98); }
+/* ─── 饭圈与同人文化 ───────────────────────── */
+.novel-fan-event-card {
+  background: linear-gradient(135deg, rgba(255,107,129,0.1), rgba(255,255,255,0.8));
+  border-radius: var(--n-radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255,107,129,0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.novel-fan-header { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: #ff4757; }
+.novel-fan-content { font-size: 14px; line-height: 1.5; color: var(--n-text1); }
+.novel-fan-actions { display: flex; gap: 8px; }
+
+/* ─── 键盘大乱斗 ─────────────────────────── */
+.novel-brawl-panel {
+  background: var(--n-surface); border-radius: var(--n-radius-lg);
+  padding: 20px; box-shadow: var(--n-shadow); margin-bottom: 24px;
+}
+.novel-brawl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.novel-brawl-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--n-text1); }
+.novel-brawl-hp-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 16px; background: var(--n-surface2); }
+.novel-brawl-hp-mine { background: #4cd964; transition: width 0.3s; }
+.novel-brawl-hp-ai { background: #ff4757; transition: width 0.3s; }
+.novel-brawl-status { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; margin-bottom: 16px; }
+.novel-brawl-status-me { color: #4cd964; }
+.novel-brawl-status-ai { color: #ff4757; }
+.novel-brawl-logs { background: var(--n-surface2); border-radius: 8px; padding: 12px; max-height: 120px; overflow-y: auto; font-size: 12px; line-height: 1.6; margin-bottom: 16px; }
+.novel-brawl-log-item { margin-bottom: 4px; }
+.novel-brawl-log-item span.me { color: #4cd964; font-weight: 600; }
+.novel-brawl-log-item span.ai { color: #ff4757; font-weight: 600; }
+
+/* === Novel App 升级版 2：批注、BGM与听书 === */
+.novel-annotation {
+  position: absolute; right: 10px; margin-top: -20px;
+  font-family: 'Alex Brush', cursive, 'PingFang SC', sans-serif;
+  font-size: 14px; color: #d63031; transform: rotate(-5deg);
+  opacity: 0.8; pointer-events: none; z-index: 5;
+  background: rgba(255,255,255,0.7); padding: 2px 6px; border-radius: 4px;
+}
+.novel-tools-bar {
+  display: flex; gap: 8px; align-items: center;
+}
+.novel-audio-active { color: #ff7e67 !important; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+/* ─── COMMUNITY TAB ──────────────────────────────────────── */
+.novel-community-section {
+  background: var(--n-surface); border-radius: var(--n-radius-lg);
+  padding: 20px; box-shadow: var(--n-shadow); margin-bottom: 20px;
+}
+.novel-community-title {
+  font-size: 15px; font-weight: 700; color: var(--n-text1);
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.novel-community-trends { display: flex; flex-direction: column; gap: 12px; }
+.novel-trend-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  background: var(--n-surface2); border-radius: var(--n-radius);
+  transition: transform 0.2s; cursor: pointer;
+}
+.novel-trend-item:hover { transform: translateX(4px); background: var(--n-surface3); }
+.novel-trend-rank {
+  font-size: 14px; font-weight: 800; color: var(--n-text3); width: 20px; text-align: center;
+}
+.novel-trend-rank.top { color: #ff4757; }
+.novel-trend-text { flex: 1; font-size: 13px; font-weight: 600; color: var(--n-text1); }
+.novel-trend-heat { font-size: 11px; color: var(--n-text3); }
+
+.novel-cp-list { display: flex; flex-direction: column; gap: 12px; }
+.novel-cp-card {
+  background: var(--n-surface2); border-radius: var(--n-radius);
+  padding: 14px; border-left: 4px solid #ff7675;
+}
+.novel-cp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.novel-cp-names { font-size: 14px; font-weight: 700; color: var(--n-text1); display: flex; align-items: center; }
+.novel-cp-tag { font-size: 10px; background: rgba(255,118,117,0.1); color: #ff7675; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.novel-cp-desc { font-size: 12px; color: var(--n-text2); font-style: italic; }
+
+.novel-fanart-list { display: flex; flex-direction: column; gap: 16px; }
+.novel-fanart-card {
+  background: var(--n-surface2); border-radius: var(--n-radius); padding: 16px;
+}
+.novel-fanart-author { font-size: 12px; font-weight: 600; color: var(--n-text1); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.novel-fanart-text { font-size: 13px; color: var(--n-text2); line-height: 1.6; margin-bottom: 12px; }
+.novel-fanart-img { width: 100%; border-radius: var(--n-radius-sm); object-fit: cover; max-height: 200px; }

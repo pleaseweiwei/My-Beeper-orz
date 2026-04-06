@@ -129,22 +129,11 @@
                 .map(function (el) {
                     const sortId = getSortId(el);
                     if (el.classList.contains('dynamic-widget')) {
-                        var attrs = {};
-                        for (var i = 0; i < el.attributes.length; i++) {
-                            var attr = el.attributes[i];
-                            attrs[attr.name] = attr.value;
-                        }
-                        
-                        var clone = el.cloneNode(true);
-                        var editBtns = clone.querySelectorAll('.ds-delete-btn, .ds-color-btn, .ds-opacity-btn, .tw-controls');
-                        editBtns.forEach(function(btn) { btn.remove(); });
-                        
                         dynamicWidgets[sortId] = {
                             type: el.dataset.widgetType,
                             sizeClass: Array.from(el.classList).find(c => c.startsWith('widget-')),
                             className: el.className,
-                            html: clone.innerHTML,
-                            attributes: attrs
+                            html: el.innerHTML
                         };
                     }
                     return sortId;
@@ -187,46 +176,7 @@
 
         Object.keys(data).forEach(function (pageId) {
             var page = pageMap[pageId];
-            if (!page) {
-                var screen = getScreen();
-                if (screen) {
-                    page = document.createElement('div');
-                    page.className = 'page ds-flat';
-                    page.id = pageId;
-                    screen.appendChild(page);
-                    pageMap[pageId] = page;
-                    
-                    var s = new Sortable(page, {
-                        group: 'desktop',
-                        animation: 350,
-                        easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-                        draggable: '.sortable-item',
-                        ghostClass: 'sortable-ghost',
-                        dragClass: 'sortable-drag',
-                        fallbackOnBody: true,
-                        swap: true,
-                        swapClass: 'sortable-swap-highlight',
-                        swapThreshold: 0.55,
-                        onStart: function(e) {
-                            if ('vibrate' in navigator) navigator.vibrate(50);
-                            e.item.style.transform = 'scale(0.85)';
-                            e.item.style.opacity = '0.8';
-                        },
-                        onMove: function (evt) { onDragMove(evt); },
-                        onEnd: function (e) {
-                            e.item.style.transform = '';
-                            e.item.style.opacity = '';
-                            stopEdgeScroll();
-                            window.adjustEmptySlots(); 
-                            cleanupEmptyPages();
-                            saveOrder();
-                        }
-                    });
-                    sortableInstances.push(s);
-                } else {
-                    return;
-                }
-            }
+            if (!page) return;
             var savedIds = data[pageId];
             if (!savedIds || !savedIds.length) return;
 
@@ -240,15 +190,9 @@
                 } else if (!el && dynamicWidgets && dynamicWidgets[sortId]) {
                     const widgetData = dynamicWidgets[sortId];
                     el = document.createElement('div');
-                    if (widgetData.attributes) {
-                        Object.keys(widgetData.attributes).forEach(function(key) {
-                            el.setAttribute(key, widgetData.attributes[key]);
-                        });
-                    } else {
-                        el.className = widgetData.className || ('sortable-item dynamic-widget ' + (widgetData.sizeClass || ''));
-                        el.dataset.widgetType = widgetData.type || 'unknown';
-                        el.dataset.sortId = sortId;
-                    }
+                    el.className = widgetData.className || ('sortable-item dynamic-widget ' + (widgetData.sizeClass || ''));
+                    el.dataset.widgetType = widgetData.type || 'unknown';
+                    el.dataset.sortId = sortId;
                     el.innerHTML = widgetData.html || '';
                     
                     var match = el.className.match(/widget-(\d+)x(\d+)/);
@@ -409,9 +353,14 @@
         if (addBtn) addBtn.remove();
         document.querySelectorAll('.ds-delete-btn').forEach(function(btn) { btn.remove(); });
         document.querySelectorAll('.ds-color-btn').forEach(function(btn) { btn.remove(); });
-        // 👇 新增这两行，退出时清理残留的透明按钮和滑块，防止下次点击事件重叠失效
+        // 👇 退出时清理残留的透明按钮和滑块，并恢复小组件被提升的层级
         document.querySelectorAll('.ds-opacity-btn').forEach(function(btn) { btn.remove(); });
-        document.querySelectorAll('.tw-controls').forEach(function(ctrl) { ctrl.remove(); });
+        document.querySelectorAll('.tw-controls').forEach(function(ctrl) { 
+            if (ctrl.parentElement) ctrl.parentElement.style.zIndex = ''; // 压回原来的层级
+            ctrl.remove(); 
+        });
+        // 保险起见，把所有小组件的层级全部重置一次，防止被一直盖在最上面
+        document.querySelectorAll('.sortable-item').forEach(function(item) { item.style.zIndex = ''; });
 
         removeEdgeIndicators();
 
@@ -673,17 +622,22 @@
         }
         if(saveOrder) saveOrder();
     }
-
-      function toggleOpacityControls(item) {
+function toggleOpacityControls(item) {
         document.querySelectorAll('.tw-controls').forEach(function(ctrl) {
-            if (ctrl.parentElement !== item) ctrl.remove();
+            if (ctrl.parentElement !== item) {
+                ctrl.parentElement.style.zIndex = ''; // 还原其他组件的层级
+                ctrl.remove();
+            }
         });
 
         var existing = item.querySelector('.tw-controls');
         if (existing) {
+            item.style.zIndex = ''; // 关掉面板时还原层级
             existing.remove();
             return;
         }
+        
+        item.style.zIndex = '9999'; // <-- 新增这行：开启面板时临时提升当前组件层级，防遮挡
 
         var controls = document.createElement('div');
         controls.className = 'tw-controls';
@@ -1177,10 +1131,6 @@ window.addWidget = function(type, sizeClass) {
         el.innerHTML = '<div style="padding:10px; outline:none; text-align:center;" contenteditable="true" onblur="window.DesktopSort.saveOrder()">New Widget</div>';
     }
     
-    // 修复：确保被各种类型覆盖的 className 不会丢失必需的核心类
-    if (!el.classList.contains('dynamic-widget')) el.classList.add('dynamic-widget');
-    if (!el.classList.contains('sortable-item')) el.classList.add('sortable-item');
-
     if (window.DesktopSort && window.DesktopSort.isEditMode()) {
         var delBtn = document.createElement('div');
         delBtn.className = 'ds-delete-btn';
@@ -1237,18 +1187,7 @@ window.addWidget = function(type, sizeClass) {
         page.appendChild(el);
     }
 
-    if (!el.querySelector('.tw-bg-layer') && el.classList.contains('transparent-widget')) {
-        var bgLayer = document.createElement('div');
-        bgLayer.className = 'tw-bg-layer';
-        bgLayer.dataset.color = '255,255,255';
-        bgLayer.dataset.opacity = '0.8';
-        bgLayer.style.backgroundColor = 'rgba(255,255,255,0.8)';
-        if (el.firstChild) {
-            el.insertBefore(bgLayer, el.firstChild);
-        } else {
-            el.appendChild(bgLayer);
-        }
-    }
+   
 
     window.adjustEmptySlots(); // 增加组件后，挤掉多余的透明空格子，保持完美网格！
     closeWidgetLibrary();
@@ -1256,27 +1195,3 @@ window.addWidget = function(type, sizeClass) {
         window.DesktopSort.saveOrder();
     }
 };
-// 阻止透明度调节控件的触摸事件传递给底层网格
-document.addEventListener('touchstart', function(e) {
-    if (e.target.closest('input[type="range"]') || e.target.closest('.tw-controls') || e.target.closest('.ds-opacity-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.ds-delete-btn')) {
-        e.stopPropagation(); // 阻止事件传给底层的拖拽或长按逻辑
-    }
-}, { capture: true }); // capture: true 确保我们在底层网格发现之前先拦截掉
-
-document.addEventListener('mousedown', function(e) {
-    if (e.target.closest('input[type="range"]') || e.target.closest('.tw-controls') || e.target.closest('.ds-opacity-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.ds-delete-btn')) {
-        e.stopPropagation();
-    }
-}, { capture: true });
-
-document.addEventListener('pointerdown', function(e) {
-    if (e.target.closest('input[type="range"]') || e.target.closest('.tw-controls') || e.target.closest('.ds-opacity-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.ds-delete-btn')) {
-        e.stopPropagation();
-    }
-}, { capture: true });
-
-document.addEventListener('touchmove', function(e) {
-    if (e.target.closest('input[type="range"]')) {
-        e.stopPropagation(); // 保证滑动滑块的时候不会拖动整个页面或组件
-    }
-}, { capture: true });

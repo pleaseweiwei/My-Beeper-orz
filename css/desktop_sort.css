@@ -115,7 +115,7 @@
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    z-index: 9999;
+    z-index: 100;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     line-height: 1;
@@ -125,21 +125,22 @@
 }
 .tw-controls {
     position: absolute;
-    top: 50%;
+    top: 50%; /* <<-- 从 bottom:-40px 改为 top: 50% 移到中间 */
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%); /* <<-- 配合居中 */
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 20px;
-    padding: 8px 16px;
+    padding: 6px 12px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.5);
-    z-index: 9999;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    z-index: 99999; /* <<-- 调高层级，防止被下面的网格或其他组件挡住 */
     white-space: nowrap;
 }
+
 .tw-controls .tw-color-toggle {
     width: 24px;
     height: 24px;
@@ -2219,7 +2220,7 @@
     height: 75%;        /* 控制高度，这里设为屏幕的 75% */
     background: #fcfcfc;
     z-index: 10500;
-    transform: translateY(calc(100% + 50px));
+    transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;
     flex-direction: column;
@@ -2433,35 +2434,20 @@
 }
 .k-db-row.left .k-db-bubble { background: rgba(255,255,255,0.85); color: #333; border-bottom-left-radius: 4px; }
 .k-db-row.right .k-db-bubble { background: rgba(43,43,43,0.85); color: #fff; border-bottom-right-radius: 4px; }
-/* 1. 默认禁用桌面小组件整体的长按菜单和文本选中，防止长按背景时误触 */
-.app-cell, 
-.dynamic-widget, 
-.unified-header-widget, 
-.music-widget, 
-.photo-stack, 
-.k-mood-board, 
-.collection-ticker-widget {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-}
-
-/* 2. 但是！把权限还给可编辑的文字和输入框，允许打字、选中、复制 */
-[contenteditable="true"], 
-input, 
-textarea {
-    -webkit-touch-callout: default !important; /* 恢复原生系统菜单(复制/粘贴) */
-    -webkit-user-select: text !important;      /* 允许选中文本 */
-    user-select: text !important;
-    cursor: text;                              /* 鼠标变成输入指针 */
-}
-
-/* 3. 在编辑模式下，强制禁用所有文本选中和长按菜单，防止抖动时误触复制或编辑 */
-.desktop-edit-mode [contenteditable="true"], 
-.desktop-edit-mode input, 
-.desktop-edit-mode textarea {
-    -webkit-touch-callout: none !important;
-    -webkit-user-select: none !important;
+/* ── 拦截编辑模式下的各种误触和长按文字选择 ── */
+.desktop-edit-mode .sortable-item {
     user-select: none !important;
-    pointer-events: none !important; /* 直接禁用点击事件，彻底防止进入编辑状态 */
+    -webkit-user-select: none !important;
+}
+
+/* 禁用小组件内部元素的点击事件，避免误触内部功能和弹出输入法，但保留我们的编辑控制按钮 */
+.desktop-edit-mode .sortable-item > div:not(.ds-delete-btn):not(.ds-color-btn):not(.ds-opacity-btn):not(.tw-controls) {
+    pointer-events: none !important;
+}
+
+/* 防止含有 contenteditable 的文本在长按时呼出系统复制菜单 */
+.desktop-edit-mode .sortable-item [contenteditable="true"] {
+    pointer-events: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
 }
