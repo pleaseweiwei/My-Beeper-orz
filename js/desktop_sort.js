@@ -1185,3 +1185,23 @@ window.addWidget = function(type, sizeClass) {
         window.DesktopSort.saveOrder();
     }
 };
+// 阻止透明度调节控件的触摸事件传递给底层网格
+document.addEventListener('touchstart', function(e) {
+    // 假设你的透明度调节是一个滑块(<input type="range">) 
+    // 或者带有特定 class (比如 .opacity-slider, .btn-opacity 等，你可以根据实际情况修改)
+    if (e.target.closest('input[type="range"]') || e.target.closest('.opacity-btn-class')) {
+        e.stopPropagation(); // 阻止事件传给底层的拖拽或长按逻辑
+    }
+}, { capture: true }); // capture: true 确保我们在底层网格发现之前先拦截掉
+
+document.addEventListener('mousedown', function(e) {
+    if (e.target.closest('input[type="range"]') || e.target.closest('.opacity-btn-class')) {
+        e.stopPropagation();
+    }
+}, { capture: true });
+
+document.addEventListener('touchmove', function(e) {
+    if (e.target.closest('input[type="range"]')) {
+        e.stopPropagation(); // 保证滑动滑块的时候不会拖动整个页面或组件
+    }
+}, { capture: true });
