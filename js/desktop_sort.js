@@ -1258,15 +1258,19 @@ window.addWidget = function(type, sizeClass) {
 };
 // 阻止透明度调节控件的触摸事件传递给底层网格
 document.addEventListener('touchstart', function(e) {
-    // 假设你的透明度调节是一个滑块(<input type="range">) 
-    // 或者带有特定 class (比如 .opacity-slider, .btn-opacity 等，你可以根据实际情况修改)
-    if (e.target.closest('input[type="range"]') || e.target.closest('.opacity-btn-class')) {
+    if (e.target.closest('input[type="range"]') || e.target.closest('.tw-controls') || e.target.closest('.ds-opacity-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.ds-delete-btn')) {
         e.stopPropagation(); // 阻止事件传给底层的拖拽或长按逻辑
     }
 }, { capture: true }); // capture: true 确保我们在底层网格发现之前先拦截掉
 
 document.addEventListener('mousedown', function(e) {
-    if (e.target.closest('input[type="range"]') || e.target.closest('.opacity-btn-class')) {
+    if (e.target.closest('input[type="range"]') || e.target.closest('.tw-controls') || e.target.closest('.ds-opacity-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.ds-delete-btn')) {
+        e.stopPropagation();
+    }
+}, { capture: true });
+
+document.addEventListener('pointerdown', function(e) {
+    if (e.target.closest('input[type="range"]') || e.target.closest('.tw-controls') || e.target.closest('.ds-opacity-btn') || e.target.closest('.ds-color-btn') || e.target.closest('.ds-delete-btn')) {
         e.stopPropagation();
     }
 }, { capture: true });
