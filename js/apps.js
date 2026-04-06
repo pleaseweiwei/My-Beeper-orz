@@ -10548,8 +10548,13 @@ window.copyAiError = async function() {
 
 // 1. 页面加载时恢复所有图片和文字
 function restoreHomeCustom() {
-    const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-    if (!cfg) return;
+    let cfg = {};
+    try {
+        cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
+    } catch (e) {
+        console.warn("Failed to parse home custom config:", e);
+    }
+    if (!cfg || Object.keys(cfg).length === 0) return;
 
     // --- Page 1 & 2 (原有逻辑) ---
     // 头像
@@ -10591,7 +10596,12 @@ function restoreHomeCustom() {
 
 // 2. 初始化文字编辑监听 (文字失焦即保存)
 function initHomeEditableText() {
-    const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
+    let cfg = {};
+    try {
+        cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
+    } catch (e) {
+        console.warn("Failed to parse home custom config:", e);
+    }
     
     // 定义所有需要保存文字的元素 ID 及其对应的存储 Key
     const textMap = [
@@ -10612,10 +10622,19 @@ function initHomeEditableText() {
             
             // B. 绑定保存事件 (Blur)
             el.addEventListener('blur', () => {
-                const currentCfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-                currentCfg[item.key] = el.innerText.trim(); // 存入 key
-                localStorage.setItem(HOME_CUSTOM_KEY, JSON.stringify(currentCfg));
-                console.log(`Saved ${item.key}: ${el.innerText}`);
+                try {
+                    const currentCfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
+                    currentCfg[item.key] = el.innerText.trim(); // 存入 key
+                    localStorage.setItem(HOME_CUSTOM_KEY, JSON.stringify(currentCfg));
+                    console.log(`Saved ${item.key}: ${el.innerText}`);
+                } catch (e) {
+                    console.warn(`Failed to save ${item.key}:`, e);
+                    if (typeof showToast === 'function') {
+                        showToast('存储空间已满，无法保存主页文字。建议清理缓存。');
+                    } else {
+                        alert('存储空间已满，无法保存主页文字。');
+                    }
+                }
             });
         }
     });
@@ -10626,10 +10645,19 @@ function saveHomeImage(el, imgSrc) {
     const key = el.dataset.editKey; // 获取 data-edit-key
     if (!key) return;
 
-    const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
-    cfg[key] = imgSrc;
-    localStorage.setItem(HOME_CUSTOM_KEY, JSON.stringify(cfg));
-    console.log(`Saved Image Key: ${key}`);
+    try {
+        const cfg = JSON.parse(localStorage.getItem(HOME_CUSTOM_KEY) || '{}');
+        cfg[key] = imgSrc;
+        localStorage.setItem(HOME_CUSTOM_KEY, JSON.stringify(cfg));
+        console.log(`Saved Image Key: ${key}`);
+    } catch (e) {
+        console.warn(`Failed to save image ${key}:`, e);
+        if (typeof showToast === 'function') {
+            showToast('存储空间已满，无法保存该图片。建议清理缓存。');
+        } else {
+            alert('存储空间已满，无法保存该图片。');
+        }
+    }
 }
 
 

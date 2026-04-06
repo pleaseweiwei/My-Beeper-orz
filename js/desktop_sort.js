@@ -129,11 +129,13 @@
                 .map(function (el) {
                     const sortId = getSortId(el);
                     if (el.classList.contains('dynamic-widget')) {
+                        const clone = el.cloneNode(true);
+                        clone.querySelectorAll('.ds-delete-btn, .ds-color-btn, .ds-opacity-btn, .tw-controls').forEach(btn => btn.remove());
                         dynamicWidgets[sortId] = {
                             type: el.dataset.widgetType,
                             sizeClass: Array.from(el.classList).find(c => c.startsWith('widget-')),
                             className: el.className,
-                            html: el.innerHTML
+                            html: clone.innerHTML
                         };
                     }
                     return sortId;
@@ -1131,6 +1133,10 @@ window.addWidget = function(type, sizeClass) {
         el.innerHTML = '<div style="padding:10px; outline:none; text-align:center;" contenteditable="true" onblur="window.DesktopSort.saveOrder()">New Widget</div>';
     }
     
+    if (!el.classList.contains('dynamic-widget')) {
+        el.classList.add('dynamic-widget');
+    }
+
     if (window.DesktopSort && window.DesktopSort.isEditMode()) {
         var delBtn = document.createElement('div');
         delBtn.className = 'ds-delete-btn';
