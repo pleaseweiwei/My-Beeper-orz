@@ -1447,7 +1447,14 @@ ${charaPersonas || '未指定'}
       item.innerHTML = '<span class="novel-comment-name">' + names[i % names.length] + '</span><span class="novel-comment-text">' + comment + '</span>';
       div.appendChild(item);
     }
-    preview.appendChild(div);
+    
+    // 找到操作按钮，将读者反应插入到按钮上方
+    var actions = preview.querySelector('.novel-write-preview-actions');
+    if (actions) {
+      preview.insertBefore(div, actions);
+    } else {
+      preview.appendChild(div);
+    }
   }
   function publishWrittenChapter() {
     if (!state._pendingExpandedContent) { showNovelToast('没有可发布的内容'); return; }
