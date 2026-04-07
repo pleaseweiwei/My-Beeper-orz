@@ -344,6 +344,10 @@ const NovelApp = (() => {
 
   // ─── FORUM TAB ──────────────────────────────────────────────
   function buildForumHtml() {
+    if (state.showGenPanel) {
+      return buildGenPanelHtml() + '<div class="novel-spacer"></div>';
+    }
+
     var filtered = getForumBooks();
     var html = buildGenreFilter('forum');
 
@@ -358,10 +362,6 @@ const NovelApp = (() => {
         '</button>' +
       '</div>'
     );
-
-    if (state.showGenPanel) {
-      html += buildGenPanelHtml();
-    }
 
     if (filtered.length === 0) {
       html += buildForumEmptyHtml();
