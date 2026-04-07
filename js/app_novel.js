@@ -1425,8 +1425,6 @@ ${charaPersonas || '未指定'}
     if (previewEl) previewEl.style.display = 'block';
     if (previewContent) previewContent.innerHTML = result.replace(/\n/g, '<br>');
     state._pendingExpandedContent = result;
-
-    setTimeout(function() { showWriterReaderFeedback(); }, 1500);
   }
 
   function showWriterReaderFeedback() {
