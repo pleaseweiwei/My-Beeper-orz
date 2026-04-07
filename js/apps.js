@@ -2460,9 +2460,9 @@ AI 原始输出示例 2：[表情:嫌弃]
         const _promptReplyMax = Math.max(_promptReplyMin, parseInt(chatSettings.replyMax) || 5);
         let replyInstruction = "";
         if (_promptReplyMax === 1) {
-            replyInstruction = `- **你必须且只能回复 1 条消息！绝对禁止换行！**\n           - **消息必须极度简短，最多只能包含一到两句短话，严禁生成一大段话！**`;
+            replyInstruction = `- **你的聊天正文必须且只能回复 1 条！正文内绝对禁止换行！**\n           - **（注意：但在回复最末尾的 [STATUS] 和 [DANMAKU] 标签区块中，你必须正常使用换行符分隔数据！）**`;
         } else {
-            replyInstruction = `- **你必须分 ${_promptReplyMin} 到 ${_promptReplyMax} 条短消息来连发回复！**\n           - **必须严格使用换行符（回车）来分隔每一条消息！每换一行就是一个新气泡，绝不要把多句话挤在同一行（一大段话）里！**`;
+
         }
 
         systemPrompt = `
@@ -2995,70 +2995,63 @@ if (!aiReply.trim()) {
                     }
                 });
             }
+// === [强力容错修复] 清理模型自作主张加的 Markdown 代码块 ===
+rawReply = rawReply.replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/gi, '');
 
-const statusRegex = /\[STATUS_START\]([\s\S]*?)\[(?:\/)?STATUS_END\]/i;
+// === [强力容错修复] 匹配状态块，即使 AI 没写 STATUS_END 也能强行捕获 ===
+const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|$)/i;
 const statusMatch = rawReply.match(statusRegex);
 if (statusMatch) {
     const statusBlock = statusMatch[1];
 
     const readStatusValue = (key) => {
-        // 支持多行捕获：抓取当前字段直到下一个字段名或块结尾
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const reg = new RegExp(
-            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n[A-Za-z]+[:：]|\\n\\[(?:\\/)?STATUS_END\\]|$)`,
+            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=(?:\\n|\\s)*(?:Action|Location|Weather|BGM|Murmur|HiddenThought|Kaomoji|Affection)[:：]|$)`,
             'i'
         );
         const m = statusBlock.match(reg);
         return m ? m[1].trim() : '';
     };
 
-    // 安全防护：若聊天对象在 AI 请求期间被删除，直接跳过状态更新
-    if (!friendsData[targetChatId]) {
-        rawReply = rawReply.replace(statusRegex, '').trim();
-    } else {
-    if (!friendsData[targetChatId].mindState) friendsData[targetChatId].mindState = {};
-    if (typeof friendsData[targetChatId].affection !== 'number') friendsData[targetChatId].affection = 0;
+    if (friendsData[targetChatId]) {
+        if (!friendsData[targetChatId].mindState) friendsData[targetChatId].mindState = {};
+        if (typeof friendsData[targetChatId].affection !== 'number') friendsData[targetChatId].affection = 0;
 
-    friendsData[targetChatId].mindState.action = readStatusValue('Action') || friendsData[targetChatId].mindState.action || '正在发呆';
-    friendsData[targetChatId].mindState.location = readStatusValue('Location') || friendsData[targetChatId].mindState.location || '未知地点';
-    friendsData[targetChatId].mindState.weather = readStatusValue('Weather') || friendsData[targetChatId].mindState.weather || '晴';
-    friendsData[targetChatId].mindState.bgm = readStatusValue('BGM') || friendsData[targetChatId].mindState.bgm || 'No BGM';
-    friendsData[targetChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[targetChatId].mindState.murmur || '...';
-    friendsData[targetChatId].mindState.hiddenThought = readStatusValue('HiddenThought') || friendsData[targetChatId].mindState.hiddenThought || '';
-    friendsData[targetChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[targetChatId].mindState.kaomoji || '( ˙W˙ )';
+        friendsData[targetChatId].mindState.action = readStatusValue('Action') || friendsData[targetChatId].mindState.action || '正在发呆';
+        friendsData[targetChatId].mindState.location = readStatusValue('Location') || friendsData[targetChatId].mindState.location || '未知地点';
+        friendsData[targetChatId].mindState.weather = readStatusValue('Weather') || friendsData[targetChatId].mindState.weather || '晴';
+        friendsData[targetChatId].mindState.bgm = readStatusValue('BGM') || friendsData[targetChatId].mindState.bgm || 'No BGM';
+        friendsData[targetChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[targetChatId].mindState.murmur || '...';
+        friendsData[targetChatId].mindState.hiddenThought = readStatusValue('HiddenThought') || friendsData[targetChatId].mindState.hiddenThought || '';
+        friendsData[targetChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[targetChatId].mindState.kaomoji || '( ˙W˙ )';
 
-    const extractedAff = readStatusValue('Affection');
-    if (extractedAff) {
-        const match = extractedAff.match(/\d+/);
-        if (match) {
-            friendsData[targetChatId].affection = parseInt(match[0]);
+        const extractedAff = readStatusValue('Affection');
+        if (extractedAff) {
+            const match = extractedAff.match(/\d+/);
+            if (match) friendsData[targetChatId].affection = parseInt(match[0]);
         }
+
+        saveFriendsData();
+        refreshMindCardUI(targetChatId, false);
+
+        // 刷新首页音乐小组件
+        const homeTitle = document.getElementById('home-music-title');
+        const homeArtist = document.getElementById('home-music-artist');
+        const bgmText = friendsData[targetChatId].mindState.bgm || 'No BGM';
+        if (bgmText.includes(' - ')) {
+            const parts = bgmText.split(' - ');
+            if (homeTitle) homeTitle.innerText = parts[0].trim();
+            if (homeArtist) homeArtist.innerText = parts.slice(1).join(' - ').trim();
+        } else {
+            if (homeTitle) homeTitle.innerText = bgmText;
+            if (homeArtist) homeArtist.innerText = 'AI Mood';
+        }
+        if (typeof saveHomeMusicText === 'function') saveHomeMusicText();
     }
-
-    saveFriendsData();
-
-    // 统一通过 refreshMindCardUI 刷新心声卡片（头像、昵称、跑马灯动画等一并同步）
-    refreshMindCardUI(targetChatId, false);
-
-    // 更新首页音乐组件（refreshMindCardUI 不含此部分）
-    const homeTitle = document.getElementById('home-music-title');
-    const homeArtist = document.getElementById('home-music-artist');
-    const bgmText = friendsData[targetChatId].mindState.bgm || 'No BGM';
-
-    if (bgmText.includes(' - ')) {
-        const parts = bgmText.split(' - ');
-        if (homeTitle) homeTitle.innerText = parts[0].trim();
-        if (homeArtist) homeArtist.innerText = parts.slice(1).join(' - ').trim();
-    } else {
-        if (homeTitle) homeTitle.innerText = bgmText;
-        if (homeArtist) homeArtist.innerText = 'AI Mood';
-    }
-
-    if (typeof saveHomeMusicText === 'function') saveHomeMusicText();
-
     rawReply = rawReply.replace(statusRegex, '').trim();
-    } // end null safety check
 }
+
 
             // === [自定义状态正则提取与替换] ===
             if (chatSettings.statusRegexEnabled && chatSettings.statusExtractRegex) {
@@ -3081,9 +3074,10 @@ if (statusMatch) {
                 }
             }
 
-            // 2. 提取弹幕 [DANMAKU_START]...[DANMAKU_END]，并从 rawReply 中移除
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
+                        // 2. 提取弹幕 (容错版，兼容末尾被截断的情况)
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|$)/i;
             const danmakuMatch = rawReply.match(danmakuRegex);
+
             if (danmakuMatch) {
                 const danmakuText = danmakuMatch[1];
                 extractedDanmaku = danmakuText.split('\n').map(s => s.trim()).filter(s => s && s.length > 0);
@@ -11738,18 +11732,19 @@ ${requests.join('\n\n')}`;
         // 去除可能的 markdown 代码块包裹
         content = content.replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '').trim();
 
-        // 1. 解析 STATUS
-        const statusRegex = /\[STATUS_START\]([\s\S]*?)\[(?:\/)?STATUS_END\]/i;
-        const statusMatch = content.match(statusRegex);
+              // 1. 解析 STATUS
+        const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|$)/i;
+
         if (statusMatch) {
             if (typeof updateMindStateFromText === 'function') {
                 updateMindStateFromText(statusMatch[1], chatId);
             }
         }
 
-        // 2. 解析 OPTIONS (放宽了限制，AI 输出没带序号也能抓到)
+               // 2. 解析 OPTIONS (放宽了限制，AI 输出没带序号也能抓到)
         if (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) {
-            const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
+            const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|$)/i;
+
             const optMatch = content.match(optRegex);
             if (optMatch) {
                 // 剔除空行以及开头的数字(1. )、破折号(- )或星号(* )
@@ -11792,9 +11787,10 @@ ${requests.join('\n\n')}`;
             }
         }
 
-        // 3. 解析 DANMAKU (放宽限制)
+         // 3. 解析 DANMAKU (放宽限制)
         if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn) {
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|$)/i;
+
             const danmakuMatch = content.match(danmakuRegex);
             if (danmakuMatch) {
                 const dList = danmakuMatch[1].split('\n')
