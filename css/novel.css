@@ -14,8 +14,8 @@
   --n-text2: #8e8e93;
   --n-text3: #aeaeb2;
   --n-accent: #1c1c1e;
-  --n-radius-lg: 24px;   /* Huge bubble panels */
-  --n-radius: 16px;      /* Bubbly cards */
+  --n-radius-lg: 16px;   /* Huge bubble panels */
+  --n-radius: 12px;      /* Bubbly cards */
   --n-radius-sm: 50px;  /* Perfect pills */
   --n-shadow: 0 12px 40px rgba(0, 0, 0, 0.03);
   --n-shadow-hover: 0 20px 50px rgba(0, 0, 0, 0.06);
@@ -55,20 +55,20 @@
 /* Header */
 .novel-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 40px 16px 12px;
+  padding: 24px 12px 10px;
   background: transparent;
-  flex-shrink: 0; gap: 12px;
+  flex-shrink: 0; gap: 8px;
   z-index: 10;
 }
 .novel-header-title {
-  flex: 1; font-size: 18px; font-weight: bold; font-family: var(--n-font-serif);
+  flex: 1; font-size: 15px; font-weight: bold; font-family: var(--n-font-serif);
   color: var(--n-accent); text-align: center;
-  letter-spacing: 2px; font-style: italic;
+  letter-spacing: 1px; font-style: italic;
 }
 .novel-header-icon {
-  width: 36px; height: 36px; border-radius: 50%;
+  width: 30px; height: 30px; border-radius: 50%;
   background: var(--n-surface); display: flex; align-items: center;
-  justify-content: center; cursor: pointer; font-size: 16px;
+  justify-content: center; cursor: pointer; font-size: 14px;
   color: var(--n-text1); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
   box-shadow: var(--n-shadow);
 }
@@ -95,8 +95,8 @@
 .novel-bottom-tab {
   pointer-events: auto; /* Enable clicks on the circles themselves */
   position: absolute;
-  width: 40px; height: 40px;
-  margin: -20px 0 0 -20px; /* Center perfectly on its coordinate */
+  width: 36px; height: 36px;
+  margin: -18px 0 0 -18px; /* Center perfectly on its coordinate */
   background: var(--n-surface);
   border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -126,7 +126,7 @@
 
 /* Tabs Content */
 .novel-tab-content { 
-  flex: 1; overflow-y: auto; padding: 12px 16px 120px; display: block; 
+  flex: 1; overflow-y: auto; padding: 10px 12px 100px; display: block; 
   scroll-behavior: smooth; scrollbar-width: none;
 }
 .novel-tab-content::-webkit-scrollbar { display: none; }
@@ -140,12 +140,12 @@
 .novel-book-grid { 
   display: grid; 
   grid-template-columns: repeat(2, 1fr); 
-  gap: 12px; 
+  gap: 10px; 
   align-items: start;
-  padding-bottom: 16px;
+  padding-bottom: 12px;
 }
 
-.novel-book-card:nth-child(even) { margin-top: 24px; }
+.novel-book-card:nth-child(even) { margin-top: 16px; }
 
 .novel-book-card {
   background: var(--n-surface); border-radius: var(--n-radius); overflow: hidden;
@@ -577,15 +577,15 @@
 /* ─── COMMUNITY TAB ──────────────────────────────────────── */
 .novel-community-section {
   background: var(--n-surface); border-radius: var(--n-radius-lg);
-  padding: 16px; margin-bottom: 20px; box-shadow: var(--n-shadow);
+  padding: 12px; margin-bottom: 16px; box-shadow: var(--n-shadow);
   transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
 }
 .novel-community-section:hover {
   box-shadow: var(--n-shadow-hover); transform: translateY(-2px);
 }
 .novel-community-title {
-  font-size: 16px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text1);
-  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text1);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
   letter-spacing: 0.5px; font-style: italic;
 }
 .novel-community-trends { display: flex; flex-direction: column; gap: 12px; }
@@ -597,32 +597,32 @@
 .novel-trend-item:last-child { border-bottom: none; }
 .novel-trend-item:hover { opacity: 0.7; }
 .novel-trend-rank {
-  font-size: 16px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text3); width: 24px; text-align: center; font-style: italic;
+  font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text3); width: 20px; text-align: center; font-style: italic;
 }
-.novel-trend-rank.top { color: var(--n-text1); font-size: 20px; }
-.novel-trend-text { flex: 1; font-size: 14px; font-weight: 600; color: var(--n-text1); }
-.novel-trend-heat { font-size: 12px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text3); }
+.novel-trend-rank.top { color: var(--n-text1); font-size: 18px; }
+.novel-trend-text { flex: 1; font-size: 13px; font-weight: 600; color: var(--n-text1); }
+.novel-trend-heat { font-size: 11px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text3); }
 
-.novel-cp-list { display: flex; flex-direction: column; gap: 16px; }
+.novel-cp-list { display: flex; flex-direction: column; gap: 12px; }
 .novel-cp-card {
   background: var(--n-bg); border-radius: var(--n-radius);
-  padding: 16px; transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+  padding: 12px; transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
 }
 .novel-cp-card:hover { transform: translateY(-4px); background: #f0f0f0; }
-.novel-cp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.novel-cp-names { font-size: 16px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text1); display: flex; align-items: center; letter-spacing: 0.5px; }
-.novel-cp-tag { font-size: 10px; background: var(--n-text2); color: #fff; padding: 4px 10px; border-radius: var(--n-radius-sm); font-weight: bold; }
-.novel-cp-desc { font-size: 13px; color: var(--n-text2); font-weight: 500; line-height: 1.6; }
+.novel-cp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.novel-cp-names { font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text1); display: flex; align-items: center; letter-spacing: 0.5px; }
+.novel-cp-tag { font-size: 9px; background: var(--n-text2); color: #fff; padding: 2px 8px; border-radius: var(--n-radius-sm); font-weight: bold; }
+.novel-cp-desc { font-size: 12px; color: var(--n-text2); font-weight: 500; line-height: 1.5; }
 
-.novel-fanart-list { display: flex; flex-direction: column; gap: 16px; }
+.novel-fanart-list { display: flex; flex-direction: column; gap: 12px; }
 .novel-fanart-card {
   background: var(--n-surface); border-radius: var(--n-radius-lg); padding: 0;
   transition: all 0.4s cubic-bezier(0.16,1,0.3,1); overflow: hidden;
   box-shadow: var(--n-shadow);
 }
 .novel-fanart-card:hover { transform: translateY(-8px); box-shadow: var(--n-shadow-hover); }
-.novel-fanart-author { font-size: 14px; font-weight: bold; color: var(--n-text1); margin: 16px 16px 8px; display: flex; align-items: center; gap: 8px; }
-.novel-fanart-text { font-size: 14px; color: var(--n-text2); line-height: 1.6; margin: 0 16px 16px; font-weight: 500;}
+.novel-fanart-author { font-size: 13px; font-weight: bold; color: var(--n-text1); margin: 12px 12px 6px; display: flex; align-items: center; gap: 6px; }
+.novel-fanart-text { font-size: 13px; color: var(--n-text2); line-height: 1.5; margin: 0 12px 12px; font-weight: 500;}
 .novel-fanart-img { width: 100%; object-fit: cover; max-height: 200px; }
 
 /* ─── PROFILE TAB ────────────────────────────── */
@@ -656,17 +656,17 @@
 .novel-fan-event-card {
   background: linear-gradient(135deg, #2c2c2e, #1c1c1e);
   border-radius: var(--n-radius-lg);
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 12px;
+  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   box-shadow: 0 12px 40px rgba(0,0,0,0.15);
 }
-.novel-fan-header { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: bold; font-family: var(--n-font-serif); color: #fff; letter-spacing: 1px; font-style: italic; }
-.novel-fan-content { font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.85); font-weight: 400;}
+.novel-fan-header { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); color: #fff; letter-spacing: 1px; font-style: italic; }
+.novel-fan-content { font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.85); font-weight: 400;}
 .novel-fanfic-btn {
-  flex: 1; padding: 12px; border-radius: var(--n-radius-sm); font-size: 13px;
+  flex: 1; padding: 10px; border-radius: var(--n-radius-sm); font-size: 12px;
   font-weight: bold; text-align: center; cursor: pointer; transition: all 0.3s;
   letter-spacing: 0.5px; border: none;
 }
@@ -678,18 +678,18 @@
 /* ─── 键盘大乱斗 ─────────────────────────── */
 .novel-brawl-panel {
   background: var(--n-surface); border-radius: var(--n-radius-lg);
-  padding: 16px; margin-bottom: 20px; box-shadow: var(--n-shadow);
+  padding: 12px; margin-bottom: 16px; box-shadow: var(--n-shadow);
   transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
 }
-.novel-brawl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.novel-brawl-title { font-size: 16px; font-weight: bold; font-family: var(--n-font-serif); display: flex; align-items: center; gap: 8px; color: var(--n-text1); font-style: italic; }
-.novel-brawl-hp-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 16px; background: var(--n-surface3); }
+.novel-brawl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.novel-brawl-title { font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); display: flex; align-items: center; gap: 6px; color: var(--n-text1); font-style: italic; }
+.novel-brawl-hp-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 12px; background: var(--n-surface3); }
 .novel-brawl-hp-mine { background: var(--n-text1); transition: width 0.3s; }
 .novel-brawl-hp-ai { background: #d1d1d6; transition: width 0.3s; }
-.novel-brawl-status { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 16px; font-family: var(--n-font-serif); }
+.novel-brawl-status { display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; margin-bottom: 12px; font-family: var(--n-font-serif); }
 .novel-brawl-status-me { color: var(--n-text1); }
 .novel-brawl-status-ai { color: var(--n-text3); }
-.novel-brawl-logs { background: var(--n-surface2); border-radius: var(--n-radius); padding: 16px; max-height: 150px; overflow-y: auto; font-size: 13px; line-height: 1.6; margin-bottom: 16px; font-weight: 500;}
+.novel-brawl-logs { background: var(--n-surface2); border-radius: var(--n-radius); padding: 12px; max-height: 120px; overflow-y: auto; font-size: 12px; line-height: 1.5; margin-bottom: 12px; font-weight: 500;}
 .novel-brawl-log-item { margin-bottom: 8px; color: var(--n-text2); }
 .novel-brawl-log-item span.me { color: var(--n-text1); font-weight: bold; }
 .novel-brawl-log-item span.ai { color: var(--n-text3); font-weight: bold; }
@@ -713,11 +713,11 @@
 .novel-illustration {
   width: 100%;
   border-radius: var(--n-radius);
-  margin: 16px 0;
+  margin: 12px 0;
   overflow: hidden;
   position: relative;
   background: var(--n-surface2);
-  min-height: 150px;
+  min-height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -729,32 +729,32 @@
 }
 .novel-illustration-hint {
   position: absolute;
-  bottom: 12px; right: 12px;
+  bottom: 8px; right: 8px;
   background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
-  color: var(--n-text2); font-size: 10px; padding: 6px 12px;
+  color: var(--n-text2); font-size: 9px; padding: 4px 8px;
   border-radius: var(--n-radius-sm); font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.06);
 }
 .novel-choices-container {
-  margin-top: 24px;
-  padding-top: 24px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px dashed rgba(0,0,0,0.05);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 .novel-choice-title {
-  font-size: 16px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text1);
-  text-align: center; margin-bottom: 16px; letter-spacing: 2px; font-style: italic;
+  font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text1);
+  text-align: center; margin-bottom: 12px; letter-spacing: 1px; font-style: italic;
 }
 .novel-choice-btn {
   background: var(--n-surface); 
   color: var(--n-text2);
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-radius: var(--n-radius-sm);
-  font-size: 14px; font-weight: bold;
+  font-size: 13px; font-weight: bold;
   text-align: left; cursor: pointer;
   transition: all 0.3s;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 8px;
   box-shadow: var(--n-shadow); border: none;
 }
 .novel-choice-btn i { color: var(--n-text3); font-size: 16px; }
@@ -764,23 +764,23 @@
 /* Dialog Inners */
 .novel-share-dialog-inner,
 .novel-import-dialog-inner {
-  display: flex; flex-direction: column; gap: 16px; width: 100%;
+  display: flex; flex-direction: column; gap: 12px; width: 100%;
 }
 
 .novel-wc-share-card {
-  display: flex; gap: 16px; align-items: center;
+  display: flex; gap: 12px; align-items: center;
   background: var(--n-surface2); border-radius: var(--n-radius);
-  padding: 16px; max-width: 260px;
+  padding: 12px; max-width: 260px;
 }
 .novel-wc-share-cover {
-  width: 56px; height: 56px; border-radius: var(--n-radius); flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--n-text2);
+  width: 48px; height: 48px; border-radius: var(--n-radius); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--n-text2);
   background: var(--n-surface3);
 }
 .novel-wc-share-info { flex: 1; min-width: 0; }
 .novel-wc-share-title {
-  font-size: 16px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text1);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 6px;
+  font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-text1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px;
 }
 .novel-wc-share-tags { font-size: 12px; color: var(--n-text2); margin-bottom: 6px; font-weight: 600;}
 .novel-wc-share-source { font-size: 12px; color: var(--n-text3); display: flex; align-items: center; gap: 6px; font-weight: bold;}

@@ -107,17 +107,24 @@ const NovelApp = (() => {
   // ─── PERSONA HELPERS ─────────────────────────────────────────
   function getPersonas() {
     try {
-      if (window.friendsData && Object.keys(window.friendsData).length > 0) {
-        return Object.keys(window.friendsData).map(function(id) {
+      // 从全局 friendsData 取，兼容从角色面板导入的配置
+      var all = [];
+      if (typeof window.friendsData !== 'undefined' && window.friendsData) {
+        Object.keys(window.friendsData).forEach(function(id) {
           var f = window.friendsData[id];
-          return { id: id, name: f.remark || f.realName || id, persona: f.persona || '', avatar: f.avatar || '' };
+          if (f.type !== 'group') { // 排除群组
+            all.push({ id: id, name: f.remark || f.realName || id, persona: f.persona || '', avatar: f.avatar || '' });
+          }
         });
       }
-    } catch(e) {}
+      return all;
+    } catch(e) {
+      console.error("[NovelApp] getPersonas error:", e);
+    }
     return [];
   }
   function getPersona(id) {
-    if (window.friendsData && window.friendsData[id]) {
+    if (typeof window.friendsData !== 'undefined' && window.friendsData && window.friendsData[id]) {
       var f = window.friendsData[id];
       return { id: id, name: f.remark || f.realName || id, persona: f.persona || '', avatar: f.avatar || '' };
     }
