@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const chatForm = document.getElementById('chatForm');
     if(chatForm) {
         // 1. 发送按钮 / 回车键逻辑：只发送普通文本，不再判断语音模式
-         chatForm.addEventListener('submit', (e) => {
+         chatForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const input = document.getElementById('chatInput');
             const message = input.value.trim();
@@ -562,6 +562,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 【新增】发完消息后隐藏表情包联想框
             const suggestBox = document.getElementById('chat-sticker-suggest');
             if(suggestBox) suggestBox.style.display = 'none';
+
+            // 【新增】检查是否有外卖意图并静默查询高德API注入给AI
+            await checkAndInjectTakeoutInfo(message, msgId);
         });
 
         // === 【新增核心逻辑】：监听输入框，实现联想表情功能 ===
@@ -2518,6 +2521,18 @@ AI 原始输出示例 2：[表情:嫌弃]
         Example: [SEND_MAP:星巴克|中央公园|2.5]
         If you invent a completely new location name in the tag, the system will automatically build it on the user's Map App. Use this to creatively drive the roleplay forward!
         `;
+
+        // === [新增] 真实外卖系统指令 ===
+        systemPrompt += `
+        \n[TAKEOUT DELIVERY SYSTEM]
+        If the user says they are hungry, want to eat, or explicitly ask you to order food/takeout, and you decide to order something for them, you MUST use the following tag anywhere in your reply:
+        [TAKEOUT:FoodCategoryOrRestaurantName:PriceInRMB]
+        Example: [TAKEOUT:黄焖鸡米饭:28] or [TAKEOUT:麦当劳:45]
+        - The restaurant/food name should sound like a real local place or a specific food category.
+        - If the system has provided you with a list of nearby REAL restaurants in a hidden prompt, you MUST choose one of those restaurants to make the roleplay feel hyper-realistic.
+        - The price should be a realistic estimate in RMB (e.g., 15 to 80).
+        - DO NOT output the tag if you are just suggesting food but not actually ordering it for them. Only output it when you explicitly declare "I ordered this for you" or "I bought this for you".
+        `;
         // === [一起听] 切歌指令 ===
         if (typeof getMusicContext === 'function' && getMusicContext()) {
             systemPrompt += `
@@ -3139,6 +3154,83 @@ if (statusMatch) {
                     saveMessageToHistory(targetChatId, { text: tagText, type: 'received', senderName: friendsData[targetChatId].realName });
                 }, 1000);
             }
+            // === [新增] 解析外卖卡片指令 ===
+            const takeoutRegex = /\[TAKEOUT:([^:]+):(\d+(?:\.\d+)?)\]/i;
+            const takeoutMatch = rawReply.match(takeoutRegex);
+            if (takeoutMatch) {
+                const shopName = takeoutMatch[1].trim();
+                const price = parseFloat(takeoutMatch[2]);
+                
+                // 从文字中剥离标签
+                rawReply = rawReply.replace(takeoutRegex, '').trim();
+
+                // 延迟一小会儿渲染卡片
+                setTimeout(() => {
+                    // 1. 扣除余额
+                    if (typeof window.deductBalanceForTakeout === 'function') {
+                        window.deductBalanceForTakeout(price, shopName);
+                    }
+
+                    // 2. 渲染外卖卡片
+                    const msgId = 'msg_takeout_' + Date.now();
+                    const encodedShop = encodeURIComponent(shopName);
+                    // 点击卡片直接跳去美团搜索
+                    const cardHtml = `
+                        <div class="msg-takeout-card" onclick="openRealTakeoutApp('${encodedShop}')">
+                            <div class="takeout-header">
+                                <div class="takeout-title">TA为你点了外卖 🛵</div>
+                                <div class="takeout-price">-¥${price}</div>
+                            </div>
+                            <div class="takeout-body">
+                                <div class="takeout-shop-name">${shopName}</div>
+                                <div class="takeout-desc">正在快马加鞭送达中... (点击去外卖APP挑你喜欢的同类店)</div>
+                            </div>
+                            <div class="takeout-footer">亲密付自动代付</div>
+                        </div>
+                    `;
+                    
+                    const fName = friendsData[targetChatId]?.remark || friendsData[targetChatId]?.realName;
+                    const fAvatar = friendsData[targetChatId]?.avatar;
+                    
+                    const isLookingAtThisChat = () => {
+                        const chatLayer = document.getElementById('chatLayer');
+                        return chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
+                    };
+                    
+                    if (isLookingAtThisChat()) {
+                        // 使用富文本方式强行上屏
+                        const chatMessages = document.getElementById('chatMessages');
+                        const row = document.createElement('div');
+                        row.className = 'chat-row received';
+                        const avatar = document.createElement('img');
+                        avatar.className = 'chat-avatar-img';
+                        avatar.src = fAvatar || AVATAR_AI;
+                        const bubble = document.createElement('div');
+                        bubble.className = `message-bubble rich-bubble`;
+                        bubble.innerHTML = cardHtml;
+                        row.appendChild(avatar);
+                        row.appendChild(bubble);
+                        chatMessages.appendChild(row);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    } else {
+                        const dockDot = document.getElementById('dock-dot');
+                        if (dockDot) dockDot.style.display = 'block';
+                    }
+
+                    // 保存到历史
+                    saveMessageToHistory(targetChatId, {
+                        id: msgId,
+                        text: `[TAKEOUT_CARD:${shopName}:${price}]`, // 特殊历史标签
+                        type: 'received',
+                        senderName: fName,
+                        customAvatar: fAvatar
+                    });
+
+                    // 3. 启动 30 分钟送达定时器
+                    startTakeoutDeliveryTimer(targetChatId, shopName);
+                }, 1000);
+            }
+
             // === [新增] 解析 AI 主动发送的定位卡片 ===
             const mapRegex = /\[SEND_MAP:([^|]+)\|([^|]+)\|([^\]]+)\]/i;
             const mapMatch = rawReply.match(mapRegex);
@@ -5434,6 +5526,30 @@ window.appendMessage = function(text, type, customAvatar = null, senderName = nu
         bubble.classList.add('rich-bubble');
         contentHtml = `<div class="msg-image-content"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=300&auto=format&fit=crop"></div>`;
         isRichContent = true;
+    }
+    // === [新增] 外卖卡片从历史加载时渲染 ===
+    else if (text.startsWith('[TAKEOUT_CARD:')) {
+        bubble.classList.add('rich-bubble');
+        isRichContent = true;
+        const cleanText = text.replace('[TAKEOUT_CARD:', '').replace(']', '');
+        const parts = cleanText.split(':');
+        const shopName = parts[0] || '神秘小店';
+        const price = parseFloat(parts[1]) || 0;
+        const encodedShop = encodeURIComponent(shopName);
+        
+        contentHtml = `
+            <div class="msg-takeout-card" onclick="openRealTakeoutApp('${encodedShop}')">
+                <div class="takeout-header">
+                    <div class="takeout-title">TA为你点了外卖 🛵</div>
+                    <div class="takeout-price">-¥${price}</div>
+                </div>
+                <div class="takeout-body">
+                    <div class="takeout-shop-name">${shopName}</div>
+                    <div class="takeout-desc">订单快照 (点击去外卖APP搜同款)</div>
+                </div>
+                <div class="takeout-footer">亲密付自动代付</div>
+            </div>
+        `;
     }
     // === [新增] 转账卡片从历史加载时渲染 ===
     else if (text.startsWith('[WC_TRANSFER:')) {
@@ -11512,10 +11628,10 @@ async function callMinimaxVoiceAPI(text, globalSettings, chatSettings) {
    [转账系统] 隐藏消息发送接口
    供 app_transfer.js 调用，静默触发 AI 回复
    ========================================= */
-window.sendHiddenAIMessage = async function(prompt) {
-    if (!currentChatId) return '';
-    const targetChatId = currentChatId;
-    const targetChatType = currentChatType;
+window.sendHiddenAIMessage = async function(prompt, targetId) {
+    const targetChatId = targetId || currentChatId;
+    if (!targetChatId) return '';
+    const targetChatType = targetId ? 'single' : currentChatType;
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
     if (!settingsJSON) return '';
     const settings = JSON.parse(settingsJSON);
@@ -11665,6 +11781,198 @@ Return ONLY the formatted blocks. Do not explain yourself.`;
         }
     }
 }, 60000); // 每分钟检查一次
+
+/* =================================================================
+   [新增] 外卖系统核心逻辑 (高德API周边检索 + 短信定时闭环)
+   ================================================================= */
+
+// 1. 拦截用户消息，如果是点外卖意图，则调用高德API并注入隐藏提示
+async function checkAndInjectTakeoutInfo(userMsg, msgId) {
+    const takeoutKeywords = ['饿', '外卖', '想吃', '点餐', '做饭', '夜宵'];
+    const isTakeoutIntent = takeoutKeywords.some(kw => userMsg.includes(kw));
+    
+    if (!isTakeoutIntent) return;
+
+    // 获取高德 Key
+    const settingsJSON = localStorage.getItem(SETTINGS_KEY) || '{}';
+    const settings = JSON.parse(settingsJSON);
+    
+    // 【从 DOM 获取最新的 Key】因为用户可能刚填没点保存
+    const amapKeyInput = document.getElementById('amapApiKeyInput');
+    const amapKey = amapKeyInput ? amapKeyInput.value.trim() : (settings.amapApiKey || '');
+    
+    if (!amapKey) {
+        console.log("未配置高德地图 API Key，跳过真实店铺注入");
+        return;
+    }
+
+    try {
+        console.log("检测到外卖意图，开始获取地理位置...");
+        // 1. 获取经纬度
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true, timeout: 5000, maximumAge: 0
+            });
+        });
+        
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        // 2. 调用高德 POI 周边搜索 (美食类型 050000)
+        console.log(`获取坐标成功: ${lng}, ${lat}. 请求高德 API...`);
+        const url = `https://restapi.amap.com/v3/place/around?key=${amapKey}&location=${lng},${lat}&types=050000&radius=1500&offset=10&page=1&extensions=base`;
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data.status === '1' && data.pois && data.pois.length > 0) {
+            // 取前 5 个真实店铺名
+            const shopNames = data.pois.slice(0, 5).map(p => p.name).join('、');
+            console.log("查找到真实店铺:", shopNames);
+            
+            // 3. 构造注入给 AI 的隐藏提示
+            const hiddenInject = `[System Hint: The user is hungry. The GPS system detected REAL restaurants near the user's current physical location: ${shopNames}. Please pick ONE of these exact restaurant names and use the [TAKEOUT:Name:Price] tag in your reply to pretend you just ordered food for them from that specific local shop to surprise them!]`;
+            
+            // 4. 将这句提示偷偷塞进历史记录（标记为已发送，但不需要重新发界面）
+            // 但是我们要确保这句话在刚才用户发的那句话【之后】，这样 AI 才能立刻看到
+            if (currentChatId) {
+                let history = await loadChatHistory(currentChatId);
+                if (history && history.length > 0) {
+                    // 找到刚才存进去的用户消息，在它后面加一条系统提示
+                    const injectMsgId = 'msg_sys_takeout_hint_' + Date.now();
+                    history.push({
+                        id: injectMsgId,
+                        text: hiddenInject,
+                        type: 'system',
+                        senderName: 'SYSTEM'
+                    });
+                    await IDB.set(scopedChatKey(currentChatId), history);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("获取真实周边店铺失败 (可能是定位拒绝或Key错误):", e);
+    }
+}
+
+// 2. 外卖扣费逻辑 (如果存在 app_pay.js 的支持)
+window.deductBalanceForTakeout = function(amount, shopName) {
+    if (typeof deductBalance === 'function') {
+        deductBalance(amount, `【亲密付代扣】TA为你点了 ${shopName}`);
+    } else {
+        // Fallback: 如果没有 deductBalance，手动改 localStorage
+        let payData = JSON.parse(localStorage.getItem('myCoolPhone_payData') || '{}');
+        let currentBalance = parseFloat(payData.balance || 0);
+        if (currentBalance >= amount) {
+            payData.balance = (currentBalance - amount).toFixed(2);
+            if (!payData.bills) payData.bills = [];
+            payData.bills.unshift({
+                id: 'bill_' + Date.now(),
+                title: `TA为你点了 ${shopName}`,
+                amount: `-${amount.toFixed(2)}`,
+                time: Date.now(),
+                type: 'out'
+            });
+            localStorage.setItem('myCoolPhone_payData', JSON.stringify(payData));
+            // 尝试更新界面
+            const balEl = document.getElementById('pay-total-balance');
+            if (balEl) balEl.innerText = payData.balance;
+        }
+    }
+};
+
+// 3. 跳转真实外卖APP (美团搜索 Scheme)
+window.openRealTakeoutApp = function(encodedShopName) {
+    // 尝试唤起美团 APP 进行全局搜索
+    const meituanUrl = `imeituan://www.meituan.com/search?q=${encodedShopName}`;
+    
+    // 创建一个不可见的 iframe 尝试打开 scheme
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = meituanUrl;
+    document.body.appendChild(iframe);
+    
+    // 如果美团没装，给个提示
+    setTimeout(() => {
+        document.body.removeChild(iframe);
+    }, 2000);
+};
+
+// 4. 定时送达闭环 (30分钟后短信 + AI静默发问)
+const TAKEOUT_TIMERS_KEY = 'myCoolPhone_takeoutTimers';
+
+function startTakeoutDeliveryTimer(chatId, shopName) {
+    // 将任务存入 localStorage 防止刷新页面后丢失
+    let timers = JSON.parse(localStorage.getItem(TAKEOUT_TIMERS_KEY) || '[]');
+    const deliveryTime = Date.now() + 30 * 60 * 1000; // 30 分钟后
+    // 测试用可以改成 1 分钟: Date.now() + 1 * 60 * 1000
+    
+    timers.push({
+        chatId: chatId,
+        shopName: shopName,
+        deliveryTime: deliveryTime
+    });
+    localStorage.setItem(TAKEOUT_TIMERS_KEY, JSON.stringify(timers));
+    
+    // 设置当前进程内的 Timeout
+    scheduleDelivery(chatId, shopName, 30 * 60 * 1000);
+}
+
+function scheduleDelivery(chatId, shopName, delayMs) {
+    setTimeout(() => {
+        executeDeliveryClosure(chatId, shopName);
+    }, delayMs);
+}
+
+// 页面加载时恢复未完成的定时器
+document.addEventListener('DOMContentLoaded', () => {
+    let timers = JSON.parse(localStorage.getItem(TAKEOUT_TIMERS_KEY) || '[]');
+    const now = Date.now();
+    let validTimers = [];
+    
+    timers.forEach(t => {
+        if (t.deliveryTime > now) {
+            // 还没到时间，继续设定时器
+            scheduleDelivery(t.chatId, t.shopName, t.deliveryTime - now);
+            validTimers.push(t);
+        } else {
+            // 已经超时了，立刻执行补发
+            executeDeliveryClosure(t.chatId, t.shopName);
+        }
+    });
+    
+    localStorage.setItem(TAKEOUT_TIMERS_KEY, JSON.stringify(validTimers));
+});
+
+// 执行送达闭环
+function executeDeliveryClosure(chatId, shopName) {
+    // 1. 从队列里清理掉自己
+    let timers = JSON.parse(localStorage.getItem(TAKEOUT_TIMERS_KEY) || '[]');
+    timers = timers.filter(t => !(t.chatId === chatId && t.shopName === shopName));
+    localStorage.setItem(TAKEOUT_TIMERS_KEY, JSON.stringify(timers));
+
+    // 2. 发送伪造的美团短信
+    if (typeof SMSApp !== 'undefined') {
+        SMSApp.receiveSMS(
+            '美团外卖', 
+            `【美团外卖】您的「${shopName}」订单骑手已送达指定位置，请尽快取餐，祝您用餐愉快！`
+        );
+    }
+
+    // 3. 静默触发 AI 主动追问
+    setTimeout(() => {
+        const friend = friendsData[chatId];
+        if (!friend) return;
+        
+        const triggerPrompt = `[System Event: The takeout food from "${shopName}" that you ordered for the user 30 minutes ago has just been delivered to their door. Please send a new message to remind the user to pick up the food and eat it while it's hot, using your specific persona's tone.]`;
+        
+        // 调用隐藏发送接口，AI编好话后会自动上屏
+        if (typeof window.sendHiddenAIMessage === 'function') {
+            window.sendHiddenAIMessage(triggerPrompt, chatId);
+        }
+    }, 5000); // 短信发完5秒后 AI 来微信
+}
+
 
 // === [新增] 线下模式后台静默生成系统 (修复加强版) ===
 async function generateOfflineExtrasBackground(chatId, userInput, aiReply, settings, friend) {

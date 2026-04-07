@@ -82,6 +82,13 @@ window.openSubGame = function(gameId) {
     if(gameId === 'cards') g9_reset();
     if(gameId === 'memory') g10_reset();
     if(gameId === 'jump') g11_reset();
+    
+    // 更多新游戏复位
+    if(gameId === 'spy') g12_reset();
+    if(gameId === 'werewolf') g13_reset();
+    if(gameId === 'taboo') g14_reset();
+    if(gameId === 'tictactoe') g15_resetBoard();
+    if(gameId === 'blackjack') g16_start(); // start directly
 }
 
 
@@ -2184,4 +2191,1214 @@ async function g7_triggerAiTurn() {
     // 恢复按钮
     tryBtn.innerHTML = `让 <span id="g7-ai-partner-name">${ai.remark || ai.realName}</span> 再试一次`;
     tryBtn.disabled = false;
+}
+
+/* =========================================
+   [GAME 12] 谁是卧底
+   ========================================= */
+// --- 多人游戏公共辅助函数 ---
+function g_getRandomPlayers(neededCount, currentAiId) {
+    let pool = Object.values(friendsData || {}).filter(f => f.id !== currentAiId);
+    let players = [];
+    while(players.length < neededCount && pool.length > 0) {
+        let idx = Math.floor(Math.random() * pool.length);
+        let f = pool.splice(idx, 1)[0];
+        players.push({ id: f.id, name: f.remark || f.realName, isMe: false, persona: f.persona || '普通玩家' });
+    }
+    const dummies = [
+        {name: "暴躁老哥", persona: "说话很冲，容易暴躁，喜欢带节奏怼人。"},
+        {name: "绿茶妹妹", persona: "喜欢装无辜，语气娇滴滴，有点心机。"},
+        {name: "理智学霸", persona: "说话严谨，喜欢分析逻辑，不喜欢废话。"},
+        {name: "糊涂大叔", persona: "反应慢半拍，经常听不懂大家在说什么。"},
+        {name: "吃瓜群众", persona: "看热闹不嫌事大，说话阴阳怪气。"}
+    ];
+    let dIdx = 0;
+    while(players.length < neededCount) {
+        players.push({ id: 'dummy_'+dIdx, name: dummies[dIdx].name, isMe: false, persona: dummies[dIdx].persona });
+        dIdx++;
+    }
+    return players;
+}
+
+let g12_data = {
+    wordUser: '',
+    wordAi: '',
+    isUserSpy: false,
+    players: [],
+    alive: [],
+    round: 1,
+    chatHistory: []
+};
+
+window.g12_start = async function() {
+    const btn = document.getElementById('g12-start-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 匹配玩家与分配词语中...';
+    btn.disabled = true;
+
+    const ai = friendsData[gameAiId];
+    
+    // 生成卧底词，并初始化玩家 (5人局)
+    const prompt = `
+    [System] Generate a pair of words for the game "Who is the Spy" (e.g. 苹果 vs 梨子).
+    Return JSON: {"civilianWord": "平民词", "spyWord": "卧底词"}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        
+        const extraPlayers = g_getRandomPlayers(3, gameAiId);
+        g12_data.players = [
+            { id: 'me', name: '你', isMe: true, persona: '玩家' },
+            { id: 'ai', name: ai.realName, isMe: false, persona: ai.persona || '普通玩家' },
+            ...extraPlayers
+        ];
+        
+        // 随机一个卧底
+        const spyIdx = Math.floor(Math.random() * 5);
+        g12_data.players.forEach((p, i) => {
+            p.isSpy = (i === spyIdx);
+            p.word = p.isSpy ? data.spyWord : data.civilianWord;
+            p.isDead = false;
+        });
+
+        g12_data.isUserSpy = g12_data.players[0].isSpy;
+        g12_data.wordUser = g12_data.players[0].word;
+        g12_data.alive = [...g12_data.players];
+        g12_data.round = 1;
+        g12_data.chatHistory = [];
+        
+        document.getElementById('g12-setup-area').style.display = 'none';
+        document.getElementById('g12-game-area').style.display = 'block';
+        document.getElementById('g12-my-word').innerText = g12_data.wordUser;
+        
+        const log = document.getElementById('g12-chat-log');
+        log.innerHTML = `<div style="text-align:center; color:#888; font-size:12px; margin-bottom:10px;">【游戏开始】存活 ${g12_data.alive.length} 人</div>`;
+        
+        g12_updateUI();
+        
+    } catch(e) {
+        showToast("组局失败");
+        btn.innerHTML = '匹配组局并开始';
+        btn.disabled = false;
+    }
+}
+
+function g12_updateUI() {
+    // 渲染存活玩家列表
+    let html = '';
+    g12_data.players.forEach(p => {
+        html += `<span style="padding:2px 6px; background:${p.isDead?'#eee':'#e6f7ff'}; color:${p.isDead?'#ccc':'#1890ff'}; border-radius:4px; font-size:11px; margin-right:5px; text-decoration:${p.isDead?'line-through':'none'};">${p.name}</span>`;
+    });
+    document.getElementById('g12-alive-players').innerHTML = html;
+    
+    document.getElementById('g12-action-area').style.display = g12_data.players[0].isDead ? 'none' : 'flex';
+    document.getElementById('g12-vote-area').style.display = 'none';
+    document.getElementById('g12-result').style.display = 'none';
+    
+    // 如果我死了，直接跳过我的发言
+    if (g12_data.players[0].isDead) {
+        g12_processAITurns();
+    }
+}
+
+window.g12_submitDesc = function() {
+    const input = document.getElementById('g12-desc-input');
+    const desc = input.value.trim();
+    if(!desc) return;
+    
+    const log = document.getElementById('g12-chat-log');
+    log.innerHTML += `<div><b>你:</b> ${desc}</div>`;
+    input.value = '';
+    document.getElementById('g12-action-area').style.display = 'none';
+    
+    g12_data.chatHistory.push(`[你]: ${desc}`);
+    
+    // 轮到 AI 发言
+    g12_processAITurns();
+}
+
+async function g12_processAITurns() {
+    const log = document.getElementById('g12-chat-log');
+    const aiPlayers = g12_data.alive.filter(p => !p.isMe);
+    
+    for (let p of aiPlayers) {
+        log.innerHTML += `<div id="g12-typing-${p.id}"><i class="fas fa-circle-notch fa-spin"></i> ${p.name} 正在描述...</div>`;
+        log.scrollTop = log.scrollHeight;
+        
+        const prompt = `
+        [System] 谁是卧底游戏。你的名字【${p.name}】，你的性格/人设：【${p.persona}】。你的词是【${p.word}】。
+        之前大家的发言：${g12_data.chatHistory.join(' | ')}
+        轮到你发言。请根据你的性格用1句话描述你的词（绝对不能直接说出词语，可以带口癖/语气词）。
+        Return JSON ONLY: {"desc": "..."}
+        `;
+        
+        const res = await callAiForSpecialTask(prompt);
+        document.getElementById(`g12-typing-${p.id}`).remove();
+        
+        let aiDesc = "这东西挺常见的。"; // Fallback
+        if (res) {
+            try { aiDesc = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).desc; } catch(e) {}
+        }
+        
+        log.innerHTML += `<div><b style="color:#ff7e67;">${p.name}:</b> ${aiDesc}</div>`;
+        g12_data.chatHistory.push(`[${p.name}]: ${aiDesc}`);
+    }
+    
+    log.innerHTML += `<div style="text-align:center; color:#ff4d4f; font-size:12px; margin:10px 0;">【发言结束，进入投票】</div>`;
+    log.scrollTop = log.scrollHeight;
+    
+    setTimeout(g12_startVote, 1000);
+}
+
+function g12_startVote() {
+    // 我死了直接看结果
+    if (g12_data.players[0].isDead) {
+        g12_processAIVotes('skip');
+        return;
+    }
+    
+    const voteArea = document.getElementById('g12-vote-area');
+    voteArea.style.display = 'flex';
+    let html = '';
+    g12_data.alive.forEach(p => {
+        html += `<button class="gc-btn-secondary" onclick="g12_processAIVotes('${p.id}')">${p.name}</button>`;
+    });
+    document.getElementById('g12-vote-options').innerHTML = html;
+}
+
+window.g12_processAIVotes = async function(myVoteId) {
+    document.getElementById('g12-vote-area').style.display = 'none';
+    const log = document.getElementById('g12-chat-log');
+    log.innerHTML += `<div id="g12-voting"><i class="fas fa-circle-notch fa-spin"></i> 正在投票统计中...</div>`;
+    
+    let votesCount = {};
+    g12_data.alive.forEach(p => votesCount[p.id] = 0);
+    
+    if (myVoteId !== 'skip') {
+        votesCount[myVoteId]++;
+        log.innerHTML += `<div><span style="color:#888;">[投票]</span> 你 投给了 <b>${g12_data.players.find(p=>p.id===myVoteId).name}</b></div>`;
+    }
+    
+    const aiPlayers = g12_data.alive.filter(p => !p.isMe);
+    for (let p of aiPlayers) {
+        // AI 投票逻辑（极简）
+        const prompt = `
+        [System] 谁是卧底投票阶段。你的名字【${p.name}】，性格【${p.persona}】。你的词【${p.word}】。
+        发言记录：${g12_data.chatHistory.join(' | ')}
+        候选人：${g12_data.alive.map(a=>a.name).join(', ')}。
+        请结合大家发言的逻辑和你的性格，选出你认为是卧底的人名（只能选候选人，不能选自己）。
+        Return JSON ONLY: {"voteName": "...", "reason": "符合你性格的一句简短投票理由"}
+        `;
+        const res = await callAiForSpecialTask(prompt);
+        let voteName = g12_data.alive[0].name; // fallback
+        let reason = "感觉他不对劲";
+        if (res) {
+            try { 
+                const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+                voteName = data.voteName; reason = data.reason;
+            } catch(e) {}
+        }
+        
+        // 找 ID
+        let target = g12_data.alive.find(a => a.name === voteName);
+        if (!target || target.id === p.id) {
+            // fallback 随机投别人
+            const others = g12_data.alive.filter(a => a.id !== p.id);
+            target = others[Math.floor(Math.random() * others.length)];
+        }
+        
+        votesCount[target.id]++;
+        log.innerHTML += `<div><span style="color:#888;">[投票]</span> <b>${p.name}</b> 投给了 <b>${target.name}</b> <span style="font-size:11px; color:#aaa;">(${reason})</span></div>`;
+    }
+    
+    document.getElementById('g12-voting').remove();
+    
+    // 找出最高票
+    let maxVotes = -1;
+    let outId = null;
+    let isTie = false;
+    
+    for (let id in votesCount) {
+        if (votesCount[id] > maxVotes) {
+            maxVotes = votesCount[id];
+            outId = id;
+            isTie = false;
+        } else if (votesCount[id] === maxVotes) {
+            isTie = true;
+        }
+    }
+    
+    if (isTie) {
+        log.innerHTML += `<div style="text-align:center; color:#f59e0b; margin:10px 0;">【平票】本轮无人出局。</div>`;
+    } else {
+        const outPlayer = g12_data.players.find(p => p.id === outId);
+        outPlayer.isDead = true;
+        g12_data.alive = g12_data.alive.filter(p => p.id !== outId);
+        
+        log.innerHTML += `<div style="text-align:center; color:#ff4d4f; font-weight:bold; margin:10px 0;">【${outPlayer.name} 出局】TA的身份是：${outPlayer.isSpy ? '卧底' : '平民'}</div>`;
+        
+        // 判定胜负
+        const spyCount = g12_data.alive.filter(p => p.isSpy).length;
+        const civCount = g12_data.alive.filter(p => !p.isSpy).length;
+        
+        const resultBox = document.getElementById('g12-result');
+        
+        if (spyCount === 0) {
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = `<span style="color:#07c160; font-weight:bold; font-size:16px;">🎉 游戏结束：平民胜利！</span><br><br>卧底词是: ${g12_data.players.find(p=>p.isSpy).word}<br><button class="gc-btn-secondary" onclick="g12_reset()" style="margin-top:10px;">再来一局</button>`;
+            return;
+        } else if (civCount <= spyCount) {
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = `<span style="color:#ff4d4f; font-weight:bold; font-size:16px;">💀 游戏结束：卧底胜利！</span><br><br>卧底词是: ${g12_data.players.find(p=>p.isSpy).word}<br><button class="gc-btn-secondary" onclick="g12_reset()" style="margin-top:10px;">再来一局</button>`;
+            return;
+        }
+    }
+    
+    // 继续下一轮
+    g12_data.round++;
+    g12_data.chatHistory = []; // 清空发言记录，只保留本轮
+    log.innerHTML += `<div style="text-align:center; color:#888; font-size:12px; margin:15px 0;">【第 ${g12_data.round} 轮】开始发言</div>`;
+    log.scrollTop = log.scrollHeight;
+    g12_updateUI();
+}
+
+function g12_reset() {
+    document.getElementById('g12-setup-area').style.display = 'block';
+    document.getElementById('g12-game-area').style.display = 'none';
+    const btn = document.getElementById('g12-start-btn');
+    btn.style.display = 'block';
+    btn.innerText = '匹配组局并开始';
+    btn.disabled = false;
+    document.getElementById('g12-chat-log').innerHTML = '';
+    document.getElementById('g12-result').style.display = 'none';
+}
+
+/* =========================================
+   [GAME 13] 狼人杀
+   ========================================= */
+let g13_data = {
+    players: [],
+    alive: [],
+    myRole: '',
+    nightAction: null,
+    chatHistory: []
+};
+
+window.g13_start = async function() {
+    const btn = document.getElementById('g13-start-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发牌中...';
+    btn.disabled = true;
+
+    const ai = friendsData[gameAiId];
+    
+    // 5人局: 2狼 1预言家 2平民
+    const roles = ['狼人', '狼人', '预言家', '平民', '平民'].sort(() => Math.random() - 0.5);
+    
+    const extraPlayers = g_getRandomPlayers(3, gameAiId);
+    g13_data.players = [
+        { id: 'me', name: '你', isMe: true, role: roles[0], persona: '玩家' },
+        { id: 'ai', name: ai.realName, isMe: false, role: roles[1], persona: ai.persona || '普通玩家' }
+    ];
+    extraPlayers.forEach((ep, idx) => {
+        ep.role = roles[idx + 2];
+        g13_data.players.push(ep);
+    });
+    g13_data.players.forEach(p => p.isDead = false);
+    g13_data.alive = [...g13_data.players];
+    g13_data.myRole = roles[0];
+    g13_data.chatHistory = [];
+    g13_data.nightAction = null;
+    
+    btn.style.display = 'none';
+    document.getElementById('g13-setup-area').style.display = 'none';
+    document.getElementById('g13-game-area').style.display = 'block';
+    document.getElementById('g13-my-role').innerText = g13_data.myRole;
+    
+    // 进入黑夜
+    g13_startNight();
+}
+
+function g13_startNight() {
+    const log = document.getElementById('g13-chat-log');
+    log.innerHTML = `<div style="text-align:center; color:#1e1b4b; font-weight:bold; font-size:14px; margin-bottom:10px;">【天黑请闭眼】</div>`;
+    
+    document.getElementById('g13-action-area').style.display = 'none';
+    document.getElementById('g13-vote-area').style.display = 'none';
+    
+    if (g13_data.myRole === '狼人') {
+        log.innerHTML += `<div style="color:#ff4d4f; text-align:center; font-size:12px; margin-bottom:10px;">你是狼人，请选择你要击杀的目标：</div>`;
+        g13_showNightOptions('kill');
+    } else if (g13_data.myRole === '预言家') {
+        log.innerHTML += `<div style="color:#a78bfa; text-align:center; font-size:12px; margin-bottom:10px;">你是预言家，请选择你要查验的目标：</div>`;
+        g13_showNightOptions('check');
+    } else {
+        log.innerHTML += `<div style="color:#888; text-align:center; font-size:12px; margin-bottom:10px;">你是平民，正在睡觉...等待天亮。</div>`;
+        setTimeout(g13_processNightAi, 2000);
+    }
+}
+
+function g13_showNightOptions(action) {
+    const box = document.createElement('div');
+    box.style.display = 'flex'; box.style.gap = '5px'; box.style.justifyContent = 'center'; box.style.flexWrap = 'wrap';
+    
+    // 不能对自己行动（狼人不能杀自己，预言家不验自己）
+    g13_data.alive.filter(p => !p.isMe).forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'gc-btn-secondary';
+        btn.innerText = p.name;
+        btn.onclick = () => {
+            box.remove();
+            if(action === 'kill') {
+                g13_data.nightAction = { type: 'kill', targetId: p.id };
+                document.getElementById('g13-chat-log').innerHTML += `<div style="color:#ff4d4f; text-align:center; font-size:12px;">你选择击杀 ${p.name}。等待天亮...</div>`;
+            } else {
+                document.getElementById('g13-chat-log').innerHTML += `<div style="color:#a78bfa; text-align:center; font-size:12px;">你查验了 ${p.name}。TA的身份是：<b>${p.role}</b>。等待天亮...</div>`;
+            }
+            setTimeout(g13_processNightAi, 1500);
+        };
+        box.appendChild(btn);
+    });
+    document.getElementById('g13-chat-log').appendChild(box);
+}
+
+function g13_processNightAi() {
+    // 模拟 AI 狼人的击杀（如果有 AI 是狼人）
+    let killTargetId = null;
+    if (g13_data.nightAction && g13_data.nightAction.type === 'kill') {
+        killTargetId = g13_data.nightAction.targetId;
+    } else {
+        const aiWolves = g13_data.alive.filter(p => !p.isMe && p.role === '狼人');
+        if (aiWolves.length > 0) {
+            // 随机杀个不是狼的
+            const victims = g13_data.alive.filter(p => p.role !== '狼人');
+            if(victims.length > 0) killTargetId = victims[Math.floor(Math.random() * victims.length)].id;
+        }
+    }
+    
+    // 结算天亮
+    if (killTargetId) {
+        const deadPlayer = g13_data.players.find(p => p.id === killTargetId);
+        deadPlayer.isDead = true;
+        g13_data.alive = g13_data.alive.filter(p => p.id !== killTargetId);
+        g13_startDay(deadPlayer);
+    } else {
+        g13_startDay(null); // 平安夜（理论上这局不会出现）
+    }
+}
+
+function g13_startDay(deadPlayer) {
+    const log = document.getElementById('g13-chat-log');
+    log.innerHTML += `<div style="text-align:center; color:#f59e0b; font-weight:bold; font-size:14px; margin:15px 0 10px;">【天亮请睁眼】</div>`;
+    
+    if (deadPlayer) {
+        log.innerHTML += `<div style="text-align:center; color:#888; font-size:12px; margin-bottom:15px;">昨晚，<b>${deadPlayer.name}</b> 被杀害了。</div>`;
+        if(deadPlayer.isMe) {
+            log.innerHTML += `<div style="text-align:center; color:#ff4d4f; font-weight:bold; font-size:16px;">你死了！只能旁观。</div>`;
+        }
+    }
+    
+    g13_data.chatHistory = [];
+    document.getElementById('g13-action-area').style.display = g13_data.players[0].isDead ? 'none' : 'flex';
+    
+    if (g13_data.players[0].isDead) {
+        g13_processDayAiTurns(); // 我死了，直接看 AI 撕逼
+    }
+}
+
+window.g13_submitSpeech = function() {
+    const input = document.getElementById('g13-speech-input');
+    const speech = input.value.trim();
+    if(!speech) return;
+    
+    const log = document.getElementById('g13-chat-log');
+    log.innerHTML += `<div><b>你:</b> ${speech}</div>`;
+    input.value = '';
+    document.getElementById('g13-action-area').style.display = 'none';
+    
+    g13_data.chatHistory.push(`[你]: ${speech}`);
+    g13_processDayAiTurns();
+}
+
+async function g13_processDayAiTurns() {
+    const log = document.getElementById('g13-chat-log');
+    const aiPlayers = g13_data.alive.filter(p => !p.isMe);
+    
+    for (let p of aiPlayers) {
+        log.innerHTML += `<div id="g13-typing-${p.id}"><i class="fas fa-circle-notch fa-spin"></i> ${p.name} 正在发言...</div>`;
+        log.scrollTop = log.scrollHeight;
+        
+        // 如果是AI狼人，可以知道队友是谁
+        let wolfInfo = "";
+        if(p.role === '狼人') {
+            const wolves = g13_data.alive.filter(a => a.role === '狼人' && a.id !== p.id).map(a => a.name);
+            if(wolves.length > 0) wolfInfo = `你的狼队友是：${wolves.join(',')}，你要保护队友或带节奏。`;
+        }
+        
+        const prompt = `
+        [System] 狼人杀白天发言。你的名字【${p.name}】，性格【${p.persona}】。你的真实身份【${p.role}】。
+        当前存活：${g13_data.alive.map(a=>a.name).join(',')}。
+        ${wolfInfo}
+        刚才大家的发言：${g13_data.chatHistory.join(' | ')}
+        请结合你的性格和身份简短发言1-2句（带上口语化情绪，平民找狼/狼人伪装/神职带队）。
+        Return JSON ONLY: {"speech": "..."}
+        `;
+        
+        const res = await callAiForSpecialTask(prompt);
+        document.getElementById(`g13-typing-${p.id}`).remove();
+        
+        let aiSpeech = "我是好人，过。";
+        if (res) {
+            try { aiSpeech = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).speech; } catch(e) {}
+        }
+        
+        log.innerHTML += `<div><b style="color:#4facfe;">${p.name}:</b> ${aiSpeech}</div>`;
+        g13_data.chatHistory.push(`[${p.name}]: ${aiSpeech}`);
+    }
+    
+    log.innerHTML += `<div style="text-align:center; color:#ff4d4f; font-size:12px; margin:10px 0;">【发言结束，开始公投】</div>`;
+    log.scrollTop = log.scrollHeight;
+    
+    setTimeout(g13_startVote, 1000);
+}
+
+function g13_startVote() {
+    if (g13_data.players[0].isDead) {
+        g13_processAiVotes('skip');
+        return;
+    }
+    
+    const voteArea = document.getElementById('g13-vote-area');
+    voteArea.style.display = 'flex';
+    let html = '';
+    g13_data.alive.forEach(p => {
+        html += `<button class="gc-btn-secondary" onclick="g13_processAiVotes('${p.id}')">${p.name}</button>`;
+    });
+    document.getElementById('g13-vote-options').innerHTML = html;
+}
+
+window.g13_processAiVotes = async function(myVoteId) {
+    document.getElementById('g13-vote-area').style.display = 'none';
+    const log = document.getElementById('g13-chat-log');
+    log.innerHTML += `<div id="g13-voting"><i class="fas fa-circle-notch fa-spin"></i> 正在投票...</div>`;
+    
+    let votesCount = {};
+    g13_data.alive.forEach(p => votesCount[p.id] = 0);
+    
+    if (myVoteId !== 'skip') {
+        votesCount[myVoteId]++;
+        log.innerHTML += `<div><span style="color:#888;">[投票]</span> 你 投给了 <b>${g13_data.players.find(p=>p.id===myVoteId).name}</b></div>`;
+    }
+    
+    const aiPlayers = g13_data.alive.filter(p => !p.isMe);
+    for (let p of aiPlayers) {
+        let wolfInfo = "";
+        if(p.role === '狼人') {
+            const wolves = g13_data.alive.filter(a => a.role === '狼人' && a.id !== p.id).map(a => a.name);
+            wolfInfo = `（注意：${wolves.join(',')} 是你的狼队友，尽量不要投他们）`;
+        }
+        const prompt = `
+        [System] 狼人杀投票。你的名字【${p.name}】，性格【${p.persona}】，身份【${p.role}】。
+        发言记录：${g13_data.chatHistory.join(' | ')}。
+        候选人：${g13_data.alive.map(a=>a.name).join(',')}。${wolfInfo}
+        结合性格，选一个你要票死的人名。
+        Return JSON ONLY: {"voteName": "...", "reason": "符合性格的投票理由"}
+        `;
+        const res = await callAiForSpecialTask(prompt);
+        let voteName = g13_data.alive[0].name;
+        if (res) {
+            try { voteName = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).voteName; } catch(e) {}
+        }
+        let target = g13_data.alive.find(a => a.name === voteName) || g13_data.alive[0];
+        if (target.id === p.id && g13_data.alive.length > 1) { // 尽量不投自己
+             target = g13_data.alive.find(a => a.id !== p.id);
+        }
+        votesCount[target.id]++;
+        log.innerHTML += `<div><span style="color:#888;">[投票]</span> <b>${p.name}</b> 投给了 <b>${target.name}</b></div>`;
+    }
+    
+    document.getElementById('g13-voting').remove();
+    
+    // 结算出局者
+    let maxVotes = -1; let outId = null; let isTie = false;
+    for (let id in votesCount) {
+        if (votesCount[id] > maxVotes) { maxVotes = votesCount[id]; outId = id; isTie = false; }
+        else if (votesCount[id] === maxVotes) { isTie = true; }
+    }
+    
+    if (isTie) {
+        log.innerHTML += `<div style="text-align:center; color:#f59e0b; margin:10px 0;">【平票】无人出局，进入下一个黑夜...</div>`;
+        log.scrollTop = log.scrollHeight;
+        setTimeout(g13_startNight, 2000);
+    } else {
+        const outPlayer = g13_data.players.find(p => p.id === outId);
+        outPlayer.isDead = true;
+        g13_data.alive = g13_data.alive.filter(p => p.id !== outId);
+        
+        log.innerHTML += `<div style="text-align:center; color:#ff4d4f; font-weight:bold; margin:10px 0;">【${outPlayer.name} 出局】TA的身份是：${outPlayer.role}</div>`;
+        
+        // 判定胜负
+        const wolvesCount = g13_data.alive.filter(p => p.role === '狼人').length;
+        const goodCount = g13_data.alive.filter(p => p.role !== '狼人').length;
+        
+        const resultBox = document.getElementById('g13-result');
+        if (wolvesCount === 0) {
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = `<span style="color:#07c160; font-weight:bold; font-size:16px;">🎉 游戏结束：好人阵营胜利！</span><br><br><button class="gc-btn-secondary" onclick="g13_reset()" style="margin-top:10px;">再来一局</button>`;
+        } else if (wolvesCount >= goodCount) {
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = `<span style="color:#ff4d4f; font-weight:bold; font-size:16px;">💀 游戏结束：狼人阵营胜利！</span><br><br><button class="gc-btn-secondary" onclick="g13_reset()" style="margin-top:10px;">再来一局</button>`;
+        } else {
+            setTimeout(g13_startNight, 2000);
+        }
+    }
+}
+
+function g13_reset() {
+    document.getElementById('g13-setup-area').style.display = 'block';
+    document.getElementById('g13-game-area').style.display = 'none';
+    const btn = document.getElementById('g13-start-btn');
+    btn.style.display = 'block';
+    btn.innerText = '发牌开始';
+    btn.disabled = false;
+    document.getElementById('g13-chat-log').innerHTML = '';
+    document.getElementById('g13-result').style.display = 'none';
+}
+
+/* =========================================
+   [GAME 14] 禁语猜词
+   ========================================= */
+let g14_data = {
+    target: '',
+    taboo: [],
+    round: 1, // 1:我描述AI猜, 2:AI描述我猜
+    refereeId: null
+};
+
+window.g14_start = async function() {
+    const btn = document.getElementById('g14-start-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成题目中...';
+    btn.disabled = true;
+
+    const prompt = `
+    [System] Generate a target word and 3 taboo words for Taboo game.
+    Return JSON: {"target": "肯德基", "taboo": ["汉堡", "老爷爷", "快餐"]}
+    `;
+
+    const res = await callAiForSpecialTask(prompt);
+    
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        g14_data.target = data.target;
+        g14_data.taboo = data.taboo;
+        g14_data.round = 1;
+        
+        // 随机选一个其他 AI 作为裁判
+        const others = g_getRandomPlayers(1, gameAiId);
+        g14_data.refereeId = others.length > 0 ? others[0] : { name: "无情裁判", persona: "严格客观" };
+        
+        document.getElementById('g14-setup-area').style.display = 'none';
+        document.getElementById('g14-game-area').style.display = 'block';
+        
+        document.getElementById('g14-round-tag').innerText = `回合 1：你描述，TA来猜 (裁判: ${g14_data.refereeId.name})`;
+        document.getElementById('g14-target-box').style.display = 'block';
+        document.getElementById('g14-target-word').innerText = g14_data.target;
+        document.getElementById('g14-taboo-words').innerText = g14_data.taboo.join(' / ');
+        
+        document.getElementById('g14-chat-log').innerHTML = '';
+        document.getElementById('g14-desc-input').placeholder = "输入你的描述（可多次对话引导）...";
+        
+    } catch(e) {
+        showToast("生成题目失败");
+        btn.innerHTML = '获取题目'; btn.disabled = false;
+    }
+}
+
+window.g14_submitDesc = async function() {
+    const input = document.getElementById('g14-desc-input');
+    const text = input.value.trim();
+    if(!text) return;
+    
+    const log = document.getElementById('g14-chat-log');
+    
+    if (g14_data.round === 1) {
+        // 我描述，AI猜
+        log.innerHTML += `<div><b>你:</b> ${text}</div>`;
+        input.value = '';
+        
+        log.innerHTML += `<div id="g14-typing"><i class="fas fa-circle-notch fa-spin"></i> TA 正在思考...</div>`;
+        
+        const ai = friendsData[gameAiId];
+        const ref = g14_data.refereeId;
+        
+        const prompt = `
+        [System] 禁语猜词游戏。你扮演两个角色：
+        1. 裁判【${ref.name}】（性格：${ref.persona}）。检查用户的描述"${text}"是否包含了目标词【${g14_data.target}】或禁语【${g14_data.taboo.join(',')}】。如果违规，裁判直接判负并嘲讽。
+        2. 玩家【${ai.realName}】（性格：${ai.persona || '普通'}）。如果裁判没判负，你根据用户的描述猜词，或者追问细节。
+        
+        Return JSON ONLY:
+        {
+          "isFoul": true/false,
+          "refereeReply": "裁判的话（违规时的嘲讽，没违规则为空）",
+          "isCorrect": true/false,
+          "playerReply": "你的猜测或追问"
+        }
+        `;
+        
+        const res = await callAiForSpecialTask(prompt);
+        document.getElementById('g14-typing').remove();
+        
+        try {
+            const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+            if(data.isFoul) {
+                log.innerHTML += `<div><b style="color:#a78bfa;">[裁判] ${ref.name}:</b> ${data.refereeReply}</div>`;
+                const resBox = document.getElementById('g14-result');
+                resBox.style.display = 'block';
+                resBox.innerHTML = `<span style="color:#ff4d4f; font-weight:bold;">💥 违规了！你输了。</span><br><button class="gc-btn-secondary" onclick="g14_reset()" style="margin-top:10px;">再来</button>`;
+                document.getElementById('g14-action-area').style.display = 'none';
+            } else {
+                log.innerHTML += `<div><b style="color:#ff7e67;">${ai.realName}:</b> ${data.playerReply}</div>`;
+                if(data.isCorrect) {
+                    setTimeout(g14_startRound2, 2000);
+                }
+            }
+        } catch(e) { log.innerHTML += `<div><b style="color:#ff7e67;">${ai.realName}:</b> 没听懂，再多说点细节？</div>`; }
+        
+    } else {
+        // AI描述，我猜
+        log.innerHTML += `<div><b>你猜:</b> ${text}</div>`;
+        input.value = '';
+        
+        log.innerHTML += `<div id="g14-typing-2"><i class="fas fa-circle-notch fa-spin"></i> TA 的回应...</div>`;
+        const ai = friendsData[gameAiId];
+        
+        const prompt = `
+        [System] 禁语猜词回合2。你描述，用户猜。目标词是【${g14_data.target}】。
+        用户猜了："${text}"。
+        如果用户猜中了，或者意思非常接近，判对。否则继续用你的性格（${ai.persona || '普通'}）给出新的提示，依然不能说出禁语【${g14_data.taboo.join(',')}】。
+        Return JSON ONLY: {"isCorrect": true/false, "reply": "..."}
+        `;
+        
+        const res = await callAiForSpecialTask(prompt);
+        document.getElementById('g14-typing-2').remove();
+        
+        try {
+            const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+            log.innerHTML += `<div><b style="color:#ff7e67;">${ai.realName}:</b> ${data.reply}</div>`;
+            if (data.isCorrect) {
+                const resBox = document.getElementById('g14-result');
+                resBox.style.display = 'block';
+                resBox.innerHTML = `<span style="color:#07c160; font-weight:bold;">🎉 恭喜，你们过关了！答案是【${g14_data.target}】！</span><br><button class="gc-btn-secondary" onclick="g14_reset()" style="margin-top:10px;">再来一局</button>`;
+                document.getElementById('g14-action-area').style.display = 'none';
+            }
+        } catch(e) {
+            log.innerHTML += `<div><b style="color:#ff7e67;">${ai.realName}:</b> 不对不对，再想想！</div>`;
+        }
+    }
+}
+
+async function g14_startRound2() {
+    g14_data.round = 2;
+    document.getElementById('g14-round-tag').innerText = "回合 2：TA描述，你来猜";
+    document.getElementById('g14-target-box').style.display = 'none'; // 隐藏目标，因为现在是我来猜
+    
+    const log = document.getElementById('g14-chat-log');
+    log.innerHTML = `<div id="g14-typing"><i class="fas fa-circle-notch fa-spin"></i> TA 正在构思题目...</div>`;
+    
+    const ai = friendsData[gameAiId];
+    
+    // AI 自己生成新题并描述
+    const prompt = `
+    [System] Taboo game. Generate a new target word and 3 taboo words.
+    Then write a description for the target word WITHOUT using the taboo words. 
+    Use your persona's tone.
+    Return JSON: {"target": "长城", "taboo": ["石头", "建筑", "北京"], "desc": "这是一条很长很长的防御工事..."}
+    `;
+    
+    const res = await callAiForSpecialTask(prompt);
+    document.getElementById('g14-typing').remove();
+    
+    try {
+        const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+        g14_data.target = data.target;
+        g14_data.taboo = data.taboo; // 我是猜的人，其实不知道禁语
+        
+        log.innerHTML = `
+            <div style="text-align:center; color:#888; font-size:12px; margin-bottom:10px;">【目标已生成】</div>
+            <div><b style="color:#ff7e67;">${ai.realName}:</b> ${data.desc}</div>
+        `;
+        document.getElementById('g14-desc-input').placeholder = "输入你的猜测，或向TA提问...";
+        
+    } catch(e) {
+        log.innerHTML = `<div>TA 构思失败了，重新开始吧。</div>`;
+    }
+}
+
+function g14_reset() {
+    document.getElementById('g14-setup-area').style.display = 'block';
+    document.getElementById('g14-game-area').style.display = 'none';
+    const btn = document.getElementById('g14-start-btn');
+    btn.style.display = 'block';
+    btn.innerText = '获取题目';
+    btn.disabled = false;
+    document.getElementById('g14-result').style.display = 'none';
+}
+
+/* =========================================
+   [GAME 15] 井字棋
+   ========================================= */
+// 升级为：五子棋 (Gomoku) 配合垃圾话
+const G15_SIZE = 10; // 10x10 的棋盘
+let g15_boardState = Array(G15_SIZE * G15_SIZE).fill('');
+let g15_gameActive = true;
+
+window.g15_resetBoard = function() {
+    g15_boardState = Array(G15_SIZE * G15_SIZE).fill('');
+    g15_gameActive = true;
+    document.getElementById('g15-result').style.display = 'none';
+    document.getElementById('g15-ai-chat').innerText = "来战！你先手 (黑子)。";
+    
+    const board = document.getElementById('g15-board');
+    board.innerHTML = '';
+    // 更新棋盘样式为 10x10
+    board.style.gridTemplateColumns = `repeat(${G15_SIZE}, 1fr)`;
+    board.style.gap = '2px';
+    board.style.background = '#d2b48c'; // 木板色
+    board.style.padding = '5px';
+    
+    for(let i=0; i<G15_SIZE * G15_SIZE; i++) {
+        const cell = document.createElement('div');
+        cell.style.cssText = "background:#f5deb3; border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer;";
+        cell.onclick = () => g15_makeMove(i, cell);
+        board.appendChild(cell);
+    }
+}
+
+window.g15_makeMove = async function(idx, cellEl) {
+    if(!g15_gameActive || g15_boardState[idx] !== '') return;
+    
+    g15_boardState[idx] = 'B'; // 玩家是黑子 Black
+    cellEl.style.background = '#2b2b2b';
+    cellEl.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.5)';
+    
+    if(g15_checkWin(idx, 'B')) { g15_endGame('B'); return; }
+    if(!g15_boardState.includes('')) { g15_endGame('Draw'); return; }
+    
+    document.getElementById('g15-board').style.pointerEvents = 'none';
+    document.getElementById('g15-ai-chat').innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 盯着棋盘沉思中...';
+    
+    const ai = friendsData[gameAiId];
+    // 简易AI逻辑，寻找空位。真正的五子棋AI太耗Token，这里我们用简易的启发式或让API返回大概坐标
+    const prompt = `
+    [System] 五子棋游戏。你执白棋(W)，用户执黑棋(B)。
+    目前棋盘上有 ${g15_boardState.filter(c=>c==='B').length} 颗黑棋和 ${g15_boardState.filter(c=>c==='W').length} 颗白棋。
+    用户刚落子在索引 ${idx}（10x10棋盘）。
+    你需要根据你的性格【${ai.persona || '普通'}】发一句垃圾话/心理战（例如诱导、嘲讽或假装失误）。
+    同时随便给出一个 0-99 之间的你想下棋的数字索引（优先考虑在刚下的棋子附近的空位）。
+    Return JSON ONLY: {"moveIndex": 45, "trashTalk": "一句话"}
+    `;
+    
+    const res = await callAiForSpecialTask(prompt);
+    document.getElementById('g15-board').style.pointerEvents = 'auto';
+    
+    let move = -1;
+    let talk = "该我了。";
+    
+    if (res) {
+        try {
+            const data = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim());
+            talk = data.trashTalk;
+            move = parseInt(data.moveIndex);
+        } catch(e) {}
+    }
+    
+    // 如果 AI 选的位置不合法，帮它找一个最近的空位
+    if(isNaN(move) || move < 0 || move >= 100 || g15_boardState[move] !== '') {
+        const emptyIndices = g15_boardState.map((v, i) => v === '' ? i : -1).filter(i => i !== -1);
+        if(emptyIndices.length > 0) {
+            // 找离用户落子最近的
+            emptyIndices.sort((a, b) => {
+                const dx_a = a % 10 - idx % 10; const dy_a = Math.floor(a/10) - Math.floor(idx/10);
+                const dx_b = b % 10 - idx % 10; const dy_b = Math.floor(b/10) - Math.floor(idx/10);
+                return (dx_a*dx_a + dy_a*dy_a) - (dx_b*dx_b + dy_b*dy_b);
+            });
+            move = emptyIndices[0];
+        }
+    }
+    
+    if(move !== -1) {
+        g15_boardState[move] = 'W';
+        const aiCell = document.getElementById('g15-board').children[move];
+        aiCell.style.background = '#fefefe';
+        aiCell.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.3)';
+        document.getElementById('g15-ai-chat').innerText = `"${talk}"`;
+        
+        if(g15_checkWin(move, 'W')) { g15_endGame('W'); return; }
+        if(!g15_boardState.includes('')) { g15_endGame('Draw'); return; }
+    }
+}
+
+// 检查以 idx 为中心的米字形连珠
+function g15_checkWin(idx, player) {
+    const x = idx % G15_SIZE;
+    const y = Math.floor(idx / G15_SIZE);
+    const dirs = [[1,0], [0,1], [1,1], [1,-1]];
+    
+    for(let [dx, dy] of dirs) {
+        let count = 1;
+        // 正向
+        for(let i=1; i<5; i++) {
+            let nx = x + dx*i; let ny = y + dy*i;
+            if(nx<0 || nx>=G15_SIZE || ny<0 || ny>=G15_SIZE) break;
+            if(g15_boardState[ny*G15_SIZE + nx] === player) count++; else break;
+        }
+        // 反向
+        for(let i=1; i<5; i++) {
+            let nx = x - dx*i; let ny = y - dy*i;
+            if(nx<0 || nx>=G15_SIZE || ny<0 || ny>=G15_SIZE) break;
+            if(g15_boardState[ny*G15_SIZE + nx] === player) count++; else break;
+        }
+        if(count >= 5) return true;
+    }
+    return false;
+}
+
+function g15_checkWin(player) {
+    const winLines = [ [0,1,2],[3,4,5],[6,7,8], [0,3,6],[1,4,7],[2,5,8], [0,4,8],[2,4,6] ];
+    return winLines.some(line => line.every(idx => g15_boardState[idx] === player));
+}
+
+function g15_endGame(winner) {
+    g15_gameActive = false;
+    const resBox = document.getElementById('g15-result');
+    resBox.style.display = 'block';
+    
+    if(winner === 'B') {
+        resBox.innerHTML = '<span style="color:#07c160; font-weight:bold;">🎉 五连珠！你赢了！</span>';
+        document.getElementById('g15-ai-chat').innerText = "可恶，竟然被你算计了...";
+    } else if (winner === 'W') {
+        resBox.innerHTML = '<span style="color:#ff4d4f; font-weight:bold;">💀 五连珠！你输了！</span>';
+        document.getElementById('g15-ai-chat').innerText = "哈哈，承让承让！";
+    } else {
+        resBox.innerHTML = '<span style="color:#888; font-weight:bold;">🤝 棋盘满了，平局！</span>';
+    }
+}
+
+/* =========================================
+   [GAME 16] 21点
+   ========================================= */
+let g16_deck = [];
+let g16_myHand = [];
+let g16_aiHand = [];
+let g16_chips = 100;
+let g16_bet = 0;
+
+function g16_getDeck() {
+    const suits = ['♠','♥','♣','♦'];
+    const values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+    let deck = [];
+    for(let s of suits) {
+        for(let v of values) {
+            deck.push({suit: s, value: v, weight: ['J','Q','K'].includes(v) ? 10 : (v==='A' ? 11 : parseInt(v))});
+        }
+    }
+    return deck.sort(() => Math.random() - 0.5);
+}
+
+function g16_calcScore(hand) {
+    let score = 0;
+    let aces = 0;
+    hand.forEach(card => {
+        score += card.weight;
+        if(card.value === 'A') aces += 1;
+    });
+    while(score > 21 && aces > 0) {
+        score -= 10;
+        aces -= 1;
+    }
+    return score;
+}
+
+window.g16_start = function() {
+    // 显示下注界面
+    document.getElementById('g16-setup-area').style.display = 'block';
+    document.getElementById('g16-game-area').style.display = 'none';
+    document.getElementById('g16-result').style.display = 'none';
+    document.getElementById('g16-chips-display').innerText = g16_chips;
+}
+
+window.g16_placeBet = function() {
+    const betInput = parseInt(document.getElementById('g16-bet-input').value);
+    if(isNaN(betInput) || betInput <= 0 || betInput > g16_chips) {
+        showToast("筹码不足或格式错误"); return;
+    }
+    
+    g16_bet = betInput;
+    g16_chips -= g16_bet;
+    
+    document.getElementById('g16-setup-area').style.display = 'none';
+    document.getElementById('g16-game-area').style.display = 'block';
+    document.getElementById('g16-action-area').style.pointerEvents = 'auto';
+    document.getElementById('g16-current-bet').innerText = g16_bet;
+    
+    g16_deck = g16_getDeck();
+    g16_myHand = [g16_deck.pop(), g16_deck.pop()];
+    g16_aiHand = [g16_deck.pop(), g16_deck.pop()];
+    
+    g16_renderHands(false);
+}
+
+function g16_renderHands(revealAi) {
+    const myScore = g16_calcScore(g16_myHand);
+    document.getElementById('g16-my-score').innerText = myScore;
+    document.getElementById('g16-my-cards').innerText = g16_myHand.map(c => c.suit+c.value).join(' ');
+    
+    if(revealAi) {
+        const aiScore = g16_calcScore(g16_aiHand);
+        document.getElementById('g16-ai-score').innerText = aiScore;
+        document.getElementById('g16-ai-cards').innerText = g16_aiHand.map(c => c.suit+c.value).join(' ');
+    } else {
+        document.getElementById('g16-ai-score').innerText = '?';
+        document.getElementById('g16-ai-cards').innerText = g16_aiHand[0].suit+g16_aiHand[0].value + ' 🎴';
+    }
+}
+
+window.g16_hit = async function() {
+    g16_myHand.push(g16_deck.pop());
+    g16_renderHands(false);
+    
+    const myScore = g16_calcScore(g16_myHand);
+    
+    if(myScore > 21) {
+        g16_endGame('ai', '你爆牌了！(Bust)');
+    } else {
+        // AI 实时反馈
+        document.getElementById('g16-ai-chat').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        const prompt = `[System] Blackjack. User hit and got ${myScore} points. React in one short sentence. JSON: {"reply": "..."}`;
+        const res = await callAiForSpecialTask(prompt);
+        try { document.getElementById('g16-ai-chat').innerText = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).reply; }
+        catch(e) { document.getElementById('g16-ai-chat').innerText = "还要？胆子真大。"; }
+    }
+}
+
+window.g16_stand = async function() {
+    document.getElementById('g16-action-area').style.pointerEvents = 'none';
+    document.getElementById('g16-ai-chat').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 思考中...';
+    
+    // AI 逻辑：小于17就拿牌
+    while(g16_calcScore(g16_aiHand) < 17) {
+        g16_aiHand.push(g16_deck.pop());
+    }
+    
+    g16_renderHands(true);
+    
+    const myScore = g16_calcScore(g16_myHand);
+    const aiScore = g16_calcScore(g16_aiHand);
+    
+    let winner = 'draw';
+    let reason = '';
+    
+    if(aiScore > 21) { winner = 'me'; reason = 'TA 爆牌了！'; }
+    else if(myScore > aiScore) { winner = 'me'; reason = '你的点数更大！'; }
+    else if(aiScore > myScore) { winner = 'ai'; reason = 'TA 的点数更大！'; }
+    else { reason = '平局！点数一样。'; }
+    
+    g16_endGame(winner, reason);
+}
+
+async function g16_endGame(winner, reason) {
+    document.getElementById('g16-action-area').style.pointerEvents = 'none';
+    g16_renderHands(true);
+    const resBox = document.getElementById('g16-result');
+    resBox.style.display = 'block';
+    
+    let chipChangeStr = "";
+    if(winner === 'me') {
+        g16_chips += g16_bet * 2;
+        resBox.innerHTML = `<span style="color:#07c160; font-weight:bold;">🎉 你赢了！(+${g16_bet*2})</span><br>${reason}`;
+    } else if (winner === 'ai') {
+        // 筹码已经扣了
+        resBox.innerHTML = `<span style="color:#ff4d4f; font-weight:bold;">💀 你输了！(-${g16_bet})</span><br>${reason}`;
+    } else {
+        g16_chips += g16_bet; // 退回
+        resBox.innerHTML = `<span style="color:#888; font-weight:bold;">🤝 平局！(退回筹码)</span><br>${reason}`;
+    }
+    
+    const prompt = `[System] Blackjack round over. Result: ${winner==='me'?'User won':(winner==='ai'?'You won':'Draw')}. Give a short reaction. JSON: {"reply":"..."}`;
+    const res = await callAiForSpecialTask(prompt);
+    try { document.getElementById('g16-ai-chat').innerText = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).reply; }
+    catch(e) { document.getElementById('g16-ai-chat').innerText = "结束。"; }
+    
+    if (g16_chips <= 0) {
+        resBox.innerHTML += `<br><br><b style="color:#ff4d4f;">破产了！被赶出赌场！</b><br><button class="gc-btn-secondary" onclick="g16_chips=100; g16_start()" style="margin-top:10px;">领取救济金重开</button>`;
+    } else {
+        resBox.innerHTML += `<br><button class="gc-btn-secondary" onclick="g16_start()" style="margin-top:10px;">下一局</button>`;
+    }
+}
+
+/* =========================================
+   [GAME 17] UNO
+   ========================================= */
+let g17_deck = [];
+let g17_myCards = [];
+let g17_aiCards = [];
+let g17_pile = []; // 打出的牌堆
+let g17_currentColor = '';
+
+const UNO_COLORS = ['Red', 'Yellow', 'Green', 'Blue'];
+const UNO_TYPES = ['0','1','2','3','4','5','6','7','8','9', '+2', 'Skip', 'Rev'];
+// 这里为简化，只做基础牌和 +2
+
+function g17_createDeck() {
+    let deck = [];
+    for(let c of UNO_COLORS) {
+        for(let t of UNO_TYPES) {
+            deck.push({ color: c, type: t, id: Math.random().toString(36).substr(2,9) });
+        }
+    }
+    return deck.sort(() => Math.random() - 0.5);
+}
+
+function g17_getCardDisplay(c) {
+    const colMap = { 'Red':'#ff4d4f', 'Yellow':'#fadb14', 'Green':'#07c160', 'Blue':'#1890ff' };
+    return `<div class="uno-card" style="background:${colMap[c.color]}; color:#fff; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; text-shadow:1px 1px 0 #000;" onclick="g17_playCard('${c.id}')">${c.type}</div>`;
+}
+
+window.g17_start = function() {
+    g17_deck = g17_createDeck();
+    g17_myCards = []; g17_aiCards = []; g17_pile = [];
+    
+    for(let i=0; i<7; i++) {
+        g17_myCards.push(g17_deck.pop());
+        g17_aiCards.push(g17_deck.pop());
+    }
+    
+    // 翻出第一张
+    let first = g17_deck.pop();
+    while(first.type === '+2' || first.type === 'Skip' || first.type === 'Rev') {
+        g17_deck.unshift(first);
+        first = g17_deck.pop();
+    }
+    g17_pile.push(first);
+    g17_currentColor = first.color;
+    
+    document.getElementById('g17-setup-area').style.display = 'none';
+    document.getElementById('g17-game-area').style.display = 'block';
+    document.getElementById('g17-result').style.display = 'none';
+    
+    g17_render();
+}
+
+function g17_render() {
+    // 渲染我的手牌
+    let myHtml = '';
+    g17_myCards.forEach(c => {
+        myHtml += g17_getCardDisplay(c);
+    });
+    document.getElementById('g17-my-cards').innerHTML = myHtml;
+    
+    // 渲染 AI 手牌数量
+    document.getElementById('g17-ai-count').innerText = `${g17_aiCards.length} 张`;
+    
+    // 渲染牌堆顶部
+    const topCard = g17_pile[g17_pile.length - 1];
+    const colMap = { 'Red':'#ff4d4f', 'Yellow':'#fadb14', 'Green':'#07c160', 'Blue':'#1890ff' };
+    
+    document.getElementById('g17-discard-pile').innerText = topCard.type;
+    document.getElementById('g17-discard-pile').style.color = colMap[topCard.color];
+    
+    document.getElementById('g17-current-color').innerText = g17_currentColor;
+    document.getElementById('g17-current-color').style.background = colMap[g17_currentColor];
+    document.getElementById('g17-current-color').style.color = '#fff';
+    
+    if (g17_myCards.length === 0) g17_endGame('me');
+    if (g17_aiCards.length === 0) g17_endGame('ai');
+}
+
+function g17_isValidPlay(c) {
+    const top = g17_pile[g17_pile.length - 1];
+    return c.color === g17_currentColor || c.type === top.type;
+}
+
+window.g17_playCard = async function(cid) {
+    const idx = g17_myCards.findIndex(c => c.id === cid);
+    const card = g17_myCards[idx];
+    
+    if (!g17_isValidPlay(card)) {
+        showToast("这张牌打不出哦！"); return;
+    }
+    
+    g17_myCards.splice(idx, 1);
+    g17_pile.push(card);
+    g17_currentColor = card.color;
+    
+    g17_render();
+    
+    if(g17_myCards.length === 0) return; // 赢了
+    
+    // 处理特殊牌
+    if (card.type === '+2') {
+        showToast("TA 被罚抽 2 张牌！");
+        g17_aiCards.push(g17_deck.pop()); g17_aiCards.push(g17_deck.pop());
+    } else if (card.type === 'Skip' || card.type === 'Rev') {
+        showToast("TA 的回合被跳过了！你可以继续出牌！");
+        return; // 还是我的回合
+    }
+    
+    // AI 回合
+    setTimeout(g17_aiTurn, 1000);
+}
+
+window.g17_drawCard = function() {
+    g17_myCards.push(g17_deck.pop());
+    g17_render();
+    setTimeout(g17_aiTurn, 1000);
+}
+
+async function g17_aiTurn() {
+    document.getElementById('g17-ai-chat').innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 正在出牌...';
+    
+    // 找可出的牌
+    let playableIdx = g17_aiCards.findIndex(c => g17_isValidPlay(c));
+    let actionStr = "";
+    
+    if (playableIdx !== -1) {
+        const card = g17_aiCards.splice(playableIdx, 1)[0];
+        g17_pile.push(card);
+        g17_currentColor = card.color;
+        actionStr = `打出了 ${card.color} ${card.type}`;
+        
+        if (card.type === '+2') {
+            g17_myCards.push(g17_deck.pop()); g17_myCards.push(g17_deck.pop());
+            actionStr += "，并罚你抽 2 张牌";
+        }
+    } else {
+        g17_aiCards.push(g17_deck.pop());
+        actionStr = "抽了一张牌";
+    }
+    
+    g17_render();
+    
+    // 调用 API 说骚话
+    const prompt = `[System] UNO game. You just ${actionStr}. You have ${g17_aiCards.length} cards left. User has ${g17_myCards.length} cards. Give a short teasing reaction. JSON: {"reply":"..."}`;
+    const res = await callAiForSpecialTask(prompt);
+    try { document.getElementById('g17-ai-chat').innerText = JSON.parse(res.replace(/```json/gi,'').replace(/```/g,'').trim()).reply; }
+    catch(e) { document.getElementById('g17-ai-chat').innerText = "出牌结束。"; }
+    
+    if (g17_aiCards.length === 1) {
+        document.getElementById('g17-ai-chat').innerText += " 【UNO!】";
+    }
+}
+
+function g17_endGame(winner) {
+    const resBox = document.getElementById('g17-result');
+    resBox.style.display = 'block';
+    
+    if(winner === 'me') {
+        resBox.innerHTML = '<span style="color:#07c160; font-weight:bold;">🎉 你赢了！</span>';
+    } else {
+        resBox.innerHTML = '<span style="color:#ff4d4f; font-weight:bold;">💀 你输了！</span>';
+    }
+    resBox.innerHTML += `<br><button class="gc-btn-secondary" onclick="g17_start()" style="margin-top:10px;">再来一局</button>`;
 }

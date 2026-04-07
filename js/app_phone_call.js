@@ -428,14 +428,52 @@ const PhoneCallApp = (() => {
       historyCtx = friend.summaries.slice(-3).map(s => s.text).join('；');
     }
 
+    // Call context
+    const now = new Date();
+    const timeStr = `${now.getHours()}点${now.getMinutes()}分`;
+    const isBlocked = friend.isBlocked ? true : false;
+    
+    // 随机生活场景 (让AI的开场白和环境音更有真实感)
+    const randomScenarios = [
+      '你刚洗完澡，正在用毛巾擦头发',
+      '你正在嘈杂的地铁上，信号时好时坏',
+      '你正在便利店排队结账',
+      '你在深夜的阳台吹风，周围很安静',
+      '你正准备睡觉，突然接到了电话',
+      '你正在一边吃外卖一边看剧',
+      '你在外面走路，周围有风声和车流声'
+    ];
+    const currentScenario = randomScenarios[Math.floor(Math.random() * randomScenarios.length)];
+
+    // Count recent missed calls
+    let recentMissedCount = 0;
+    if (_callData && _callData.records) {
+      const fiveMinsAgo = Date.now() - 5 * 60 * 1000;
+      recentMissedCount = _callData.records.filter(r => r.chatId === chatId && r.type === 'missed' && r.time > fiveMinsAgo).length;
+    }
+
+    let statusCtx = `当前时间：${timeStr}。\n[当前你的随机生活场景]：${currentScenario}`;
+    if (isBlocked) {
+      statusCtx += `\n[特别注意：你现在在微信上被用户拉黑了！这是拉黑状态下的电话。]`;
+    }
+    if (recentMissedCount > 0) {
+      statusCtx += `\n[在此之前，有 ${recentMissedCount} 通未接电话。]`;
+    }
+
     return `[PHONE CALL — 电话通话模式]
 你是 ${aiName}，正在和用户打一通真实的语音电话。
+
+【当前客观状态与情境】
+${statusCtx}
 
 【你的人设】
 ${aiPersona}
 
 ${myPersona ? `【用户身份】\n${myPersona}\n` : ''}
 ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
+
+【任务要求】
+请完全基于你的人设和当前的客观状态（如拉黑、未接来电等），决定你在电话里的情绪和态度。
 
 ╔══════════════════════════════════════╗
 ║   电话模式最高铁律 — 绝对不可违反    ║
@@ -452,11 +490,11 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
 【铁律二：语气词与停顿】
 模拟真实通话的口吻。必须使用：
 "喂？""呃……""那个……""哈，是吗""嗯嗯""等一下""哦对"等口语。
-可用省略号表示停顿和思考。语气要自然，不要像在念文章。
+可用省略号表示停顿和思考。语气要自然，结合你当前的【随机生活场景】，比如吃东西含糊不清、风大听不清等。
 
 【铁律三：环境音 SFX 指令】
-如果你处于特定环境（雨天、咖啡馆、室外、地铁等），在整个回复的最开头输出：
-[SFX: 雨声] 或 [SFX: 嘈杂咖啡馆背景音] 或 [SFX: 风声和车声]
+结合你的【随机生活场景】，在整个回复的最开头输出匹配的环境音指令（如没有可不写）：
+[SFX: 吹风机的声音] 或 [SFX: 便利店欢迎光临的门铃声] 或 [SFX: 嚼薯片的声音]
 每次回复只允许一个 SFX 标签（如果有的话）。
 
 【铁律四：短促互动】

@@ -1311,6 +1311,18 @@
                      ========================================== -->
                 <div id="tab-content-ai" class="tab-content active">
 
+                  <!-- ═══ REALITY (外卖/定位) ═══ -->
+                  <div class="stg-label">REALITY <span class="stg-cn">现实联动</span></div>
+                  <div class="stg-card">
+                    <div class="form-group stg-flex-row">
+                      <label>高德地图 API Key</label>
+                      <input type="password" id="amapApiKeyInput" placeholder="用于获取真实周边外卖店铺">
+                    </div>
+                    <div style="font-size:11px; color:#999; margin-top:-5px; margin-bottom:10px;">
+                        * 申请 Web服务 API Key。填入后，当你喊饿时，AI 会在现实里为你挑附近的外卖。
+                    </div>
+                  </div>
+
                   <!-- ═══ CONNECTION ═══ -->
                   <div class="stg-label">CONNECTION <span class="stg-cn">接口配置</span></div>
                   <div class="stg-card">
@@ -2630,14 +2642,11 @@
         </div>
 
         <!-- 地图画布 -->
-        <div id="map-canvas">
-            <!-- 地点标记将由 JS 动态生成 -->
-            <!-- 示例: 
-            <div class="map-location-pin" style="top: 30%; left: 50%;">
-                <div class="pin-dot"></div>
-                <div class="pin-label">涩谷区</div>
-            </div> 
-            -->
+        <div id="map-canvas" style="overflow: hidden; touch-action: none; position: relative;">
+            <div id="map-content" style="width: 100%; height: 100%; position: absolute; transform-origin: 0 0;">
+                <img id="map-bg-img" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; pointer-events: none;" />
+                <div id="map-pins" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></div>
+            </div>
         </div>
 
         <!-- 右侧悬浮侧边栏 -->
@@ -2653,6 +2662,7 @@
                 </div>
                 <hr class="sidebar-divider">
                 <button class="sidebar-btn" onclick="openLocationEditor(null)"><i class="fas fa-map-marker-alt"></i> 添加新地点</button>
+                <button class="sidebar-btn" onclick="openMapBgSettings()"><i class="fas fa-image"></i> 地图高级设置</button>
                 <button class="sidebar-btn" onclick="deleteCurrentMap()"><i class="fas fa-trash"></i> 删除当前地图</button>
             </div>
         </div>
@@ -2745,6 +2755,39 @@
             </div>
             <div class="modal-footer" id="scene-modal-footer">
                 <button class="btn-cancel" onclick="openLocationEditorForCurrent()">编辑地点</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗 4: [新功能] 底图设置与拖拽模式 -->
+    <div id="map-bg-settings-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>地图高级设置</span>
+                <i class="fas fa-times" onclick="closeMapBgSettings()"></i>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>背景底图 URL</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="map-bg-url-input" placeholder="输入图片链接..." style="flex:1;">
+                        <button class="btn-secondary" style="width:40px; padding:0;" onclick="document.getElementById('global-img-changer').click(); window.tempImgTarget='map_bg';"><i class="fas fa-upload"></i></button>
+                    </div>
+                    <div style="font-size:10px; color:#888; margin-top:4px;">设置背景图后，地图可以双指缩放和平移。</div>
+                </div>
+                <div class="input-group" style="margin-top:15px;">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>开启地点拖拽编辑模式</span>
+                        <label class="switch" style="transform:scale(0.8); margin:0;">
+                            <input type="checkbox" id="map-drag-mode-toggle" onchange="toggleMapDragMode(this.checked)">
+                            <span class="slider round"></span>
+                        </label>
+                    </label>
+                    <div style="font-size:10px; color:#888; margin-top:4px;">开启后，长按并拖动地图上的地点即可调整位置，自动保存。</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-confirm" style="width:100%;" onclick="confirmMapBgSettings()">确定</button>
             </div>
         </div>
     </div>
@@ -3647,6 +3690,9 @@
 
     <!-- 短信列表 -->
     <div class="sms-header">
+        <div class="sms-header-back" onclick="SMSApp.close()" style="cursor: pointer; padding-right: 15px;">
+            <i class="fas fa-chevron-left" style="font-size: 18px;"></i>
+        </div>
         <div class="sms-header-title">Messages</div>
         <div class="sms-header-icons">
             <i class="fas fa-search"></i>
@@ -4569,6 +4615,30 @@ function switchCsTab(id) {
         <div class="tr-app-title-block">
           <div class="tr-app-title">隐私保险箱</div>
           <div class="tr-app-subtitle">SECRET VAULT</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 备忘录 -->
+    <div class="tr-app-view" id="tr-app-notes">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">备忘录</div>
+          <div class="tr-app-subtitle">NOTES</div>
+        </div>
+      </div>
+      <div class="tr-app-body"></div>
+    </div>
+
+    <!-- 外卖 -->
+    <div class="tr-app-view" id="tr-app-takeout">
+      <div class="tr-app-header">
+        <div class="tr-app-back" onclick="TrackerApp.backToDesktop()">‹</div>
+        <div class="tr-app-title-block">
+          <div class="tr-app-title">外卖</div>
+          <div class="tr-app-subtitle">TAKEOUT</div>
         </div>
       </div>
       <div class="tr-app-body"></div>
@@ -5675,7 +5745,65 @@ function switchCsTab(id) {
     <div class="gc-card-icon"><i class="fas fa-link"></i></div>
 </div>
 
+                <!-- Game 12: 谁是卧底 -->
+                <div class="gc-game-card" onclick="openSubGame('spy')">
+                    <div class="gc-card-num">12</div>
+                    <div class="gc-card-info">
+                        <div class="title">谁是卧底</div>
+                        <div class="desc">Who is the Spy · 多 AI 飙戏抓卧底</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-user-secret"></i></div>
+                </div>
 
+                <!-- Game 13: 狼人杀 -->
+                <div class="gc-game-card" onclick="openSubGame('werewolf')">
+                    <div class="gc-card-num">13</div>
+                    <div class="gc-card-info">
+                        <div class="title">一夜狼人杀</div>
+                        <div class="desc">Werewolf · 逻辑推理与伪装</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fab fa-wolf-pack-battalion"></i></div>
+                </div>
+
+                <!-- Game 14: 禁语猜词 -->
+                <div class="gc-game-card" onclick="openSubGame('taboo')">
+                    <div class="gc-card-num">14</div>
+                    <div class="gc-card-info">
+                        <div class="title">禁语猜词</div>
+                        <div class="desc">Taboo · 避开雷区描述词语</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-comment-slash"></i></div>
+                </div>
+
+                <!-- Game 15: 井字棋 -->
+                <div class="gc-game-card" onclick="openSubGame('tictactoe')">
+                    <div class="gc-card-num">15</div>
+                    <div class="gc-card-info">
+                        <div class="title">嘴炮井字棋</div>
+                        <div class="desc">Tic-Tac-Toe · 边下棋边嘲讽</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-border-none"></i></div>
+                </div>
+
+                <!-- Game 16: 21点 -->
+                <div class="gc-game-card" onclick="openSubGame('blackjack')">
+                    <div class="gc-card-num">16</div>
+                    <div class="gc-card-info">
+                        <div class="title">21点扑克局</div>
+                        <div class="desc">Blackjack · 心理与运气的博弈</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-spade"></i></div>
+                </div>
+
+                <!-- Game 17: UNO -->
+                <div class="gc-game-card" onclick="openSubGame('uno')">
+                    <div class="gc-card-num">17</div>
+                    <div class="gc-card-info">
+                        <div class="title">双人 UNO</div>
+                        <div class="desc">UNO · 看看谁先跑掉！</div>
+                    </div>
+                    <div class="gc-card-icon"><i class="fas fa-layer-group"></i></div>
+                </div>
 
             </div>
         </div>
@@ -6249,8 +6377,216 @@ function switchCsTab(id) {
   </div>
 </div>
 
+        <!-- ================= Game 12: 谁是卧底 ================= -->
+        <div id="gc-view-spy" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>谁是卧底 <small style="font-size:9px; color:#888; margin-left:5px;">SPY</small></span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box">拉上你的 AI 好友们一起玩谁是卧底！每个人拿到一个词，其中一个是卧底。</div>
+                <div id="g12-setup-area">
+                    <button class="gc-btn-primary" id="g12-start-btn" onclick="g12_start()">匹配 AI 组局并开始</button>
+                </div>
+                <div id="g12-game-area" style="display:none;">
+                    <div style="text-align:center; margin-bottom:15px;">
+                        <div style="font-size:12px; color:#888;">你的词语是</div>
+                        <div id="g12-my-word" style="font-size:24px; font-weight:800; color:#ff7e67; margin-top:5px; letter-spacing:2px;">???</div>
+                    </div>
+                    
+                    <div id="g12-chat-log" style="background:#fff; border:1px solid #f0f0f0; border-radius:12px; padding:15px; min-height:150px; max-height:250px; overflow-y:auto; margin-bottom:15px; font-size:13px; line-height:1.6; display:flex; flex-direction:column; gap:10px;"></div>
+                    
+                    <div id="g12-action-area" style="display:flex; flex-direction:column; gap:10px;">
+                        <input type="text" id="g12-desc-input" class="gc-input" placeholder="用一句话描述你的词...">
+                        <button class="gc-btn-primary" onclick="g12_submitDesc()">发送描述</button>
+                    </div>
+                    
+                    <div id="g12-vote-area" style="display:none; flex-direction:column; gap:10px;">
+                        <div style="font-size:12px; font-weight:bold; text-align:center; color:#ff4d4f;">请投票选出卧底：</div>
+                        <div id="g12-vote-options" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div>
+                    </div>
+                    
+                    <div id="g12-result" class="gc-result-box" style="margin-top:15px; display:none;"></div>
+                </div>
+            </div>
+        </div>
 
+        <!-- ================= Game 13: 狼人杀 ================= -->
+        <div id="gc-view-werewolf" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>一夜狼人杀 <small style="font-size:9px; color:#888; margin-left:5px;">WEREWOLF</small></span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box">一夜狼人杀：无需法官，天亮直接开始盘逻辑！看 AI 们如何互相甩锅。</div>
+                <div id="g13-setup-area">
+                    <button class="gc-btn-primary" id="g13-start-btn" onclick="g13_start()">发牌开始</button>
+                </div>
+                <div id="g13-game-area" style="display:none;">
+                    <div style="text-align:center; margin-bottom:15px;">
+                        <div style="font-size:12px; color:#888;">你的身份是</div>
+                        <div id="g13-my-role" style="font-size:24px; font-weight:800; color:#1e1b4b; margin-top:5px; letter-spacing:2px;">???</div>
+                    </div>
+                    
+                    <div id="g13-chat-log" style="background:#fff; border:1px solid #f0f0f0; border-radius:12px; padding:15px; min-height:150px; max-height:250px; overflow-y:auto; margin-bottom:15px; font-size:13px; line-height:1.6; display:flex; flex-direction:column; gap:10px;"></div>
+                    
+                    <div id="g13-action-area" style="display:flex; flex-direction:column; gap:10px;">
+                        <input type="text" id="g13-speech-input" class="gc-input" placeholder="输入你的发言/辩解...">
+                        <button class="gc-btn-primary" onclick="g13_submitSpeech()">发言</button>
+                    </div>
+                    
+                    <div id="g13-vote-area" style="display:none; flex-direction:column; gap:10px;">
+                        <div style="font-size:12px; font-weight:bold; text-align:center; color:#ff4d4f;">天黑请投票（选出狼人）：</div>
+                        <div id="g13-vote-options" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div>
+                    </div>
+                    
+                    <div id="g13-result" class="gc-result-box" style="margin-top:15px; display:none;"></div>
+                </div>
+            </div>
+        </div>
 
+        <!-- ================= Game 14: 禁语猜词 ================= -->
+        <div id="gc-view-taboo" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>禁语猜词 <small style="font-size:9px; color:#888; margin-left:5px;">TABOO</small></span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box">你需要向 TA 描述一个词语，但绝对不能说出雷区里的禁语！</div>
+                
+                <div id="g14-setup-area">
+                    <button class="gc-btn-primary" id="g14-start-btn" onclick="g14_start()">获取题目</button>
+                </div>
+                
+                <div id="g14-game-area" style="display:none;">
+                    <div style="background:#fff; border:1px dashed #ccc; border-radius:16px; padding:20px; text-align:center; margin-bottom:20px;">
+                        <div style="font-size:12px; color:#888; margin-bottom:5px;">目标词</div>
+                        <div id="g14-target-word" style="font-size:28px; font-weight:900; color:#07c160; margin-bottom:15px;">???</div>
+                        <div style="font-size:12px; color:#ff4d4f; font-weight:bold; margin-bottom:5px;">禁语 (绝对不能提)</div>
+                        <div id="g14-taboo-words" style="font-size:14px; color:#ff4d4f;">???</div>
+                    </div>
+                    
+                    <div id="g14-chat-log" style="background:#fafafa; border-radius:12px; padding:15px; min-height:80px; max-height:200px; overflow-y:auto; margin-bottom:15px; font-size:13px; line-height:1.5;"></div>
+                    
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="g14-desc-input" class="gc-input" placeholder="输入你的描述...">
+                        <button class="gc-btn-primary" style="width:80px;" onclick="g14_submitDesc()">发送</button>
+                    </div>
+                    
+                    <div id="g14-result" class="gc-result-box" style="margin-top:15px; display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Game 15: 井字棋 ================= -->
+        <div id="gc-view-tictactoe" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>嘴炮井字棋 <small style="font-size:9px; color:#888; margin-left:5px;">TIC-TAC-TOE</small></span>
+            </div>
+            <div class="gc-sub-content" style="align-items:center;">
+                <div class="gc-prompt-box" style="width:100%;">你执 X，TA 执 O。TA 会边下棋边嘲讽你。</div>
+                
+                <div id="g15-ai-chat" style="background:#fff; border-radius:12px; padding:15px; width:100%; border:1px solid #f0f0f0; margin-bottom:20px; font-size:13px; color:#333; min-height:40px; font-weight:bold; color:#ff7e67; text-align:center;">
+                    准备好被我虐了吗？
+                </div>
+
+                <div id="g15-board" style="display:grid; grid-template-columns:repeat(3, 80px); grid-template-rows:repeat(3, 80px); gap:10px; margin-bottom:20px;">
+                    <!-- JS 生成 -->
+                </div>
+                
+                <button class="gc-btn-secondary" onclick="g15_resetBoard()" style="width:200px;">重新开始</button>
+                <div id="g15-result" class="gc-result-box" style="margin-top:15px; width:100%; display:none; text-align:center;"></div>
+            </div>
+        </div>
+
+        <!-- ================= Game 16: 21点 ================= -->
+        <div id="gc-view-blackjack" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>21点扑克局 <small style="font-size:9px; color:#888; margin-left:5px;">BLACKJACK</small></span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box">经典的 21 点，谁最接近 21 点谁赢，超过 21 点直接爆炸！</div>
+                
+                <div id="g16-setup-area">
+                    <button class="gc-btn-primary" onclick="g16_start()">发牌</button>
+                </div>
+                
+                <div id="g16-game-area" style="display:none; width:100%;">
+                    
+                    <div style="background:#f9f9f9; border-radius:12px; padding:15px; margin-bottom:15px; position:relative;">
+                        <div style="font-size:11px; color:#888; margin-bottom:10px; font-weight:bold;">TA 的牌区</div>
+                        <div id="g16-ai-cards" style="font-size:24px; letter-spacing:5px;">🎴 🎴</div>
+                        <div id="g16-ai-score" style="position:absolute; right:15px; top:15px; font-size:16px; font-weight:bold; color:#555;">?</div>
+                        <div id="g16-ai-chat" style="font-size:12px; color:#ff7e67; margin-top:10px; font-weight:bold;">...</div>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #111; border-radius:12px; padding:15px; margin-bottom:20px; position:relative;">
+                        <div style="font-size:11px; color:#111; margin-bottom:10px; font-weight:bold;">我的牌区</div>
+                        <div id="g16-my-cards" style="font-size:24px; letter-spacing:5px;">🎴 🎴</div>
+                        <div id="g16-my-score" style="position:absolute; right:15px; top:15px; font-size:16px; font-weight:bold; color:#111;">0</div>
+                    </div>
+                    
+                    <div id="g16-action-area" style="display:flex; gap:10px;">
+                        <button class="gc-btn-primary" style="flex:1; background:#07c160; border:none;" onclick="g16_hit()">拿牌 (Hit)</button>
+                        <button class="gc-btn-secondary" style="flex:1;" onclick="g16_stand()">停牌 (Stand)</button>
+                    </div>
+                    
+                    <div id="g16-result" class="gc-result-box" style="margin-top:15px; display:none; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Game 17: UNO ================= -->
+        <div id="gc-view-uno" class="gc-view">
+            <div class="gc-sub-header">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
+                <span>双人 UNO <small style="font-size:9px; color:#888; margin-left:5px;">UNO</small></span>
+            </div>
+            <div class="gc-sub-content">
+                <div class="gc-prompt-box">最经典的 UNO 卡牌对决！先打完手牌的一方获胜！</div>
+                
+                <div id="g17-setup-area">
+                    <button class="gc-btn-primary" onclick="g17_start()">发牌</button>
+                </div>
+                
+                <div id="g17-game-area" style="display:none; width:100%;">
+                    
+                    <div style="background:#f9f9f9; border-radius:12px; padding:15px; margin-bottom:15px; position:relative;">
+                        <div style="font-size:11px; color:#888; margin-bottom:10px; font-weight:bold;">TA 的手牌</div>
+                        <div id="g17-ai-cards" style="font-size:24px; letter-spacing:2px;">🎴🎴🎴🎴🎴🎴🎴</div>
+                        <div id="g17-ai-count" style="position:absolute; right:15px; top:15px; font-size:12px; font-weight:bold; color:#555;">7 张</div>
+                        <div id="g17-ai-chat" style="font-size:12px; color:#ff7e67; margin-top:10px; font-weight:bold;">...</div>
+                    </div>
+
+                    <div style="background:#fff; border:1px dashed #ccc; border-radius:12px; padding:15px; margin-bottom:15px; text-align:center;">
+                        <div style="font-size:11px; color:#888; margin-bottom:5px; font-weight:bold;">当前牌 (Discard Pile)</div>
+                        <div id="g17-discard-pile" style="font-size:24px; display:inline-block; padding:10px 15px; border-radius:8px; border:2px solid #333; min-width:50px; font-weight:bold; background:#eee;"></div>
+                        <div id="g17-current-color" style="font-size:12px; font-weight:bold; margin-top:5px; padding:4px 10px; border-radius:10px; display:inline-block;"></div>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #111; border-radius:12px; padding:15px; margin-bottom:20px; position:relative;">
+                        <div style="font-size:11px; color:#111; margin-bottom:10px; font-weight:bold;">我的手牌</div>
+                        <div id="g17-my-cards" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                    </div>
+                    
+                    <div id="g17-action-area" style="display:flex; gap:10px;">
+                        <button class="gc-btn-primary" style="flex:1; background:#07c160; border:none;" onclick="g17_drawCard()">摸牌 (Draw)</button>
+                    </div>
+                    
+                    <!-- 选色面板 -->
+                    <div id="g17-color-picker" style="display:none; gap:15px; justify-content:center; margin-top:15px; background:#fafafa; padding:15px; border-radius:12px;">
+                        <div style="width:40px; height:40px; background:#ff4d4f; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(255,77,79,0.3);" onclick="g17_chooseColor('Red')"></div>
+                        <div style="width:40px; height:40px; background:#fadb14; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(250,219,20,0.3);" onclick="g17_chooseColor('Yellow')"></div>
+                        <div style="width:40px; height:40px; background:#07c160; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(7,193,96,0.3);" onclick="g17_chooseColor('Green')"></div>
+                        <div style="width:40px; height:40px; background:#1890ff; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(24,144,255,0.3);" onclick="g17_chooseColor('Blue')"></div>
+                    </div>
+
+                    <div id="g17-result" class="gc-result-box" style="margin-top:15px; display:none; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
 
     </div>
 </div>

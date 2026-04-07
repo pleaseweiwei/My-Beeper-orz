@@ -33,6 +33,8 @@ const SMSApp = (() => {
       { id: 'sys_icbc',     type: 'system', name: '工商银行',  number: '95588'  },
       { id: 'sys_meituan',  type: 'system', name: '美团外卖',  number: '10106'  },
       { id: 'sys_taobao',   type: 'system', name: '淘宝',      number: '95095'  },
+      { id: 'sys_starbucks',type: 'system', name: '星巴克',    number: '1069888' },
+      { id: 'sys_police',   type: 'system', name: '反诈中心',  number: '96110'   }
     ];
     defaults.forEach(d => {
       if (!_db.conversations[d.id]) {
@@ -311,17 +313,25 @@ const SMSApp = (() => {
     let aiPersona = '';
     let aiName = conv.name;
     let contextNote = '';
+    let historyCtx = '';
 
     if (conv.chatId && typeof friendsData !== 'undefined') {
       const f = friendsData[conv.chatId] || {};
       aiPersona = f.persona || '';
       aiName = f.remark || f.realName || conv.name;
+      if (f.summaries && f.summaries.length > 0) {
+        historyCtx = f.summaries.slice(-3).map(s => s.text).join('；');
+      }
     }
 
     if (conv.type === 'unknown') {
-      contextNote = `你是一个陌生人，通过短信联系用户。你可以是推销员、快递员、或与用户有某种隐藏关联的神秘人物。`;
+      contextNote = `你是一个陌生人，通过短信联系用户。你可以是送错外卖的骑手、发错号码的相亲对象、推销员或与用户有某种隐藏关联的神秘人物。请表现出极强的生活化和日常感，语气可以焦急、试探或尴尬。`;
     } else if (conv.type === 'blocked') {
-      contextNote = `你是用户在微信里拉黑的那个人。你现在通过短信联系 TA，情绪可能是委屈、愤怒或苦苦哀求，想要和解。`;
+      const now = new Date();
+      const timeStr = `${now.getHours()}点${now.getMinutes()}分`;
+      contextNote = `[客观状态]：用户刚才在微信里把你拉黑了，目前你处于被拉黑状态。当前时间是 ${timeStr}。
+请完全基于你的性格和人设（暴躁、傲娇、卑微或冷静），自主决定给用户发什么内容的短信。可以带一些生活状态（如抱怨天气、刚下班等）。`;
+      if (historyCtx) contextNote += `\n[你们被拉黑前的近期记忆]：\n${historyCtx}`;
     }
 
     const myPersona = (() => {
@@ -356,7 +366,7 @@ ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
   /* ─── System Notifications ─── */
 
   /**
-   * type: 'cainiao' | 'bank' | 'meituan' | 'taobao' | 'custom'
+   * type: 'cainiao' | 'bank' | 'meituan' | 'taobao' | 'starbucks' | 'police' | 'custom'
    * options: { code, area, cardNo, amount, direction, message, name, number, threadId }
    */
   function addSystemNotif(type, options = {}) {
@@ -366,9 +376,9 @@ ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
       case 'cainiao': {
         threadId = 'sys_cainiao';
         name = '菜鸟驿站';
-        const area = options.area || _randomFrom(['3号货架','物业前台','快递柜A区','门卫处']);
+        const area = options.area || _randomFrom(['3号货架','物业前台','快递柜A区(下层)','消防栓背后的纸箱上','门卫处桌底下']);
         const code = options.code || _randomCode(4);
-        message = `【菜鸟驿站】您有一个包裹已暂放${area}，取件码 ${code}。如有疑问请拨95货运。`;
+        message = `【菜鸟驿站】您有一个包裹已暂放${area}，取件码 ${code}。请及时取走，如有疑问请拨95货运。`;
         break;
       }
       case 'bank': {
@@ -393,6 +403,29 @@ ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
           _db.conversations[threadId] = { id: threadId, type: 'system', name: '淘宝', number: '95095', messages: [], unread: 0, lastMessage: '', lastTime: 0 };
         }
         message = options.message || `【淘宝】您的宝贝已由菜鸟物流揽收，预计${_randomFrom(['明天','后天','大后天'])}送达。`;
+        break;
+      }
+      case 'starbucks': {
+        threadId = 'sys_starbucks';
+        name = '星巴克';
+        if (!_db.conversations[threadId]) {
+          _db.conversations[threadId] = { id: threadId, type: 'system', name: '星巴克', number: '1069888', messages: [], unread: 0, lastMessage: '', lastTime: 0 };
+        }
+        const wens = [
+          '周一的冰美式，拯救你的无力感。全场饮品买一赠一。',
+          '下雨天和热拿铁更配哦。点击领取你的专属7折券。',
+          '疲惫的下午，不如来杯星冰乐？今日双杯立减15元。'
+        ];
+        message = options.message || `【星巴克】${_randomFrom(wens)} 回T退订`;
+        break;
+      }
+      case 'police': {
+        threadId = 'sys_police';
+        name = '反诈中心';
+        if (!_db.conversations[threadId]) {
+          _db.conversations[threadId] = { id: threadId, type: 'system', name: '反诈中心', number: '96110', messages: [], unread: 0, lastMessage: '', lastTime: 0 };
+        }
+        message = options.message || `【公安交警/反诈中心】提示：近期冒充快递员、客服退款诈骗多发。请勿点击陌生链接，不随意透露验证码！如遇可疑情况请拨打110。`;
         break;
       }
       case 'custom': {
@@ -433,6 +466,45 @@ ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
     renderList();
   }
 
+  /* ─── API Driven Random Daily Event ─── */
+  async function triggerRandomDailyEvent() {
+    const settingsJSON = localStorage.getItem('myCoolPhone_aiSettings');
+    if (!settingsJSON) return;
+    const settings = JSON.parse(settingsJSON);
+
+    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+    const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+    const prompt = `[任务]
+请扮演一个随机的真实生活中的“陌生人”，给我发一条莫名其妙但极具日常感的短信。
+角色可能是：
+1. 送错外卖/快递极其焦急的骑手
+2. 喝醉酒发错短信的前任/相亲对象
+3. 问你是不是在楼上跳绳的暴躁邻居
+4. 让你明天把某个报表交一下的糊涂老板（把你当成了他员工）
+5. 驾校教练喊你练车
+
+【要求】
+- 短信字数 15-40 字以内。
+- 非常真实口语化。绝对不要动作描写。
+- 格式：直接输出短信内容，不要加任何其他解释。`;
+
+    try {
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+        body: JSON.stringify({ model: settings.model, messages: [{ role: 'user', content: prompt }], temperature: 0.9, max_tokens: 100 })
+      });
+      const data = await res.json();
+      let msg = (data?.choices?.[0]?.message?.content || '').trim();
+      if (msg) {
+        injectStrangerSMS('未知号码', _genFakeNumber(), msg);
+      }
+    } catch (e) {
+      console.error('[SMS] Random event error:', e);
+    }
+  }
+
   /* ─── Blocked-Contact Harassment ─── */
   function triggerBlockedHarassment(chatId) {
     if (typeof friendsData === 'undefined' || !friendsData[chatId]) return;
@@ -462,11 +534,26 @@ ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
     let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
     const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
-    const prompt = `你是 ${friend.remark || friend.realName || '某人'}。
-人设：${friend.persona || ''}
-用户把你在微信上拉黑了，你非常委屈或愤怒。
-现在用短信联系对方，写一条情感真实的短信（15-45字），
-只有纯文字，不能有动作描写，不能有 *号，要像真实短信那样。`;
+    const now = new Date();
+    const timeStr = `${now.getHours()}点${now.getMinutes()}分`;
+    let historyCtx = '';
+    if (friend.summaries && friend.summaries.length > 0) {
+      historyCtx = friend.summaries.slice(-3).map(s => s.text).join('；');
+    }
+
+    const prompt = `[客观状态]
+你(${friend.remark || friend.realName || '某人'})刚才在微信上被用户拉黑了。
+当前时间：${timeStr}。
+
+【你的人设】
+${friend.persona || ''}
+${historyCtx ? `【你们最近的经历/记忆】\n${historyCtx}\n` : ''}
+
+【任务】
+请完全基于你的人设，决定此刻你要给用户发的一条真实短信。
+- 不受任何情绪限制，傲娇就死鸭子嘴硬，暴躁就质问，冷静就陈述事实，完全取决于你的性格。
+- 短信长度 15-45 字，纯文字，绝对不能有动作描写（不能用*号或()包裹动作）。
+- 如果你觉得必须立刻打电话，可以在回复最后加上 [PHONE_CALL] 标签，系统会自动拨打过去。`;
 
     try {
       const res = await fetch(apiUrl, {
@@ -635,6 +722,7 @@ ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
     sendMessage,
     addSystemNotif,
     injectStrangerSMS,
+    triggerRandomDailyEvent,
     triggerBlockedHarassment,
     showNotifToast,
     checkForSMSTrigger,

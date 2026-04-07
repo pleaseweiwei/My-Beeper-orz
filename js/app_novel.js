@@ -52,6 +52,7 @@ const NovelApp = (() => {
   let state = {
     books: [],
     favorites: new Set(),
+    customLists: {}, // 新增：自定义书单 { "书单名": ["bookId1", "bookId2"] }
     activeBook: null,
     currentPage: 0,
     companion: null,
@@ -81,6 +82,11 @@ const NovelApp = (() => {
     brawlHP: { me: 100, ai: 100 },
     brawlLogs: [],
     brawlGoal: '',
+    workshopPhase: 'init',
+    castingCards: [],
+    plottingChat: [],
+    fateCards: [],
+    liveReactions: [],
   };
 
   // ─── API HELPER ──────────────────────────────────────────────
@@ -221,6 +227,7 @@ const NovelApp = (() => {
       localStorage.setItem('novel_state_v3', JSON.stringify({
         companion: state.companion,
         favorites: Array.from(state.favorites),
+        customLists: state.customLists || {},
         userBooks: state.books,
         myNovels: state.myNovels || [],
         writingBookId: state.writingBookId,
@@ -279,9 +286,16 @@ const NovelApp = (() => {
         }
         state.writingBookId = s.writingBookId || null;
         state.authorViews = s.authorViews || {};
+        state.customLists = s.customLists || {};
       } catch(e) {}
     }
     if (!(state.favorites instanceof Set)) state.favorites = new Set();
+    if (typeof state.customLists !== 'object') state.customLists = {};
+    state.workshopPhase = 'init';
+    state.castingCards = [];
+    state.plottingChat = [];
+    state.fateCards = [];
+    state.liveReactions = [];
     render();
     bindEvents();
     startAwayTracker();
@@ -399,10 +413,24 @@ const NovelApp = (() => {
   function buildShelfHtml() {
     var filtered = getShelfBooks();
     var html = buildGenreFilter('shelf');
-    html += (
+    var listsHtml = '';
+    var listNames = Object.keys(state.customLists);
+    if (listNames.length > 0) {
+        listsHtml = '<div class="novel-custom-lists" style="display:flex; gap:8px; overflow-x:auto; padding:12px 16px; scrollbar-width:none; background:var(--n-surface2); border-bottom:1px solid rgba(0,0,0,0.05);">';
+        listNames.forEach(function(lname) {
+            var activeClass = state.shelfGenre === 'list_' + lname ? 'active' : '';
+            listsHtml += '<div class="novel-genre-pill sm ' + activeClass + '" data-genre="list_' + lname + '" data-gtab="shelf"><i class="fas fa-folder"></i> ' + escapeHtml(lname) + '</div>';
+        });
+        listsHtml += '</div>';
+    }
+
+    html += listsHtml + (
       '<div class="novel-shelf-header">' +
         '<div class="novel-shelf-section-title"><i class="fas fa-heart"></i> 收藏 & 导入</div>' +
-        '<button class="novel-import-mini-btn" id="novel-import-btn"><i class="fas fa-file-import"></i> 导入TXT</button>' +
+        '<div style="display:flex;gap:8px;">' +
+           '<button class="novel-import-mini-btn" id="novel-new-list-btn" style="background:var(--n-surface2);color:var(--n-text2);"><i class="fas fa-plus"></i> 新建书单</button>' +
+           '<button class="novel-import-mini-btn" id="novel-import-btn"><i class="fas fa-file-import"></i> 导入TXT</button>' +
+        '</div>' +
       '</div>'
     );
 
@@ -421,6 +449,13 @@ const NovelApp = (() => {
     var books = state.books.filter(function(b) {
       return state.favorites.has(b.id) || b.isImported;
     });
+    
+    if (state.shelfGenre && state.shelfGenre.startsWith('list_')) {
+        var listName = state.shelfGenre.replace('list_', '');
+        var listIds = state.customLists[listName] || [];
+        return books.filter(function(b) { return listIds.includes(b.id); });
+    }
+    
     if (state.shelfGenre !== 'all') {
       books = books.filter(function(b) { return (b.tags || []).indexOf(state.shelfGenre) >= 0; });
     }
@@ -477,13 +512,17 @@ const NovelApp = (() => {
         cpHtml = '<div class="novel-community-section">' +
             '<div class="novel-community-title"><i class="fas fa-heart"></i> CP磕糖区</div>' +
             '<div class="novel-cp-list">';
-        cData.cpList.forEach(function(cp) {
-            cpHtml += '<div class="novel-cp-card">' +
+        cData.cpList.forEach(function(cp, i) {
+            cpHtml += '<div class="novel-cp-card" data-cpidx="' + i + '">' +
                 '<div class="novel-cp-header">' +
                     '<div class="novel-cp-names">' + escapeHtml(cp.name1) + ' <i class="fas fa-times" style="font-size:10px;margin:0 4px;"></i> ' + escapeHtml(cp.name2) + '</div>' +
                     '<div class="novel-cp-tag">' + escapeHtml(cp.tag) + '</div>' +
                 '</div>' +
                 '<div class="novel-cp-desc">"' + escapeHtml(cp.desc) + '"</div>' +
+                '<div style="display:flex;gap:12px;margin-top:12px;border-top:1px solid rgba(0,0,0,0.05);padding-top:8px;">' +
+                  '<button class="novel-fanfic-btn outline novel-comm-like-cp" style="flex:1;border:none;background:var(--n-surface2);"><i class="far fa-heart"></i> ' + (Math.floor(Math.random()*1000)+100) + '</button>' +
+                  '<button class="novel-fanfic-btn outline novel-comm-comment-cp" style="flex:1;border:none;background:var(--n-surface2);"><i class="far fa-comment"></i> 评论</button>' +
+                '</div>' +
             '</div>';
         });
         cpHtml += '</div></div>';
@@ -495,11 +534,15 @@ const NovelApp = (() => {
         fanartHtml = '<div class="novel-community-section">' +
             '<div class="novel-community-title"><i class="fas fa-palette"></i> 同人掉落</div>' +
             '<div class="novel-fanart-list">';
-        cData.fanarts.forEach(function(fa) {
-            fanartHtml += '<div class="novel-fanart-card">' +
+        cData.fanarts.forEach(function(fa, i) {
+            fanartHtml += '<div class="novel-fanart-card" data-faidx="' + i + '">' +
                 '<div class="novel-fanart-author"><i class="fas fa-user-circle"></i> ' + escapeHtml(fa.author) + '</div>' +
                 '<div class="novel-fanart-text">' + escapeHtml(fa.text).replace(/\n/g, '<br>') + '</div>' +
                 (fa.img ? '<img src="' + fa.img + '" class="novel-fanart-img">' : '') +
+                '<div style="display:flex;gap:12px;margin-top:12px;border-top:1px solid rgba(0,0,0,0.05);padding-top:8px;">' +
+                  '<button class="novel-fanfic-btn outline novel-comm-like-fa" style="flex:1;border:none;background:var(--n-surface2);"><i class="far fa-heart"></i> ' + (Math.floor(Math.random()*5000)+500) + '</button>' +
+                  '<button class="novel-fanfic-btn outline novel-comm-comment-fa" style="flex:1;border:none;background:var(--n-surface2);"><i class="far fa-comment"></i> 评论</button>' +
+                '</div>' +
             '</div>';
         });
         fanartHtml += '</div></div>';
@@ -509,6 +552,15 @@ const NovelApp = (() => {
       '<div class="novel-lb-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">' +
         '<div class="novel-section-label" style="margin:0; font-size: 1.2em; font-weight: bold; color: var(--n-text1);"><i class="fas fa-globe-asia" style="animation: spin 10s linear infinite;"></i> 泛读社区</div>' +
         '<button class="novel-lb-refresh-btn" id="novel-community-refresh" style="background: linear-gradient(135deg, #333, #000); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s ease; display: flex; align-items: center; gap: 5px;"><i class="fas fa-sync-alt"></i> 刷新动态</button>' +
+      '</div>' +
+      '<div class="novel-community-section">' +
+        '<div class="novel-plot-input-area" style="background:var(--n-surface); border-radius:12px; padding:12px; margin-bottom:15px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">' +
+          '<textarea id="novel-comm-post-input" class="novel-write-textarea" style="min-height:60px; margin-bottom:8px; border:none; background:var(--n-surface2); padding:10px;" placeholder="发帖求书、吐槽剧情、或者安利神仙小说..."></textarea>' +
+          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<div style="font-size:12px;color:var(--n-text3);"><i class="fas fa-image"></i> 发带图贴</div>' +
+            '<button class="novel-fanfic-btn primary" id="novel-comm-post-btn" style="margin:0; padding:6px 16px;">发布</button>' +
+          '</div>' +
+        '</div>' +
       '</div>' +
       trendsHtml +
       cpHtml +
@@ -534,6 +586,32 @@ const NovelApp = (() => {
     getAllBooksForRanking().forEach(function(b) { totalHeatNum += getHeatScore(b); });
     var fans = Math.floor(totalHeatNum / 47);
     var heatStr = totalHeatNum > 1000 ? Math.floor(totalHeatNum / 1000) + 'k' : String(totalHeatNum);
+
+    // 成就系统逻辑
+    var achievements = [];
+    if (allMyWorks.length > 0) achievements.push({ icon: 'fas fa-pen', title: '初入江湖', desc: '发布第一部作品' });
+    if (allMyWorks.length >= 5) achievements.push({ icon: 'fas fa-book', title: '著作等身', desc: '累计发布5部作品' });
+    if (fans >= 1000) achievements.push({ icon: 'fas fa-star', title: '小有名气', desc: '粉丝数突破1000' });
+    if (fans >= 10000) achievements.push({ icon: 'fas fa-crown', title: '驻站大神', desc: '粉丝数突破10000' });
+    if (totalHeatNum >= 100000) achievements.push({ icon: 'fas fa-fire-alt', title: '爆款制造机', desc: '总热度突破10万' });
+    
+    var badgesHtml = '';
+    if (achievements.length > 0) {
+      badgesHtml = '<div class="novel-section-label" style="margin-top:24px;"><i class="fas fa-medal"></i> 我的成就徽章</div>' +
+        '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none;">' +
+        achievements.map(function(ach) {
+          return '<div style="flex:none;width:80px;background:var(--n-surface2);border-radius:12px;padding:12px;text-align:center;box-shadow:var(--n-shadow);">' +
+            '<div style="font-size:24px;color:var(--n-accent);margin-bottom:8px;"><i class="' + ach.icon + '"></i></div>' +
+            '<div style="font-size:12px;font-weight:bold;color:var(--n-text1);margin-bottom:4px;">' + ach.title + '</div>' +
+            '<div style="font-size:10px;color:var(--n-text2);">' + ach.desc + '</div>' +
+          '</div>';
+        }).join('') +
+        '</div>';
+    } else {
+      badgesHtml = '<div class="novel-section-label" style="margin-top:24px;"><i class="fas fa-medal"></i> 我的成就徽章</div>' +
+        '<div style="font-size:12px;color:var(--n-text3);text-align:center;padding:16px;">多写点作品，点亮你的第一个徽章吧！</div>';
+    }
+
 
     var avatarHtml = userAvatar
       ? '<img src="' + userAvatar + '" class="novel-profile-avatar">'
@@ -579,29 +657,121 @@ const NovelApp = (() => {
           '</div>' +
         '</div>' +
       '</div>' +
+      badgesHtml +
       '<div class="novel-section-label" style="margin-top:24px;"><i class="fas fa-feather"></i> 作者工坊</div>' +
       buildFanEventHtml() +
       buildBrawlHtml() +
-      '<div class="novel-gen-card" id="novel-normal-write-card" style="' + (state.brawlMode ? 'display:none;' : '') + '">' +
-        '<div class="novel-gen-card-title"><i class="fas fa-pen-nib"></i> 剧情大纲扩写</div>' +
-        '<div class="novel-gen-card-desc">输入本章大纲，AI 帮你扩写成文笔优美的完整章节，发布后虚拟读者会来催更～</div>' +
-        '<div style="display:flex; justify-content:flex-end; margin-bottom:8px;"><button class="novel-fanfic-btn outline" id="novel-brawl-start-btn" style="padding:6px 12px; font-size:11px; flex:none;"><i class="fas fa-gamepad"></i> 键盘大乱斗</button></div>' +
-        '<textarea class="novel-write-textarea" id="novel-write-prompt" placeholder="例如：这章写我们在游乐园被困在摩天轮里，气氛很暧昧……"></textarea>' +
-        '<div class="novel-write-actions" style="margin-top:12px;">' +
-          '<button class="novel-gen-btn" id="novel-write-expand-btn" style="margin:0;flex:1"><i class="fas fa-magic"></i> AI扩写</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="novel-write-preview" id="novel-write-preview" style="display:none">' +
-        '<div class="novel-gen-card-title">预览</div>' +
-        '<div class="novel-write-preview-content" id="novel-write-preview-content"></div>' +
-        '<div class="novel-write-preview-actions">' +
-          '<button class="novel-fanfic-btn primary" id="novel-write-publish-btn"><i class="fas fa-paper-plane"></i> 发布章节</button>' +
-          '<button class="novel-fanfic-btn outline" id="novel-write-regen-btn"><i class="fas fa-sync-alt"></i> 重新生成</button>' +
-        '</div>' +
-      '</div>' +
+      buildWorkshopHtml() +
       myWorksHtml +
       '<div class="novel-spacer"></div>'
     );
+  }
+
+  // ─── WORKSHOP HTML & LOGIC ──────────────────────────────────
+  function buildWorkshopHtml() {
+    if (state.brawlMode) return '';
+    var html = '<div class="novel-workshop-phase">';
+
+    if (!state.workshopPhase || state.workshopPhase === 'init') {
+      var personas = getPersonas();
+      var charaListHtml = personas.length === 0
+        ? '<div style="font-size:12px;color:var(--n-text3);">请先添加好友</div>'
+        : personas.map(function(p) {
+            var isSel = state.selectedCharas.indexOf(p.id) >= 0;
+            return '<div class="novel-chara-item' + (isSel ? ' selected' : '') + '" data-ws-charaid="' + p.id + '">' +
+              (p.avatar ? '<img src="' + p.avatar + '" class="novel-chara-avatar">' : '<div class="novel-chara-avatar"><i class="fas fa-user"></i></div>') +
+              '<div class="novel-chara-name">' + p.name + '</div>' +
+              '<div class="novel-chara-check"><i class="fas fa-check"></i></div>' +
+            '</div>';
+          }).join('');
+
+      html += '<div class="novel-gen-card">' +
+        '<div class="novel-gen-card-title"><i class="fas fa-mask"></i> 剧组筹备 (Casting)</div>' +
+        '<div class="novel-gen-card-desc">选择参演的 AI 好友，系统将根据他们的真实性格生成专属异世界“身份卡”。</div>' +
+        '<div class="novel-chara-list" style="max-height:120px;margin-bottom:12px;">' + charaListHtml + '</div>' +
+        '<input type="text" id="novel-ws-genre" class="novel-trope-input" placeholder="输入题材 (如：末日废土、星际机甲)" value="末世废土" style="margin-bottom:12px;">' +
+        '<button class="novel-gen-btn" id="novel-ws-cast-btn"><i class="fas fa-magic"></i> 生成剧组身份卡</button>' +
+      '</div>';
+    } else if (state.workshopPhase === 'casting') {
+      var castHtml = (state.castingCards || []).map(function(c) {
+        return '<div class="novel-cast-card">' +
+          '<img src="' + c.avatar + '" class="novel-cast-avatar">' +
+          '<div class="novel-cast-name">' + c.name + '</div>' +
+          '<div class="novel-cast-role">' + c.role + '</div>' +
+        '</div>';
+      }).join('');
+      html += '<div class="novel-gen-card">' +
+        '<div class="novel-gen-card-title"><i class="fas fa-id-card"></i> 剧组身份卡已生成</div>' +
+        '<div class="novel-cast-grid">' + castHtml + '</div>' +
+        '<button class="novel-gen-btn" id="novel-ws-to-plot-btn" style="margin-top:12px;"><i class="fas fa-users"></i> 进入剧情圆桌会</button>' +
+      '</div>';
+    } else if (state.workshopPhase === 'plotting') {
+      var chatHtml = (state.plottingChat || []).map(function(msg) {
+        var isMe = msg.id === 'me';
+        return '<div class="novel-plot-msg ' + (isMe ? 'me' : '') + '">' +
+          '<img src="' + msg.avatar + '" class="novel-plot-msg-avatar">' +
+          '<div class="novel-plot-msg-bubble">' + escapeHtml(msg.text) + '</div>' +
+        '</div>';
+      }).join('');
+      html += '<div class="novel-plotting-room">' +
+        '<div class="novel-gen-card-title"><i class="fas fa-comments"></i> 剧情圆桌策划会</div>' +
+        '<div class="novel-gen-card-desc">输入你的灵感，看 AI 角色们如何以剧中身份争论接下来的剧情。</div>' +
+        '<div class="novel-plot-chat" id="novel-plot-chat">' + (chatHtml || '<div style="color:var(--n-text3);font-size:12px;text-align:center;">抛出个灵感开始讨论吧...</div>') + '</div>' +
+        '<div class="novel-plot-input-area">' +
+          '<input type="text" id="novel-plot-input" class="novel-plot-input" placeholder="例如：男主突然黑化了...">' +
+          '<button id="novel-plot-send-btn" class="novel-plot-send"><i class="fas fa-paper-plane"></i></button>' +
+        '</div>' +
+        '<button class="novel-gen-btn" id="novel-ws-to-write-btn" style="margin-top:12px;"><i class="fas fa-pen-nib"></i> 吸收讨论，生成大纲并开写！</button>' +
+      '</div>';
+    } else if (state.workshopPhase === 'writing') {
+      var fateHtml = '';
+      if (state.fateCards && state.fateCards.length > 0) {
+        fateHtml = '<div class="novel-fate-container">' + state.fateCards.map(function(f, i) {
+          return '<div class="novel-fate-card" data-fateidx="' + i + '">' +
+            '<i class="' + f.icon + ' novel-fate-icon"></i>' +
+            '<div class="novel-fate-title">' + f.title + '</div>' +
+            '<div class="novel-fate-desc">' + f.desc + '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+      }
+      
+      var reactionsHtml = '';
+      if (state.liveReactions && state.liveReactions.length > 0) {
+        reactionsHtml = '<div class="novel-live-reactions">' + state.liveReactions.map(function(r) {
+          return '<div class="novel-live-reaction"><img src="' + r.avatar + '">' + escapeHtml(r.text) + '</div>';
+        }).join('') + '</div>';
+      }
+
+      html += '<div class="novel-gen-card" style="position:relative;">' +
+        '<div class="novel-gen-card-title"><i class="fas fa-laptop-code"></i> 沉浸式双屏写作台</div>' +
+        '<div style="display:flex; justify-content:space-between; margin-bottom:8px;">' +
+          '<select id="novel-ws-tone" class="novel-trope-input" style="width:48%;padding:6px;"><option value="细腻心理">细腻心理</option><option value="燃向打斗">燃向打斗</option><option value="修罗场">修罗场</option><option value="高甜发糖">高甜发糖</option></select>' +
+          '<button class="novel-fanfic-btn outline" id="novel-coop-start-btn" style="padding:6px 12px; font-size:11px; flex:none; margin-right:8px;"><i class="fas fa-handshake"></i> 合作接龙</button>' +
+          '<button class="novel-fanfic-btn outline" id="novel-brawl-start-btn" style="padding:6px 12px; font-size:11px; flex:none;"><i class="fas fa-gamepad"></i> 开启大乱斗</button>' +
+        '</div>' +
+        '<textarea class="novel-write-textarea" id="novel-write-prompt" placeholder="基于讨论大纲，继续输入剧情细节...">' + (state._wsTempOutline || '') + '</textarea>' +
+        reactionsHtml +
+        fateHtml +
+        '<div class="novel-write-actions" style="margin-top:12px;">' +
+          (state.workshopPhase === 'coop_writing' 
+            ? '<button class="novel-gen-btn" id="novel-coop-write-btn" style="margin:0;flex:1;background:#2ecc71;"><i class="fas fa-pen-fancy"></i> 我来接龙</button>' 
+            : '<button class="novel-gen-btn" id="novel-ws-write-btn" style="margin:0;flex:1"><i class="fas fa-magic"></i> AI 监工扩写</button>') +
+          '<button class="novel-fanfic-btn outline" id="novel-ws-draw-fate-btn" style="margin:0;flex:none;"><i class="fas fa-layer-group"></i> 抽命运卡</button>' +
+        '</div>' +
+        '<button class="novel-fanfic-btn outline" id="novel-ws-reset" style="width:100%;margin-top:12px;border:none;">重置工坊</button>' +
+      '</div>';
+      
+      html += '<div class="novel-write-preview" id="novel-write-preview" style="' + (state._pendingExpandedContent ? 'display:block;' : 'display:none;') + '">' +
+        '<div class="novel-gen-card-title">预览</div>' +
+        '<div class="novel-write-preview-content" id="novel-write-preview-content">' + (state._pendingExpandedContent ? state._pendingExpandedContent.replace(/\n/g, '<br>') : '') + '</div>' +
+        '<div class="novel-write-preview-actions">' +
+          '<button class="novel-fanfic-btn primary" id="novel-write-publish-btn"><i class="fas fa-paper-plane"></i> 发布章节</button>' +
+        '</div>' +
+      '</div>';
+    }
+    
+    html += '</div>';
+    return html;
   }
 
   function getMyWorks() {
@@ -676,16 +846,17 @@ const NovelApp = (() => {
     var isFav = state.favorites.has(book.id);
     var heat = getHeatScore(book);
     var heatStr = heat > 1000 ? (heat / 1000).toFixed(1) + 'k' : String(heat);
+    var coverStyle = book.aiCover ? 'background-image:url(' + book.aiCover + ')' : 'background:' + (book.cover || '#f8f9fa');
     return (
       '<div class="novel-book-card" data-bookid="' + book.id + '">' +
-        '<div class="novel-book-cover" style="background:' + (book.cover || '#f8f9fa') + '">' +
-          '<div class="novel-book-cover-pattern"></div>' +
-          '<span class="novel-book-emoji"><i class="' + (book.emoji || 'fas fa-book') + '"></i></span>' +
+        '<div class="novel-book-cover" style="' + coverStyle + '">' +
+          (book.aiCover ? '' : '<div class="novel-book-cover-pattern"></div><span class="novel-book-emoji"><i class="' + (book.emoji || 'fas fa-book') + '"></i></span>') +
           '<button class="novel-fav-btn' + (isFav ? ' active' : '') + '" data-favid="' + book.id + '">' +
             (isFav ? '<i class="fas fa-heart" style="color:#000;"></i>' : '<i class="far fa-heart"></i>') +
           '</button>' +
           (book.serial || book.isGenerated || book.isMyNovel ? '<div class="novel-serial-badge">连载</div>' : '') +
           (book.isImported ? '<div class="novel-serial-badge" style="left:auto;right:12px;background:#111;color:#fff;">TXT</div>' : '') +
+          (book.hasUpdate ? '<div style="position:absolute;top:-4px;right:-4px;width:12px;height:12px;background:#ff4757;border-radius:50%;border:2px solid var(--n-surface);"></div>' : '') +
         '</div>' +
         '<div class="novel-book-info">' +
           '<div class="novel-book-title">' + escapeHtml(book.title) + '</div>' +
@@ -768,10 +939,33 @@ const NovelApp = (() => {
           '<button class="novel-page-btn" id="novel-fr-close"><i class="fas fa-chevron-down"></i></button>' +
           '<span class="novel-fullreader-title" id="novel-fr-title"></span>' +
           '<div class="novel-tools-bar">' +
+            '<button class="novel-header-icon" id="novel-fr-settings-btn" title="阅读设置"><i class="fas fa-font"></i></button>' +
             '<button class="novel-header-icon" id="novel-fr-bgm-btn" title="情境BGM"><i class="fas fa-music"></i></button>' +
             '<button class="novel-header-icon" id="novel-fr-tts-btn" title="听书模式"><i class="fas fa-headphones"></i></button>' +
             '<button class="novel-header-icon" id="novel-fr-highlight-btn" title="划线"><i class="fas fa-pen"></i></button>' +
             '<button class="novel-header-icon" id="novel-fr-share-btn" title="分享"><i class="fas fa-paper-plane"></i></button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="novel-reader-settings-panel" id="novel-reader-settings-panel">' +
+          '<div class="novel-setting-row">' +
+            '<div class="novel-setting-label">字号</div>' +
+            '<div class="novel-setting-options">' +
+              '<button class="novel-setting-btn" data-fontsize="small">A-</button>' +
+              '<button class="novel-setting-btn active" data-fontsize="medium">标准</button>' +
+              '<button class="novel-setting-btn" data-fontsize="large">A+</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="novel-setting-row">' +
+            '<div class="novel-setting-label">背景</div>' +
+            '<div class="novel-setting-options">' +
+              '<button class="novel-theme-btn active" data-theme="default" style="background:#fafafa;"></button>' +
+              '<button class="novel-theme-btn" data-theme="parchment" style="background:#fdf6e3;"></button>' +
+              '<button class="novel-theme-btn" data-theme="green" style="background:#cce8cf;"></button>' +
+              '<button class="novel-theme-btn" data-theme="dark" style="background:#1a1a1a;"></button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="novel-setting-row" style="margin-top:8px;">' +
+             '<button class="novel-fanfic-btn outline" id="novel-fr-export-txt" style="width:100%;"><i class="fas fa-download"></i> 导出为 TXT</button>' +
           '</div>' +
         '</div>' +
         '<div style="padding:0 24px;position:absolute;top:76px;left:0;right:0;z-index:9;pointer-events:none;">' +
@@ -812,6 +1006,20 @@ const NovelApp = (() => {
   // ─── DIALOGS ─────────────────────────────────────────────────
   function buildDialogs() {
     return (
+      '<div class="novel-share-dialog" id="novel-setting-dialog" style="display:none; z-index:99999;">' +
+        '<div class="novel-share-dialog-inner" style="max-width:400px;width:90%;">' +
+          '<div class="novel-gen-card-title" style="margin-bottom:12px;font-size:18px;text-align:center;"><i class="fas fa-book-open"></i> 剧本推演完成</div>' +
+          '<div id="novel-setting-content" style="max-height:300px;overflow-y:auto;font-size:13px;line-height:1.6;color:var(--n-text2);margin-bottom:15px;background:var(--n-surface2);padding:12px;border-radius:8px;border:1px solid rgba(0,0,0,0.05);white-space:pre-wrap;">' +
+            '生成中...' +
+          '</div>' +
+          '<div style="display:flex;gap:10px;">' +
+            '<button class="novel-fanfic-btn outline" id="novel-setting-cancel" style="flex:1;">放弃并重推</button>' +
+            '<button class="novel-fanfic-btn primary" id="novel-setting-confirm" style="flex:1;">确认！生成正文</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="novel-share-overlay" id="novel-setting-overlay" style="display:none; z-index:99998;"></div>' +
+
       '<div class="novel-share-dialog" id="novel-share-dialog" style="display:none">' +
         '<div class="novel-share-dialog-inner">' +
           '<div class="novel-gen-card-title" style="margin-bottom:12px"><i class="fas fa-share"></i> 分享给谁看？</div>' +
@@ -887,8 +1095,30 @@ const NovelApp = (() => {
       };
     });
 
+    // Long Press for Book Card (Context Menu)
+    var pressTimer;
+    app.addEventListener('touchstart', function(e) {
+      var card = e.target.closest('.novel-book-card');
+      if (card && card.dataset.bookid) {
+        pressTimer = setTimeout(function() {
+          e.preventDefault(); // stop click
+          openNovelContextMenu(card.dataset.bookid);
+        }, 600);
+      }
+    });
+    app.addEventListener('touchend', function() { clearTimeout(pressTimer); });
+    app.addEventListener('touchmove', function() { clearTimeout(pressTimer); });
+    
     // Delegated clicks
     app.addEventListener('click', function(e) {
+      // Context menu right-click simulation for desktop
+      var cardRightClick = e.target.closest('.novel-book-card');
+      if (e.button === 2 && cardRightClick && cardRightClick.dataset.bookid) {
+        e.preventDefault();
+        openNovelContextMenu(cardRightClick.dataset.bookid);
+        return;
+      }
+      
       // Genre pill (forum / shelf filter)
       var pill = e.target.closest('.novel-genre-pill[data-gtab]');
       if (pill) {
@@ -1024,22 +1254,87 @@ const NovelApp = (() => {
   }
 
   function bindWriteEvents() {
-    var expandBtn = document.getElementById('novel-write-expand-btn');
-    if (expandBtn) expandBtn.onclick = doExpandChapter;
-    var publishBtn = document.getElementById('novel-write-publish-btn');
-    if (publishBtn) publishBtn.onclick = publishWrittenChapter;
-    var regenBtn = document.getElementById('novel-write-regen-btn');
-    if (regenBtn) regenBtn.onclick = doExpandChapter;
-    
+    // Basic stuff
+    var coopStart = document.getElementById('novel-coop-start-btn');
+    if (coopStart) coopStart.onclick = function() {
+        state.workshopPhase = 'coop_writing';
+        state.brawlMode = false;
+        refreshProfile();
+        showNovelToast('🤝 已开启温和接龙模式');
+    };
+
     var brawlStart = document.getElementById('novel-brawl-start-btn');
     if (brawlStart) brawlStart.onclick = startBrawlMode;
     var brawlAttack = document.getElementById('novel-brawl-attack-btn');
     if (brawlAttack) brawlAttack.onclick = doBrawlAttack;
     var brawlQuit = document.getElementById('novel-brawl-quit-btn');
     if (brawlQuit) brawlQuit.onclick = quitBrawlMode;
-    
     var fanResolve = document.getElementById('novel-fan-resolve-btn');
     if (fanResolve) fanResolve.onclick = resolveFanEvent;
+
+    // Workshop bindings
+    var wsApp = document.getElementById('novelApp');
+    if (!wsApp) return;
+    
+    // Casting Chara Select
+    wsApp.querySelectorAll('.novel-chara-item[data-ws-charaid]').forEach(function(item) {
+      item.onclick = function() {
+        var cid = item.dataset.wsCharaid;
+        var idx = state.selectedCharas.indexOf(cid);
+        if (idx >= 0) state.selectedCharas.splice(idx, 1);
+        else state.selectedCharas.push(cid);
+        refreshProfile();
+      };
+    });
+
+    var castBtn = document.getElementById('novel-ws-cast-btn');
+    if (castBtn) castBtn.onclick = doWsCasting;
+
+    var toPlotBtn = document.getElementById('novel-ws-to-plot-btn');
+    if (toPlotBtn) toPlotBtn.onclick = function() { state.workshopPhase = 'plotting'; state.plottingChat = []; refreshProfile(); };
+
+    var plotSendBtn = document.getElementById('novel-plot-send-btn');
+    if (plotSendBtn) plotSendBtn.onclick = doPlotChatSend;
+    var plotInput = document.getElementById('novel-plot-input');
+    if (plotInput) plotInput.onkeydown = function(e) { if (e.key === 'Enter') doPlotChatSend(); };
+
+    var toWriteBtn = document.getElementById('novel-ws-to-write-btn');
+    if (toWriteBtn) toWriteBtn.onclick = doWsGenerateOutlineAndWrite;
+
+    var writeBtn = document.getElementById('novel-ws-write-btn');
+    if (writeBtn) writeBtn.onclick = doWsExpandChapter;
+    
+    var coopWriteBtn = document.getElementById('novel-coop-write-btn');
+    if (coopWriteBtn) coopWriteBtn.onclick = doCoopWrite;
+
+    var drawFateBtn = document.getElementById('novel-ws-draw-fate-btn');
+    if (drawFateBtn) drawFateBtn.onclick = doWsDrawFateCards;
+
+    var wsReset = document.getElementById('novel-ws-reset');
+    if (wsReset) wsReset.onclick = function() {
+      state.workshopPhase = 'init';
+      state.castingCards = [];
+      state.plottingChat = [];
+      state.fateCards = [];
+      state.liveReactions = [];
+      state._wsTempOutline = '';
+      state._pendingExpandedContent = '';
+      refreshProfile();
+    };
+
+    wsApp.querySelectorAll('.novel-fate-card').forEach(function(card) {
+      card.onclick = function() {
+        var idx = card.dataset.fateidx;
+        var f = state.fateCards[idx];
+        var ta = document.getElementById('novel-write-prompt');
+        if (ta) ta.value += '\n【命运分支】：' + f.desc;
+        state.fateCards = [];
+        refreshProfile();
+      };
+    });
+
+    var publishBtn = document.getElementById('novel-write-publish-btn');
+    if (publishBtn) publishBtn.onclick = publishWrittenChapter;
   }
 
   function bindReaderEvents() {
@@ -1128,6 +1423,22 @@ const NovelApp = (() => {
 
 
   function bindDialogEvents() {
+    var settingCancel = document.getElementById('novel-setting-cancel');
+    if (settingCancel) settingCancel.onclick = function() {
+      document.getElementById('novel-setting-dialog').style.display = 'none';
+      document.getElementById('novel-setting-overlay').style.display = 'none';
+      var btn = document.getElementById('novel-generate-btn');
+      if (btn) { btn.innerHTML = '<i class="fas fa-magic"></i> 一键生成 ' + state.chaptersToGenerate + ' 章小说'; btn.disabled = false; }
+      state.isGenerating = false;
+    };
+    var settingConfirm = document.getElementById('novel-setting-confirm');
+    if (settingConfirm) settingConfirm.onclick = function() {
+      document.getElementById('novel-setting-dialog').style.display = 'none';
+      document.getElementById('novel-setting-overlay').style.display = 'none';
+      if (window._pendingGenNovel) {
+          window._pendingGenNovel();
+      }
+    };
     var importCancel = document.getElementById('novel-import-cancel');
     if (importCancel) importCancel.onclick = hideImportDialog;
     var importOvl = document.getElementById('novel-import-overlay');
@@ -1231,6 +1542,21 @@ const NovelApp = (() => {
     if (si) si.onclick = showImportDialog;
     var sf = document.getElementById('novel-shelf-forum-btn');
     if (sf) sf.onclick = function() { switchTab('forum'); };
+    
+    var nlBtn = document.getElementById('novel-new-list-btn');
+    if (nlBtn) {
+        nlBtn.onclick = function() {
+            var name = prompt('请输入新书单名称：');
+            if (name && name.trim()) {
+                name = name.trim();
+                if (state.customLists[name]) { showNovelToast('该书单已存在'); return; }
+                state.customLists[name] = [];
+                saveState();
+                refreshShelf();
+                showNovelToast('书单创建成功');
+            }
+        };
+    }
   }
 
   function refreshCommunity() {
@@ -1244,6 +1570,52 @@ const NovelApp = (() => {
     fanResolve.forEach(btn => {
         btn.onclick = resolveFanEvent;
     });
+
+    // 社区点赞交互
+    el.querySelectorAll('.novel-comm-like-cp, .novel-comm-like-fa').forEach(function(btn) {
+      btn.onclick = function() {
+        var icon = btn.querySelector('i');
+        if (icon.classList.contains('far')) {
+          icon.className = 'fas fa-heart';
+          icon.style.color = '#ff4757';
+          btn.innerHTML = btn.innerHTML.replace(/\d+/, function(m) { return parseInt(m) + 1; });
+          createParticleEffect(btn.getBoundingClientRect().left + 20, btn.getBoundingClientRect().top, '💖');
+        }
+      };
+    });
+
+    el.querySelectorAll('.novel-comm-comment-cp, .novel-comm-comment-fa').forEach(function(btn) {
+      btn.onclick = function() {
+        var text = prompt("输入你的评论：");
+        if (text && text.trim()) {
+          showNovelToast('评论成功！经验值+5');
+        }
+      };
+    });
+
+    var postBtn = document.getElementById('novel-comm-post-btn');
+    if (postBtn) {
+      postBtn.onclick = async function() {
+        var input = document.getElementById('novel-comm-post-input');
+        if (!input || !input.value.trim()) { showNovelToast('请输入内容'); return; }
+        var text = input.value.trim();
+        postBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
+        postBtn.disabled = true;
+
+        showNovelToast('帖子已发布！正在等待网友回复...');
+        input.value = '';
+
+        // 模拟AI网友回复
+        setTimeout(async function() {
+          var promptStr = `我刚在一个小说社区发布了一个帖子：\n"${text}"\n请扮演一个热心的社区网友（可能带点沙雕、可能在推书、可能附和吐槽），用一句话简短回复我的帖子。可以直接输出回复内容。`;
+          var res = await callAPI(promptStr, 100);
+          if (res) {
+            showNovelToast('💬 网友回复你: ' + res);
+          }
+          if (postBtn) { postBtn.innerHTML = '发布'; postBtn.disabled = false; }
+        }, 2000);
+      };
+    }
   }
 
   function refreshProfile() {
@@ -1325,10 +1697,11 @@ ${userPersona || '代入感极强的普通主角视角'}
 [Main Characters (NPCs)]
 ${charaPersonas || '未指定'}
 
-[Style Guidance]
-1. 深度贴合NPC人设（口癖、性格、行为逻辑），严禁OOC。
-2. 侧重感官描写（视觉、听觉、嗅觉）和微妙的心理活动。
-3. 文本必须包含丰富的对话和动作细节。
+[Style Guidance & Relationship Dynamics]
+1. 深度贴合NPC人设，必须符合他们的真实性格和思维方式。
+2. 呈现出主角与NPC之间的特定羁绊和张力（比如暗流涌动的敌意、极致的拉扯感或甜宠日常）。
+3. 侧重感官描写（视觉、听觉、嗅觉）和微妙的心理活动。
+4. 文本必须包含丰富的对话，切忌流水账叙述。
 
 [Task]
 `;
@@ -1349,6 +1722,199 @@ ${charaPersonas || '未指定'}
 [Option B: 握住他的手，尝试安抚]
 `;
     return prompt;
+  }
+
+  // ─── WORKSHOP API ACTIONS ──────────────────────────────────
+  async function doWsCasting() {
+    if (state.selectedCharas.length === 0) { showNovelToast('请至少选择一位角色参演'); return; }
+    var genre = document.getElementById('novel-ws-genre') ? document.getElementById('novel-ws-genre').value : '异世界';
+    var btn = document.getElementById('novel-ws-cast-btn');
+    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 构思身份卡中...'; btn.disabled = true; }
+
+    state.castingCards = [];
+    
+    for (var i = 0; i < state.selectedCharas.length; i++) {
+      var cid = state.selectedCharas[i];
+      var f = getPersona(cid);
+      if (!f) continue;
+      
+      var prompt = `在一本【${genre}】题材的小说中，根据以下角色的原有人设，为TA生成一张“小说身份卡”（包括剧中名字、职业/身份、隐藏性格）。
+原人设：${f.name}，${f.persona}
+请返回JSON格式（不含markdown，仅返回{}包裹的JSON）：
+{"role": "角色设定描述(约15字)"}`;
+      
+      try {
+        var res = await callAPI(prompt, 100);
+        var parsed = JSON.parse(res.replace(/```json/g, '').replace(/```/g, '').trim());
+        state.castingCards.push({
+          id: cid,
+          name: f.name,
+          avatar: f.avatar,
+          role: parsed.role || '神秘角色',
+          originalPersona: f.persona
+        });
+      } catch(e) {
+        state.castingCards.push({ id: cid, name: f.name, avatar: f.avatar, role: '神秘路人甲', originalPersona: f.persona });
+      }
+    }
+    
+    state.workshopPhase = 'casting';
+    refreshProfile();
+  }
+
+  async function doPlotChatSend() {
+    var input = document.getElementById('novel-plot-input');
+    if (!input || !input.value.trim()) return;
+    var text = input.value.trim();
+    input.value = '';
+    
+    state.plottingChat.push({ id: 'me', avatar: getUserAvatar() || 'https://via.placeholder.com/32', text: text });
+    refreshProfile();
+    
+    // Auto-scroll
+    setTimeout(function(){ var c = document.getElementById('novel-plot-chat'); if(c) c.scrollTop = c.scrollHeight; }, 100);
+
+    // AI Characters respond
+    if (!state.castingCards || state.castingCards.length === 0) return;
+    var speaker = state.castingCards[Math.floor(Math.random() * state.castingCards.length)];
+    
+    var context = state.plottingChat.slice(-4).map(function(m) { return (m.id==='me' ? '作者:' : m.name+':') + m.text; }).join('\n');
+    var prompt = `我们正在筹备一本小说。你在剧中的身份是【${speaker.role}】。
+基于你的原性格【${speaker.originalPersona}】和剧中身份，对作者的剧情提议发表看法（赞同、反对或提出疯狂的建议）。
+聊天记录：
+${context}
+用你的身份口吻回答一句话（不要加前缀）：`;
+
+    var btn = document.getElementById('novel-plot-send-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+      var res = await callAPI(prompt, 100);
+      if (res) {
+        state.plottingChat.push({ id: speaker.id, name: speaker.name, avatar: speaker.avatar, text: res });
+        refreshProfile();
+        setTimeout(function(){ var c = document.getElementById('novel-plot-chat'); if(c) c.scrollTop = c.scrollHeight; }, 100);
+      }
+    } catch(e) {}
+    if (btn) btn.disabled = false;
+  }
+
+  async function doWsGenerateOutlineAndWrite() {
+    if (state.plottingChat.length === 0) { showNovelToast('请先讨论几句剧情'); return; }
+    var btn = document.getElementById('novel-ws-to-write-btn');
+    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 整理大纲中...'; btn.disabled = true; }
+
+    var context = state.plottingChat.map(function(m) { return (m.id==='me' ? '作者:' : m.name+':') + m.text; }).join('\n');
+    var prompt = `根据我们的群聊讨论记录，整理出一份这本小说当前章节的【详细大纲】（包括：起因、发展、高潮点）。
+讨论记录：
+${context}
+直接输出大纲正文（不超150字）。`;
+
+    try {
+      var res = await callAPI(prompt, 200);
+      state._wsTempOutline = res || '剧情发展大纲...';
+      state.workshopPhase = 'writing';
+      refreshProfile();
+    } catch(e) {
+      showNovelToast('生成失败');
+      if (btn) { btn.innerHTML = '<i class="fas fa-pen-nib"></i> 吸收讨论，生成大纲并开写！'; btn.disabled = false; }
+    }
+  }
+
+  async function doWsExpandChapter() {
+    var promptEl = document.getElementById('novel-write-prompt');
+    if (!promptEl || !promptEl.value.trim()) { showNovelToast('请输入大纲细节'); return; }
+    
+    var tone = document.getElementById('novel-ws-tone') ? document.getElementById('novel-ws-tone').value : '细腻心理';
+    var btn = document.getElementById('novel-ws-write-btn');
+    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI 监工扩写中...'; btn.disabled = true; }
+
+    // Trigger random live reaction
+    if (state.castingCards && state.castingCards.length > 0 && Math.random() > 0.3) {
+      var watcher = state.castingCards[Math.floor(Math.random() * state.castingCards.length)];
+      var texts = ['“你确定要这么虐我？”', '“这段写得不错，赏你个点赞。”', '“赶紧写，别摸鱼！”', '“这里能多加点我的戏份吗？”'];
+      state.liveReactions = [{ avatar: watcher.avatar, text: watcher.name + '：' + texts[Math.floor(Math.random() * texts.length)] }];
+      refreshProfile();
+    }
+
+    var outline = promptEl.value.trim();
+    var castInfo = (state.castingCards || []).map(function(c) { return c.name + ' - 剧中身份:' + c.role + ', 性格:' + c.originalPersona; }).join('\n');
+
+    var prompt = `你是顶尖小说家。请基于大纲扩写一章（800字）。
+要求风格/笔调：【${tone}】
+出场角色设定：
+${castInfo}
+本章大纲：
+${outline}
+
+要求：
+1. 强制展现角色设定，使用符合他们性格的小动作或口癖（Show don't tell）。
+2. 直接输出章节正文，不需要多余的解释，注意张力。`;
+
+    try {
+      var result = await callAPI(prompt, 1500);
+      state._pendingExpandedContent = result;
+      refreshProfile();
+    } catch(e) {
+      showNovelToast('扩写失败');
+    }
+    if (btn) { btn.innerHTML = '<i class="fas fa-magic"></i> AI 监工扩写'; btn.disabled = false; }
+    state.liveReactions = []; // clear reaction
+  }
+
+  async function doWsDrawFateCards() {
+    var btn = document.getElementById('novel-ws-draw-fate-btn');
+    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; }
+
+    var prompt = `你是一个跑团GM（带有些恶趣味）。根据当前的网文大纲/局势，生成3张随机的“命运卡牌”，用来给主角制造意外转折或戏剧冲突。
+返回严格的JSON格式：
+[
+  {"icon": "fas fa-bolt", "title": "卡牌名", "desc": "简短的意外转折描述(如：突然有个隐藏反派跳出来)"}
+]`;
+    try {
+      var res = await callAPI(prompt, 200);
+      state.fateCards = JSON.parse(res.replace(/```json/g, '').replace(/```/g, '').trim()).slice(0, 3);
+      refreshProfile();
+    } catch(e) {
+      state.fateCards = [
+        { icon: "fas fa-heart-broken", title: "突生嫌隙", desc: "主角之间产生了致命误会。" },
+        { icon: "fas fa-meteor", title: "天降横祸", desc: "原本平稳的局面被意外打破。" },
+        { icon: "fas fa-mask", title: "伪装掉落", desc: "某个角色的真实身份暴露了。" }
+      ];
+      refreshProfile();
+    }
+    if (btn) { btn.innerHTML = '<i class="fas fa-layer-group"></i> 抽命运卡'; btn.disabled = false; }
+  }
+
+  async function doCoopWrite() {
+      var promptEl = document.getElementById('novel-write-prompt');
+      if (!promptEl || !promptEl.value.trim()) { showNovelToast('请输入接龙内容'); return; }
+      
+      var userText = promptEl.value.trim();
+      var btn = document.getElementById('novel-coop-write-btn');
+      if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI 接龙中...'; btn.disabled = true; }
+
+      var context = state._pendingExpandedContent || state._wsTempOutline || '';
+      var prompt = `我们正在玩小说接龙游戏。\n前面的内容是：${context}\n刚才我接龙了：${userText}\n现在轮到你了，请顺着我的情节继续往下写一段（约100-200字），保持文风一致，推动剧情发展。直接输出你接龙的内容，不要有其他解释。`;
+      
+      try {
+          var aiText = await callAPI(prompt, 500);
+          if (aiText) {
+             state._pendingExpandedContent = (context ? context + '\n\n' : '') + userText + '\n\n' + aiText;
+             promptEl.value = '';
+             refreshProfile();
+             var previewEl = document.getElementById('novel-write-preview');
+             var previewContent = document.getElementById('novel-write-preview-content');
+             if (previewEl) previewEl.style.display = 'block';
+             if (previewContent) previewContent.innerHTML = state._pendingExpandedContent.replace(/\n/g, '<br>');
+          } else {
+             showNovelToast('接龙失败');
+          }
+      } catch (e) {
+          showNovelToast('接龙发生错误');
+      }
+      
+      if (btn) { btn.innerHTML = '<i class="fas fa-pen-fancy"></i> 我来接龙'; btn.disabled = false; }
   }
 
   // ─── GENERATE NOVEL ──────────────────────────────────────────
@@ -1376,47 +1942,77 @@ ${charaPersonas || '未指定'}
       if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + msg;
     };
 
-    setProgress('推演世界线与人设...');
+    setProgress('前期筹备中...');
 
-    var prompt1 = buildTavernPrompt("未定名", genre, tropeStr, charaPersonas, userPersona, worldContent, "", true);
-    var result1 = await callAPI(prompt1, 2000);
-
-    if (!result1) {
-      state.isGenerating = false;
-      state.genProgress = '';
-      if (btn) { btn.innerHTML = '<i class="fas fa-magic"></i> 一键生成小说'; btn.disabled = false; }
-      showNovelToast('生成失败，请检查 API 配置');
-      return;
+    // 1. 生成设定集
+    let settingPrompt = `请为一部【${genre}】题材的小说生成一份《剧组设定集》。\n`+
+                        `结合要素：${tropeStr}\n`+
+                        `参演AI角色：\n${charaPersonas}\n\n`+
+                        `请直接输出设定集，包含：1. 暂定书名（加书名号）；2. 一句话世界观；3. 每个角色在剧中的新身份及性格微调。`;
+    
+    var settingResult = await callAPI(settingPrompt, 600);
+    if (!settingResult) {
+        state.isGenerating = false;
+        state.genProgress = '';
+        if (btn) { btn.innerHTML = '<i class="fas fa-magic"></i> 一键生成 ' + state.chaptersToGenerate + ' 章小说'; btn.disabled = false; }
+        showNovelToast('设定集推演失败，请检查 API 配置');
+        return;
     }
 
-    var titleMatch = result1.match(/《(.+?)》/);
+    var titleMatch = settingResult.match(/《(.+?)》/);
     var title = titleMatch ? titleMatch[1] : ('时空异卷_' + Date.now().toString().slice(-4));
-    var content1 = result1.replace(/《.+?》/, '').trim();
+    
+    // 展示设定集对话框
+    var settingDialog = document.getElementById('novel-setting-dialog');
+    var settingOverlay = document.getElementById('novel-setting-overlay');
+    var settingContent = document.getElementById('novel-setting-content');
+    if (settingDialog && settingOverlay && settingContent) {
+        settingContent.textContent = settingResult;
+        settingDialog.style.display = 'flex';
+        settingOverlay.style.display = 'block';
+    }
 
-    var newBook = {
-      id: 'gen_' + Date.now(),
-      title: title,
-      tags: [state.generationGenre],
-      cover: randomCover(),
-      emoji: randomEmoji(),
-      progress: 0,
-      totalPages: 1,
-      pages: [content1],
-      isGenerated: true,
-      serial: true,
-      charas: state.selectedCharas.slice(),
-      tropes: state.currentTropes.slice(),
-      meta: { genre: genre, tropeStr: tropeStr, charaPersonas: charaPersonas, userPersona: userPersona, worldContent: worldContent }
+    // 挂载确认回调
+    window._pendingGenNovel = async function() {
+        setProgress('正式开机撰写...');
+        var prompt1 = buildTavernPrompt(title, genre, tropeStr, charaPersonas, userPersona, worldContent, "《剧本设定集参考》\n" + settingResult, true);
+        var result1 = await callAPI(prompt1, 2000);
+
+        if (!result1) {
+          state.isGenerating = false;
+          state.genProgress = '';
+          if (btn) { btn.innerHTML = '<i class="fas fa-magic"></i> 一键生成 ' + state.chaptersToGenerate + ' 章小说'; btn.disabled = false; }
+          showNovelToast('正文生成失败');
+          return;
+        }
+
+        var content1 = result1.replace(/《.+?》/, '').trim();
+
+        var newBook = {
+          id: 'gen_' + Date.now(),
+          title: title,
+          tags: [state.generationGenre],
+          cover: randomCover(),
+          emoji: randomEmoji(),
+          progress: 0,
+          totalPages: 1,
+          pages: [content1],
+          isGenerated: true,
+          serial: true,
+          charas: state.selectedCharas.slice(),
+          tropes: state.currentTropes.slice(),
+          meta: { genre: genre, tropeStr: tropeStr, charaPersonas: charaPersonas, userPersona: userPersona, worldContent: worldContent, settingResult: settingResult }
+        };
+        state.books.push(newBook);
+        saveState();
+
+        state.isGenerating = false;
+        state.genProgress = '';
+        if (btn) { btn.innerHTML = '<i class="fas fa-magic"></i> 一键生成小说'; btn.disabled = false; }
+        showNovelToast('✅「' + title + '」序章生成成功！');
+        closeGenPanel();
+        openBook(newBook);
     };
-    state.books.push(newBook);
-    saveState();
-
-    state.isGenerating = false;
-    state.genProgress = '';
-    if (btn) { btn.innerHTML = '<i class="fas fa-magic"></i> 一键生成小说'; btn.disabled = false; }
-    showNovelToast('✅「' + title + '」序章生成成功！');
-    closeGenPanel();
-    openBook(newBook);
   }
 
 
@@ -1571,11 +2167,17 @@ ${charaPersonas || '未指定'}
       if (eb) {
         eb.pages.push(content);
         eb.totalPages = eb.pages.length;
+        eb.hasUpdate = true;
         var mb = state.books.find(function(b) { return b.id === state.writingBookId; });
-        if (mb) { mb.pages = eb.pages; mb.totalPages = eb.pages.length; }
+        if (mb) { mb.pages = eb.pages; mb.totalPages = eb.pages.length; mb.hasUpdate = true; }
       }
     }
     state._pendingExpandedContent = '';
+    
+    var currentBook = state.myNovels.find(b => b.id === state.writingBookId);
+    if (currentBook) {
+        extractLoreFromPages(currentBook);
+    }
     
     // 1. 虚拟粉丝涨粉与打赏
     var newFans = Math.floor(Math.random() * 500) + 100;
@@ -1614,6 +2216,15 @@ ${charaPersonas || '未指定'}
     if (prev) prev.style.display = 'none';
     var pe = document.getElementById('novel-write-prompt');
     if (pe) pe.value = '';
+    
+    // Reset Workshop to plotting state after publishing a chapter so we can plot the next
+    if (state.workshopPhase === 'writing') {
+      state.workshopPhase = 'plotting';
+      state.fateCards = [];
+      state.liveReactions = [];
+      state._wsTempOutline = '';
+    }
+    
     refreshProfile();
   }
 
@@ -1942,6 +2553,7 @@ ${charaPersonas || '未指定'}
     book.pages.push(result);
     book.totalPages = book.pages.length;
     state.currentPage = book.pages.length - 1;
+    book.hasUpdate = true;
     saveState();
     renderPage();
     showNovelToast('✅ 第' + chapterNum + '章已生成！');
@@ -1999,15 +2611,33 @@ ${charaPersonas || '未指定'}
   function renderComments(comments) {
     var body = document.getElementById('novel-comment-body');
     if (!body) return;
-    body.innerHTML = comments.map(function(c) {
+    var html = comments.map(function(c, idx) {
+      var repliesHtml = '';
+      if (c.replies && c.replies.length > 0) {
+          repliesHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.05);font-size:12px;color:var(--n-text2);">' + 
+              c.replies.map(r => '<div><span style="color:var(--n-accent);font-weight:bold;">' + escapeHtml(r.name) + ':</span> ' + escapeHtml(r.text) + '</div>').join('') +
+          '</div>';
+      }
       return (
-        '<div class="novel-comment-item">' +
+        '<div class="novel-comment-item" data-cidx="' + idx + '">' +
           '<span class="novel-comment-name">' + escapeHtml(c.name) + '</span>' +
           '<span class="novel-comment-text">' + escapeHtml(c.text) + '</span>' +
-          '<span class="novel-comment-likes"><i class="fas fa-heart" style="color:#333;"></i> ' + c.likes + '</span>' +
+          repliesHtml + 
+          '<div style="display:flex;justify-content:space-between;margin-top:8px;">' +
+             '<span class="novel-comment-reply-btn" style="font-size:12px;color:var(--n-text3);cursor:pointer;" onclick="window.replyToNovelComment(' + idx + ')"><i class="fas fa-reply"></i> 回复</span>' +
+             '<span class="novel-comment-likes"><i class="fas fa-heart" style="color:#333;"></i> ' + c.likes + '</span>' +
+          '</div>' +
         '</div>'
       );
     }).join('');
+    
+    // 增加底部回复输入框
+    html += '<div style="margin-top:16px;display:flex;gap:8px;">' +
+        '<input type="text" id="novel-my-comment-input" class="novel-trope-input" placeholder="发表你的看法...">' +
+        '<button class="novel-fanfic-btn primary" onclick="window.submitMyNovelComment()">发送</button>' +
+    '</div>';
+    
+    body.innerHTML = html;
   }
 
   function closeCommentSheet() {
@@ -2038,10 +2668,26 @@ ${charaPersonas || '未指定'}
     var f = (typeof friendsData !== 'undefined') ? friendsData[companionId] : null;
     if (!f) { showCompanionBubble('（嗯，这段话很有意思……）'); return; }
     if (!localStorage.getItem(SETTINGS_KEY)) { showCompanionBubble('（悄声）这句话让我想起了你。'); return; }
-    var prompt = '你是' + (f.remark || f.realName) + '，人设：' + (f.persona || '') + '\n\n' +
-      '朋友把这段话划给你看：\n「' + snippet + '」\n\n用1-2句话私语式点评（可以调侃、心动或嗔怪）。直接输出，无解释。';
-    var result = await callAPI(prompt, 80);
-    showCompanionBubble(result || '（悄声）这句话……让我想起了你。');
+    
+    // 获取当前小说和设定集上下文
+    var bookContext = '';
+    if (state.activeBook) {
+        bookContext = `当前我们在看小说《${state.activeBook.title}》。`;
+        if (state.activeBook.meta && state.activeBook.meta.settingResult) {
+            // 如果AI角色参与了这本小说的“演出”
+            if (state.activeBook.charas && state.activeBook.charas.includes(companionId)) {
+                bookContext += `注意：你在小说里有出演！看看设定集里的你是什么样的：${state.activeBook.meta.settingResult.slice(0, 200)}... `;
+            }
+        }
+    }
+
+    var prompt = `你是${f.remark || f.realName}，人设：${f.persona || ''}\n\n` +
+      `${bookContext}\n` +
+      `朋友把这段小说划线给你看：\n「${snippet}」\n\n` +
+      `请发表1-2句私语式吐槽或点评。必须结合你的真实人设和划线内容！如果是你在小说里的戏份，记得疯狂吐槽或暗自得意。直接输出，无解释。`;
+    
+    var result = await callAPI(prompt, 100);
+    showCompanionBubble(result || '（沉思）这段描写确实有点意思……');
   }
 
   function showCompanionBubble(text) {
@@ -2409,6 +3055,181 @@ ${charaPersonas || '未指定'}
     document.body.appendChild(toast);
     setTimeout(function() { toast.classList.add('show'); }, 10);
     setTimeout(function() { toast.classList.remove('show'); setTimeout(function() { toast.remove(); }, 300); }, 2500);
+  }
+
+  window.replyToNovelComment = async function(cidx) {
+      var body = document.getElementById('novel-comment-body');
+      if (!body) return;
+      var cItem = body.querySelector('.novel-comment-item[data-cidx="' + cidx + '"]');
+      if (!cItem) return;
+      
+      var replyText = prompt("回复该评论：");
+      if (!replyText) return;
+      
+      // 这里简化处理，直接找当前显示的段落评论的 key
+      // 因为实际渲染时并没有保存当前的 paraIdx 在全局状态（可优化），我们先仅做UI表现
+      var nameEl = cItem.querySelector('.novel-comment-name');
+      var targetName = nameEl ? nameEl.textContent : '网友';
+      var textEl = cItem.querySelector('.novel-comment-text');
+      var targetText = textEl ? textEl.textContent : '';
+
+      // 临时添加到 DOM (不持久化到 state.commentCache)
+      var repliesDiv = cItem.querySelector('div[style*="margin-top:8px;padding-top:8px"]');
+      if (!repliesDiv) {
+          repliesDiv = document.createElement('div');
+          repliesDiv.style = "margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.05);font-size:12px;color:var(--n-text2);";
+          cItem.insertBefore(repliesDiv, cItem.lastElementChild);
+      }
+      repliesDiv.innerHTML += '<div><span style="color:var(--n-accent);font-weight:bold;">' + getUserName() + ':</span> ' + escapeHtml(replyText) + '</div>';
+      showNovelToast('回复成功');
+
+      // AI 可能会追评
+      if (Math.random() > 0.3 && localStorage.getItem(SETTINGS_KEY)) {
+          showNovelToast('AI 网友正在输入...');
+          var promptStr = `我是网络小说读者，我回复了评论区网友【${targetName}】的话。
+原评论：${targetText}
+我的回复：${replyText}
+请你扮演其他围观网友，用简短、犀利或搞笑的语气对我的回复进行“追评”（1句即可）。`;
+          
+          try {
+              var aiRes = await callAPI(promptStr, 50);
+              if (aiRes) {
+                  setTimeout(() => {
+                      repliesDiv.innerHTML += '<div><span style="color:var(--n-accent);font-weight:bold;">热心网友:</span> ' + escapeHtml(aiRes) + '</div>';
+                      showNovelToast('收到新的网友追评！');
+                  }, 1500);
+              }
+          } catch(e) {}
+      }
+  };
+
+  window.submitMyNovelComment = function() {
+      var input = document.getElementById('novel-my-comment-input');
+      if (!input || !input.value.trim()) return;
+      var text = input.value.trim();
+      
+      var body = document.getElementById('novel-comment-body');
+      if (!body) return;
+      
+      var newHtml = '<div class="novel-comment-item">' +
+          '<span class="novel-comment-name">' + escapeHtml(getUserName()) + '</span>' +
+          '<span class="novel-comment-text">' + escapeHtml(text) + '</span>' +
+          '<span class="novel-comment-likes"><i class="fas fa-heart" style="color:#333;"></i> 0</span>' +
+        '</div>';
+        
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = newHtml;
+      body.insertBefore(wrapper.firstChild, body.firstChild);
+      input.value = '';
+      showNovelToast('评论发布成功');
+  };
+
+  // ─── CONTEXT MENU ──────────────────────────────────────────────
+  function openNovelContextMenu(bookId) {
+    var book = findBook(bookId);
+    if (!book) return;
+    
+    var existing = document.getElementById('novel-context-menu');
+    if (existing) existing.remove();
+    
+    var isFav = state.favorites.has(bookId);
+    var isMy = state.myNovels.find(function(b) { return b.id === bookId; });
+    
+    var menu = document.createElement('div');
+    menu.id = 'novel-context-menu';
+    menu.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--n-surface);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:999999;width:80%;max-width:300px;padding:16px;display:flex;flex-direction:column;gap:12px;';
+    
+    var listNames = Object.keys(state.customLists);
+    var addToListHtml = '';
+    if (listNames.length > 0) {
+        addToListHtml = '<div style="margin-top:8px;font-size:12px;color:var(--n-text3);font-weight:bold;">移入书单:</div>' + 
+            listNames.map(function(lname) {
+                var inList = state.customLists[lname].includes(bookId);
+                return '<button class="novel-fanfic-btn outline novel-cm-addtolist" data-listname="' + escapeHtml(lname) + '" style="justify-content:space-between;border:none;background:var(--n-surface2);margin-top:4px;"><span style="text-align:left;"><i class="fas fa-folder"></i> ' + escapeHtml(lname) + '</span>' + (inList ? '<i class="fas fa-check" style="color:var(--n-accent)"></i>' : '') + '</button>';
+            }).join('');
+    }
+
+    menu.innerHTML = '<div style="font-weight:bold;text-align:center;padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,0.05);color:var(--n-text1);"><i class="fas fa-book"></i> ' + escapeHtml(book.title) + '</div>' +
+      '<button class="novel-fanfic-btn outline novel-cm-rename" style="justify-content:center;border:none;background:var(--n-surface2);"><i class="fas fa-edit"></i> 重命名</button>' +
+      (isFav ? '<button class="novel-fanfic-btn outline novel-cm-unfav" style="justify-content:center;border:none;background:var(--n-surface2);"><i class="fas fa-heart-broken"></i> 取消收藏</button>' : '') +
+      addToListHtml +
+      '<button class="novel-fanfic-btn outline novel-cm-delete" style="justify-content:center;border:none;background:#ffeeee;color:#ff4757;margin-top:8px;"><i class="fas fa-trash"></i> 删除书籍</button>' +
+      '<button class="novel-fanfic-btn outline novel-cm-close" style="justify-content:center;border:none;background:transparent;margin-top:8px;">关闭</button>';
+
+    var overlay = document.createElement('div');
+    overlay.id = 'novel-context-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:999998;';
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(menu);
+    
+    var closeMenu = function() {
+        if(menu) menu.remove();
+        if(overlay) overlay.remove();
+    };
+    
+    overlay.onclick = closeMenu;
+    menu.querySelector('.novel-cm-close').onclick = closeMenu;
+    
+    menu.querySelector('.novel-cm-rename').onclick = function() {
+        var newTitle = prompt('请输入新的书名：', book.title);
+        if (newTitle && newTitle.trim()) {
+            book.title = newTitle.trim();
+            saveState();
+            if (state.activeTab === 'forum') refreshForum();
+            else if (state.activeTab === 'shelf') refreshShelf();
+            else if (state.activeTab === 'profile') refreshProfile();
+            showNovelToast('重命名成功');
+        }
+        closeMenu();
+    };
+    
+    var unfavBtn = menu.querySelector('.novel-cm-unfav');
+    if (unfavBtn) {
+        unfavBtn.onclick = function() {
+            state.favorites.delete(bookId);
+            saveState();
+            if (state.activeTab === 'forum') refreshForum();
+            else if (state.activeTab === 'shelf') refreshShelf();
+            showNovelToast('已取消收藏');
+            closeMenu();
+        };
+    }
+    
+    menu.querySelector('.novel-cm-delete').onclick = function() {
+        if (confirm('确定要删除这本书吗？删除后无法恢复。')) {
+            state.books = state.books.filter(function(b) { return b.id !== bookId; });
+            state.myNovels = state.myNovels.filter(function(b) { return b.id !== bookId; });
+            state.favorites.delete(bookId);
+            Object.keys(state.customLists).forEach(function(lname) {
+                state.customLists[lname] = state.customLists[lname].filter(function(id) { return id !== bookId; });
+            });
+            saveState();
+            if (state.activeTab === 'forum') refreshForum();
+            else if (state.activeTab === 'shelf') refreshShelf();
+            else if (state.activeTab === 'profile') refreshProfile();
+            showNovelToast('删除成功');
+        }
+        closeMenu();
+    };
+    
+    menu.querySelectorAll('.novel-cm-addtolist').forEach(function(btn) {
+        btn.onclick = function() {
+            var lname = btn.dataset.listname;
+            if (!state.customLists[lname]) return;
+            var idx = state.customLists[lname].indexOf(bookId);
+            if (idx >= 0) {
+                state.customLists[lname].splice(idx, 1);
+                showNovelToast('已从书单移出');
+            } else {
+                state.customLists[lname].push(bookId);
+                showNovelToast('已加入书单');
+            }
+            saveState();
+            if (state.activeTab === 'shelf') refreshShelf();
+            closeMenu();
+        };
+    });
   }
 
    return { 

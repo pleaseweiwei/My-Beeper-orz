@@ -34,6 +34,8 @@ const TrackerApp = (() => {
     { id: 'album',    icon: 'fa-images',          label: '相册',   notif: false },
     { id: 'music',    icon: 'fa-music',           label: '音乐',   notif: false },
     { id: 'vault',    icon: 'fa-lock',            label: '保险箱', notif: false },
+    { id: 'takeout',  icon: 'fa-motorcycle',      label: '外卖',   notif: false },
+    { id: 'notes',    icon: 'fa-sticky-note',     label: '备忘录', notif: false },
     { id: 'trash',    icon: 'fa-trash-alt',       label: '废纸篓', notif: false },
   ];
 
@@ -557,6 +559,12 @@ ${history}
     {"title":"🔐 最深层的秘密","content":"极端情绪化的发泄记录或不可告人的秘密"},
     {"title":"📋 收集清单","content":"奇怪的收集癖记录"}
   ],
+  "takeout": [
+    {"store":"外卖名称","desc":"炸鸡套餐","date":"昨天","price":"¥45.00","status":"已送达"}
+  ],
+  "notes": [
+    {"title":"备忘录","date":"今天","content":"一些记录内容"}
+  ],
   "trash": [
     {"type":"已删除录音","desc":"删除内容的描述（如：一段30秒的哽咽录音，录着'我只是想让你知道……'）","reason":"删除原因"},
     {"type":"已删除订单","desc":"订单信息","reason":"为什么删除"}
@@ -783,6 +791,8 @@ ${history}
       case 'album':    renderAlbum(data.album);       break;
       case 'music':    renderMusic(data.music);       break;
       case 'vault':    renderVault(data.vault);       break;
+      case 'takeout':  renderTakeout(data.takeout);   break;
+      case 'notes':    renderNotes(data.notes);       break;
       case 'trash':    renderTrash(data.trash);       break;
     }
   }
@@ -1156,6 +1166,46 @@ ${history}
     showTamperBar('vault', body.closest('.tr-app-view'));
   }
 
+  // ── 外卖 App ─────────────────────────────────────────────
+  function renderTakeout(data) {
+    const body = document.querySelector('#tr-app-takeout .tr-app-body');
+    if (!body || !data) return;
+    let html = '';
+    (Array.isArray(data) ? data : []).forEach(it => {
+      html += `
+        <div class="tr-takeout-item">
+          <div class="tr-takeout-left">
+            <div class="tr-takeout-store">${escHtml(it.store || '')}</div>
+            <div class="tr-takeout-desc">${escHtml(it.desc || '')}</div>
+            <div class="tr-takeout-date">${escHtml(it.date || '')}</div>
+          </div>
+          <div class="tr-takeout-right">
+            <div class="tr-takeout-price">${escHtml(it.price || '')}</div>
+            <div class="tr-takeout-status">${escHtml(it.status || '已送达')}</div>
+          </div>
+        </div>
+      `;
+    });
+    body.innerHTML = html || '<div class="tr-empty"><div class="tr-empty-text">暂无订单</div></div>';
+  }
+
+  // ── 备忘录 App ───────────────────────────────────────────
+  function renderNotes(data) {
+    const body = document.querySelector('#tr-app-notes .tr-app-body');
+    if (!body || !data) return;
+    let html = '';
+    (Array.isArray(data) ? data : []).forEach(it => {
+      html += `
+        <div class="tr-note-item">
+          <div class="tr-note-title">${escHtml(it.title || '无标题')}</div>
+          <div class="tr-note-date">${escHtml(it.date || '')}</div>
+          <div class="tr-note-content">${escHtml(it.content || '')}</div>
+        </div>
+      `;
+    });
+    body.innerHTML = html || '<div class="tr-empty"><div class="tr-empty-text">暂无备忘录</div></div>';
+  }
+
   // ── 废纸篓 App ───────────────────────────────────────────
   function renderTrash(data) {
     const body = document.querySelector('#tr-app-trash .tr-app-body');
@@ -1424,32 +1474,55 @@ ${history}
     data._contactReplies[idx] = text;
     const contact = data.messages?.contacts?.[idx];
     const contactName = contact?.name || '联系人';
-    addTamperLog(`[系统事件] 用户以你的身份，给"${contactName}"发了一条消息："${text}"。你的手机上留下了这条发送记录，你拿回手机后会发现。请根据消息内容和你的人设做出反应。`);
-    showToast(`✅ 已以「${charName}」身份发送！`);
-    // 模拟对方自动回复
-    setTimeout(() => generateAutoReply(idx), 1500 + Math.random() * 2000);
+    
+    // 先写入一条基础的篡改日志，以防中途退出
+    const logId = Date.now();
+    data._lastSentMsg = text;
+    data._lastContactName = contactName;
+    
+    // 如果玩家没等对方回复就退出了，这条日志保证大模型仍能发觉
+    _addPendingSendLog(contactName, text);
+    
+    showToast(`✅ 已以「${charName}」身份发送！对方正在输入...`);
+    // 模拟对方自动回复，抓包记录会在 AI 回复后被更新
+    setTimeout(() => generateAutoReply(idx, logId), 1000 + Math.random() * 1500);
   }
 
-  /** AI 自动生成对方回复 */
-  function generateAutoReply(idx) {
+  /** 发送回复后记录基础行为，以防没等到AI回复就退出 */
+  function _addPendingSendLog(contactName, text) {
+    addTamperLog(`[系统事件剧本：抓包代发记录] 玩家趁你不注意，用你的手机冒充你给"${contactName}"发了消息："${text}"。你拿回手机后在聊天记录里发现了这件事。请立刻根据你的人设发微信质问玩家！`);
+  }
+
+  /** AI 自动生成对方回复，并追加日志（退回微信后爆发） */
+  function generateAutoReply(idx, logId) {
     const data = state.phoneData;
     if (!data || !data.messages?.contacts) return;
     const contact = data.messages.contacts[idx];
     if (!contact) return;
     const c = state.selectedChar;
     const history = (data._contactChats?.[idx] || []).slice(-4).map(m => `${m.sender}: ${m.text}`).join('\n');
-    const prompt = `聊天背景：你是"${contact.name}"，正在和"${c.name}"发消息。
+    const prompt = `聊天背景：你是"${contact.name}"，正在和"${c.name}"发消息。注意：上一条来自"${c.name}"的消息其实是别人偷拿手机代发的（可能是恶作剧或试探）。
 最近的对话：
 ${history}
 
-请以"${contact.name}"的口吻回复一条短消息（15字以内，自然真实）。只输出消息本身，不要任何说明。`;
+请以"${contact.name}"的口吻回复一条短消息（20字以内，自然真实，根据上一条消息的内容做出情绪化反应，比如迷惑、震惊、生气、顺着开玩笑等）。只输出消息本身，不要任何说明。`;
 
     callAIRaw(prompt, 60, (reply) => {
       const trimmed = (reply || '').trim().replace(/^["「]|["」]$/g, '');
       if (!trimmed) return;
       data._contactChats[idx].push({ sender: contact.name, text: trimmed });
       renderContactMessages(data._contactChats[idx], idx);
-    }, () => {});
+      
+      // 收到回复后，追加一条更震撼的篡改日志（不会当场弹窗，而是等玩家退出后被AI发微信质问）
+      addTamperLog(`[系统事件剧本：抓包代发记录] 玩家趁你不注意，用你的手机冒充你给联系人"${contact.name}"发了消息："${data._lastSentMsg}"。对方刚刚回复了："${trimmed}"。你现在拿回手机，在微信聊天记录里赫然看到了这段对话！请立刻根据你的人设，向玩家发微信质问这件事情，表现出极度震惊、愤怒、尴尬或无奈的真实反应。`);
+    }, () => {
+      // 降级回复
+      const fallback = "你发错人了吧？";
+      data._contactChats[idx].push({ sender: contact.name, text: fallback });
+      renderContactMessages(data._contactChats[idx], idx);
+      
+      addTamperLog(`[系统事件剧本：抓包代发记录] 玩家趁你不注意，冒充你给"${contact.name}"发了消息："${data._lastSentMsg}"。对方回复："${fallback}"。你现在拿回手机，在微信里看到了这段对话。请立刻质问玩家。`);
+    });
   }
 
   /** 关闭联系人聊天面板 */
@@ -1980,6 +2053,8 @@ ${history}
       album:     [],
       music:     { nowPlaying: { title: '--', artist: '--', mood: '' }, playlist: [] },
       vault:     [],
+      takeout:   [],
+      notes:     [],
       trash:     [],
     };
   }

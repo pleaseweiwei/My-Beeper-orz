@@ -311,25 +311,152 @@ function renderMapView() {
 
     document.getElementById('map-header-title').innerText = map.name;
     const canvas = document.getElementById('map-canvas');
-    canvas.innerHTML = '';
+    
+    // 清空现有的大头针（保留可能存在的其他背景层结构）
+    const pinsContainer = document.getElementById('map-pins') || canvas;
+    pinsContainer.innerHTML = '';
 
-    // --- 原有的地点渲染逻辑 (保持不变) ---
+    // 渲染背景图
+    const bgImg = document.getElementById('map-bg-img');
+    if (bgImg) {
+        if (map.bgImage) {
+            bgImg.src = map.bgImage;
+            bgImg.style.display = 'block';
+        } else {
+            bgImg.src = '';
+            bgImg.style.display = 'none';
+        }
+    }
+
+    // --- 新的地点渲染逻辑 (增加拖拽功能) ---
     map.locations.forEach(loc => {
         const pin = document.createElement('div');
         pin.className = 'map-location-pin';
         pin.style.top = `${loc.y}%`;
         pin.style.left = `${loc.x}%`;
         pin.style.zIndex = Math.round(loc.y);
+        pin.style.cursor = 'grab'; // 提示可拖拽
         pin.innerHTML = `
             <div class="pin-dot"></div>
             <div class="pin-label">${loc.name}</div>
         `;
+        
+        let isDragging = false;
+        let startX, startY;
+        let initialPinX, initialPinY;
+
+        pin.addEventListener('mousedown', startDrag);
+        pin.addEventListener('touchstart', startDrag, {passive: false});
+
+        function startDrag(e) {
+            if (e.target.closest('.pin-label')) return; // 防止点击文字触发拖拽导致无法正常点击
+            e.stopPropagation();
+            if (e.type === 'touchstart') {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            } else {
+                startX = e.clientX;
+                startY = e.clientY;
+            }
+            initialPinX = loc.x;
+            initialPinY = loc.y;
+            
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('touchmove', onDrag, {passive: false});
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchend', endDrag);
+            pin.style.cursor = 'grabbing';
+        }
+
+        function onDrag(e) {
+            isDragging = true;
+            e.preventDefault();
+            let currentX, currentY;
+            if (e.type === 'touchmove') {
+                currentX = e.touches[0].clientX;
+                currentY = e.touches[0].clientY;
+            } else {
+                currentX = e.clientX;
+                currentY = e.clientY;
+            }
+            
+            const dx = currentX - startX;
+            const dy = currentY - startY;
+            
+            // 使用 canvas 的尺寸计算百分比
+            const rect = canvas.getBoundingClientRect();
+            const percentDx = (dx / rect.width) * 100;
+            const percentDy = (dy / rect.height) * 100;
+            
+            let newX = initialPinX + percentDx;
+            let newY = initialPinY + percentDy;
+            
+            // 限制在 0-100 之间
+            newX = Math.max(0, Math.min(100, newX));
+            newY = Math.max(0, Math.min(100, newY));
+            
+            pin.style.left = `${newX}%`;
+            pin.style.top = `${newY}%`;
+            pin.style.zIndex = Math.round(newY);
+            
+            loc.tempX = newX;
+            loc.tempY = newY;
+        }
+
+        function endDrag(e) {
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('mouseup', endDrag);
+            document.removeEventListener('touchend', endDrag);
+            pin.style.cursor = 'grab';
+            
+            if (isDragging) {
+                // 保存坐标
+                loc.x = loc.tempX !== undefined ? loc.tempX : loc.x;
+                loc.y = loc.tempY !== undefined ? loc.tempY : loc.y;
+                saveMapsData();
+                setTimeout(() => isDragging = false, 50); // 防止误触发 click
+            }
+        }
+
         // [修改] 将点击事件统一到一个新函数
-        pin.onclick = () => handleMapMarkerClick('location', loc.id);
-        canvas.appendChild(pin);
+        pin.onclick = (e) => {
+            if (!isDragging) {
+                handleMapMarkerClick('location', loc.id);
+            }
+        };
+        
+        pinsContainer.appendChild(pin);
     });
 
 }
+
+window.openMapBgSettings = function() {
+    if (!currentMapId || !mapsData[currentMapId]) {
+        alert("请先选择一个地图！");
+        return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const map = mapsData[currentMapId];
+                if (map) {
+                    map.bgImage = evt.target.result;
+                    saveMapsData();
+                    renderMapView();
+                    toggleMapSidebar(false);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    input.click();
+};
 
 function handleMapMarkerClick(type, id) {
     if (type === 'location') {
@@ -483,10 +610,105 @@ function openSceneModal(location) {
 
     title.innerText = location.name;
     desc.innerText = location.desc || "这里似乎没什么特别的...";
-    choicesArea.innerHTML = ''; // 清空旧选项
-    choicesArea.style.display = 'none'; // 默认隐藏选项区
+    
+    // 显示选项区并提示正在生成事件
+    choicesArea.style.display = 'block';
+    choicesArea.innerHTML = '<div style="text-align:center; padding:15px; color:#888; font-size: 14px;"><i class="fas fa-spinner fa-spin"></i> 正在感知周围环境...</div>';
 
     modal.classList.add('active');
+
+    // 触发 AI 生成场景随机事件
+    generateSceneEvents(location).then(events => {
+        choicesArea.innerHTML = '';
+        events.forEach(evt => {
+            const btn = document.createElement('button');
+            btn.className = 'scene-choice-btn';
+            btn.style.cssText = 'display:block; width:100%; padding:12px; margin-bottom:8px; background:rgba(0,0,0,0.05); border:1px solid rgba(0,0,0,0.1); border-radius:8px; text-align:left; cursor:pointer; transition:background 0.2s;';
+            btn.onmouseover = () => btn.style.background = 'rgba(0,0,0,0.1)';
+            btn.onmouseout = () => btn.style.background = 'rgba(0,0,0,0.05)';
+            btn.innerHTML = `<i class="fas fa-random" style="color:#666; margin-right:8px;"></i> ${evt.text}`;
+            btn.onclick = () => {
+                startSceneEventChat(location, evt);
+                closeSceneModal();
+            };
+            choicesArea.appendChild(btn);
+        });
+    }).catch(err => {
+        choicesArea.innerHTML = `<div style="color:#d9534f; font-size:13px; text-align:center;">生成事件失败: ${err.message}</div>`;
+    });
+}
+
+// 场景事件生成逻辑
+async function generateSceneEvents(location) {
+    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if (!settings.apiKey || !settings.model) {
+        throw new Error("请先在设置中配置 API Key");
+    }
+
+    const systemPrompt = `You are a text adventure game master. The player has arrived at a location. Generate 3 short event choices or actions they can take here. Return ONLY a JSON array of objects with a 'text' property in Chinese. Example: [{"text":"去周围的商店逛逛"}, {"text":"坐在长椅上观察路人"}, {"text":"寻找有没有可疑的线索"}]`;
+    const userPrompt = `Location Name: ${location.name}\nDescription: ${location.desc}\nPlease generate 3 options.`;
+
+    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+    const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+        body: JSON.stringify({
+            model: settings.model,
+            messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+            temperature: 0.8
+        })
+    });
+
+    if (!response.ok) throw new Error("API 请求异常");
+    const data = await response.json();
+    const result = data.choices?.[0]?.message?.content;
+    if (!result) throw new Error("AI 未返回内容");
+    
+    const cleanResult = result.replace(/```json/gi, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanResult);
+}
+
+// 事件点击后联动短信/聊天
+function startSceneEventChat(location, eventChoice) {
+    if (location.boundChars && location.boundChars.length > 0) {
+        const charId = location.boundChars[0]; // 默认取第一个绑定的角色
+        const friend = Object.values(friendsData).find(f => f.realName === charId);
+        
+        if (friend) {
+            const msgText = `【场景探索】我来到了 ${location.name}。\n我决定：${eventChoice.text}`;
+            const chatId = friend.id;
+            
+            if (typeof smsData === 'undefined') {
+                alert("短信系统数据异常！");
+                return;
+            }
+            
+            if (!smsData[chatId]) smsData[chatId] = { unread: 0, messages: [] };
+            
+            smsData[chatId].messages.push({
+                id: Date.now().toString(),
+                sender: 'me',
+                text: msgText,
+                timestamp: new Date().toISOString()
+            });
+            if (typeof saveSMSData === 'function') saveSMSData();
+            
+            closeMapApp();
+            
+            if (typeof window.openSMSApp === 'function') {
+                window.openSMSApp();
+                setTimeout(() => {
+                    if (typeof window.openChat === 'function') window.openChat(chatId);
+                }, 300);
+            } else {
+                alert(`已记录行动：“${eventChoice.text}”\n请手动打开短信应用查看。`);
+            }
+        }
+    } else {
+        alert("该地点还没有绑定任何角色，无法触发专属剧情交流！\n(请在地点编辑器中绑定相关角色)");
+    }
 }
 
 // 关闭场景弹窗
