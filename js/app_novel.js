@@ -107,11 +107,18 @@ const NovelApp = (() => {
   // ─── PERSONA HELPERS ─────────────────────────────────────────
   function getPersonas() {
     try {
-      // 从全局 friendsData 取，兼容从角色面板导入的配置
       var all = [];
-      if (typeof window.friendsData !== 'undefined' && window.friendsData) {
-        Object.keys(window.friendsData).forEach(function(id) {
-          var f = window.friendsData[id];
+      // 1. 读取玩家的“人设”
+      if (typeof personasMeta !== 'undefined' && personasMeta) {
+        Object.keys(personasMeta).forEach(function(id) {
+          var p = personasMeta[id];
+          all.push({ id: id, name: p.name || p.nickname || '我(人设)', persona: p.persona || '', avatar: p.avatar || '' });
+        });
+      }
+      // 2. 读取全局 friendsData (好友/NPC)
+      if (typeof friendsData !== 'undefined' && friendsData) {
+        Object.keys(friendsData).forEach(function(id) {
+          var f = friendsData[id];
           if (f.type !== 'group') { // 排除群组
             all.push({ id: id, name: f.remark || f.realName || id, persona: f.persona || '', avatar: f.avatar || '' });
           }
@@ -124,8 +131,8 @@ const NovelApp = (() => {
     return [];
   }
   function getPersona(id) {
-    if (typeof window.friendsData !== 'undefined' && window.friendsData && window.friendsData[id]) {
-      var f = window.friendsData[id];
+    if (typeof friendsData !== 'undefined' && friendsData && friendsData[id]) {
+      var f = friendsData[id];
       return { id: id, name: f.remark || f.realName || id, persona: f.persona || '', avatar: f.avatar || '' };
     }
     return null;
@@ -133,24 +140,24 @@ const NovelApp = (() => {
   function getName(id) { var p = getPersona(id); return p ? p.name : 'TA'; }
   function getUserPersona() {
     try {
-      var meta = window.personasMeta || {};
-      var pid = window.currentPersonaId || '';
+      var meta = (typeof personasMeta !== 'undefined') ? personasMeta : {};
+      var pid = (typeof currentPersonaId !== 'undefined') ? currentPersonaId : '';
       var me = meta[pid];
       return me ? (me.persona || '') : '';
     } catch(e) { return ''; }
   }
   function getUserName() {
     try {
-      var meta = window.personasMeta || {};
-      var pid = window.currentPersonaId || '';
+      var meta = (typeof personasMeta !== 'undefined') ? personasMeta : {};
+      var pid = (typeof currentPersonaId !== 'undefined') ? currentPersonaId : '';
       var me = meta[pid];
       return me ? (me.name || me.nickname || '我') : '我';
     } catch(e) { return '我'; }
   }
   function getUserAvatar() {
     try {
-      var meta = window.personasMeta || {};
-      var pid = window.currentPersonaId || '';
+      var meta = (typeof personasMeta !== 'undefined') ? personasMeta : {};
+      var pid = (typeof currentPersonaId !== 'undefined') ? currentPersonaId : '';
       var me = meta[pid];
       return me ? (me.avatar || '') : '';
     } catch(e) { return ''; }
@@ -158,8 +165,8 @@ const NovelApp = (() => {
   function getWorldbookContent(charaIds) {
     charaIds = charaIds || [];
     try {
-      if (typeof window.worldBooks === 'undefined') return '';
-      var allWbs = window.worldBooks;
+      if (typeof worldBooks === 'undefined') return '';
+      var allWbs = worldBooks;
       var globalContent = allWbs
         .filter(function(wb) { return wb.global; })
         .reduce(function(acc, wb) {
@@ -167,7 +174,7 @@ const NovelApp = (() => {
         }, []).filter(Boolean).join('\n');
       var charaWbIds = [];
       charaIds.forEach(function(id) {
-        var f = window.friendsData && window.friendsData[id];
+        var f = (typeof friendsData !== 'undefined') ? friendsData[id] : null;
         if (f && f.worldbook) {
           var wbs = Array.isArray(f.worldbook) ? f.worldbook : [f.worldbook];
           wbs.forEach(function(wid) { if (charaWbIds.indexOf(wid) < 0) charaWbIds.push(wid); });
@@ -703,7 +710,7 @@ const NovelApp = (() => {
       : '<span style="color:#aaa;font-size:12px;">尚未选择，点击随机摇梗</span>';
 
     var charaListHtml = personas.length === 0
-      ? '<div style="padding:12px;text-align:center;color:var(--n-text3);font-size:12px;">请先在微信中创建角色～</div>'
+      ? '<div style="padding:12px;text-align:center;color:var(--n-text3);font-size:12px;">请先在微信中添加好友～</div>'
       : personas.map(function(p) {
           var isSel = state.selectedCharas.indexOf(p.id) >= 0;
           return (
@@ -1354,7 +1361,7 @@ ${charaPersonas || '未指定'}
     if (btn) { btn.disabled = true; }
 
     var charaPersonas = state.selectedCharas.map(function(id) {
-      var f = window.friendsData && window.friendsData[id];
+      var f = (typeof friendsData !== 'undefined') ? friendsData[id] : null;
       if (!f) return '';
       return 'Name: ' + (f.remark || f.realName || id) + '\nPersona: ' + (f.persona || '未设置');
     }).filter(Boolean).join('\n---\n');
@@ -2028,7 +2035,7 @@ ${charaPersonas || '未指定'}
   }
 
   async function generateCompanionWhisper(companionId, snippet) {
-    var f = window.friendsData && window.friendsData[companionId];
+    var f = (typeof friendsData !== 'undefined') ? friendsData[companionId] : null;
     if (!f) { showCompanionBubble('（嗯，这段话很有意思……）'); return; }
     if (!localStorage.getItem(SETTINGS_KEY)) { showCompanionBubble('（悄声）这句话让我想起了你。'); return; }
     var prompt = '你是' + (f.remark || f.realName) + '，人设：' + (f.persona || '') + '\n\n' +
@@ -2043,7 +2050,7 @@ ${charaPersonas || '未指定'}
     if (existing) existing.remove();
     var bubble = document.createElement('div');
     bubble.className = 'novel-companion-bubble';
-    var f = state.companion && window.friendsData && window.friendsData[state.companion];
+    var f = state.companion && (typeof friendsData !== 'undefined') ? friendsData[state.companion] : null;
     bubble.innerHTML = (f && f.avatar ? '<img src="' + f.avatar + '" class="novel-companion-bubble-avatar">' : '<div class="novel-companion-bubble-avatar" style="background:#eee;display:flex;align-items:center;justify-content:center;"><i class="fas fa-user"></i></div>') +
       '<div class="novel-companion-bubble-text">' + escapeHtml(text) + '</div>';
     var reader = document.getElementById('novel-fullreader');
@@ -2079,7 +2086,7 @@ ${charaPersonas || '未指定'}
     if (hour >= 0 && hour < 4) {
       var overlay = document.getElementById('novel-antiaddict-overlay');
       if (overlay && overlay.style.display === 'none') {
-        var f = state.companion && window.friendsData && window.friendsData[state.companion];
+        var f = state.companion && (typeof friendsData !== 'undefined') ? friendsData[state.companion] : null;
         var avatarEl = document.getElementById('novel-antiaddict-avatar');
         if (avatarEl) {
           avatarEl.innerHTML = f && f.avatar
@@ -2300,7 +2307,7 @@ ${charaPersonas || '未指定'}
   }
 
     async function triggerPostReadingReaction(book, charId) {
-    var f = window.friendsData && window.friendsData[charId];
+    var f = (typeof friendsData !== 'undefined') ? friendsData[charId] : null;
     if (!f) return;
 
     // 检查 AI 是否是这本小说的“主角”之一 (同人小说入戏判定)
@@ -2334,11 +2341,11 @@ ${charaPersonas || '未指定'}
     if (window.currentChatId === charId && typeof window.appendMessage === 'function') {
       window.appendMessage(text, 'received', avatarUrl, charId, null, msgId);
     }
-    if (window.friendsData && window.friendsData[charId]) {
-      window.friendsData[charId].lastMessage = text;
-      window.friendsData[charId].unreadCount = (window.friendsData[charId].unreadCount || 0) + 1;
-      if (typeof window.saveFriendsData === 'function') window.saveFriendsData();
-      if (typeof window.updateDockUnreadDot === 'function') window.updateDockUnreadDot();
+    if (typeof friendsData !== 'undefined' && friendsData[charId]) {
+      friendsData[charId].lastMessage = text;
+      friendsData[charId].unreadCount = (friendsData[charId].unreadCount || 0) + 1;
+      if (typeof saveFriendsData === 'function') saveFriendsData();
+      if (typeof updateDockUnreadDot === 'function') updateDockUnreadDot();
     }
     if (typeof window.showToast === 'function') {
       window.showToast('💬 ' + (f ? (f.remark || f.realName || charId) : charId) + '：' + text.slice(0, 25) + '...');
@@ -2352,13 +2359,13 @@ ${charaPersonas || '未指定'}
     var remaining = [];
     pending.forEach(function(item) {
       if (item.triggerTime <= now) {
-        var f = window.friendsData && window.friendsData[item.charId];
+        var f = (typeof friendsData !== 'undefined') ? friendsData[item.charId] : null;
         if (f) triggerPostReadingReaction({ title: item.bookTitle, pages: [item.bookSnippet], tags: [item.genre] }, item.charId);
       } else {
         remaining.push(item);
         var delay = item.triggerTime - now;
         setTimeout(function() {
-          var fn = window.friendsData && window.friendsData[item.charId];
+          var fn = (typeof friendsData !== 'undefined') ? friendsData[item.charId] : null;
           if (fn) triggerPostReadingReaction({ title: item.bookTitle, pages: [item.bookSnippet], tags: [item.genre] }, item.charId);
         }, delay);
       }
@@ -2383,7 +2390,7 @@ ${charaPersonas || '未指定'}
           var due = pending.filter(function(p) { return p.triggerTime <= now + 5 * 60 * 1000; });
           if (due.length > 0) {
             setTimeout(function() {
-              var f = window.friendsData && window.friendsData[due[0].charId];
+              var f = (typeof friendsData !== 'undefined') ? friendsData[due[0].charId] : null;
               if (f) triggerPostReadingReaction({ title: due[0].bookTitle, pages: [due[0].bookSnippet], tags: [due[0].genre] }, due[0].charId);
             }, 3000);
           }

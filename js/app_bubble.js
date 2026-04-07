@@ -600,7 +600,7 @@ window.bbEnterIdolModeFlow = function() {
             const isCurrent = id === getGlobalCurrentPersonaId();
             return `<option value="${id}" ${isCurrent ? 'selected' : ''}>${p.name || '未命名'}</option>`;
         }).join('')
-        : '<option value="">（暂无人设，请先创建）</option>';
+        : '<option value="">（暂无角色，请先在微信添加）</option>';
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay active';

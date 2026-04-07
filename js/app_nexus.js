@@ -637,7 +637,7 @@ const NexusApp = (() => {
       }
 
       if (!personas.length && !aiFriends.length) {
-        html = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:8px 0">暂无人设，请先在人设或好友应用中创建</div>';
+        html = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:8px 0">暂无好友，请先在微信中添加好友</div>';
       }
 
       pList.innerHTML = html;
