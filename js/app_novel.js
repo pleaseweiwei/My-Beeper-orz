@@ -39,8 +39,8 @@ const NovelApp = (() => {
   ];
 
   const COVER_PALETTES = [
-    '#ffffff', '#f8f9fa', '#f1f3f5', '#e9ecef', '#dee2e6',
-    '#fff5f5', '#fff9db', '#f0fff4', '#e8f4f8', '#f3f0ff'
+    '#ffffff', '#fafafa', '#f5f5f5', '#eeeeee', '#e0e0e0',
+    '#fcfcfc', '#f4f4f6', '#f7f6f5', '#e8e8e8', '#f0f0f0'
   ];
   const COVER_EMOJIS = [
     'fas fa-quote-left','fas fa-leaf','fas fa-moon','fas fa-wind',
@@ -219,14 +219,50 @@ const NovelApp = (() => {
   function init() {
     state.books = [];
     state.myNovels = [];
+    
+    // 如果没有任何书籍，给一点默认数据来展示效果
+    if (state.books.length === 0) {
+      state.books = [
+        {
+          id: 'demo_1', title: '总裁的在逃小娇妻', tags: ['romance'], cover: '#fafafa', emoji: 'fas fa-heart',
+          progress: 0.1, totalPages: 100, pages: ['第一章...'], isGenerated: false, serial: true
+        },
+        {
+          id: 'demo_2', title: '全服第一剑修', tags: ['xianxia'], cover: '#eeeeee', emoji: 'fas fa-leaf',
+          progress: 0.8, totalPages: 150, pages: ['第一章...'], isGenerated: false, serial: true
+        },
+        {
+          id: 'demo_3', title: '无限流之末日求生', tags: ['infinite'], cover: '#e9ecef', emoji: 'fas fa-ghost',
+          progress: 0.4, totalPages: 80, pages: ['第一章...'], isGenerated: false, serial: true
+        },
+        {
+          id: 'demo_4', title: '星际第一指挥官', tags: ['scifi'], cover: '#f5f5f5', emoji: 'fas fa-rocket',
+          progress: 0.9, totalPages: 200, pages: ['第一章...'], isGenerated: false, serial: true
+        },
+        {
+          id: 'demo_5', title: '穿书后我成了反派师尊', tags: ['transmigration'], cover: '#f0f0f0', emoji: 'fas fa-moon',
+          progress: 0.2, totalPages: 50, pages: ['第一章...'], isGenerated: false, serial: true
+        }
+      ];
+    }
     var saved = localStorage.getItem('novel_state_v3') || localStorage.getItem('novel_state_v2');
     if (saved) {
       try {
         var s = JSON.parse(saved);
         state.companion = s.companion || null;
         state.favorites = new Set(Array.isArray(s.favorites) ? s.favorites : []);
-        if (Array.isArray(s.userBooks)) state.books = s.userBooks;
-        if (Array.isArray(s.myNovels)) state.myNovels = s.myNovels;
+        if (Array.isArray(s.userBooks)) {
+          state.books = s.userBooks;
+          state.books.forEach(function(b) {
+            if (COVER_PALETTES.indexOf(b.cover) === -1) b.cover = randomCover();
+          });
+        }
+        if (Array.isArray(s.myNovels)) {
+          state.myNovels = s.myNovels;
+          state.myNovels.forEach(function(b) {
+            if (COVER_PALETTES.indexOf(b.cover) === -1) b.cover = randomCover();
+          });
+        }
         state.writingBookId = s.writingBookId || null;
         state.authorViews = s.authorViews || {};
       } catch(e) {}
@@ -278,7 +314,7 @@ const NovelApp = (() => {
     var tabs = [
       { id: 'forum', icon: 'fas fa-newspaper', label: '论坛' },
       { id: 'shelf', icon: 'fas fa-book', label: '书架' },
-      { id: 'community', icon: 'fas fa-candy-cane', label: '磕糖社区' },
+      { id: 'community', icon: 'fas fa-globe-asia', label: '社区' },
       { id: 'profile', icon: 'fas fa-user-edit', label: '我的' },
     ];
     return (
@@ -301,7 +337,7 @@ const NovelApp = (() => {
       '<div class="novel-forum-topbar">' +
         '<div class="novel-forum-stats">' +
           '<span><i class="fas fa-book-open"></i> ' + state.books.length + ' 部</span>' +
-          '<span><i class="fas fa-fire" style="color:#ff6b35;"></i> ' + getTotalHeatStr() + ' 热度</span>' +
+          '<span><i class="fas fa-fire" style="color:#333;"></i> ' + getTotalHeatStr() + ' 热度</span>' +
         '</div>' +
         '<button class="novel-forum-gen-btn" id="novel-forum-gen-btn">' +
           '<i class="fas fa-magic"></i> AI生成' +
@@ -351,7 +387,7 @@ const NovelApp = (() => {
     var html = buildGenreFilter('shelf');
     html += (
       '<div class="novel-shelf-header">' +
-        '<div class="novel-shelf-section-title"><i class="fas fa-heart" style="color:#ff4757;"></i> 收藏 & 导入</div>' +
+        '<div class="novel-shelf-section-title"><i class="fas fa-heart"></i> 收藏 & 导入</div>' +
         '<button class="novel-import-mini-btn" id="novel-import-btn"><i class="fas fa-file-import"></i> 导入TXT</button>' +
       '</div>'
     );
@@ -404,7 +440,7 @@ const NovelApp = (() => {
     var trendsHtml = '';
     if (cData.trends && cData.trends.length > 0) {
         trendsHtml = '<div class="novel-community-section">' +
-            '<div class="novel-community-title"><i class="fas fa-fire" style="color:#ff4757;"></i> 实时热搜榜</div>' +
+            '<div class="novel-community-title"><i class="fas fa-fire"></i> 实时热搜榜</div>' +
             '<div class="novel-community-trends">';
         cData.trends.forEach(function(t, i) {
             trendsHtml += '<div class="novel-trend-item">' +
@@ -425,12 +461,12 @@ const NovelApp = (() => {
     var cpHtml = '';
     if (cData.cpList && cData.cpList.length > 0) {
         cpHtml = '<div class="novel-community-section">' +
-            '<div class="novel-community-title"><i class="fas fa-heart" style="color:#ff7675;"></i> CP磕糖区</div>' +
+            '<div class="novel-community-title"><i class="fas fa-heart"></i> CP磕糖区</div>' +
             '<div class="novel-cp-list">';
         cData.cpList.forEach(function(cp) {
             cpHtml += '<div class="novel-cp-card">' +
                 '<div class="novel-cp-header">' +
-                    '<div class="novel-cp-names">' + escapeHtml(cp.name1) + ' <i class="fas fa-times" style="font-size:10px;margin:0 4px;color:#ff7675;"></i> ' + escapeHtml(cp.name2) + '</div>' +
+                    '<div class="novel-cp-names">' + escapeHtml(cp.name1) + ' <i class="fas fa-times" style="font-size:10px;margin:0 4px;"></i> ' + escapeHtml(cp.name2) + '</div>' +
                     '<div class="novel-cp-tag">' + escapeHtml(cp.tag) + '</div>' +
                 '</div>' +
                 '<div class="novel-cp-desc">"' + escapeHtml(cp.desc) + '"</div>' +
@@ -443,7 +479,7 @@ const NovelApp = (() => {
     var fanartHtml = '';
     if (cData.fanarts && cData.fanarts.length > 0) {
         fanartHtml = '<div class="novel-community-section">' +
-            '<div class="novel-community-title"><i class="fas fa-palette" style="color:#74b9ff;"></i> 同人掉落</div>' +
+            '<div class="novel-community-title"><i class="fas fa-palette"></i> 同人掉落</div>' +
             '<div class="novel-fanart-list">';
         cData.fanarts.forEach(function(fa) {
             fanartHtml += '<div class="novel-fanart-card">' +
@@ -456,9 +492,9 @@ const NovelApp = (() => {
     }
 
     return (
-      '<div class="novel-lb-header">' +
-        '<div class="novel-section-label" style="margin:0"><i class="fas fa-candy-cane"></i> 书友磕糖社区</div>' +
-        '<button class="novel-lb-refresh-btn" id="novel-community-refresh"><i class="fas fa-sync-alt"></i> 刷新社区</button>' +
+      '<div class="novel-lb-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">' +
+        '<div class="novel-section-label" style="margin:0; font-size: 1.2em; font-weight: bold; color: var(--n-text1);"><i class="fas fa-globe-asia" style="animation: spin 10s linear infinite;"></i> 泛读社区</div>' +
+        '<button class="novel-lb-refresh-btn" id="novel-community-refresh" style="background: linear-gradient(135deg, #333, #000); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s ease; display: flex; align-items: center; gap: 5px;"><i class="fas fa-sync-alt"></i> 刷新动态</button>' +
       '</div>' +
       trendsHtml +
       cpHtml +
@@ -625,14 +661,14 @@ const NovelApp = (() => {
     var pct = Math.round((book.progress || 0) * 100);
     var isFav = state.favorites.has(book.id);
     var heat = getHeatScore(book);
-    var heatStr = heat > 1000 ? Math.floor(heat / 1000) + 'k' : String(heat);
+    var heatStr = heat > 1000 ? (heat / 1000).toFixed(1) + 'k' : String(heat);
     return (
       '<div class="novel-book-card" data-bookid="' + book.id + '">' +
         '<div class="novel-book-cover" style="background:' + (book.cover || '#f8f9fa') + '">' +
           '<div class="novel-book-cover-pattern"></div>' +
           '<span class="novel-book-emoji"><i class="' + (book.emoji || 'fas fa-book') + '"></i></span>' +
           '<button class="novel-fav-btn' + (isFav ? ' active' : '') + '" data-favid="' + book.id + '">' +
-            (isFav ? '<i class="fas fa-heart" style="color:#ff4757;"></i>' : '<i class="far fa-heart"></i>') +
+            (isFav ? '<i class="fas fa-heart" style="color:#000;"></i>' : '<i class="far fa-heart"></i>') +
           '</button>' +
           (book.serial || book.isGenerated || book.isMyNovel ? '<div class="novel-serial-badge">连载</div>' : '') +
           (book.isImported ? '<div class="novel-serial-badge" style="left:auto;right:12px;background:#111;color:#fff;">TXT</div>' : '') +
@@ -641,9 +677,9 @@ const NovelApp = (() => {
           '<div class="novel-book-title">' + escapeHtml(book.title) + '</div>' +
           '<div class="novel-book-tags">' + tags + '</div>' +
           '<div class="novel-book-progress">' +
-            '<span><i class="fas fa-fire" style="color:#ff6b35;font-size:9px;"></i> ' + heatStr + '</span>' +
+            '<span><i class="fas fa-fire" style="color:#333;font-size:10px;"></i> ' + heatStr + '</span>' +
             '<span class="novel-dot-sep"></span>' +
-            '<span>' + (book.pages ? book.pages.length : 1) + '章</span>' +
+            '<span>' + (book.totalPages || book.pages?.length || 1) + '章</span>' +
           '</div>' +
           '<div class="novel-progress-bar"><div class="novel-progress-fill" style="width:' + pct + '%"></div></div>' +
         '</div>' +
@@ -914,6 +950,11 @@ const NovelApp = (() => {
           charaItem.classList.toggle('selected', state.selectedCharas.indexOf(cid) >= 0);
           var chk = charaItem.querySelector('.novel-chara-check');
           if (chk) chk.classList.toggle('active', state.selectedCharas.indexOf(cid) >= 0);
+          
+          if (state.selectedCharas.indexOf(cid) >= 0) {
+              const rect = charaItem.getBoundingClientRect();
+              createParticleEffect(rect.left + rect.width / 2, rect.top + rect.height / 2, '✨');
+          }
         }
         return;
       }
@@ -1116,6 +1157,31 @@ const NovelApp = (() => {
     };
   }
 
+  // ─── EFFECTS ──────────────────────────────────────────────────
+  function createParticleEffect(x, y, emoji) {
+    var el = document.createElement('div');
+    el.textContent = emoji;
+    el.style.position = 'fixed';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.fontSize = '24px';
+    el.style.pointerEvents = 'none';
+    el.style.zIndex = '99999';
+    el.style.transition = 'all 0.8s cubic-bezier(0.16,1,0.3,1)';
+    el.style.transform = 'translate(-50%, -50%) scale(0.5)';
+    el.style.opacity = '1';
+    document.body.appendChild(el);
+    
+    requestAnimationFrame(function() {
+      var angle = Math.random() * Math.PI * 2;
+      var dist = 50 + Math.random() * 50;
+      el.style.transform = 'translate(calc(-50% + ' + (Math.cos(angle)*dist) + 'px), calc(-50% + ' + (Math.sin(angle)*dist - 50) + 'px)) scale(1.5) rotate(' + (Math.random()*60-30) + 'deg)';
+      el.style.opacity = '0';
+    });
+    
+    setTimeout(function() { el.remove(); }, 800);
+  }
+
   // ─── TAB HELPERS ─────────────────────────────────────────────
   function switchTab(tabId) {
     var app = document.getElementById('novelApp');
@@ -1178,7 +1244,18 @@ const NovelApp = (() => {
     state.showGenPanel = true;
     refreshForum();
     var panel = document.getElementById('novel-gen-panel');
-    if (panel) setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+    if (panel) {
+      setTimeout(function() { 
+        var scrollContainer = document.getElementById('novel-tab-forum');
+        if (scrollContainer) {
+          // 精确计算内部元素的滚动位置，替代 scrollIntoView，防止顶出底部隐藏的评论弹窗
+          scrollContainer.scrollTo({
+            top: panel.offsetTop - scrollContainer.offsetTop,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    }
   }
 
   function closeGenPanel() {
@@ -1189,7 +1266,12 @@ const NovelApp = (() => {
   // ─── TROPE GACHA ─────────────────────────────────────────────
   function rollTropes() {
     var btn = document.getElementById('novel-gacha-btn');
-    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 摇摇摇...'; btn.disabled = true; }
+    if (btn) { 
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 摇摇摇...'; 
+        btn.disabled = true; 
+        const rect = btn.getBoundingClientRect();
+        createParticleEffect(rect.left + rect.width / 2, rect.top + rect.height / 2, '🎲');
+    }
     setTimeout(function() {
       var cats = Object.keys(TROPE_POOL).sort(function() { return Math.random() - 0.5; });
       var count = Math.floor(Math.random() * 2) + 2;
@@ -1344,23 +1426,23 @@ ${charaPersonas || '未指定'}
           }
       }
 
-      var prompt = `你正在模拟一个叫“书友磕糖社区”的饭圈与同人文化论坛。
+      var prompt = `你正在模拟一个活跃多元的小说泛读社区。
 请根据以下上下文（如果没有则自由发挥）：${contextStr}
 我的昵称是：${getUserName()}
 
-请生成社区的最新动态，返回严格的JSON格式（不要加\`\`\`json等多余字符），结构如下：
+请生成社区的最新动态，包含热搜、CP乱炖、同人创作以及书评吐槽，返回严格的JSON格式（不要加\`\`\`json等多余字符），结构如下：
 {
   "trends": [
-    {"text": "热搜词条1(如 #xxx太甜了# 或 #作者大大没有心#)", "heat": "热度值(如 9.8w)"},
-    // 3条热搜
+    {"text": "热搜词条1(例如：#某某作者填坑了#、#震惊！男主居然是反派#)", "heat": "热度值(如 10.5w)"},
+    // 生成4-5条热搜
   ],
   "cpList": [
-    {"name1": "角色A(可以是读者/作者和我)", "name2": "角色B", "tag": "CP标签(如 相爱相杀)", "desc": "CP粉的一句磕糖语录"},
-    // 2条CP
+    {"name1": "角色A/作者/读者", "name2": "角色B/作者/读者", "tag": "互动标签(如：相爱相杀、互怼日常)", "desc": "社区用户的一句脑洞大开的互动描述或磕糖语录"},
+    // 生成2-3条CP或人物互动
   ],
   "fanarts": [
-    {"author": "神仙画手昵称", "text": "一段发病式的同人长评或同人段子，语气要很像狂热粉丝(约50字)", "imgPrompt": "一段英文的画图提示词(可以为空)"}
-    // 1-2条同人
+    {"author": "社区大触/戏精读者", "text": "一段极具感染力、甚至带点沙雕或深情的长评、同人段子、避雷指南(约80字)", "imgPrompt": "一段详细的英文画图提示词，用于生成配图(必须提供)"}
+    // 生成2-3条同人或书评内容
   ]
 }`;
 
@@ -1908,7 +1990,7 @@ ${charaPersonas || '未指定'}
         '<div class="novel-comment-item">' +
           '<span class="novel-comment-name">' + escapeHtml(c.name) + '</span>' +
           '<span class="novel-comment-text">' + escapeHtml(c.text) + '</span>' +
-          '<span class="novel-comment-likes"><i class="fas fa-heart" style="color:#ff4757;"></i> ' + c.likes + '</span>' +
+          '<span class="novel-comment-likes"><i class="fas fa-heart" style="color:#333;"></i> ' + c.likes + '</span>' +
         '</div>'
       );
     }).join('');

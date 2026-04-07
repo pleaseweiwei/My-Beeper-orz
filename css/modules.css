@@ -1214,9 +1214,18 @@ textarea#custom-css-input:focus {
     background: #f7f7f7;
     height: 0;
     overflow: hidden;
-    transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-    
+    /* 增加下面这行，平时彻底让它不占用任何空间和渲染 */
+    visibility: hidden; 
+    transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.3s;
 }
+
+.chat-panels-container.open {
+    height: 220px; /* 面板展开高度 */
+    padding-bottom: 20px;
+    visibility: visible; /* 展开时恢复可见 */
+    transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s;
+}
+
 .chat-panels-container.open {
     height: 220px; /* 面板展开高度 */
     padding-bottom: 20px;
