@@ -79,9 +79,9 @@
 .novel-bottom-tabs {
   position: absolute;
   /* Make it a huge circle centered horizontally, mostly hidden below screen */
-  width: 500px; height: 500px;
+  width: 360px; height: 360px;
   left: 50%; transform: translateX(-50%);
-  bottom: -380px; /* Top of circle is 120px above screen bottom */
+  bottom: -280px; /* Top of circle is 80px above screen bottom */
   border-radius: 50%;
   border: 1px solid var(--n-border-light);
   background: rgba(255, 255, 255, 0.4);
@@ -95,8 +95,8 @@
 .novel-bottom-tab {
   pointer-events: auto; /* Enable clicks on the circles themselves */
   position: absolute;
-  width: 44px; height: 44px;
-  margin: -22px 0 0 -22px; /* Center perfectly on its coordinate */
+  width: 40px; height: 40px;
+  margin: -20px 0 0 -20px; /* Center perfectly on its coordinate */
   background: var(--n-surface);
   border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -107,21 +107,21 @@
   border: 1px solid var(--n-surface);
 }
 
-/* Coordinates on the radius=250 circle: */
-.novel-bottom-tab:nth-child(1) { left: 73px; top: 73px; }
-.novel-bottom-tab:nth-child(2) { left: 185px; top: 9px; }
-.novel-bottom-tab:nth-child(3) { left: 315px; top: 9px; }
-.novel-bottom-tab:nth-child(4) { left: 427px; top: 73px; }
+/* Coordinates on the radius=180 circle (centered at 180,180): */
+.novel-bottom-tab:nth-child(1) { left: 53px; top: 53px; }
+.novel-bottom-tab:nth-child(2) { left: 134px; top: 6px; }
+.novel-bottom-tab:nth-child(3) { left: 226px; top: 6px; }
+.novel-bottom-tab:nth-child(4) { left: 307px; top: 53px; }
 
 .novel-bottom-tab.active { 
   background: var(--n-accent);
   color: var(--n-surface); 
-  transform: scale(1.3); /* Enlarge */
+  transform: scale(1.15); /* Enlarge slightly */
   box-shadow: 0 10px 30px rgba(0,0,0,0.15);
   border-color: var(--n-accent);
 }
 
-.novel-bottom-tab i { font-size: 16px; }
+.novel-bottom-tab i { font-size: 14px; }
 .novel-bottom-tab span { display: none; }
 
 /* Tabs Content */
