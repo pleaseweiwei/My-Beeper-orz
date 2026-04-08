@@ -8323,6 +8323,8 @@ window.insertOfflineAction = function(char) {
         input.value += '*动作描述* ';
     } else if(char === '「') {
         input.value += '「说话」';
+    } else if(char === '【') {
+        input.value += '【系统指令】';
     }
     input.focus();
 }
@@ -8438,6 +8440,20 @@ window.sendOfflineMessage = async function(isRegen = false) {
         text = "*静静地等待事情发展*"; 
     }
     
+    // 【新增】解析【】内的指令，将其作为系统提示词注入
+    let userInstruction = "";
+    const instructionRegex = /【(.*?)】/g;
+    let match;
+    while ((match = instructionRegex.exec(text)) !== null) {
+        userInstruction += match[1] + " ";
+    }
+    
+    // 清除正文中的【】内容
+    let cleanText = text.replace(instructionRegex, '').trim();
+    if (!cleanText && !isRegen && userInstruction) {
+        cleanText = "*静静地等待事情发展*"; // 如果用户只发了指令没发内容，给个默认动作
+    }
+    
     const friend = friendsData[targetChatId];
     if (!friend) return;
 
@@ -8446,10 +8462,15 @@ window.sendOfflineMessage = async function(isRegen = false) {
     if (!isRegen) {
         const userMsgId = 'off_u_' + Date.now();
         if (isLookingOffline) {
-            appendOfflineEntry('user', text, 'You', userMsgId);
+            // 界面上只显示清除了【】的正文，如果没有正文就显示默认动作
+            let displayText = cleanText;
+            // 如果只有指令，我们可以在界面上显示一个带有系统图标的提示，或者就显示动作
+            appendOfflineEntry('user', displayText, 'You', userMsgId); 
         }
+        // 历史记录也只保存清除后的文本，指令在本次请求中生效，不留在长期记忆里（避免污染之后的对话）
+        // 如果想把指令留在记忆里，可以把 text 换回去。通常跑团中 () 或 [] 都是带入 prompt。
         saveMessageToHistory(targetChatId, {
-            text: text, type: 'sent', senderName: 'ME', isOffline: true, id: userMsgId
+            text: cleanText, type: 'sent', senderName: 'ME', isOffline: true, id: userMsgId
         });
     } else {
         console.log("执行时间线重置");
@@ -8530,7 +8551,7 @@ ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingSt
 
 ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。\n【重要】：你就是角色。\n格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。'}
 
-【字数要求】：你的正文回复总字数必须控制在 ${limit} 字左右。`;
+【篇幅控制】：视当前剧情发展自然叙述，单次回复最长不超过 ${limit} 字，该停顿时自然换行或结束。`;
 
     // === 注入剧情总结 ===
     if (friend.summaries && friend.summaries.length > 0) {
@@ -8553,13 +8574,23 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
     const recentHistory = history.slice(-memoryLimit);
     let chatMessagesArr = [];
     recentHistory.forEach(h => {
+        // 如果历史消息是用户发的，并且包含【】，我们需要将其转换为系统指令格式，确保大模型理解这是指令而不是角色说的话
+        let hContent = h.isOffline ? h.text : `(Online Memory: ${h.text})`;
+        if (h.type === 'sent' && hContent.includes('【') && hContent.includes('】')) {
+            hContent = hContent.replace(/【(.*?)】/g, '\n[System: User Instruction - $1]\n');
+        }
         chatMessagesArr.push({
             role: h.type === 'sent' ? 'user' : 'assistant',
-            content: h.isOffline ? h.text : `(Online Memory: ${h.text})`
+            content: hContent
         });
     });
-    if (text) {
-        chatMessagesArr.push({ role: "user", content: text });
+    
+    if (userInstruction) {
+        // 把提取出来的指令包装成特殊的格式放在用户发言的末尾（或开头）
+        const instructionBlock = `\n[System: User Instruction - ${userInstruction.trim()}]\n`;
+        chatMessagesArr.push({ role: "user", content: cleanText + instructionBlock });
+    } else if (cleanText) {
+        chatMessagesArr.push({ role: "user", content: cleanText });
     }
 
     const payload = { 
@@ -12042,6 +12073,7 @@ ${requests.join('\n\n')}`;
 
               // 1. 解析 STATUS
         const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|$)/i;
+        const statusMatch = content.match(statusRegex);
 
         if (statusMatch) {
             if (typeof updateMindStateFromText === 'function') {

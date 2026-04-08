@@ -3347,6 +3347,20 @@ async function sendGroupOfflineMessage(isRegen = false) {
 
     const input = document.getElementById('offline-input');
     let userText = (input ? input.value.trim() : '') || (!isRegen ? '*静静地等待大家的反应*' : '');
+    
+    // 【新增】解析【】内的指令，将其作为系统提示词注入
+    let userInstruction = "";
+    const instructionRegex = /【(.*?)】/g;
+    let match;
+    while ((match = instructionRegex.exec(userText)) !== null) {
+        userInstruction += match[1] + " ";
+    }
+    
+    // 清除正文中的【】内容
+    let cleanText = userText.replace(instructionRegex, '').trim();
+    if (!cleanText && !isRegen && userInstruction) {
+        cleanText = "*静静地等待大家的反应*"; // 如果用户只发了指令没发内容，给个默认动作
+    }
 
     const isLookingAtThisGroupOffline = () => document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetGroupId && currentChatType === 'group';
 
@@ -3435,10 +3449,16 @@ async function sendGroupOfflineMessage(isRegen = false) {
         timeStr = `[${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}] `;
         
         let content = m.text || '';
+        
+        // 【新增】处理历史消息中的【】指令
+        if (m.type === 'sent' && content.includes('【') && content.includes('】')) {
+            content = content.replace(/【(.*?)】/g, '\n[System: User Instruction - $1]\n');
+        }
+        
         if (m.isImage) content = '[图片]';
         else if (m.isEmoji) content = `[发送了一个表情: ${m.emojiName || '表情'}]`;
         else if (m.isRevoked) content = '[用户撤回了一条消息，你不知道内容，但你可以对此做出反应]';
-        else content = content.substring(0, 100);
+        else content = content.substring(0, 200); // 稍微放宽一点限制，以容纳较长的指令
 
         historyText += `${timeStr}${sender}: ${content}\n`;
     });
@@ -3520,7 +3540,7 @@ ${historyText || '（刚刚开始聚会）'}
 1. 【多角色参与】：必须让2-4个未潜水成员参与互动，允许相互呼应与打断，体现真实聚会感。
 2. 【沉浸叙事】：用 *星号* 包裹动作/肢体语言，用 「」 包裹直接对话，不能只有台词。
 3. 【场景融入】：叙事要自然融入当前场景（${currentLocation}），注意灯光/声音/空间感。
-4. 【字数要求】：每位角色叙事约${perCharLen}字，总长度控制在${maxLen}字以内。
+4. 【篇幅控制】：每位角色视当前剧情自然叙事即可，总长度建议不超过${maxLen}字，该停顿时自然结束，无需凑字数。
 5. 【输出格式】：必须输出纯 JSON 数组，每项格式：{"name":"角色名","content":"叙事正文"}
    - 不要在 JSON 数组外添加任何多余文字。
 6. 【防出戏死命令】：你绝对不能扮演用户（${myName}），严禁生成用户的对话！
@@ -3528,7 +3548,8 @@ ${historyText || '（刚刚开始聚会）'}
 ${danmakuInstr}
 ${optionsInstr}
 
-用户（${myName}）刚才说/做了："${userText}"
+${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n` : ''}
+用户（${myName}）刚才说/做了："${cleanText}"
 请生成本次聚会的多角色沉浸叙事（纯 JSON 数组）：`;
 
     // ── Loading 条目 ──
@@ -3568,7 +3589,7 @@ ${optionsInstr}
                 messages: [
                     { role: 'system', content: systemPrompt },
                     ...contextMsgs,
-                    { role: 'user', content: userText || '（继续）' }
+                    { role: 'user', content: cleanText || '（继续）' }
                 ],
                 temperature: parseFloat(settings.temperature || 0.9),
                 max_tokens: Math.max(maxLen * 4, 1200)

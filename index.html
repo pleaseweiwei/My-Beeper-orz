@@ -5034,6 +5034,7 @@ function switchCsTab(id) {
             <span id="offline-danmaku-btn" onclick="toggleDanmaku()">弹幕: OFF</span>
             <!-- [新增] 剧情选项开关 -->
             <span id="offline-options-btn" onclick="toggleOfflineOptions()">选项分支: OFF</span>
+            <span id="offline-instruction-btn" onclick="insertOfflineAction('【')">提示词 【】</span>
         </div>
         <div class="offline-textarea-wrap">
             <textarea id="offline-input" placeholder="描述你的动作或语言... (Enter 发送)" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendOfflineMessage();}"></textarea>
