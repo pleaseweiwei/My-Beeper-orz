@@ -234,8 +234,10 @@ window.generateOfflineMsgsForFriend = async function(friendId, forceGenerate) {
         let presetJailbreak = '';
         if (typeof tavernPresets !== 'undefined' && typeof offlineConfig !== 'undefined') {
             const pid = offlineConfig.activePresetId;
-            const preset = tavernPresets.find(p => p.id === pid) || tavernPresets[0];
-            if (preset && preset.jailbreak) presetJailbreak = preset.jailbreak;
+            if (pid) {
+                const preset = tavernPresets.find(p => p.id === pid);
+                if (preset && preset.jailbreak) presetJailbreak = preset.jailbreak;
+            }
         }
 
         // ── 3. 用户人设 ────────────────────────────────────────────
@@ -309,7 +311,7 @@ ${historyContext}
 【生成要求】：
 1. 直接输出消息内容，每条独立一行，条与条空一行。
 2. 不加序号、引号、前缀，不生成用户回复。
-3. 请控制每条消息的字数在 ${limit} 字以内。
+3. 请控制每条消息的字数在 ${limit} 字以内（如果输出思维链过程，思维链的字数不计入该限制）。
 4. 严格遵循人设。拒绝OOC，保持角色的独立生活感。
 5. 必须符合微信聊天习惯：严禁长篇大论，把想说的话拆分成一小段一小段的短消息发送。
 6. 发送的消息条数自由发挥，话题自然且避免重复。`;
@@ -330,6 +332,9 @@ ${historyContext}
         }
 
         // ── 解析消息 ───────────────────────────────────────────────
+        // 过滤掉 <think> 标签及其包裹的所有思维链内容，避免变为聊天消息
+        rawText = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
         const parsedLines = rawText.split('\n')
             .map(l => l.trim())
             .filter(l => l.length > 0)
