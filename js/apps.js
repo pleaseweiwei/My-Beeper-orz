@@ -9099,181 +9099,48 @@ window.closePresetsApp = function() {
 function renderPresetsList() {
     const container = document.getElementById('presets-list-container');
     container.innerHTML = '';
-    
-    // Add grid layout to the container for split view
     container.style.display = 'flex';
-    container.style.flexDirection = 'row';
-    container.style.height = '100%';
-    container.style.overflow = 'hidden';
-    
-    // Create left panel for Presets
-    const leftPanel = document.createElement('div');
-    leftPanel.style.flex = '1';
-    leftPanel.style.overflowY = 'auto';
-    leftPanel.style.padding = '15px';
-    leftPanel.style.borderRight = '1px solid #eee';
-    leftPanel.style.display = 'flex';
-    leftPanel.style.flexDirection = 'column';
-    leftPanel.style.gap = '10px';
-    
-    // Create right panel for Regex
-    const rightPanel = document.createElement('div');
-    rightPanel.style.flex = '1';
-    rightPanel.style.overflowY = 'auto';
-    rightPanel.style.padding = '15px';
-    rightPanel.style.display = 'flex';
-    rightPanel.style.flexDirection = 'column';
-    rightPanel.style.gap = '10px';
-    
-    // Title headers
-    const leftTitle = document.createElement('h3');
-    leftTitle.innerText = "预设列表 (Presets)";
-    leftTitle.style.margin = '0 0 10px 0';
-    leftTitle.style.color = '#333';
-    leftPanel.appendChild(leftTitle);
-    
-    const rightTitle = document.createElement('h3');
-    rightTitle.innerText = "搭配正则 (Regex)";
-    rightTitle.style.margin = '0 0 10px 0';
-    rightTitle.style.color = '#333';
-    rightTitle.style.display = 'flex';
-    rightTitle.style.justifyContent = 'space-between';
-    
-    // Add a subtitle to indicate select preset to see regex
-    const rightSubtitle = document.createElement('span');
-    rightSubtitle.innerText = "请在左侧选择预设";
-    rightSubtitle.style.fontSize = '12px';
-    rightSubtitle.style.color = '#888';
-    rightSubtitle.style.fontWeight = 'normal';
-    rightSubtitle.id = 'regex-panel-subtitle';
-    rightTitle.appendChild(rightSubtitle);
-    
-    rightPanel.appendChild(rightTitle);
-    
-    const regexContainer = document.createElement('div');
-    regexContainer.id = 'preset-regex-view-container';
-    regexContainer.style.display = 'flex';
-    regexContainer.style.flexDirection = 'column';
-    regexContainer.style.gap = '8px';
-    rightPanel.appendChild(regexContainer);
-
-    // Global variable to keep track of currently selected preset in list view
-    window._currentSelectedPresetListId = window._currentSelectedPresetListId || offlineConfig.activePresetId;
-
-    const renderRegexForPreset = (presetId) => {
-        const rc = document.getElementById('preset-regex-view-container');
-        const st = document.getElementById('regex-panel-subtitle');
-        if (!rc) return;
-        rc.innerHTML = '';
-        
-        const p = tavernPresets.find(x => x.id === presetId);
-        if (!p) {
-            if(st) st.innerText = "未找到预设";
-            return;
-        }
-        
-        if(st) st.innerText = `当前: ${p.name}`;
-
-        let scripts = p.regexScripts || [];
-        if (typeof p.regex === 'string' && scripts.length === 0 && p.regex) {
-            scripts = [{ regex: p.regex, flags: 'g', replace: '' }];
-        }
-
-        if (scripts.length === 0) {
-            rc.innerHTML = '<div style="color:#aaa; font-size:12px; text-align:center; padding: 20px;">此预设无正则脚本</div>';
-            return;
-        }
-
-        scripts.forEach((script, idx) => {
-            const div = document.createElement('div');
-            div.style.background = '#f9f9f9';
-            div.style.padding = '10px';
-            div.style.borderRadius = '8px';
-            div.style.borderLeft = '3px solid #f59e0b';
-            div.style.fontSize = '12px';
-            
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                    <strong style="color:#333;">#${idx+1}</strong>
-                    <span style="background:#eee; padding:2px 6px; border-radius:4px; color:#555;">Flags: ${script.flags || 'g'}</span>
-                </div>
-                <div style="font-family:monospace; background:#fff; padding:6px; border-radius:4px; border:1px solid #eee; margin-bottom:6px; word-break:break-all;">
-                    ${script.regex ? script.regex.replace(/</g, '<').replace(/>/g, '>') : '<i>Empty</i>'}
-                </div>
-                <div style="display:flex; align-items:center; gap:5px;">
-                    <i class="fas fa-arrow-right" style="color:#aaa;"></i>
-                    <div style="font-family:monospace; background:#fff; padding:6px; border-radius:4px; border:1px solid #eee; flex:1; word-break:break-all;">
-                        ${script.replace ? script.replace.replace(/</g, '<').replace(/>/g, '>') : '<i>Empty (Delete)</i>'}
-                    </div>
-                </div>
-            `;
-            rc.appendChild(div);
-        });
-    };
+    container.style.flexDirection = 'column';
+    container.style.height = 'auto';
+    container.style.overflow = 'visible';
 
     tavernPresets.forEach(p => {
         const div = document.createElement('div');
-        div.className = `preset-list-item ${p.id === window._currentSelectedPresetListId ? 'selected' : ''} ${p.id === offlineConfig.activePresetId ? 'active-preset' : ''}`;
+        div.className = `preset-list-item ${p.id === offlineConfig.activePresetId ? 'active-preset' : ''}`;
         div.style.display = 'flex';
         div.style.flexDirection = 'column';
-        div.style.backgroundColor = p.id === window._currentSelectedPresetListId ? '#f0f7ff' : '#fff';
-        div.style.borderRadius = '8px';
-        div.style.padding = '12px';
-        div.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
+        div.style.backgroundColor = '#fff';
+        div.style.borderRadius = '12px';
+        div.style.padding = '15px';
+        div.style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)';
         div.style.cursor = 'pointer';
-        div.style.border = p.id === window._currentSelectedPresetListId ? '1px solid #007aff' : '1px solid transparent';
+        div.style.border = '1px solid #ebebeb';
         div.style.transition = 'all 0.2s';
         
-        div.onclick = () => {
-            window._currentSelectedPresetListId = p.id;
-            // Update selection styles
-            leftPanel.querySelectorAll('.preset-list-item').forEach(el => {
-                el.style.backgroundColor = '#fff';
-                el.style.border = '1px solid transparent';
-            });
-            div.style.backgroundColor = '#f0f7ff';
-            div.style.border = '1px solid #007aff';
-            
-            // Update regex view
-            renderRegexForPreset(p.id);
-        };
-        
-        div.ondblclick = () => openPresetEditor(p.id);
+        // 点击直接进入详情编辑面板（模拟酒馆预设点击效果）
+        div.onclick = () => openPresetEditor(p.id);
 
-            let scriptCount = p.regexScripts ? p.regexScripts.length : (p.regex ? 1 : 0);
+        let scriptCount = p.regexScripts ? p.regexScripts.length : (p.regex ? 1 : 0);
 
         div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <h4 style="margin: 0; font-size: 15px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">${p.name}</h4>
-                <div style="display:flex; gap: 5px;">
-                    ${p.id === offlineConfig.activePresetId ? '<span style="background:#07c160; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">当前</span>' : ''}
-                    <i class="fas fa-edit" style="color:#999; padding:4px; z-index: 10;" onclick="event.stopPropagation(); openPresetEditor('${p.id}');"></i>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="margin: 0; font-size: 16px; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">${p.name}</h4>
+                <div style="display:flex; align-items: center; gap: 8px;">
+                    ${p.id === offlineConfig.activePresetId ? '<span style="background:#07c160; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px;">已应用</span>' : ''}
+                    <i class="fas fa-chevron-right" style="color:#ccc; font-size: 12px;"></i>
                 </div>
             </div>
             
-            <div style="font-size: 11px; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px;">
-                ${p.systemPrompt ? p.systemPrompt.replace(/</g, '<').replace(/>/g, '>') : '无提示词'}
+            <div style="font-size: 12px; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 10px; line-height: 1.5;">
+                ${p.systemPrompt ? p.systemPrompt.replace(/</g, '<').replace(/>/g, '>') : '<span style="color:#aaa;font-style:italic;">无系统提示词...</span>'}
             </div>
             
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#888;">
-                <span><i class="fas fa-code"></i> ${scriptCount} 个正则规则</span>
-                <span>(双击编辑)</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#888; background:#fafafa; padding:6px 10px; border-radius:6px;">
+                <span><i class="fas fa-code"></i> 包含 ${scriptCount} 个正则脚本</span>
             </div>
         `;
-        leftPanel.appendChild(div);
+        container.appendChild(div);
     });
-
-    container.appendChild(leftPanel);
-    container.appendChild(rightPanel);
-    
-    // Initial render for regex
-    if (window._currentSelectedPresetListId) {
-        // Needs a slight delay because element might not be fully in DOM yet
-        setTimeout(() => renderRegexForPreset(window._currentSelectedPresetListId), 0);
-    } else if (tavernPresets.length > 0) {
-        window._currentSelectedPresetListId = tavernPresets[0].id;
-        setTimeout(() => renderRegexForPreset(tavernPresets[0].id), 0);
-    }
 }
 
 window.createNewPreset = function() {
@@ -9693,6 +9560,11 @@ window.openPresetEditor = function(id) {
         document.getElementById('pe-name').value = p.name || '';
         document.getElementById('pe-sys-prompt').value = p.systemPrompt || '';
         document.getElementById('pe-jailbreak').value = p.jailbreak || '';
+        
+        // 兼容处理旧数据中的单条 regex
+        if (!p.regexScripts && p.regex) {
+            p.regexScripts = [{ regex: p.regex, flags: 'g', replace: '' }];
+        }
     } else {
         p = { regexScripts: [] };
         document.getElementById('pe-name').value = '';
