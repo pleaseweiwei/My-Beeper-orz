@@ -1900,29 +1900,22 @@ input:checked + .slider { background-color: #2b2b2b !important; }
 /* Range 滑块美化 */
 input[type="range"] { accent-color: #2b2b2b; }
 
-/* 修复隐藏面板 */
-.lt-player-panel:not(.lt-active), .offline-settings-modal:not(.active), .wc-multi-select-bar:not(.show) {
-    transform: translateY(calc(100% + 60px)) !important;
-}
-
-
 /* =========================================
-   [修复] 底部面板隐藏时，上边缘阴影泄漏到屏幕内的问题
+   [修复] 底部面板和隐藏应用在边缘回弹(overscroll)时暴露及阴影泄漏的问题
    ========================================= */
 
-/* 1. 一起听音乐面板 (music.css) */
-.lt-player-panel:not(.lt-active) {
-    transform: translateY(calc(100% + 60px)) !important;
-}
-
-/* 2. 线下模式设置面板 (modules.css) */
-.offline-settings-modal:not(.active) {
-    transform: translateY(calc(100% + 60px)) !important;
-}
-
-/* 3. 聊天多选操作底部栏 (modules.css) */
+.lt-player-panel:not(.lt-active), 
+.offline-settings-modal:not(.active), 
 .wc-multi-select-bar:not(.show) {
     transform: translateY(calc(100% + 60px)) !important;
+    visibility: hidden !important;
+}
+
+/* 防止 app 隐藏时，其内部强制可见的元素(如 active 状态的地图)在 overscroll 时露馅 */
+.app-fullscreen-view:not(.open) .map-view.active,
+.app-fullscreen-view:not(.open) .bb-view.active,
+.app-fullscreen-view:not(.open) .fridge-inner-art.open {
+    visibility: hidden !important;
 }
   
 /* Group Settings V2.0 Extra Styles */
