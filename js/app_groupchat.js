@@ -3358,9 +3358,6 @@ async function sendGroupOfflineMessage(isRegen = false) {
     
     // 清除正文中的【】内容
     let cleanText = userText.replace(instructionRegex, '').trim();
-    if (!cleanText && !isRegen && userInstruction) {
-        cleanText = "*静静地等待大家的反应*"; // 如果用户只发了指令没发内容，给个默认动作
-    }
 
     const isLookingAtThisGroupOffline = () => document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetGroupId && currentChatType === 'group';
 
@@ -3538,9 +3535,12 @@ ${historyText || '（刚刚开始聚会）'}
 
 [核心叙事规则 — 严格遵守]
 1. 【多角色参与】：必须让2-4个未潜水成员参与互动，允许相互呼应与打断，体现真实聚会感。
-2. 【沉浸叙事】：用 *星号* 包裹动作/肢体语言，用 「」 包裹直接对话，不能只有台词。
+2. 【沉浸叙事】：用 *星号* 包裹动作/肢体语言，用 「」 包裹直接对话，不能只有台词。动作描写和台词要自然混用，但【禁止使用过长的复合句】。
 3. 【场景融入】：叙事要自然融入当前场景（${currentLocation}），注意灯光/声音/空间感。
-4. 【篇幅控制】：每位角色视当前剧情自然叙事即可，总长度建议不超过${maxLen}字，该停顿时自然结束，无需凑字数。
+4. 【篇幅与句式控制】：
+   - 每位角色视当前剧情自然叙事即可，总长度建议不超过${maxLen}字。
+   - 【严禁堆砌逗号】，每个角色的回复中，动作描写或长句必须多用句号“。”进行断句，保持清爽的节奏感。
+   - 该停顿时自然结束，无需凑字数。
 5. 【输出格式】：必须输出纯 JSON 数组，每项格式：{"name":"角色名","content":"叙事正文"}
    - 不要在 JSON 数组外添加任何多余文字。
 6. 【防出戏死命令】：你绝对不能扮演用户（${myName}），严禁生成用户的对话！
@@ -3620,15 +3620,15 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
 
         // ── 提取选项分支 ──
         let extractedOptions = [];
-        const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
+        const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[(?:\/)?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
         const optMatch = rawReply.match(optRegex);
         if (optMatch) {
             extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => /^\d+\./.test(s));
-            rawReply = rawReply.replace(optRegex, '').trim();
+            rawReply = rawReply.replace(optMatch[0], '').trim();
         }
 
         // ── 提取弹幕 ──
-        const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
+        const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[(?:\/)?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
         const danmakuMatch = rawReply.match(danmakuRegex);
         if (danmakuMatch) {
             const dList = danmakuMatch[1].split('\n').map(s => s.trim()).filter(Boolean);
@@ -3636,7 +3636,7 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
                 if (typeof danmakuPool !== 'undefined') danmakuPool = dList;
                 if (typeof startDanmakuBatch === 'function') startDanmakuBatch(0);
             }
-            rawReply = rawReply.replace(danmakuRegex, '').trim();
+            rawReply = rawReply.replace(danmakuMatch[0], '').trim();
         }
 
         // ── 清理 Markdown ──

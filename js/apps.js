@@ -302,7 +302,7 @@ function parseAndApplyMindStateBlock(friendId, statusBlock) {
         // 支持多行捕获：抓取当前字段直到下一个字段名或块结尾
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const reg = new RegExp(
-            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n[A-Za-z]+[:：]|\\n\\[(?:\\/)?STATUS_END\\]|$)`,
+            `(?:[-*•]\\s*)?${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n(?:[-*•]\\s*)?[A-Za-z]+[:：]|\\n\\[(?:\\/)?STATUS_END\\]|$)`,
             'i'
         );
         const m = statusBlock.match(reg);
@@ -3014,7 +3014,7 @@ if (!aiReply.trim()) {
 rawReply = rawReply.replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/gi, '');
 
 // === [强力容错修复] 匹配状态块，即使 AI 没写 STATUS_END 也能强行捕获 ===
-const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|$)/i;
+const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
 const statusMatch = rawReply.match(statusRegex);
 if (statusMatch) {
     const statusBlock = statusMatch[1];
@@ -3022,7 +3022,7 @@ if (statusMatch) {
     const readStatusValue = (key) => {
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const reg = new RegExp(
-            `${escapedKey}[:：]\\s*([\\s\\S]*?)(?=(?:\\n|\\s)*(?:Action|Location|Weather|BGM|Murmur|HiddenThought|Kaomoji|Affection)[:：]|$)`,
+            `(?:[-*•]\\s*)?${escapedKey}[:：]\\s*([\\s\\S]*?)(?=(?:\\n|\\s)*(?:[-*•]\\s*)?(?:Action|Location|Weather|BGM|Murmur|HiddenThought|Kaomoji|Affection)[:：]|$)`,
             'i'
         );
         const m = statusBlock.match(reg);
@@ -3090,7 +3090,7 @@ if (statusMatch) {
             }
 
                         // 2. 提取弹幕 (容错版，兼容末尾被截断的情况)
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|$)/i;
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const danmakuMatch = rawReply.match(danmakuRegex);
 
             if (danmakuMatch) {
@@ -8324,7 +8324,11 @@ window.insertOfflineAction = function(char) {
     } else if(char === '「') {
         input.value += '「说话」';
     } else if(char === '【') {
-        input.value += '【系统指令】';
+        input.value += '【】';
+        input.focus();
+        const pos = input.value.length - 1;
+        input.setSelectionRange(pos, pos);
+        return;
     }
     input.focus();
 }
@@ -8450,9 +8454,6 @@ window.sendOfflineMessage = async function(isRegen = false) {
     
     // 清除正文中的【】内容
     let cleanText = text.replace(instructionRegex, '').trim();
-    if (!cleanText && !isRegen && userInstruction) {
-        cleanText = "*静静地等待事情发展*"; // 如果用户只发了指令没发内容，给个默认动作
-    }
     
     const friend = friendsData[targetChatId];
     if (!friend) return;
@@ -8551,7 +8552,10 @@ ${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingSt
 
 ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。\n【重要】：你就是角色。\n格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。'}
 
-【篇幅控制】：视当前剧情发展自然叙述，单次回复最长不超过 ${limit} 字，该停顿时自然换行或结束。`;
+【篇幅与句式控制】：
+- 视当前剧情发展自然叙述，单次回复最长不超过 ${limit} 字。
+- 【严禁堆砌逗号】，动作描写或长句必须多用句号“。”进行断句，保持清爽的节奏感。
+- 该停顿时自然换行或结束，无需凑字数。`;
 
     // === 注入剧情总结 ===
     if (friend.summaries && friend.summaries.length > 0) {
@@ -8690,7 +8694,7 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
             let cleanReply = fullReply;
 
             let extractedOptions = [];
-            const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
+            const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const optMatch = cleanReply.match(optRegex);
             if (optMatch) {
                 extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
@@ -8698,7 +8702,7 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
             }
 
             let statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
-            statusRegStr = statusRegStr.replace('\\[STATUS_END\\]', '\\[(?:\\/)?STATUS_END\\]');
+            statusRegStr = statusRegStr.replace('\\[STATUS_END\\]', '(?:\\[\\/?STATUS_END\\]|(?=\\[[A-Za-z_]+_START\\])|$)');
             const statusRegex = new RegExp(statusRegStr, 'i');
             const statusMatch = cleanReply.match(statusRegex);
             if (statusMatch) {
@@ -8706,7 +8710,7 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
                 cleanReply = cleanReply.replace(statusRegex, '').trim();
             }
 
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const danmakuMatch = cleanReply.match(danmakuRegex);
             if (danmakuMatch) {
                 const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
@@ -8843,7 +8847,7 @@ if (!rawReply.trim()) {
 }
 
             let extractedOptions = [];
-            const optRegex = /\[OPTIONS_START\]([\s\S]*?)\[(?:\/)?OPTIONS_END\]/i;
+            const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const optMatch = rawReply.match(optRegex);
             if (optMatch) {
                 extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
@@ -8851,7 +8855,7 @@ if (!rawReply.trim()) {
             }
 
             let statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
-            statusRegStr = statusRegStr.replace('\\[STATUS_END\\]', '\\[(?:\\/)?STATUS_END\\]');
+            statusRegStr = statusRegStr.replace('\\[STATUS_END\\]', '(?:\\[\\/?STATUS_END\\]|(?=\\[[A-Za-z_]+_START\\])|$)');
             const statusRegex = new RegExp(statusRegStr, 'i');
             const statusMatch = rawReply.match(statusRegex);
             if (statusMatch) {
@@ -8859,7 +8863,7 @@ if (!rawReply.trim()) {
                 rawReply = rawReply.replace(statusRegex, '').trim();
             }
 
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)\[(?:\/)?DANMAKU_END\]/i;
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const danmakuMatch = rawReply.match(danmakuRegex);
             if (danmakuMatch) {
                 const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
@@ -9246,19 +9250,50 @@ window.handleImportPresets = function(input) {
     reader.onload = function(e) {
         try {
             const json = JSON.parse(e.target.result);
-            if (Array.isArray(json)) {
-                // 合并或覆盖
-                if(confirm("导入将追加到现有预设，点击【取消】则清空旧预设只保留导入的。")) {
-                    tavernPresets = [...tavernPresets, ...json];
-                } else {
-                    tavernPresets = json;
+            // 兼容酒馆原生的单个预设对象
+            let importedPresets = Array.isArray(json) ? json : [json];
+            
+            // 规范化预设结构
+            importedPresets = importedPresets.map(p => {
+                if (!p.id) p.id = 'preset_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+                if (!p.name) p.name = p.name || 'Imported Preset';
+                
+                // 处理酒馆预设格式
+                if (!p.regexScripts) {
+                    p.regexScripts = [];
                 }
-                localStorage.setItem(PRESETS_DATA_KEY, JSON.stringify(tavernPresets));
-                renderPresetsList();
-                alert("导入成功！");
+                // 支持酒馆格式预设的常见字段映射
+                if (p.system_prompt && !p.systemPrompt) p.systemPrompt = p.system_prompt;
+                if (p.jailbreak_prompt && !p.jailbreak) p.jailbreak = p.jailbreak_prompt;
+
+                // 提取正则（酒馆通常可能是 regexes 字段等）
+                if (p.regex && typeof p.regex === 'string') {
+                    p.regexScripts.push({
+                        regex: p.regex,
+                        flags: 'g',
+                        replace: ''
+                    });
+                }
+                if (Array.isArray(p.regexes)) {
+                    p.regexScripts = [...p.regexScripts, ...p.regexes.map(r => ({
+                        regex: r.regex || r.pattern || '',
+                        flags: r.flags || 'g',
+                        replace: r.replace || r.replacement || ''
+                    }))];
+                }
+
+                return p;
+            });
+
+            // 合并或覆盖
+            if(confirm("导入将追加到现有预设，点击【取消】则清空旧预设只保留导入的。")) {
+                tavernPresets = [...tavernPresets, ...importedPresets];
             } else {
-                alert("文件格式错误，应为预设数组。");
+                tavernPresets = importedPresets;
             }
+            localStorage.setItem(PRESETS_DATA_KEY, JSON.stringify(tavernPresets));
+            renderPresetsList();
+            alert("导入成功！");
         } catch (err) {
             alert("解析失败: " + err.message);
         }
@@ -9313,13 +9348,42 @@ window.addRegexScriptItem = function() {
     container.appendChild(div);
 }
 
+// 应用正则脚本
+window.applyRegexScripts = function(text, scripts) {
+    if (!text || !scripts || !scripts.length) return text;
+    let result = text;
+    scripts.forEach(s => {
+        if (!s.regex) return;
+        try {
+            const reg = new RegExp(s.regex, s.flags || 'g');
+            // 支持 \n 等转义字符在替换文本里的映射
+            let rText = s.replace || '';
+            rText = rText.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+            result = result.replace(reg, rText);
+        } catch (e) {
+            console.error("Regex Script Error:", e);
+        }
+    });
+    return result;
+}
+
 // 修改 openPresetEditor 以支持正则列表渲染
 window.openPresetEditor = function(id) {
-    originalOpenPreset(id);
+    document.getElementById('preset-editor').classList.add('show');
+    currentEditingPresetId = id;
     
-    // 获取当前预设
-    let p = tavernPresets.find(x => x.id === id);
-    if (!id) p = { regexScripts: [] }; // 新建的情况
+    let p;
+    if(id) {
+        p = tavernPresets.find(x => x.id === id);
+        document.getElementById('pe-name').value = p.name || '';
+        document.getElementById('pe-sys-prompt').value = p.systemPrompt || '';
+        document.getElementById('pe-jailbreak').value = p.jailbreak || '';
+    } else {
+        p = { regexScripts: [] };
+        document.getElementById('pe-name').value = '';
+        document.getElementById('pe-sys-prompt').value = '';
+        document.getElementById('pe-jailbreak').value = '';
+    }
     
     // 渲染正则列表
     renderRegexList(p.regexScripts || []);
@@ -12030,11 +12094,11 @@ async function generateOfflineExtrasBackground(chatId, userInput, aiReply, setti
 【角色人设】：${friend.persona}
 
 【核心指令】
-1. 根据刚刚发生的最新对话，推测角色的状态、生成的弹幕及选项。
-2. 绝对不要输出任何 markdown 代码块标记 (如 \`\`\`json )，不要加任何问候语。
-3. 直接输出规定的方括号结构！
+1. 根据最新对话推测角色的状态、弹幕及选项。
+2. 绝对不要输出任何 markdown 代码块标记 (如 \`\`\`json 等)，不要任何问候语、分析解释。
+3. 必须严格输出以下格式的方括号结构，不要漏掉结束标签，也不要合并标签！
 
-需要输出的模块结构如下：
+格式要求：
 ${requests.join('\n\n')}`;
 
     // 构造 User Prompt (提供上下文)
@@ -12072,7 +12136,7 @@ ${requests.join('\n\n')}`;
         content = content.replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '').trim();
 
               // 1. 解析 STATUS
-        const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|$)/i;
+        const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
         const statusMatch = content.match(statusRegex);
 
         if (statusMatch) {
@@ -12083,7 +12147,7 @@ ${requests.join('\n\n')}`;
 
                // 2. 解析 OPTIONS (放宽了限制，AI 输出没带序号也能抓到)
         if (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) {
-            const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|$)/i;
+            const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
 
             const optMatch = content.match(optRegex);
             if (optMatch) {
@@ -12129,7 +12193,7 @@ ${requests.join('\n\n')}`;
 
          // 3. 解析 DANMAKU (放宽限制)
         if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn) {
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|$)/i;
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
 
             const danmakuMatch = content.match(danmakuRegex);
             if (danmakuMatch) {
