@@ -134,6 +134,7 @@ function ensureFriendMindFields(friend, friendId = 'AI') {
         location: friend.mindState.location || "未知地点",
         weather: friend.mindState.weather || "晴",
         murmur: friend.mindState.murmur || "我还没想好要说什么。不过我在看着你。也在等你继续靠近一点。",
+        hiddenThought: friend.mindState.hiddenThought || "",
         kaomoji: friend.mindState.kaomoji || "( ˙W˙ )",
         bgm: friend.mindState.bgm || "No BGM"
     };
@@ -322,6 +323,7 @@ function parseAndApplyMindStateBlock(friendId, statusBlock) {
     friend.mindState.weather = getVal('Weather') || friend.mindState.weather;
     friend.mindState.bgm = getVal('BGM') || friend.mindState.bgm;
     friend.mindState.murmur = getVal('Murmur') || friend.mindState.murmur;
+    friend.mindState.hiddenThought = getVal('HiddenThought') || '';
     friend.mindState.kaomoji = getVal('Kaomoji') || friend.mindState.kaomoji;
 
     saveFriendsData();
@@ -8728,12 +8730,10 @@ ${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一�
                 cleanReply = cleanReply.replace(optRegex, '').trim();
             }
 
-            let statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
-            statusRegStr = statusRegStr.replace('\\[STATUS_END\\]', '(?:\\[\\/?STATUS_END\\]|(?=\\[[A-Za-z_]+_START\\])|$)');
-            const statusRegex = new RegExp(statusRegStr, 'i');
+            const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const statusMatch = cleanReply.match(statusRegex);
             if (statusMatch) {
-                updateMindStateFromText(statusMatch[1], targetChatId); 
+                updateMindStateFromText(statusMatch[1], targetChatId);
                 cleanReply = cleanReply.replace(statusRegex, '').trim();
             }
 
@@ -8782,10 +8782,8 @@ ${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一�
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
             
-            // 已将状态和选项集成到主回复中，删除旧的后台静默请求，防止重复与冲突
-            if (typeof generateOfflineExtrasBackground === 'function') {
-                generateOfflineExtrasBackground(targetChatId, text, cleanReply, settings, friend);
-            }
+            // 主回复已直接生成 STATUS / OPTIONS / DANMAKU，这里不再触发后台二次补生成，
+            // 否则会出现心声、选项、弹幕被后一次请求覆盖或互相打架的问题。
 
        } catch (e) {
     if (e.name === 'AbortError') {
@@ -8883,12 +8881,10 @@ if (!rawReply.trim()) {
                 rawReply = rawReply.replace(optRegex, '').trim();
             }
 
-            let statusRegStr = preset.regex || '\\[STATUS_START\\]([\\s\\S]*?)\\[STATUS_END\\]';
-            statusRegStr = statusRegStr.replace('\\[STATUS_END\\]', '(?:\\[\\/?STATUS_END\\]|(?=\\[[A-Za-z_]+_START\\])|$)');
-            const statusRegex = new RegExp(statusRegStr, 'i');
+            const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const statusMatch = rawReply.match(statusRegex);
             if (statusMatch) {
-                updateMindStateFromText(statusMatch[1], targetChatId); 
+                updateMindStateFromText(statusMatch[1], targetChatId);
                 rawReply = rawReply.replace(statusRegex, '').trim();
             }
 
@@ -8937,10 +8933,8 @@ if (!rawReply.trim()) {
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
 
-            // 已将状态和选项集成到主回复中，删除旧的后台静默请求，防止重复与冲突
-            if (typeof generateOfflineExtrasBackground === 'function') {
-                generateOfflineExtrasBackground(targetChatId, text, rawReply, settings, friend);
-            }
+            // 主回复已直接生成 STATUS / OPTIONS / DANMAKU，这里不再触发后台二次补生成，
+            // 否则会出现心声、选项、弹幕被后一次请求覆盖或互相打架的问题。
 
         } catch (e) {
     if (e.name === 'AbortError') {
