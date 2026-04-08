@@ -143,6 +143,7 @@ textarea#custom-css-input:focus {
     display: flex; flex-direction: column;
     border-radius: 0px;
     overflow: hidden;
+    overscroll-behavior: none; /* 防止边缘回弹导致底层元素透出 */
 }
 .app-fullscreen-view.open { transform: translateY(0); }
 
@@ -7768,4 +7769,28 @@ img.msg-sticker-img {
 }
 .preset-prompt-title:focus {
     border-color: #111;
+}
+/* =========================================
+   [修复] 彻底解决底部 APP 穿帮被拉出来的问题
+   ========================================= */
+
+/* 1. 强制关闭状态下的APP内部彻底隐藏，防止内部 .active 元素的可见性击穿父级 */
+.app-fullscreen-view:not(.open) *,
+.music-player-view:not(.show) *,
+.chat-settings-page-view:not(.show) *,
+.offline-mode-view:not(.show) * {
+    visibility: hidden !important;
+}
+
+/* 2. 阻止滚动区域的边缘回弹(Overscroll)传递给网页本身，让它拉不动底部的潜伏元素 */
+.app-fullscreen-view,
+.music-player-view,
+.chat-settings-page-view,
+.offline-mode-view,
+.wc-body-container,
+.chat-settings-page-content,
+.pb-scroll-container,
+.map-view,
+.live-tab-content {
+    overscroll-behavior-y: none !important;
 }
