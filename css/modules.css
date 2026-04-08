@@ -7734,3 +7734,38 @@ img.msg-sticker-img {
     display: flex;
     justify-content: space-between;
 }
+/* === 预设提示词条目样式 === */
+.preset-prompt-item {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+.preset-prompt-item:focus-within {
+    border-color: #333;
+    background: #fff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.preset-prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.preset-prompt-title {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    outline: none;
+    background: #fff;
+}
+.preset-prompt-title:focus {
+    border-color: #111;
+}

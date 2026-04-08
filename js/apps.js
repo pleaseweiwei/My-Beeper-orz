@@ -9067,7 +9067,7 @@ window.toggleOfflineSettings = function() {
         // ====== 增加不使用预设的选项 ======
         select.innerHTML = '<option value="">── 不使用预设 ──</option>';
         tavernPresets.forEach(p => {
-
+            const opt = document.createElement('option');
             opt.value = p.id;
             opt.text = p.name;
             select.appendChild(opt);
@@ -9099,48 +9099,181 @@ window.closePresetsApp = function() {
 function renderPresetsList() {
     const container = document.getElementById('presets-list-container');
     container.innerHTML = '';
+    
+    // Add grid layout to the container for split view
     container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.height = 'auto';
-    container.style.overflow = 'visible';
+    container.style.flexDirection = 'row';
+    container.style.height = '100%';
+    container.style.overflow = 'hidden';
+    
+    // Create left panel for Presets
+    const leftPanel = document.createElement('div');
+    leftPanel.style.flex = '1';
+    leftPanel.style.overflowY = 'auto';
+    leftPanel.style.padding = '15px';
+    leftPanel.style.borderRight = '1px solid #eee';
+    leftPanel.style.display = 'flex';
+    leftPanel.style.flexDirection = 'column';
+    leftPanel.style.gap = '10px';
+    
+    // Create right panel for Regex
+    const rightPanel = document.createElement('div');
+    rightPanel.style.flex = '1';
+    rightPanel.style.overflowY = 'auto';
+    rightPanel.style.padding = '15px';
+    rightPanel.style.display = 'flex';
+    rightPanel.style.flexDirection = 'column';
+    rightPanel.style.gap = '10px';
+    
+    // Title headers
+    const leftTitle = document.createElement('h3');
+    leftTitle.innerText = "预设列表 (Presets)";
+    leftTitle.style.margin = '0 0 10px 0';
+    leftTitle.style.color = '#333';
+    leftPanel.appendChild(leftTitle);
+    
+    const rightTitle = document.createElement('h3');
+    rightTitle.innerText = "搭配正则 (Regex)";
+    rightTitle.style.margin = '0 0 10px 0';
+    rightTitle.style.color = '#333';
+    rightTitle.style.display = 'flex';
+    rightTitle.style.justifyContent = 'space-between';
+    
+    // Add a subtitle to indicate select preset to see regex
+    const rightSubtitle = document.createElement('span');
+    rightSubtitle.innerText = "请在左侧选择预设";
+    rightSubtitle.style.fontSize = '12px';
+    rightSubtitle.style.color = '#888';
+    rightSubtitle.style.fontWeight = 'normal';
+    rightSubtitle.id = 'regex-panel-subtitle';
+    rightTitle.appendChild(rightSubtitle);
+    
+    rightPanel.appendChild(rightTitle);
+    
+    const regexContainer = document.createElement('div');
+    regexContainer.id = 'preset-regex-view-container';
+    regexContainer.style.display = 'flex';
+    regexContainer.style.flexDirection = 'column';
+    regexContainer.style.gap = '8px';
+    rightPanel.appendChild(regexContainer);
+
+    // Global variable to keep track of currently selected preset in list view
+    window._currentSelectedPresetListId = window._currentSelectedPresetListId || offlineConfig.activePresetId;
+
+    const renderRegexForPreset = (presetId) => {
+        const rc = document.getElementById('preset-regex-view-container');
+        const st = document.getElementById('regex-panel-subtitle');
+        if (!rc) return;
+        rc.innerHTML = '';
+        
+        const p = tavernPresets.find(x => x.id === presetId);
+        if (!p) {
+            if(st) st.innerText = "未找到预设";
+            return;
+        }
+        
+        if(st) st.innerText = `当前: ${p.name}`;
+
+        let scripts = p.regexScripts || [];
+        if (typeof p.regex === 'string' && scripts.length === 0 && p.regex) {
+            scripts = [{ regex: p.regex, flags: 'g', replace: '' }];
+        }
+
+        if (scripts.length === 0) {
+            rc.innerHTML = '<div style="color:#aaa; font-size:12px; text-align:center; padding: 20px;">此预设无正则脚本</div>';
+            return;
+        }
+
+        scripts.forEach((script, idx) => {
+            const div = document.createElement('div');
+            div.style.background = '#f9f9f9';
+            div.style.padding = '10px';
+            div.style.borderRadius = '8px';
+            div.style.borderLeft = '3px solid #f59e0b';
+            div.style.fontSize = '12px';
+            
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <strong style="color:#333;">#${idx+1}</strong>
+                    <span style="background:#eee; padding:2px 6px; border-radius:4px; color:#555;">Flags: ${script.flags || 'g'}</span>
+                </div>
+                <div style="font-family:monospace; background:#fff; padding:6px; border-radius:4px; border:1px solid #eee; margin-bottom:6px; word-break:break-all;">
+                    ${script.regex ? script.regex.replace(/</g, '<').replace(/>/g, '>') : '<i>Empty</i>'}
+                </div>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <i class="fas fa-arrow-right" style="color:#aaa;"></i>
+                    <div style="font-family:monospace; background:#fff; padding:6px; border-radius:4px; border:1px solid #eee; flex:1; word-break:break-all;">
+                        ${script.replace ? script.replace.replace(/</g, '<').replace(/>/g, '>') : '<i>Empty (Delete)</i>'}
+                    </div>
+                </div>
+            `;
+            rc.appendChild(div);
+        });
+    };
 
     tavernPresets.forEach(p => {
         const div = document.createElement('div');
-        div.className = `preset-list-item ${p.id === offlineConfig.activePresetId ? 'active-preset' : ''}`;
+        div.className = `preset-list-item ${p.id === window._currentSelectedPresetListId ? 'selected' : ''} ${p.id === offlineConfig.activePresetId ? 'active-preset' : ''}`;
         div.style.display = 'flex';
         div.style.flexDirection = 'column';
-        div.style.backgroundColor = '#fff';
-        div.style.borderRadius = '12px';
-        div.style.padding = '15px';
-        div.style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)';
+        div.style.backgroundColor = p.id === window._currentSelectedPresetListId ? '#f0f7ff' : '#fff';
+        div.style.borderRadius = '8px';
+        div.style.padding = '12px';
+        div.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
         div.style.cursor = 'pointer';
-        div.style.border = '1px solid #ebebeb';
+        div.style.border = p.id === window._currentSelectedPresetListId ? '1px solid #007aff' : '1px solid transparent';
         div.style.transition = 'all 0.2s';
         
-        // 点击直接进入详情编辑面板（模拟酒馆预设点击效果）
-        div.onclick = () => openPresetEditor(p.id);
+        div.onclick = () => {
+            window._currentSelectedPresetListId = p.id;
+            // Update selection styles
+            leftPanel.querySelectorAll('.preset-list-item').forEach(el => {
+                el.style.backgroundColor = '#fff';
+                el.style.border = '1px solid transparent';
+            });
+            div.style.backgroundColor = '#f0f7ff';
+            div.style.border = '1px solid #007aff';
+            
+            // Update regex view
+            renderRegexForPreset(p.id);
+        };
+        
+        div.ondblclick = () => openPresetEditor(p.id);
 
-        let scriptCount = p.regexScripts ? p.regexScripts.length : (p.regex ? 1 : 0);
+            let scriptCount = p.regexScripts ? p.regexScripts.length : (p.regex ? 1 : 0);
 
         div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h4 style="margin: 0; font-size: 16px; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">${p.name}</h4>
-                <div style="display:flex; align-items: center; gap: 8px;">
-                    ${p.id === offlineConfig.activePresetId ? '<span style="background:#07c160; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px;">已应用</span>' : ''}
-                    <i class="fas fa-chevron-right" style="color:#ccc; font-size: 12px;"></i>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <h4 style="margin: 0; font-size: 15px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">${p.name}</h4>
+                <div style="display:flex; gap: 5px;">
+                    ${p.id === offlineConfig.activePresetId ? '<span style="background:#07c160; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">当前</span>' : ''}
+                    <i class="fas fa-edit" style="color:#999; padding:4px; z-index: 10;" onclick="event.stopPropagation(); openPresetEditor('${p.id}');"></i>
                 </div>
             </div>
             
-            <div style="font-size: 12px; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 10px; line-height: 1.5;">
-                ${p.systemPrompt ? p.systemPrompt.replace(/</g, '<').replace(/>/g, '>') : '<span style="color:#aaa;font-style:italic;">无系统提示词...</span>'}
+            <div style="font-size: 11px; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px;">
+                ${p.systemPrompt ? p.systemPrompt.replace(/</g, '<').replace(/>/g, '>') : '无提示词'}
             </div>
             
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#888; background:#fafafa; padding:6px 10px; border-radius:6px;">
-                <span><i class="fas fa-code"></i> 包含 ${scriptCount} 个正则脚本</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#888;">
+                <span><i class="fas fa-code"></i> ${scriptCount} 个正则规则</span>
+                <span>(双击编辑)</span>
             </div>
         `;
-        container.appendChild(div);
+        leftPanel.appendChild(div);
     });
+
+    container.appendChild(leftPanel);
+    container.appendChild(rightPanel);
+    
+    // Initial render for regex
+    if (window._currentSelectedPresetListId) {
+        // Needs a slight delay because element might not be fully in DOM yet
+        setTimeout(() => renderRegexForPreset(window._currentSelectedPresetListId), 0);
+    } else if (tavernPresets.length > 0) {
+        window._currentSelectedPresetListId = tavernPresets[0].id;
+        setTimeout(() => renderRegexForPreset(tavernPresets[0].id), 0);
+    }
 }
 
 window.createNewPreset = function() {
@@ -9391,39 +9524,44 @@ window.handleImportPresets = function(input) {
                 if (p.description && !p.systemPrompt) p.systemPrompt = p.description;
                 if (p.jailbreak_prompt && !p.jailbreak) p.jailbreak = p.jailbreak_prompt;
                 if (p.post_history_instructions && !p.jailbreak) p.jailbreak = p.post_history_instructions;
-
-                // 2. 特殊处理：SillyTavern 的多 Prompt 阵列格式 (读取 prompt_order)
-                if (p.prompts && Array.isArray(p.prompts) && !p.systemPrompt) {
+                // 2. 特殊处理：SillyTavern 的多 Prompt 阵列格式
+                if (p.prompts && Array.isArray(p.prompts)) {
                     let enabledPromptIds = [];
-                    
-                    // 解析 prompt_order 来获取启用的 prompt 及其顺序
+                    // 解析酒馆里的勾选状态
                     if (p.prompt_order && Array.isArray(p.prompt_order)) {
-                        // 优先找 character_id 为 100000 (全局) 或 100001 (附加) 的配置，或者直接取第一个
                         const globalOrder = p.prompt_order.find(o => o.character_id === 100000 || o.character_id === 100001) || p.prompt_order[0];
                         if (globalOrder && Array.isArray(globalOrder.order)) {
-                            // 筛选出 enabled !== false 的项
                             enabledPromptIds = globalOrder.order.filter(item => item.enabled !== false).map(item => item.identifier);
                         }
                     }
-
-                    let finalContents = [];
-                    if (enabledPromptIds.length > 0) {
-                        // 根据 prompt_order 的顺序来组装
-                        enabledPromptIds.forEach(id => {
-                            const pr = p.prompts.find(x => x.identifier === id);
-                            if (pr && pr.content && typeof pr.content === 'string') {
-                                finalContents.push(pr.content.trim());
-                            }
-                        });
-                    } else {
-                        // 兜底：如果没有 prompt_order，看 prompt 自身的 enabled 字段 (不存在也默认视为开启)
-                        const enabledPrompts = p.prompts.filter(pr => pr.enabled !== false);
-                        finalContents = enabledPrompts.map(pr => pr.content).filter(Boolean);
-                    }
                     
-                    // 拼接成一整段系统提示词
-                    p.systemPrompt = finalContents.join('\n\n');
+                    p.prompts.forEach(pr => {
+                        if (p.prompt_order) {
+                            pr.enabled = enabledPromptIds.includes(pr.identifier);
+                        } else {
+                            pr.enabled = pr.enabled !== false;
+                        }
+                        // 兜底命名
+                        if (!pr.name) pr.name = pr.identifier || "提示词片段";
+                    });
+                    
+                    // 将启用的部分拼合成用于 AI 发送的实际 System Prompt
+                    p.systemPrompt = p.prompts.filter(pr => pr.enabled).map(pr => pr.content).join('\n\n');
+                    
+                } else if (p.system_prompt || p.description || p.systemPrompt) {
+                    // 兼容旧预设：转换为单一条目
+                    let sp = p.systemPrompt || p.system_prompt || p.description;
+                    p.prompts = [{
+                        identifier: 'default_sys',
+                        name: 'Main Prompt (主提示词)',
+                        content: sp,
+                        enabled: true
+                    }];
+                    p.systemPrompt = sp;
+                } else {
+                    p.prompts = [];
                 }
+
 
                 // 3. 提取正则表达式 (基础正则)
                 if (p.regex && typeof p.regex === 'string') {
@@ -9546,7 +9684,46 @@ window.applyRegexScripts = function(text, scripts) {
     return result;
 }
 
-// 修改 openPresetEditor 以支持正则列表渲染
+// === 新增：渲染多条目提示词列表 ===
+window.renderPresetPromptsList = function(prompts) {
+    const container = document.getElementById('pe-prompts-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    (prompts || []).forEach((pr, index) => {
+        const div = document.createElement('div');
+        div.className = 'preset-prompt-item';
+        const checkedStr = pr.enabled ? 'checked' : '';
+        div.innerHTML = `
+            <div class="preset-prompt-header">
+                <input type="checkbox" class="p-enabled" ${checkedStr} style="margin-right:8px; accent-color:#111;" title="启用/禁用">
+                <input type="text" class="p-name preset-prompt-title" placeholder="名称 (如: NSFW, 核心设定)" value="${pr.name || ''}">
+                <i class="fas fa-trash btn-del-regex" onclick="this.closest('.preset-prompt-item').remove()" style="margin-left:8px;" title="删除条目"></i>
+            </div>
+            <textarea class="p-content" rows="4" style="width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 13px; line-height: 1.5; resize: vertical; outline: none; box-sizing: border-box; background: transparent; color: #444;" placeholder="提示词内容...">${pr.content || ''}</textarea>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// === 新增：添加空白提示词条目 ===
+window.addPresetPromptItem = function() {
+    const container = document.getElementById('pe-prompts-container');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = 'preset-prompt-item';
+    div.innerHTML = `
+        <div class="preset-prompt-header">
+            <input type="checkbox" class="p-enabled" checked style="margin-right:8px; accent-color:#111;">
+            <input type="text" class="p-name preset-prompt-title" placeholder="名称 (如: New Prompt)" value="新附加提示词">
+            <i class="fas fa-trash btn-del-regex" onclick="this.closest('.preset-prompt-item').remove()" style="margin-left:8px;"></i>
+        </div>
+        <textarea class="p-content" rows="4" style="width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 13px; line-height: 1.5; resize: vertical; outline: none; box-sizing: border-box; background: transparent; color: #444;" placeholder="输入新的系统提示词..."></textarea>
+    `;
+    container.appendChild(div);
+}
+
+// 修改 openPresetEditor 以支持正则列表和多提示词渲染
 window.openPresetEditor = function(id) {
     let listPane = document.getElementById('preset-list-pane');
     let editorPane = document.getElementById('preset-editor-pane');
@@ -9558,25 +9735,24 @@ window.openPresetEditor = function(id) {
     if(id) {
         p = tavernPresets.find(x => x.id === id);
         document.getElementById('pe-name').value = p.name || '';
-        document.getElementById('pe-sys-prompt').value = p.systemPrompt || '';
         document.getElementById('pe-jailbreak').value = p.jailbreak || '';
         
-        // 兼容处理旧数据中的单条 regex
-        if (!p.regexScripts && p.regex) {
-            p.regexScripts = [{ regex: p.regex, flags: 'g', replace: '' }];
+        // 兼容没有 prompts 数组的旧版配置
+        if (!p.prompts && p.systemPrompt) {
+            p.prompts = [{ name: 'Main Prompt (主提示词)', content: p.systemPrompt, enabled: true }];
         }
     } else {
-        p = { regexScripts: [] };
+        p = { regexScripts: [], prompts: [] };
         document.getElementById('pe-name').value = '';
-        document.getElementById('pe-sys-prompt').value = '';
         document.getElementById('pe-jailbreak').value = '';
     }
     
-    // 渲染正则列表
+    // 渲染列表
+    renderPresetPromptsList(p.prompts || []);
     renderRegexList(p.regexScripts || []);
 }
 
-// 修改 savePresetEditor 以保存正则列表
+// 修改 savePresetEditor 以保存正则列表和多提示词
 window.savePresetEditor = function() {
     // 1. 收集正则脚本数据
     const scriptEls = document.querySelectorAll('.regex-script-item');
@@ -9590,32 +9766,54 @@ window.savePresetEditor = function() {
         }
     });
 
-    // 2. 劫持保存逻辑：先保存基础信息（这里稍微麻烦，因为原函数不方便劫持中间变量）
-    // 为了简单，我们直接重写 savePresetEditor 的核心部分，或者在原函数执行后更新
-    // 最好的办法是完全替换原来的 savePresetEditor
-    
+    // 2. 收集多条目提示词 (Prompts) 数据
+    const promptEls = document.querySelectorAll('.preset-prompt-item');
+    const prompts = [];
+    promptEls.forEach(el => {
+        const enabled = el.querySelector('.p-enabled').checked;
+        const name = el.querySelector('.p-name').value;
+        const content = el.querySelector('.p-content').value;
+        if (content || name) {
+            prompts.push({ 
+                name: name || '未命名片段', 
+                content: content, 
+                enabled: enabled, 
+                identifier: 'p_' + Math.random().toString(36).substr(2, 6) 
+            });
+        }
+    });
+
     const name = document.getElementById('pe-name').value;
-    const sys = document.getElementById('pe-sys-prompt').value;
     const jail = document.getElementById('pe-jailbreak').value;
     
-    if(!name) return alert('Name required');
+    if(!name) return alert('请给预设起个名字！');
+
+    // 把被勾选启用的提示词拼合起来作为最终传输的系统提示词
+    let finalSystemPrompt = prompts.filter(pr => pr.enabled).map(pr => pr.content).join('\n\n');
 
     if (currentEditingPresetId) {
         const p = tavernPresets.find(x => x.id === currentEditingPresetId);
-        p.name = name; p.systemPrompt = sys; p.jailbreak = jail;
-        p.regexScripts = scripts; // 保存脚本
+        p.name = name; 
+        p.systemPrompt = finalSystemPrompt; 
+        p.prompts = prompts;
+        p.jailbreak = jail;
+        p.regexScripts = scripts;
     } else {
         const newP = {
             id: 'pre_' + Date.now(),
             name: name,
-            systemPrompt: sys,
+            systemPrompt: finalSystemPrompt,
+            prompts: prompts,
             jailbreak: jail,
-            regexScripts: scripts // 保存脚本
+            regexScripts: scripts
         };
         tavernPresets.push(newP);
     }
     
+    // 保存数据
     localStorage.setItem(PRESETS_DATA_KEY, JSON.stringify(tavernPresets));
+    if (typeof IDB !== 'undefined') IDB.set(PRESETS_DATA_KEY, tavernPresets); 
+    
     renderPresetsList();
     closePresetEditor();
 }

@@ -44,22 +44,37 @@ window.openSubGame = function(gameId) {
     document.querySelectorAll('.gc-view').forEach(el => el.classList.remove('active'));
     document.getElementById(`gc-view-${gameId}`).classList.add('active');
         // === 新增：为对战类游戏填充双方头像 ===
-    if(gameId === 'truth' || gameId === 'emoji') {
-        const ai = friendsData[gameAiId];
-        const me = personasMeta[currentPersonaId] || {};
-        const avaMe = me.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200';
-        const avaAi = ai.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${ai.realName}`;
-        
-        if(gameId === 'truth') {
-            document.getElementById('g1-me-avatar').src = avaMe;
-            document.getElementById('g1-ai-avatar').src = avaAi;
-            document.getElementById('g1-ai-name').innerText = ai.remark || ai.realName;
-        }
-        if(gameId === 'emoji') {
-            document.getElementById('g2-me-avatar').src = avaMe;
-            document.getElementById('g2-ai-avatar').src = avaAi;
-            document.getElementById('g2-ai-name').innerText = ai.remark || ai.realName;
-        }
+    // === 新增：为对战类游戏填充双方头像 ===
+    const ai = friendsData[gameAiId] || { realName: 'AI' };
+    const me = (typeof personasMeta !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId] : {};
+    const avaMe = me.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200';
+    const avaAi = ai.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${ai.realName}`;
+    const aiNameStr = ai.remark || ai.realName;
+
+    if(gameId === 'truth') {
+        document.getElementById('g1-me-avatar').src = avaMe;
+        document.getElementById('g1-ai-avatar').src = avaAi;
+        document.getElementById('g1-ai-name').innerText = aiNameStr;
+    }
+    if(gameId === 'emoji') {
+        document.getElementById('g2-me-avatar').src = avaMe;
+        document.getElementById('g2-ai-avatar').src = avaAi;
+        document.getElementById('g2-ai-name').innerText = aiNameStr;
+    }
+    if(gameId === 'tictactoe') {
+        if(document.getElementById('g15-me-avatar')) document.getElementById('g15-me-avatar').src = avaMe;
+        if(document.getElementById('g15-ai-avatar')) document.getElementById('g15-ai-avatar').src = avaAi;
+        if(document.getElementById('g15-ai-name')) document.getElementById('g15-ai-name').innerText = aiNameStr;
+    }
+    if(gameId === 'blackjack') {
+        if(document.getElementById('g16-me-avatar')) document.getElementById('g16-me-avatar').src = avaMe;
+        if(document.getElementById('g16-ai-avatar')) document.getElementById('g16-ai-avatar').src = avaAi;
+        if(document.getElementById('g16-ai-name')) document.getElementById('g16-ai-name').innerText = aiNameStr;
+    }
+    if(gameId === 'uno') {
+        if(document.getElementById('g17-me-avatar')) document.getElementById('g17-me-avatar').src = avaMe;
+        if(document.getElementById('g17-ai-avatar')) document.getElementById('g17-ai-avatar').src = avaAi;
+        if(document.getElementById('g17-ai-name')) document.getElementById('g17-ai-name').innerText = aiNameStr;
     }
 
     // 隐藏全局的大厅头部和玩伴选择区
@@ -2957,19 +2972,15 @@ window.g15_resetBoard = function() {
     g15_boardState = Array(G15_SIZE * G15_SIZE).fill('');
     g15_gameActive = true;
     document.getElementById('g15-result').style.display = 'none';
-    document.getElementById('g15-ai-chat').innerText = "来战！你先手 (黑子)。";
+    document.getElementById('g15-ai-chat').innerHTML = "来战！你先手 (黑子)。<div style=\"content:''; position:absolute; top:-8px; right:40px; border-width: 0 8px 8px 8px; border-style: solid; border-color: transparent transparent rgba(255,255,255,0.9) transparent;\"></div>";
     
     const board = document.getElementById('g15-board');
     board.innerHTML = '';
-    // 更新棋盘样式为 10x10
-    board.style.gridTemplateColumns = `repeat(${G15_SIZE}, 1fr)`;
-    board.style.gap = '2px';
-    board.style.background = '#d2b48c'; // 木板色
-    board.style.padding = '5px';
     
     for(let i=0; i<G15_SIZE * G15_SIZE; i++) {
         const cell = document.createElement('div');
-        cell.style.cssText = "background:#f5deb3; border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer;";
+        // 半透明质感占位，点击落子
+        cell.style.cssText = "width: 100%; height: 100%; border-radius: 50%; display:flex; justify-content:center; align-items:center; cursor:pointer; position:relative;";
         cell.onclick = () => g15_makeMove(i, cell);
         board.appendChild(cell);
     }
@@ -2979,17 +2990,16 @@ window.g15_makeMove = async function(idx, cellEl) {
     if(!g15_gameActive || g15_boardState[idx] !== '') return;
     
     g15_boardState[idx] = 'B'; // 玩家是黑子 Black
-    cellEl.style.background = '#2b2b2b';
-    cellEl.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.5)';
+    cellEl.innerHTML = '<div style="width:80%; height:80%; background:radial-gradient(circle at 30% 30%, #666, #000); border-radius:50%; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>';
+    cellEl.style.pointerEvents = 'none';
     
     if(g15_checkWin(idx, 'B')) { g15_endGame('B'); return; }
     if(!g15_boardState.includes('')) { g15_endGame('Draw'); return; }
     
     document.getElementById('g15-board').style.pointerEvents = 'none';
-    document.getElementById('g15-ai-chat').innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 盯着棋盘沉思中...';
+    document.getElementById('g15-ai-chat').innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 盯着棋盘沉思中...<div style=\"content:\'\'; position:absolute; top:-8px; right:40px; border-width: 0 8px 8px 8px; border-style: solid; border-color: transparent transparent rgba(255,255,255,0.9) transparent;\"></div>';
     
-    const ai = friendsData[gameAiId];
-    // 简易AI逻辑，寻找空位。真正的五子棋AI太耗Token，这里我们用简易的启发式或让API返回大概坐标
+    const ai = friendsData[gameAiId] || { realName: 'AI' };
     const prompt = `
     [System] 五子棋游戏。你执白棋(W)，用户执黑棋(B)。
     目前棋盘上有 ${g15_boardState.filter(c=>c==='B').length} 颗黑棋和 ${g15_boardState.filter(c=>c==='W').length} 颗白棋。
@@ -3013,11 +3023,9 @@ window.g15_makeMove = async function(idx, cellEl) {
         } catch(e) {}
     }
     
-    // 如果 AI 选的位置不合法，帮它找一个最近的空位
     if(isNaN(move) || move < 0 || move >= 100 || g15_boardState[move] !== '') {
         const emptyIndices = g15_boardState.map((v, i) => v === '' ? i : -1).filter(i => i !== -1);
         if(emptyIndices.length > 0) {
-            // 找离用户落子最近的
             emptyIndices.sort((a, b) => {
                 const dx_a = a % 10 - idx % 10; const dy_a = Math.floor(a/10) - Math.floor(idx/10);
                 const dx_b = b % 10 - idx % 10; const dy_b = Math.floor(b/10) - Math.floor(idx/10);
@@ -3030,9 +3038,9 @@ window.g15_makeMove = async function(idx, cellEl) {
     if(move !== -1) {
         g15_boardState[move] = 'W';
         const aiCell = document.getElementById('g15-board').children[move];
-        aiCell.style.background = '#fefefe';
-        aiCell.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.3)';
-        document.getElementById('g15-ai-chat').innerText = `"${talk}"`;
+        aiCell.innerHTML = '<div style="width:80%; height:80%; background:radial-gradient(circle at 30% 30%, #fff, #ccc); border-radius:50%; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>';
+        aiCell.style.pointerEvents = 'none';
+        document.getElementById('g15-ai-chat').innerHTML = `"${talk}"<div style=\"content:\'\'; position:absolute; top:-8px; right:40px; border-width: 0 8px 8px 8px; border-style: solid; border-color: transparent transparent rgba(255,255,255,0.9) transparent;\"></div>`;
         
         if(g15_checkWin(move, 'W')) { g15_endGame('W'); return; }
         if(!g15_boardState.includes('')) { g15_endGame('Draw'); return; }
@@ -3062,11 +3070,6 @@ function g15_checkWin(idx, player) {
         if(count >= 5) return true;
     }
     return false;
-}
-
-function g15_checkWin(player) {
-    const winLines = [ [0,1,2],[3,4,5],[6,7,8], [0,3,6],[1,4,7],[2,5,8], [0,4,8],[2,4,6] ];
-    return winLines.some(line => line.every(idx => g15_boardState[idx] === player));
 }
 
 function g15_endGame(winner) {

@@ -1279,9 +1279,15 @@
                     <input type="text" id="pe-name" style="width: 100%; border: none; border-bottom: 2px solid #eee; padding: 8px 0; font-size: 16px; font-weight: 700; color: #222; outline: none; background: transparent; box-sizing: border-box;" placeholder="输入预设名称...">
                 </div>
 
-                <div class="form-group" style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
-                    <label style="font-size: 11px; color: #888; font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 1px;">SYSTEM PROMPT</label>
-                    <textarea id="pe-sys-prompt" rows="5" style="width: 100%; border: 1px solid #eee; border-radius: 12px; padding: 12px; font-size: 13px; color: #444; outline: none; resize: vertical; background: #fafafa; box-sizing: border-box;" placeholder="System instructions..."></textarea>
+                <!-- 新增：多条目提示词容器 -->
+                <div style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <label style="font-size: 11px; color: #888; font-weight: 700; letter-spacing: 1px; margin: 0;">提示词条目 (PROMPTS)</label>
+                        <button onclick="addPresetPromptItem()" style="background: #f0f0f0; color: #333; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;"><i class="fas fa-plus"></i> 添加条目</button>
+                    </div>
+                    <div id="pe-prompts-container" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- JS 动态插入提示词项 -->
+                    </div>
                 </div>
 
                 <div class="form-group" style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
@@ -6427,178 +6433,301 @@ function switchCsTab(id) {
         </div>
 
         <!-- ================= Game 13: 狼人杀 ================= -->
-        <div id="gc-view-werewolf" class="gc-view">
-            <div class="gc-sub-header">
-                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
-                <span>一夜狼人杀 <small style="font-size:9px; color:#888; margin-left:5px;">WEREWOLF</small></span>
+        <div id="gc-view-werewolf" class="gc-view" style="background: radial-gradient(circle at center, #2a2a35 0%, #10101a 100%);">
+            <!-- 增加一些环境光和纹理 -->
+            <div style="position:absolute; inset:0; background:url('https://www.transparenttextures.com/patterns/black-paper.png'); opacity:0.4; pointer-events:none; z-index:0;"></div>
+            
+            <div class="gc-sub-header" style="background:transparent; border-bottom:none; position:relative; z-index:1;">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()" style="color:#d4af37; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></i>
+                <span style="color:#d4af37; font-weight:800; letter-spacing:1px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-family:'Playfair Display', serif;">一夜狼人杀 <small style="font-size:9px; color:#888; font-weight:normal; letter-spacing:2px; margin-left:5px; font-family:sans-serif;">WEREWOLF</small></span>
             </div>
-            <div class="gc-sub-content">
-                <div class="gc-prompt-box">一夜狼人杀：无需法官，天亮直接开始盘逻辑！看 AI 们如何互相甩锅。</div>
-                <div id="g13-setup-area">
-                    <button class="gc-btn-primary" id="g13-start-btn" onclick="g13_start()">发牌开始</button>
+            <div class="gc-sub-content" style="padding:15px; position:relative; z-index:1;">
+                <div class="gc-prompt-box" style="background:rgba(0,0,0,0.4); color:#e9e9eb; border:1px solid rgba(212,175,55,0.3); box-shadow:0 4px 15px rgba(0,0,0,0.5); text-align:center; backdrop-filter:blur(5px); border-radius:12px;">天亮直接开始盘逻辑！看 AI 们如何互相甩锅。</div>
+                
+                <div id="g13-setup-area" style="text-align:center; margin-top:30px;">
+                    <!-- 真实的塔罗牌背面拟物 -->
+                    <div style="width:140px; height:220px; background:url('https://images.unsplash.com/photo-1633519139316-f331d2ba510d?q=80&w=400&auto=format&fit=crop') center/cover; border-radius:8px; margin:0 auto 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.2), inset 0 0 20px rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; border:2px solid #111; flex-direction:column; color:#d4af37; position:relative;">
+                        <div style="position:absolute; inset:8px; border:1px solid rgba(212,175,55,0.4); border-radius:4px; pointer-events:none;"></div>
+                        <i class="fab fa-wolf-pack-battalion" style="font-size:54px; margin-bottom:15px; filter:drop-shadow(0 0 10px rgba(0,0,0,0.8));"></i>
+                        <div style="font-size:16px; font-weight:900; letter-spacing:3px; font-family:'Playfair Display', serif; text-shadow:0 2px 4px rgba(0,0,0,0.8);">TAROT</div>
+                    </div>
+                    <button class="gc-btn-primary" id="g13-start-btn" onclick="g13_start()" style="background:linear-gradient(180deg, #d4af37, #aa8222); color:#111; border-radius:8px; letter-spacing:2px; padding:15px 40px; font-weight:900; border:1px solid #ffe57f; box-shadow:0 8px 20px rgba(0,0,0,0.6), inset 0 2px 5px rgba(255,255,255,0.5); font-family:'Playfair Display', serif;">发牌</button>
                 </div>
-                <div id="g13-game-area" style="display:none;">
-                    <div style="text-align:center; margin-bottom:15px;">
-                        <div style="font-size:12px; color:#888;">你的身份是</div>
-                        <div id="g13-my-role" style="font-size:24px; font-weight:800; color:#1e1b4b; margin-top:5px; letter-spacing:2px;">???</div>
+                
+                <div id="g13-game-area" style="display:none; height:100%; flex-direction:column;">
+                    <div style="text-align:center; margin-bottom:15px; position:relative;">
+                        <div style="font-size:10px; color:#d4af37; letter-spacing:2px; margin-bottom:5px; font-weight:bold;">YOUR ROLE</div>
+                        <!-- 厚实特种纸卡片拟物 正面 -->
+                        <div style="background:url('https://www.transparenttextures.com/patterns/old-wall.png') #f4e8d1; padding:20px; border-radius:8px; box-shadow: 0 10px 25px rgba(0,0,0,0.6), inset 0 0 30px rgba(0,0,0,0.2); border:1px solid #c8b08a; position:relative; overflow:hidden;">
+                            <div style="position:absolute; inset:6px; border:1px solid rgba(139,69,19,0.3); pointer-events:none;"></div>
+                            <div id="g13-my-role" style="font-size:28px; font-weight:900; color:#3e2723; letter-spacing:4px; text-shadow: 1px 1px 0px rgba(255,255,255,0.5); position:relative; z-index:1; font-family:'Playfair Display', serif;">???</div>
+                        </div>
                     </div>
                     
-                    <div id="g13-chat-log" style="background:#fff; border:1px solid #f0f0f0; border-radius:12px; padding:15px; min-height:150px; max-height:250px; overflow-y:auto; margin-bottom:15px; font-size:13px; line-height:1.6; display:flex; flex-direction:column; gap:10px;"></div>
+                    <div id="g13-chat-log" style="flex:1; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); border:2px solid rgba(212,175,55,0.2); border-radius:8px; padding:15px; overflow-y:auto; margin-bottom:15px; font-size:13px; line-height:1.6; display:flex; flex-direction:column; gap:12px; box-shadow:inset 0 10px 30px rgba(0,0,0,0.8);"></div>
                     
                     <div id="g13-action-area" style="display:flex; flex-direction:column; gap:10px;">
-                        <input type="text" id="g13-speech-input" class="gc-input" placeholder="输入你的发言/辩解...">
-                        <button class="gc-btn-primary" onclick="g13_submitSpeech()">发言</button>
+                        <input type="text" id="g13-speech-input" class="gc-input" placeholder="输入发言..." style="background:rgba(255,255,255,0.05); border:1px solid rgba(212,175,55,0.3); box-shadow:inset 0 2px 8px rgba(0,0,0,0.5); color:#fff; border-radius:6px;">
+                        <button class="gc-btn-primary" onclick="g13_submitSpeech()" style="background:linear-gradient(180deg, #d4af37, #aa8222); color:#111; border:1px solid #ffe57f; border-radius:6px; font-weight:900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">发言</button>
                     </div>
                     
-                    <div id="g13-vote-area" style="display:none; flex-direction:column; gap:10px;">
-                        <div style="font-size:12px; font-weight:bold; text-align:center; color:#ff4d4f;">天黑请投票（选出狼人）：</div>
+                    <div id="g13-vote-area" style="display:none; flex-direction:column; gap:15px; background:rgba(20,20,25,0.9); padding:20px; border-radius:12px; box-shadow:0 15px 40px rgba(0,0,0,0.8); border:1px solid rgba(255,77,79,0.3);">
+                        <div style="font-size:16px; font-weight:900; text-align:center; color:#ff4d4f; letter-spacing:3px; font-family:'Playfair Display', serif;">VOTE TO EXILE</div>
+                        <div style="font-size:11px; color:#aaa; text-align:center; margin-top:-10px;">请投票选出你要驱逐的玩家</div>
                         <div id="g13-vote-options" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div>
                     </div>
                     
-                    <div id="g13-result" class="gc-result-box" style="margin-top:15px; display:none;"></div>
+                    <div id="g13-result" class="gc-result-box" style="margin-top:15px; display:none; background:rgba(0,0,0,0.9); color:#d4af37; border:2px solid #d4af37; text-align:center; box-shadow:0 0 30px rgba(212,175,55,0.3);"></div>
                 </div>
             </div>
         </div>
 
         <!-- ================= Game 14: 禁语猜词 ================= -->
-        <div id="gc-view-taboo" class="gc-view">
-            <div class="gc-sub-header">
-                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
-                <span>禁语猜词 <small style="font-size:9px; color:#888; margin-left:5px;">TABOO</small></span>
+        <div id="gc-view-taboo" class="gc-view" style="background:url('https://www.transparenttextures.com/patterns/cork-board.png') #d8b288;">
+            <div class="gc-sub-header" style="background:transparent; border-bottom:none; position:relative; z-index:1;">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()" style="color:#3e2723; text-shadow:0 1px 1px rgba(255,255,255,0.4);"></i>
+                <span style="color:#3e2723; font-weight:900; letter-spacing:1px; text-shadow:0 1px 1px rgba(255,255,255,0.4); font-family:'Courier New', Courier, monospace;">禁语猜词 <small style="font-size:9px; color:#5d4037; font-weight:bold; letter-spacing:2px; margin-left:5px;">TABOO</small></span>
             </div>
-            <div class="gc-sub-content">
-                <div class="gc-prompt-box">你需要向 TA 描述一个词语，但绝对不能说出雷区里的禁语！</div>
+            
+            <div class="gc-sub-content" style="padding:20px; position:relative; z-index:1;">
                 
-                <div id="g14-setup-area">
-                    <button class="gc-btn-primary" id="g14-start-btn" onclick="g14_start()">获取题目</button>
+                <div id="g14-setup-area" style="text-align:center; margin-top:50px;">
+                    <!-- 真实的卡片拟物 -->
+                    <div style="background:#fefefe; width:200px; height:140px; margin:0 auto 30px; border-radius:4px; box-shadow: 2px 5px 15px rgba(0,0,0,0.3); border:1px solid #e0e0e0; display:flex; justify-content:center; align-items:center; transform:rotate(-3deg); position:relative;">
+                        <!-- 红色图钉 -->
+                        <div style="position:absolute; top:10px; left:10px; width:12px; height:12px; background:radial-gradient(circle at 30% 30%, #ff6b6b, #c62828); border-radius:50%; box-shadow: 2px 4px 6px rgba(0,0,0,0.4);"></div>
+                        <i class="fas fa-comment-slash" style="font-size:50px; color:#ddd; filter:drop-shadow(1px 2px 2px rgba(0,0,0,0.1));"></i>
+                    </div>
+                    <button class="gc-btn-primary" id="g14-start-btn" onclick="g14_start()" style="background:linear-gradient(180deg, #fefefe, #e0e0e0); color:#3e2723; border-radius:4px; letter-spacing:2px; font-weight:800; border:1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.2), inset 0 -2px 5px rgba(0,0,0,0.1); font-family:'Courier New', Courier, monospace;">获取题目卡</button>
                 </div>
                 
-                <div id="g14-game-area" style="display:none;">
-                    <div style="background:#fff; border:1px dashed #ccc; border-radius:16px; padding:20px; text-align:center; margin-bottom:20px;">
-                        <div style="font-size:12px; color:#888; margin-bottom:5px;">目标词</div>
-                        <div id="g14-target-word" style="font-size:28px; font-weight:900; color:#07c160; margin-bottom:15px;">???</div>
-                        <div style="font-size:12px; color:#ff4d4f; font-weight:bold; margin-bottom:5px;">禁语 (绝对不能提)</div>
-                        <div id="g14-taboo-words" style="font-size:14px; color:#ff4d4f;">???</div>
+                <div id="g14-game-area" style="display:none; height:100%; flex-direction:column;">
+                    
+                    <!-- 实体索引卡拟物 -->
+                    <div style="background:#fdfcf0; border-radius:2px; padding:30px 20px; text-align:center; margin-bottom:25px; box-shadow: 3px 6px 15px rgba(0,0,0,0.4); position:relative; overflow:hidden; border:1px solid #dcd7c3; transform:rotate(1deg);">
+                        <!-- 胶带拟物 -->
+                        <div style="position:absolute; top:-5px; left:50%; transform:translateX(-50%) rotate(-2deg); width:80px; height:25px; background:rgba(255,255,255,0.6); backdrop-filter:blur(2px); border:1px solid rgba(0,0,0,0.1); box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index:2;"></div>
+                        <!-- 横线背景 -->
+                        <div style="position:absolute; inset:0; background: linear-gradient(transparent 95%, #e1e8f0 95%); background-size: 100% 28px; z-index:0; opacity:0.8;"></div>
+                        
+                        <div style="position:relative; z-index:1;">
+                            <div style="font-size:10px; color:#5d4037; letter-spacing:2px; margin-bottom:5px; font-weight:bold; font-family:'Courier New', Courier, monospace;">TARGET WORD</div>
+                            <div id="g14-target-word" style="font-size:36px; font-weight:900; color:#d32f2f; margin-bottom:20px; letter-spacing:4px; font-family:sans-serif; text-shadow:1px 1px 0 rgba(255,255,255,0.8);">???</div>
+                            
+                            <!-- 印章效果禁语 -->
+                            <div style="display:inline-block; border:3px solid #d32f2f; border-radius:6px; padding:12px 20px; transform:rotate(-3deg); opacity:0.85;">
+                                <div style="font-size:10px; color:#d32f2f; font-weight:900; margin-bottom:8px; letter-spacing:2px; font-family:'Courier New', Courier, monospace;">RESTRICTED</div>
+                                <div id="g14-taboo-words" style="font-size:16px; color:#3e2723; font-weight:800; letter-spacing:1px;">???</div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div id="g14-chat-log" style="background:#fafafa; border-radius:12px; padding:15px; min-height:80px; max-height:200px; overflow-y:auto; margin-bottom:15px; font-size:13px; line-height:1.5;"></div>
+                    <div id="g14-chat-log" style="flex:1; background:rgba(255,255,255,0.8); backdrop-filter:blur(5px); border-radius:8px; padding:15px; min-height:80px; max-height:200px; overflow-y:auto; margin-bottom:15px; font-size:13px; line-height:1.6; display:flex; flex-direction:column; gap:10px; border:1px solid rgba(0,0,0,0.1); box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);"></div>
                     
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="g14-desc-input" class="gc-input" placeholder="输入你的描述...">
-                        <button class="gc-btn-primary" style="width:80px;" onclick="g14_submitDesc()">发送</button>
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <input type="text" id="g14-desc-input" class="gc-input" placeholder="输入描述..." style="background:#fefefe; border:2px solid #ccc; border-radius:6px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); font-family:'Courier New', Courier, monospace; font-weight:bold;">
+                        <button class="gc-btn-primary" style="width:80px; background:linear-gradient(180deg, #fefefe, #e0e0e0); color:#3e2723; border:1px solid #ccc; border-radius:6px; font-weight:bold; font-family:'Courier New', Courier, monospace; box-shadow: 0 2px 5px rgba(0,0,0,0.2);" onclick="g14_submitDesc()">发送</button>
                     </div>
                     
-                    <div id="g14-result" class="gc-result-box" style="margin-top:15px; display:none;"></div>
+                    <div id="g14-result" class="gc-result-box" style="display:none; background:#3e2723; color:#fdfcf0; text-align:center; border:2px dashed #fdfcf0; border-radius:6px; font-family:'Courier New', Courier, monospace; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"></div>
                 </div>
             </div>
         </div>
 
         <!-- ================= Game 15: 井字棋 ================= -->
-        <div id="gc-view-tictactoe" class="gc-view">
-            <div class="gc-sub-header">
-                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
-                <span>嘴炮井字棋 <small style="font-size:9px; color:#888; margin-left:5px;">TIC-TAC-TOE</small></span>
+        <div id="gc-view-tictactoe" class="gc-view" style="background:url('https://www.transparenttextures.com/patterns/wood-pattern.png') #d2b48c; background-blend-mode: multiply;">
+            <div class="gc-sub-header" style="background:transparent; border-bottom:none;">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()" style="color:#3e2723; text-shadow:0 1px 2px rgba(255,255,255,0.4);"></i>
+                <span style="color:#3e2723; font-weight:800; letter-spacing:1px; text-shadow:0 1px 2px rgba(255,255,255,0.4);">嘴炮五子棋 <small style="font-size:9px; color:#5d4037; font-weight:normal; letter-spacing:2px; margin-left:5px;">GOMOKU</small></span>
             </div>
-            <div class="gc-sub-content" style="align-items:center;">
-                <div class="gc-prompt-box" style="width:100%;">你执 X，TA 执 O。TA 会边下棋边嘲讽你。</div>
+            <div class="gc-sub-content" style="align-items:center; padding:10px 20px;">
+                <!-- 对战双方信息 -->
+                <div class="gc-duel-header" style="background: rgba(255,255,255,0.7); backdrop-filter: blur(5px); border-radius: 16px; padding: 10px; width: 100%; border: 1px solid rgba(255,255,255,0.5); margin-bottom: 15px;">
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <img id="g15-me-avatar" class="gc-duel-avatar me" src="" style="width:40px; height:40px; border:2px solid #2b2b2b;">
+                        <div class="gc-duel-name" style="color:#3e2723;">Me (黑)</div>
+                    </div>
+                    <div class="gc-duel-vs" style="color:#8d6e63;">VS</div>
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <img id="g15-ai-avatar" class="gc-duel-avatar ai" src="" style="width:40px; height:40px; border:2px solid #fefefe;">
+                        <div id="g15-ai-name" class="gc-duel-name" style="color:#3e2723;">AI (白)</div>
+                    </div>
+                </div>
                 
-                <div id="g15-ai-chat" style="background:#fff; border-radius:12px; padding:15px; width:100%; border:1px solid #f0f0f0; margin-bottom:20px; font-size:13px; color:#333; min-height:40px; font-weight:bold; color:#ff7e67; text-align:center;">
-                    准备好被我虐了吗？
+                <div id="g15-ai-chat" style="background:rgba(255,255,255,0.9); border-radius:12px; padding:10px 15px; width:100%; box-shadow:0 4px 10px rgba(0,0,0,0.1); margin-bottom:15px; font-size:13px; font-weight:700; color:#5d4037; text-align:center; position: relative;">
+                    <!-- 气泡小尾巴 -->
+                    <div style="content:''; position:absolute; top:-8px; right:40px; border-width: 0 8px 8px 8px; border-style: solid; border-color: transparent transparent rgba(255,255,255,0.9) transparent;"></div>
+                    等你落子...
                 </div>
 
-                <div id="g15-board" style="display:grid; grid-template-columns:repeat(3, 80px); grid-template-rows:repeat(3, 80px); gap:10px; margin-bottom:20px;">
-                    <!-- JS 生成 -->
+                <!-- 拟物木质棋盘 -->
+                <div style="background:#e6c280; border:4px solid #8b5a2b; border-radius:4px; padding:8px; box-shadow: 0 15px 35px rgba(0,0,0,0.3), inset 0 0 20px rgba(139,90,43,0.5); position:relative;">
+                    <!-- 棋盘网格线背景 -->
+                    <div style="position:absolute; inset:8px; background-image: linear-gradient(#a06c3a 1px, transparent 1px), linear-gradient(90deg, #a06c3a 1px, transparent 1px); background-size: 26px 26px; background-position: 13px 13px; pointer-events: none;"></div>
+                    <!-- 10x10 的五子棋盘 -->
+                    <div id="g15-board" style="display:grid; grid-template-columns:repeat(10, 26px); grid-template-rows:repeat(10, 26px); gap:0; background:transparent; position:relative; z-index:1;">
+                        <!-- JS 生成 -->
+                    </div>
                 </div>
                 
-                <button class="gc-btn-secondary" onclick="g15_resetBoard()" style="width:200px;">重新开始</button>
-                <div id="g15-result" class="gc-result-box" style="margin-top:15px; width:100%; display:none; text-align:center;"></div>
+                <button class="gc-btn-secondary" onclick="g15_resetBoard()" style="width:200px; margin-top:25px; background:rgba(255,255,255,0.8); border:1px solid #a06c3a; color:#5d4037; font-weight:800; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">重新开局</button>
+                <div id="g15-result" class="gc-result-box" style="margin-top:15px; width:100%; display:none; text-align:center; background:rgba(62,39,35,0.9); color:#fff; border:none; border-radius:12px;"></div>
             </div>
         </div>
 
         <!-- ================= Game 16: 21点 ================= -->
-        <div id="gc-view-blackjack" class="gc-view">
-            <div class="gc-sub-header">
-                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
-                <span>21点扑克局 <small style="font-size:9px; color:#888; margin-left:5px;">BLACKJACK</small></span>
+        <div id="gc-view-blackjack" class="gc-view" style="background:#1b3b22; box-shadow: inset 0 0 100px rgba(0,0,0,0.8);">
+            <!-- 更真实的深绿色赌场绒布背景 -->
+            <div style="position:absolute; inset:0; background:url('https://www.transparenttextures.com/patterns/woven.png'); opacity:0.3; pointer-events:none; z-index:0;"></div>
+            
+            <div class="gc-sub-header" style="background:transparent; border-bottom:none; position:relative; z-index:1;">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()" style="color:#d4af37; text-shadow:0 2px 2px rgba(0,0,0,0.5);"></i>
+                <span style="color:#d4af37; font-weight:900; letter-spacing:2px; text-shadow:0 2px 2px rgba(0,0,0,0.5); font-family:serif;">21点扑克局 <small style="font-size:9px; color:#aaa; font-weight:bold; letter-spacing:3px; margin-left:5px; font-family:sans-serif;">BLACKJACK</small></span>
             </div>
-            <div class="gc-sub-content">
-                <div class="gc-prompt-box">经典的 21 点，谁最接近 21 点谁赢，超过 21 点直接爆炸！</div>
+            
+            <div class="gc-sub-content" style="padding:10px 20px; position:relative; z-index:1;">
                 
-                <div id="g16-setup-area">
-                    <button class="gc-btn-primary" onclick="g16_start()">发牌</button>
+                <!-- 真实筹码拟物展示 -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:linear-gradient(to bottom, rgba(20,40,25,0.9), rgba(10,20,15,0.9)); padding:12px 18px; border-radius:12px; border:2px solid rgba(218,165,32,0.4); box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 2px 5px rgba(255,255,255,0.1);">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <!-- 拟物筹码图标 -->
+                        <div style="width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg, #ffd700, #daa520); border:2px dashed #b8860b; box-shadow:0 2px 4px rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; font-size:10px; font-weight:900; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,0.8);">C</div>
+                        <div style="color:#e0e0e0; font-size:11px; font-weight:800; letter-spacing:1px;">BANK: <span id="g16-chips-display" style="color:#ffd700; font-size:18px; text-shadow:0 1px 2px rgba(0,0,0,0.8);">100</span></div>
+                    </div>
+                    <div style="color:#aaa; font-size:11px; font-weight:800; letter-spacing:1px; background:rgba(0,0,0,0.5); padding:4px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);">BET: <span id="g16-current-bet" style="color:#fff;">0</span></div>
+                </div>
+
+                <!-- 玩家和AI头像区域 -->
+                <div class="gc-duel-header" style="margin-bottom: 10px; background:transparent;">
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <img id="g16-me-avatar" class="gc-duel-avatar me" src="" style="width:48px; height:48px; border:3px solid #ffd700; box-shadow:0 4px 10px rgba(0,0,0,0.5);">
+                        <div class="gc-duel-name" style="color:#ddd; font-weight:800; margin-top:4px;">Me</div>
+                    </div>
+                    <div class="gc-duel-vs" style="color:#ffd700; font-size:24px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8));"><i class="fas fa-spade"></i></div>
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <img id="g16-ai-avatar" class="gc-duel-avatar ai" src="" style="width:48px; height:48px; border:3px solid #ddd; box-shadow:0 4px 10px rgba(0,0,0,0.5);">
+                        <div id="g16-ai-name" class="gc-duel-name" style="color:#ddd; font-weight:800; margin-top:4px;">Dealer</div>
+                    </div>
                 </div>
                 
-                <div id="g16-game-area" style="display:none; width:100%;">
+                <!-- 下注区 -->
+                <div id="g16-setup-area" style="text-align:center; padding:25px 20px; background:rgba(0,0,0,0.4); border-radius:20px; margin-bottom:15px; border:1px solid rgba(218,165,32,0.2); box-shadow: 0 15px 30px rgba(0,0,0,0.6), inset 0 2px 10px rgba(0,0,0,0.4);">
+                    <div style="font-size:12px; color:#ffd700; letter-spacing:4px; margin-bottom:20px; font-weight:900; text-shadow:0 2px 4px rgba(0,0,0,0.8);">PLACE YOUR BET</div>
                     
-                    <div style="background:#f9f9f9; border-radius:12px; padding:15px; margin-bottom:15px; position:relative;">
-                        <div style="font-size:11px; color:#888; margin-bottom:10px; font-weight:bold;">TA 的牌区</div>
-                        <div id="g16-ai-cards" style="font-size:24px; letter-spacing:5px;">🎴 🎴</div>
-                        <div id="g16-ai-score" style="position:absolute; right:15px; top:15px; font-size:16px; font-weight:bold; color:#555;">?</div>
-                        <div id="g16-ai-chat" style="font-size:12px; color:#ff7e67; margin-top:10px; font-weight:bold;">...</div>
+                    <!-- 拟物筹码按钮 -->
+                    <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:20px;">
+                        <button class="gc-btn-secondary" style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, #e0e0e0, #9e9e9e); color:#111; font-weight:900; font-size:14px; border:3px dashed #616161; box-shadow:0 4px 8px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.5);" onclick="document.getElementById('g16-bet-input').value='10'">10</button>
+                        <button class="gc-btn-secondary" style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, #66bb6a, #2e7d32); color:#fff; font-weight:900; font-size:14px; border:3px dashed #1b5e20; box-shadow:0 4px 8px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.5);" onclick="document.getElementById('g16-bet-input').value='50'">50</button>
+                        <button class="gc-btn-secondary" style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, #333, #111); color:#ffd700; font-weight:900; font-size:14px; border:3px dashed #b8860b; box-shadow:0 4px 8px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.2);" onclick="document.getElementById('g16-bet-input').value='100'">100</button>
+                    </div>
+                    
+                    <input type="number" id="g16-bet-input" class="gc-input" value="10" style="width:140px; text-align:center; margin-bottom:20px; background:rgba(0,0,0,0.8); border:2px solid #b8860b; color:#ffd700; font-size:28px; font-weight:900; border-radius:12px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.8);">
+                    
+                    <button class="gc-btn-primary" onclick="g16_placeBet()" style="background:linear-gradient(180deg, #ffd700, #daa520); color:#111; border-radius:12px; font-weight:900; letter-spacing:3px; width:100%; border:2px solid #fff8dc; box-shadow: 0 6px 15px rgba(0,0,0,0.6); padding:15px 0;">DEAL CARDS</button>
+                </div>
+                
+                <div id="g16-game-area" style="display:none; width:100%; flex-direction:column; gap:15px;">
+                    
+                    <!-- AI 牌区 -->
+                    <div style="text-align:center; position:relative; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 16px; border: 1px solid rgba(218,165,32,0.2); box-shadow:inset 0 5px 15px rgba(0,0,0,0.5);">
+                        <div style="font-size:11px; color:#d4af37; letter-spacing:3px; margin-bottom:15px; font-weight:900;">DEALER <span id="g16-ai-score" style="background:rgba(0,0,0,0.6); padding:2px 8px; border-radius:6px; color:#fff; margin-left:5px; border:1px solid rgba(255,255,255,0.2);">?</span></div>
+                        <div id="g16-ai-cards" style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap; min-height:80px;"></div>
+                        <div id="g16-ai-chat" style="font-size:12px; color:#ffd700; margin-top:15px; font-weight:bold; background:rgba(0,0,0,0.6); padding:8px 12px; border-radius:8px; display:inline-block; border:1px solid rgba(218,165,32,0.3); box-shadow:0 4px 10px rgba(0,0,0,0.5);">...</div>
                     </div>
 
-                    <div style="background:#fff; border:1px solid #111; border-radius:12px; padding:15px; margin-bottom:20px; position:relative;">
-                        <div style="font-size:11px; color:#111; margin-bottom:10px; font-weight:bold;">我的牌区</div>
-                        <div id="g16-my-cards" style="font-size:24px; letter-spacing:5px;">🎴 🎴</div>
-                        <div id="g16-my-score" style="position:absolute; right:15px; top:15px; font-size:16px; font-weight:bold; color:#111;">0</div>
+                    <!-- 玩家牌区 -->
+                    <div style="text-align:center; position:relative; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 16px; border: 1px solid rgba(218,165,32,0.2); box-shadow:inset 0 5px 15px rgba(0,0,0,0.5);">
+                        <div style="font-size:11px; color:#d4af37; letter-spacing:3px; margin-bottom:15px; font-weight:900;">PLAYER <span id="g16-my-score" style="background:rgba(0,0,0,0.6); padding:2px 8px; border-radius:6px; color:#fff; margin-left:5px; border:1px solid rgba(255,255,255,0.2);">0</span></div>
+                        <div id="g16-my-cards" style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap; min-height:80px;"></div>
                     </div>
                     
-                    <div id="g16-action-area" style="display:flex; gap:10px;">
-                        <button class="gc-btn-primary" style="flex:1; background:#07c160; border:none;" onclick="g16_hit()">拿牌 (Hit)</button>
-                        <button class="gc-btn-secondary" style="flex:1;" onclick="g16_stand()">停牌 (Stand)</button>
+                    <div id="g16-action-area" style="display:flex; gap:15px; margin-top:10px;">
+                        <button class="gc-btn-secondary" style="flex:1; background:linear-gradient(180deg, #555, #222); color:#fff; border:2px solid #777; border-radius:12px; font-weight:900; letter-spacing:2px; box-shadow: 0 6px 12px rgba(0,0,0,0.6); padding:15px 0;" onclick="g16_hit()">HIT <i class="fas fa-hand-point-down"></i></button>
+                        <button class="gc-btn-primary" style="flex:1; background:linear-gradient(180deg, #e53935, #b71c1c); color:#fff; border:2px solid #ff8a80; border-radius:12px; font-weight:900; letter-spacing:2px; box-shadow: 0 6px 12px rgba(0,0,0,0.6); padding:15px 0;" onclick="g16_stand()">STAND <i class="fas fa-hand-paper"></i></button>
                     </div>
                     
-                    <div id="g16-result" class="gc-result-box" style="margin-top:15px; display:none; text-align:center;"></div>
+                    <div id="g16-result" class="gc-result-box" style="margin-top:15px; display:none; text-align:center; background:rgba(0,0,0,0.9); color:#ffd700; border:2px solid #ffd700; border-radius:12px; font-size:16px; padding:20px; font-weight:900; box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(255,215,0,0.2);"></div>
                 </div>
             </div>
         </div>
 
         <!-- ================= Game 17: UNO ================= -->
-        <div id="gc-view-uno" class="gc-view">
-            <div class="gc-sub-header">
-                <i class="fas fa-chevron-left" onclick="backToGameLobby()"></i>
-                <span>双人 UNO <small style="font-size:9px; color:#888; margin-left:5px;">UNO</small></span>
+        <div id="gc-view-uno" class="gc-view" style="background: radial-gradient(circle at center, #1a202c, #000); position:relative;">
+            <!-- 增加霓虹纹理效果 -->
+            <div style="position:absolute; inset:0; background:url('https://www.transparenttextures.com/patterns/stardust.png'); opacity:0.3; pointer-events:none; z-index:0;"></div>
+
+            <div class="gc-sub-header" style="background:transparent; border-bottom:none; position:relative; z-index:1;">
+                <i class="fas fa-chevron-left" onclick="backToGameLobby()" style="color:#fff;"></i>
+                <span style="color:#fff; font-weight:900; letter-spacing:1px; text-shadow:0 0 10px rgba(255,255,255,0.3);">双人 UNO <small style="font-size:9px; color:#aaa; font-weight:bold; letter-spacing:2px; margin-left:5px;">NEON NIGHT</small></span>
             </div>
-            <div class="gc-sub-content">
-                <div class="gc-prompt-box">最经典的 UNO 卡牌对决！先打完手牌的一方获胜！</div>
+            
+            <div class="gc-sub-content" style="padding:15px; position:relative; z-index:1;">
                 
-                <div id="g17-setup-area">
-                    <button class="gc-btn-primary" onclick="g17_start()">发牌</button>
+                <div id="g17-setup-area" style="text-align:center; margin-top:50px; background: rgba(255,255,255,0.03); padding: 50px 20px; border-radius: 24px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 15px 35px rgba(0,0,0,0.8);">
+                    <div style="font-size:64px; font-weight:900; letter-spacing: -2px; color:transparent; background-clip:text; -webkit-background-clip:text; background-image:linear-gradient(90deg, #ff4d4f, #fadb14, #07c160, #1890ff); margin-bottom:10px; filter:drop-shadow(0 0 15px rgba(255,255,255,0.2));">U N O</div>
+                    <div style="font-size:12px; color:#888; margin-bottom:50px; letter-spacing:6px; font-weight:bold;">NEON NIGHT EDITION</div>
+                    <button class="gc-btn-primary" onclick="g17_start()" style="background:linear-gradient(90deg, #ff4d4f, #fadb14, #07c160, #1890ff); color:#fff; border-radius:30px; letter-spacing:3px; padding:18px 40px; border:none; box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 2px 5px rgba(255,255,255,0.3); font-weight: 900; font-size:16px;">START GAME</button>
                 </div>
                 
-                <div id="g17-game-area" style="display:none; width:100%;">
+                <div id="g17-game-area" style="display:none; width:100%; flex-direction:column; height:100%;">
                     
-                    <div style="background:#f9f9f9; border-radius:12px; padding:15px; margin-bottom:15px; position:relative;">
-                        <div style="font-size:11px; color:#888; margin-bottom:10px; font-weight:bold;">TA 的手牌</div>
-                        <div id="g17-ai-cards" style="font-size:24px; letter-spacing:2px;">🎴🎴🎴🎴🎴🎴🎴</div>
-                        <div id="g17-ai-count" style="position:absolute; right:15px; top:15px; font-size:12px; font-weight:bold; color:#555;">7 张</div>
-                        <div id="g17-ai-chat" style="font-size:12px; color:#ff7e67; margin-top:10px; font-weight:bold;">...</div>
+                    <!-- AI 状态 -->
+                    <div style="background:rgba(0,0,0,0.4); backdrop-filter:blur(10px); border-radius:16px; padding:12px 18px; margin-bottom:15px; box-shadow:0 8px 25px rgba(0,0,0,0.5); display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.1);">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <img id="g17-ai-avatar" src="" style="width:44px; height:44px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px rgba(255,255,255,0.3);">
+                            <div>
+                                <div style="font-size:10px; color:#aaa; letter-spacing:2px; margin-bottom:2px; font-weight:bold;">OPPONENT</div>
+                                <div id="g17-ai-name" style="font-size:15px; font-weight:900; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);">AI PLAYER</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:10px; color:#aaa; letter-spacing:2px; margin-bottom:2px; font-weight:bold;">CARDS</div>
+                            <div id="g17-ai-count" style="font-size:24px; font-weight:900; color:#ff4d4f; text-shadow: 0 0 15px rgba(255,77,79,0.8);">7</div>
+                        </div>
+                    </div>
+                    <div id="g17-ai-chat" style="font-size:13px; color:#ddd; text-align:center; margin-bottom:15px; font-style:italic; background:rgba(0,0,0,0.5); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); box-shadow:inset 0 2px 5px rgba(0,0,0,0.5);">...</div>
+
+                    <!-- 牌堆区 -->
+                    <div style="flex:1; display:flex; justify-content:center; align-items:center; gap:50px; margin-bottom:20px;">
+                        <!-- 摸牌堆 (黑底质感) -->
+                        <div style="width:80px; height:120px; background:linear-gradient(135deg, #222, #000); border: 2px solid #444; border-radius:12px; box-shadow: -4px 4px 0 #111, -8px 8px 0 #000, 0 10px 20px rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; color:#fff; font-weight:900; font-size:18px; letter-spacing:2px; cursor:pointer; transform:rotate(-5deg); transition: 0.2s;" onclick="g17_drawCard()" onmousedown="this.style.transform='rotate(-5deg) scale(0.95)'" onmouseup="this.style.transform='rotate(-5deg)'">
+                            <span style="border:2px solid #fff; padding:4px 8px; border-radius:50%; transform:rotate(-20deg); display:inline-block; box-shadow:0 0 10px rgba(255,255,255,0.3);">UNO</span>
+                        </div>
+                        <!-- 出牌堆 -->
+                        <div style="position:relative; width:80px; height:120px;">
+                            <!-- 底部随机卡牌装饰 -->
+                            <div style="position:absolute; width:80px; height:120px; background:#fff; border:1px solid #ccc; border-radius:12px; transform:rotate(12deg); box-shadow:0 4px 10px rgba(0,0,0,0.5);"></div>
+                            <div style="position:absolute; width:80px; height:120px; background:#fff; border:1px solid #ccc; border-radius:12px; transform:rotate(-18deg); box-shadow:0 4px 10px rgba(0,0,0,0.5);"></div>
+                            <!-- 当前牌 -->
+                            <div id="g17-discard-pile" style="position:absolute; width:80px; height:120px; background:#fff; border:2px solid #fff; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; font-size:36px; font-weight:900; z-index:2; text-shadow: 2px 2px 0 rgba(0,0,0,0.3);"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align:center; margin-bottom:15px; background:rgba(0,0,0,0.4); display:inline-block; align-self:center; padding:8px 15px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                        <span style="font-size:11px; color:#aaa; letter-spacing:2px; font-weight:700;">COLOR</span>
+                        <div id="g17-current-color" style="display:inline-block; margin-left:10px; width:18px; height:18px; border-radius:50%; vertical-align:middle; box-shadow: 0 0 15px rgba(255,255,255,0.8), inset 0 0 5px rgba(0,0,0,0.5); border: 2px solid #fff;"></div>
                     </div>
 
-                    <div style="background:#fff; border:1px dashed #ccc; border-radius:12px; padding:15px; margin-bottom:15px; text-align:center;">
-                        <div style="font-size:11px; color:#888; margin-bottom:5px; font-weight:bold;">当前牌 (Discard Pile)</div>
-                        <div id="g17-discard-pile" style="font-size:24px; display:inline-block; padding:10px 15px; border-radius:8px; border:2px solid #333; min-width:50px; font-weight:bold; background:#eee;"></div>
-                        <div id="g17-current-color" style="font-size:12px; font-weight:bold; margin-top:5px; padding:4px 10px; border-radius:10px; display:inline-block;"></div>
-                    </div>
-
-                    <div style="background:#fff; border:1px solid #111; border-radius:12px; padding:15px; margin-bottom:20px; position:relative;">
-                        <div style="font-size:11px; color:#111; margin-bottom:10px; font-weight:bold;">我的手牌</div>
-                        <div id="g17-my-cards" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-                    </div>
-                    
-                    <div id="g17-action-area" style="display:flex; gap:10px;">
-                        <button class="gc-btn-primary" style="flex:1; background:#07c160; border:none;" onclick="g17_drawCard()">摸牌 (Draw)</button>
-                    </div>
-                    
                     <!-- 选色面板 -->
-                    <div id="g17-color-picker" style="display:none; gap:15px; justify-content:center; margin-top:15px; background:#fafafa; padding:15px; border-radius:12px;">
-                        <div style="width:40px; height:40px; background:#ff4d4f; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(255,77,79,0.3);" onclick="g17_chooseColor('Red')"></div>
-                        <div style="width:40px; height:40px; background:#fadb14; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(250,219,20,0.3);" onclick="g17_chooseColor('Yellow')"></div>
-                        <div style="width:40px; height:40px; background:#07c160; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(7,193,96,0.3);" onclick="g17_chooseColor('Green')"></div>
-                        <div style="width:40px; height:40px; background:#1890ff; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(24,144,255,0.3);" onclick="g17_chooseColor('Blue')"></div>
+                    <div id="g17-color-picker" style="display:none; gap:20px; justify-content:center; margin-bottom:15px; background:rgba(0,0,0,0.6); padding:20px; border-radius:20px; backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.1); box-shadow:0 10px 30px rgba(0,0,0,0.8);">
+                        <div style="width:40px; height:40px; background:#ff4d4f; border-radius:50%; cursor:pointer; box-shadow:0 0 20px #ff4d4f, inset 0 0 10px rgba(0,0,0,0.3); border:2px solid #fff;" onclick="g17_chooseColor('Red')"></div>
+                        <div style="width:40px; height:40px; background:#fadb14; border-radius:50%; cursor:pointer; box-shadow:0 0 20px #fadb14, inset 0 0 10px rgba(0,0,0,0.3); border:2px solid #fff;" onclick="g17_chooseColor('Yellow')"></div>
+                        <div style="width:40px; height:40px; background:#07c160; border-radius:50%; cursor:pointer; box-shadow:0 0 20px #07c160, inset 0 0 10px rgba(0,0,0,0.3); border:2px solid #fff;" onclick="g17_chooseColor('Green')"></div>
+                        <div style="width:40px; height:40px; background:#1890ff; border-radius:50%; cursor:pointer; box-shadow:0 0 20px #1890ff, inset 0 0 10px rgba(0,0,0,0.3); border:2px solid #fff;" onclick="g17_chooseColor('Blue')"></div>
                     </div>
 
-                    <div id="g17-result" class="gc-result-box" style="margin-top:15px; display:none; text-align:center;"></div>
+                    <!-- 我的手牌区 -->
+                    <div style="background:rgba(0,0,0,0.6); backdrop-filter:blur(15px); border-radius:20px 20px 0 0; padding:20px; border:1px solid rgba(255,255,255,0.1); border-bottom:none; box-shadow:0 -10px 30px rgba(0,0,0,0.5);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <img id="g17-me-avatar" src="" style="width:36px; height:36px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px rgba(255,255,255,0.2);">
+                                <span style="font-size:13px; color:#fff; font-weight:900; letter-spacing:1px;">YOUR CARDS</span>
+                            </div>
+                        </div>
+                        <div id="g17-my-cards" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-height:180px; overflow-y:auto; padding-bottom:10px;"></div>
+                    </div>
+
+                    <div id="g17-result" class="gc-result-box" style="margin-top:10px; display:none; text-align:center; background:rgba(0,0,0,0.9); color:#fff; border:2px solid rgba(255,255,255,0.3); border-radius:16px; backdrop-filter:blur(10px); padding:20px; font-size:16px; font-weight:bold; box-shadow:0 10px 30px rgba(0,0,0,0.8);"></div>
                 </div>
             </div>
         </div>
