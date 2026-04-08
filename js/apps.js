@@ -9274,10 +9274,44 @@ window.triggerImportPresets = function() {
     document.getElementById('preset-import-file').click();
 }
 
+// === 预设导入导出 ===
+window.exportPresets = function() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tavernPresets, null, 2));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = "my_presets_" + Date.now() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+window.triggerImportPresets = function() {
+    document.getElementById('preset-import-file').click();
+}
+
+// === 预设导入导出 ===
+window.exportPresets = function() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tavernPresets, null, 2));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = "my_presets_" + Date.now() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+window.triggerImportPresets = function() {
+    document.getElementById('preset-import-file').click();
+}
+
 window.handleImportPresets = function(input) {
     const file = input.files[0];
     if (!file) return;
+    
+    // 获取文件名（去除后缀），作为找不到名字时的兜底
+    const fileName = file.name.replace(/\.[^/.]+$/, ""); 
     const reader = new FileReader();
+    
     reader.onload = function(e) {
         try {
             const json = JSON.parse(e.target.result);
@@ -9288,55 +9322,99 @@ window.handleImportPresets = function(input) {
                 importedPresets = json;
             } else if (json && typeof json === 'object') {
                 if (Array.isArray(json.data)) {
-                    // 应对带有 { data: [...] } 的包装格式
                     importedPresets = json.data;
-                } else if (json.system_prompt || json.systemPrompt || json.regexes || json.name) {
-                    // 应对导出为单个预设对象的格式
-                    importedPresets = [json];
                 } else {
-                    throw new Error("文件格式错误，应为预设数组或有效预设对象");
+                    // 放宽限制：只要是 JSON 对象，都尝试进行解析
+                    importedPresets = [json];
                 }
             } else {
-                throw new Error("文件格式错误，应为预设数组");
+                throw new Error("文件格式错误，应为 JSON 对象或数组");
             }
             
-            // 规范化预设结构，兼容酒馆专用字段
+            // 规范化预设结构，深度兼容酒馆专用字段
             importedPresets = importedPresets.map(p => {
                 if (!p.id) p.id = 'preset_' + Date.now() + '_' + Math.floor(Math.random()*10000);
-                if (!p.name) p.name = p.name || 'Imported Preset';
+                // 优先使用文件里的名字，没有就用文件名
+                if (!p.name) p.name = p.name || fileName || 'Imported Preset';
                 
-                if (!p.regexScripts) {
-                    p.regexScripts = [];
-                }
+                if (!p.regexScripts) p.regexScripts = [];
                 
-                // 兼容酒馆格式预设的常见字段映射
+                // 1. 基础字段映射
                 if (p.system_prompt && !p.systemPrompt) p.systemPrompt = p.system_prompt;
                 if (p.description && !p.systemPrompt) p.systemPrompt = p.description;
-                
                 if (p.jailbreak_prompt && !p.jailbreak) p.jailbreak = p.jailbreak_prompt;
                 if (p.post_history_instructions && !p.jailbreak) p.jailbreak = p.post_history_instructions;
 
-                // 提取正则（酒馆通常可能是 regexes 字段等）
+                // 2. 特殊处理：SillyTavern 的多 Prompt 阵列格式 (读取 prompt_order)
+                if (p.prompts && Array.isArray(p.prompts) && !p.systemPrompt) {
+                    let enabledPromptIds = [];
+                    
+                    // 解析 prompt_order 来获取启用的 prompt 及其顺序
+                    if (p.prompt_order && Array.isArray(p.prompt_order)) {
+                        // 优先找 character_id 为 100000 (全局) 或 100001 (附加) 的配置，或者直接取第一个
+                        const globalOrder = p.prompt_order.find(o => o.character_id === 100000 || o.character_id === 100001) || p.prompt_order[0];
+                        if (globalOrder && Array.isArray(globalOrder.order)) {
+                            // 筛选出 enabled !== false 的项
+                            enabledPromptIds = globalOrder.order.filter(item => item.enabled !== false).map(item => item.identifier);
+                        }
+                    }
+
+                    let finalContents = [];
+                    if (enabledPromptIds.length > 0) {
+                        // 根据 prompt_order 的顺序来组装
+                        enabledPromptIds.forEach(id => {
+                            const pr = p.prompts.find(x => x.identifier === id);
+                            if (pr && pr.content && typeof pr.content === 'string') {
+                                finalContents.push(pr.content.trim());
+                            }
+                        });
+                    } else {
+                        // 兜底：如果没有 prompt_order，看 prompt 自身的 enabled 字段 (不存在也默认视为开启)
+                        const enabledPrompts = p.prompts.filter(pr => pr.enabled !== false);
+                        finalContents = enabledPrompts.map(pr => pr.content).filter(Boolean);
+                    }
+                    
+                    // 拼接成一整段系统提示词
+                    p.systemPrompt = finalContents.join('\n\n');
+                }
+
+                // 3. 提取正则表达式 (基础正则)
                 if (p.regex && typeof p.regex === 'string') {
-                    p.regexScripts.push({
-                        regex: p.regex,
-                        flags: 'g',
-                        replace: ''
-                    });
+                    p.regexScripts.push({ regex: p.regex, flags: 'g', replace: '' });
                 }
                 if (Array.isArray(p.regexes)) {
                     p.regexScripts = [...p.regexScripts, ...p.regexes.map(r => ({
-                        regex: r.regex || r.pattern || '',
-                        flags: r.flags || 'g',
+                        regex: r.regex || r.pattern || '', 
+                        flags: r.flags || 'g', 
                         replace: r.replace || r.replacement || ''
                     }))];
+                }
+
+                // 4. 特殊处理：SillyTavern 嵌套在 extensions 里的 regex_scripts
+                if (p.extensions && p.extensions.regex_scripts && Array.isArray(p.extensions.regex_scripts)) {
+                    p.extensions.regex_scripts.forEach(r => {
+                        if (r.disabled) return; // 忽略被禁用的正则
+                        let pat = r.findRegex || '';
+                        let flg = 'g';
+                        // 酒馆导出的正则经常自带斜杠 /pattern/gi，需要剥离出来适配
+                        const match = pat.match(/^\/(.*?)\/([a-z]*)$/i);
+                        if (match) {
+                            pat = match[1];
+                            flg = match[2] || 'g';
+                        }
+                        p.regexScripts.push({
+                            regex: pat,
+                            flags: flg,
+                            replace: r.replaceString || ''
+                        });
+                    });
                 }
 
                 return p;
             });
 
             // 合并或覆盖
-            if(confirm("导入将追加到现有预设，点击【取消】则清空旧预设只保留导入的。")) {
+            if(confirm(`识别到预设 [${importedPresets[0].name}]\n导入将追加到现有预设，点击【确定】追加，点击【取消】则清空旧预设只保留本次导入的。`)) {
                 tavernPresets = [...tavernPresets, ...importedPresets];
             } else {
                 tavernPresets = importedPresets;
@@ -9351,7 +9429,6 @@ window.handleImportPresets = function(input) {
     };
     reader.readAsText(file);
 }
-
 
 // === 正则脚本编辑器逻辑 ===
 
