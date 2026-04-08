@@ -8567,8 +8567,24 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
         const relationshipText = friend.relationshipLog.map(r => `- ${r.text}`).join('\n');
         systemPrompt += `\n\n[OUR RELATIONSHIP HISTORY]:\n${relationshipText}\n`;
     }
+ // === 附加特殊数据块指令（动态检测开关状态） ===
+    const optionsInstr = (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn)
+        ? `[OPTIONS_START]\n1. （用户接下来可执行的选项一）\n2. （选项二）\n[OPTIONS_END]` : '';
+
+    const danmakuInstr = (typeof isDanmakuOn !== 'undefined' && isDanmakuOn)
+        ? `[DANMAKU_START]\n（网友弹幕一）\n（网友弹幕二）\n[DANMAKU_END]` : '';
+
+    const statusInstr = `[STATUS_START]\nAction: (动作)\nLocation: (地点)\nWeather: (天气)\nBGM: (歌名-歌手)\nMurmur: (3句内心想法)\nHiddenThought: (阴暗面心声)\nKaomoji: (颜文字)\nAffection: (0-100)\n[STATUS_END]`;
+
+    let extraBlocks = [statusInstr];
+    if (optionsInstr) extraBlocks.push(optionsInstr);
+    if (danmakuInstr) extraBlocks.push(danmakuInstr);
+
+    systemPrompt += `\n\n【后台数据生成指令】\n你必须在回复正文的最末尾，严格按以下格式附加系统数据（如果没有被要求则不要乱加）：\n${extraBlocks.join('\n\n')}`;
+
     // === 注入世界书关键词触发 ===
     if (typeof constructWorldInfoPrompt === 'function') {
+
         const offlineWorldInfo = constructWorldInfoPrompt(text, targetChatId);
         if (offlineWorldInfo) {
             systemPrompt += `\n\n[World Setting / Lorebook Data]:\n${offlineWorldInfo}\n`;
@@ -8675,9 +8691,11 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
                         if (content) {
                             fullReply += content;
                             if (textElement) {
-                                let partialClean = fullReply.split('[OPTIONS_START]')[0];
+                                // 动态截断所有的特殊后台标签，彻底防止它们在打字机效果中暴露在屏幕上
+                                let partialClean = fullReply.split(/\[(?:STATUS|OPTIONS|DANMAKU)_START\]/i)[0];
                                 textElement.innerHTML = partialClean.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
                             }
+
                             // 【修复】移除滚动，保持位置
                         }
                     } catch (e) { /* ignore parse errors */ }
@@ -8751,12 +8769,11 @@ ${parseMacros(preset.systemPrompt) || '以第一人称写沉浸式叙事，自�
                     container.appendChild(optDiv);
                 }
 
-                // 【修复】选项出现后自动滚动到底部，确保能看到
+             // 【修复】选项出现后自动滚动到底部，确保能看到
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
             
-            // 后台静默生成状态和选项等，不阻塞主流程
-            generateOfflineExtrasBackground(targetChatId, text, cleanReply, settings, friend);
+            // 已将状态和选项集成到主回复中，删除旧的后台静默请求，防止重复与冲突
 
        } catch (e) {
     if (e.name === 'AbortError') {
@@ -8908,8 +8925,7 @@ if (!rawReply.trim()) {
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
 
-            // 后台静默生成状态和选项等，不阻塞主流程
-            generateOfflineExtrasBackground(targetChatId, text, rawReply, settings, friend);
+            // 已将状态和选项集成到主回复中，删除旧的后台静默请求，防止重复与冲突
 
         } catch (e) {
     if (e.name === 'AbortError') {
@@ -9243,6 +9259,21 @@ window.triggerImportPresets = function() {
     document.getElementById('preset-import-file').click();
 }
 
+// === 预设导入导出 ===
+window.exportPresets = function() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tavernPresets, null, 2));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = "my_presets_" + Date.now() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+window.triggerImportPresets = function() {
+    document.getElementById('preset-import-file').click();
+}
+
 window.handleImportPresets = function(input) {
     const file = input.files[0];
     if (!file) return;
@@ -9250,21 +9281,40 @@ window.handleImportPresets = function(input) {
     reader.onload = function(e) {
         try {
             const json = JSON.parse(e.target.result);
-            // 兼容酒馆原生的单个预设对象
-            let importedPresets = Array.isArray(json) ? json : [json];
             
-            // 规范化预设结构
+            // 兼容酒馆原生的多种导出格式（数组、包装对象、单对象）
+            let importedPresets = [];
+            if (Array.isArray(json)) {
+                importedPresets = json;
+            } else if (json && typeof json === 'object') {
+                if (Array.isArray(json.data)) {
+                    // 应对带有 { data: [...] } 的包装格式
+                    importedPresets = json.data;
+                } else if (json.system_prompt || json.systemPrompt || json.regexes || json.name) {
+                    // 应对导出为单个预设对象的格式
+                    importedPresets = [json];
+                } else {
+                    throw new Error("文件格式错误，应为预设数组或有效预设对象");
+                }
+            } else {
+                throw new Error("文件格式错误，应为预设数组");
+            }
+            
+            // 规范化预设结构，兼容酒馆专用字段
             importedPresets = importedPresets.map(p => {
                 if (!p.id) p.id = 'preset_' + Date.now() + '_' + Math.floor(Math.random()*10000);
                 if (!p.name) p.name = p.name || 'Imported Preset';
                 
-                // 处理酒馆预设格式
                 if (!p.regexScripts) {
                     p.regexScripts = [];
                 }
-                // 支持酒馆格式预设的常见字段映射
+                
+                // 兼容酒馆格式预设的常见字段映射
                 if (p.system_prompt && !p.systemPrompt) p.systemPrompt = p.system_prompt;
+                if (p.description && !p.systemPrompt) p.systemPrompt = p.description;
+                
                 if (p.jailbreak_prompt && !p.jailbreak) p.jailbreak = p.jailbreak_prompt;
+                if (p.post_history_instructions && !p.jailbreak) p.jailbreak = p.post_history_instructions;
 
                 // 提取正则（酒馆通常可能是 regexes 字段等）
                 if (p.regex && typeof p.regex === 'string') {
@@ -9301,6 +9351,7 @@ window.handleImportPresets = function(input) {
     };
     reader.readAsText(file);
 }
+
 
 // === 正则脚本编辑器逻辑 ===
 
