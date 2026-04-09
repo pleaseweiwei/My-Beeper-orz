@@ -8721,18 +8721,27 @@ ${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一�
             if (entryDiv) entryDiv.querySelector('.oe-actions').style.display = 'flex';
 
             let cleanReply = fullReply;
+            let hasStatus = false;
+            let hasOptions = false;
+            let hasDanmaku = false;
 
             let extractedOptions = [];
             const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const optMatch = cleanReply.match(optRegex);
             if (optMatch) {
-                extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
+                hasOptions = true;
+                extractedOptions = optMatch[1]
+                    .split('\n')
+                    .map(s => s.trim())
+                    .map(s => s.replace(/^(\d+\s*[\.、)\]）]|Option\s*\d+\s*[:：]|[-*•])\s*/i, '').trim())
+                    .filter(s => s.length > 0);
                 cleanReply = cleanReply.replace(optRegex, '').trim();
             }
 
             const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const statusMatch = cleanReply.match(statusRegex);
             if (statusMatch) {
+                hasStatus = true;
                 updateMindStateFromText(statusMatch[1], targetChatId);
                 cleanReply = cleanReply.replace(statusRegex, '').trim();
             }
@@ -8740,6 +8749,7 @@ ${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一�
             const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const danmakuMatch = cleanReply.match(danmakuRegex);
             if (danmakuMatch) {
+                hasDanmaku = true;
                 const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
                 if (isDanmakuOn && dList.length > 0) {
                     danmakuPool = dList;
@@ -8782,8 +8792,25 @@ ${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一�
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
             
-            // 主回复已直接生成 STATUS / OPTIONS / DANMAKU，这里不再触发后台二次补生成，
-            // 否则会出现心声、选项、弹幕被后一次请求覆盖或互相打架的问题。
+            const needsExtraFallback =
+                !hasStatus ||
+                (isOfflineOptionsOn && !hasOptions) ||
+                (isDanmakuOn && !hasDanmaku);
+
+            if (needsExtraFallback && typeof generateOfflineExtrasBackground === 'function') {
+                generateOfflineExtrasBackground(
+                    targetChatId,
+                    cleanText || text,
+                    cleanReply,
+                    settings,
+                    friend,
+                    {
+                        needStatus: !hasStatus,
+                        needOptions: isOfflineOptionsOn && !hasOptions,
+                        needDanmaku: isDanmakuOn && !hasDanmaku
+                    }
+                );
+            }
 
        } catch (e) {
     if (e.name === 'AbortError') {
@@ -8873,17 +8900,26 @@ if (!rawReply.trim()) {
   return;
 }
 
+            let hasStatus = false;
+            let hasOptions = false;
+            let hasDanmaku = false;
             let extractedOptions = [];
             const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const optMatch = rawReply.match(optRegex);
             if (optMatch) {
-                extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => s.match(/^\d+\./) || s.toLowerCase().startsWith('option'));
+                hasOptions = true;
+                extractedOptions = optMatch[1]
+                    .split('\n')
+                    .map(s => s.trim())
+                    .map(s => s.replace(/^(\d+\s*[\.、)\]）]|Option\s*\d+\s*[:：]|[-*•])\s*/i, '').trim())
+                    .filter(s => s.length > 0);
                 rawReply = rawReply.replace(optRegex, '').trim();
             }
 
             const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const statusMatch = rawReply.match(statusRegex);
             if (statusMatch) {
+                hasStatus = true;
                 updateMindStateFromText(statusMatch[1], targetChatId);
                 rawReply = rawReply.replace(statusRegex, '').trim();
             }
@@ -8891,6 +8927,7 @@ if (!rawReply.trim()) {
             const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
             const danmakuMatch = rawReply.match(danmakuRegex);
             if (danmakuMatch) {
+                hasDanmaku = true;
                 const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
                 // 【修复】仅在弹幕开关开启时才处理
                 if (isDanmakuOn && dList.length > 0) {
@@ -8933,8 +8970,25 @@ if (!rawReply.trim()) {
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
 
-            // 主回复已直接生成 STATUS / OPTIONS / DANMAKU，这里不再触发后台二次补生成，
-            // 否则会出现心声、选项、弹幕被后一次请求覆盖或互相打架的问题。
+            const needsExtraFallback =
+                !hasStatus ||
+                (isOfflineOptionsOn && !hasOptions) ||
+                (isDanmakuOn && !hasDanmaku);
+
+            if (needsExtraFallback && typeof generateOfflineExtrasBackground === 'function') {
+                generateOfflineExtrasBackground(
+                    targetChatId,
+                    cleanText || text,
+                    rawReply,
+                    settings,
+                    friend,
+                    {
+                        needStatus: !hasStatus,
+                        needOptions: isOfflineOptionsOn && !hasOptions,
+                        needDanmaku: isDanmakuOn && !hasDanmaku
+                    }
+                );
+            }
 
         } catch (e) {
     if (e.name === 'AbortError') {
@@ -9092,182 +9146,99 @@ window.closePresetsApp = function() {
 
 function renderPresetsList() {
     const container = document.getElementById('presets-list-container');
+    if (!container) return;
     container.innerHTML = '';
-    
-    // Add grid layout to the container for split view
+
     container.style.display = 'flex';
-    container.style.flexDirection = 'row';
+    container.style.flexDirection = 'column';
     container.style.height = '100%';
-    container.style.overflow = 'hidden';
-    
-    // Create left panel for Presets
-    const leftPanel = document.createElement('div');
-    leftPanel.style.flex = '1';
-    leftPanel.style.overflowY = 'auto';
-    leftPanel.style.padding = '15px';
-    leftPanel.style.borderRight = '1px solid #eee';
-    leftPanel.style.display = 'flex';
-    leftPanel.style.flexDirection = 'column';
-    leftPanel.style.gap = '10px';
-    
-    // Create right panel for Regex
-    const rightPanel = document.createElement('div');
-    rightPanel.style.flex = '1';
-    rightPanel.style.overflowY = 'auto';
-    rightPanel.style.padding = '15px';
-    rightPanel.style.display = 'flex';
-    rightPanel.style.flexDirection = 'column';
-    rightPanel.style.gap = '10px';
-    
-    // Title headers
-    const leftTitle = document.createElement('h3');
-    leftTitle.innerText = "预设列表 (Presets)";
-    leftTitle.style.margin = '0 0 10px 0';
-    leftTitle.style.color = '#333';
-    leftPanel.appendChild(leftTitle);
-    
-    const rightTitle = document.createElement('h3');
-    rightTitle.innerText = "搭配正则 (Regex)";
-    rightTitle.style.margin = '0 0 10px 0';
-    rightTitle.style.color = '#333';
-    rightTitle.style.display = 'flex';
-    rightTitle.style.justifyContent = 'space-between';
-    
-    // Add a subtitle to indicate select preset to see regex
-    const rightSubtitle = document.createElement('span');
-    rightSubtitle.innerText = "请在左侧选择预设";
-    rightSubtitle.style.fontSize = '12px';
-    rightSubtitle.style.color = '#888';
-    rightSubtitle.style.fontWeight = 'normal';
-    rightSubtitle.id = 'regex-panel-subtitle';
-    rightTitle.appendChild(rightSubtitle);
-    
-    rightPanel.appendChild(rightTitle);
-    
-    const regexContainer = document.createElement('div');
-    regexContainer.id = 'preset-regex-view-container';
-    regexContainer.style.display = 'flex';
-    regexContainer.style.flexDirection = 'column';
-    regexContainer.style.gap = '8px';
-    rightPanel.appendChild(regexContainer);
+    container.style.overflowY = 'auto';
+    container.style.padding = '15px';
+    container.style.gap = '12px';
+    container.style.boxSizing = 'border-box';
 
-    // Global variable to keep track of currently selected preset in list view
-    window._currentSelectedPresetListId = window._currentSelectedPresetListId || offlineConfig.activePresetId;
+    if (!Array.isArray(tavernPresets) || tavernPresets.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#aaa; font-size:12px; padding:40px 20px;">暂无预设，点击右上角新建一个吧</div>';
+        return;
+    }
 
-    const renderRegexForPreset = (presetId) => {
-        const rc = document.getElementById('preset-regex-view-container');
-        const st = document.getElementById('regex-panel-subtitle');
-        if (!rc) return;
-        rc.innerHTML = '';
-        
-        const p = tavernPresets.find(x => x.id === presetId);
-        if (!p) {
-            if(st) st.innerText = "未找到预设";
-            return;
-        }
-        
-        if(st) st.innerText = `当前: ${p.name}`;
+    const escapeHtml = (str) => String(str || '')
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>');
 
+    tavernPresets.forEach(p => {
         let scripts = p.regexScripts || [];
         if (typeof p.regex === 'string' && scripts.length === 0 && p.regex) {
             scripts = [{ regex: p.regex, flags: 'g', replace: '' }];
         }
 
-        if (scripts.length === 0) {
-            rc.innerHTML = '<div style="color:#aaa; font-size:12px; text-align:center; padding: 20px;">此预设无正则脚本</div>';
-            return;
-        }
+        const scriptCount = scripts.length;
+        const promptPreview = p.systemPrompt
+            ? escapeHtml(p.systemPrompt).replace(/\n/g, '<br>')
+            : '无提示词';
 
-        scripts.forEach((script, idx) => {
-            const div = document.createElement('div');
-            div.style.background = '#f9f9f9';
-            div.style.padding = '10px';
-            div.style.borderRadius = '8px';
-            div.style.borderLeft = '3px solid #f59e0b';
-            div.style.fontSize = '12px';
-            
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                    <strong style="color:#333;">#${idx+1}</strong>
-                    <span style="background:#eee; padding:2px 6px; border-radius:4px; color:#555;">Flags: ${script.flags || 'g'}</span>
-                </div>
-                <div style="font-family:monospace; background:#fff; padding:6px; border-radius:4px; border:1px solid #eee; margin-bottom:6px; word-break:break-all;">
-                    ${script.regex ? script.regex.replace(/</g, '<').replace(/>/g, '>') : '<i>Empty</i>'}
-                </div>
-                <div style="display:flex; align-items:center; gap:5px;">
-                    <i class="fas fa-arrow-right" style="color:#aaa;"></i>
-                    <div style="font-family:monospace; background:#fff; padding:6px; border-radius:4px; border:1px solid #eee; flex:1; word-break:break-all;">
-                        ${script.replace ? script.replace.replace(/</g, '<').replace(/>/g, '>') : '<i>Empty (Delete)</i>'}
+        const regexCode = scriptCount > 0
+            ? scripts.map((script, idx) => {
+                const pattern = script.regex || '';
+                const flags = script.flags || 'g';
+                const replaceText = script.replace || '';
+                return [
+                    `#${idx + 1}`,
+                    `/${pattern}/${flags}`,
+                    replaceText !== '' ? `=> ${replaceText}` : '=> '
+                ].join('\n');
+            }).join('\n\n')
+            : '// 此预设无正则脚本';
+
+        const card = document.createElement('div');
+        card.className = 'preset-list-item' + (p.id === offlineConfig.activePresetId ? ' active-preset' : '');
+        card.style.background = '#fff';
+        card.style.borderRadius = '22px';
+        card.style.overflow = 'hidden';
+        card.style.border = p.id === offlineConfig.activePresetId ? '1px solid #111' : '1px solid #eee';
+        card.style.boxShadow = '0 6px 18px rgba(0,0,0,0.04)';
+        card.style.cursor = 'pointer';
+        card.style.transition = 'all 0.2s ease';
+
+        card.ondblclick = () => openPresetEditor(p.id);
+
+        card.innerHTML = `
+            <div style="padding:16px 18px 14px 18px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px;">
+                    <div style="min-width:0; flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                            <h4 style="margin:0; font-size:15px; color:#222; font-weight:700; line-height:1.3;">${escapeHtml(p.name || '未命名预设')}</h4>
+                            ${p.id === offlineConfig.activePresetId ? '<span style="background:#111; color:#fff; font-size:10px; padding:3px 8px; border-radius:999px;">当前</span>' : ''}
+                        </div>
+                        <div style="font-size:11px; color:#666; line-height:1.6; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+                            ${promptPreview}
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                        <span style="font-size:10px; color:#999; white-space:nowrap;">${scriptCount} 条正则</span>
+                        <i class="fas fa-edit" style="color:#999; padding:6px; border-radius:10px; background:#f7f7f7; cursor:pointer;" onclick="event.stopPropagation(); openPresetEditor('${p.id}');"></i>
                     </div>
                 </div>
-            `;
-            rc.appendChild(div);
-        });
-    };
-
-    tavernPresets.forEach(p => {
-        const div = document.createElement('div');
-        div.className = `preset-list-item ${p.id === window._currentSelectedPresetListId ? 'selected' : ''} ${p.id === offlineConfig.activePresetId ? 'active-preset' : ''}`;
-        div.style.display = 'flex';
-        div.style.flexDirection = 'column';
-        div.style.backgroundColor = p.id === window._currentSelectedPresetListId ? '#f0f7ff' : '#fff';
-        div.style.borderRadius = '8px';
-        div.style.padding = '12px';
-        div.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
-        div.style.cursor = 'pointer';
-        div.style.border = p.id === window._currentSelectedPresetListId ? '1px solid #007aff' : '1px solid transparent';
-        div.style.transition = 'all 0.2s';
-        
-        div.onclick = () => {
-            window._currentSelectedPresetListId = p.id;
-            // Update selection styles
-            leftPanel.querySelectorAll('.preset-list-item').forEach(el => {
-                el.style.backgroundColor = '#fff';
-                el.style.border = '1px solid transparent';
-            });
-            div.style.backgroundColor = '#f0f7ff';
-            div.style.border = '1px solid #007aff';
-            
-            // Update regex view
-            renderRegexForPreset(p.id);
-        };
-        
-        div.ondblclick = () => openPresetEditor(p.id);
-
-            let scriptCount = p.regexScripts ? p.regexScripts.length : (p.regex ? 1 : 0);
-
-        div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <h4 style="margin: 0; font-size: 15px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">${p.name}</h4>
-                <div style="display:flex; gap: 5px;">
-                    ${p.id === offlineConfig.activePresetId ? '<span style="background:#07c160; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">当前</span>' : ''}
-                    <i class="fas fa-edit" style="color:#999; padding:4px; z-index: 10;" onclick="event.stopPropagation(); openPresetEditor('${p.id}');"></i>
-                </div>
+                <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700;">PRESET</div>
             </div>
-            
-            <div style="font-size: 11px; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px;">
-                ${p.systemPrompt ? p.systemPrompt.replace(/</g, '<').replace(/>/g, '>') : '无提示词'}
-            </div>
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#888;">
-                <span><i class="fas fa-code"></i> ${scriptCount} 个正则规则</span>
-                <span>(双击编辑)</span>
+
+            <div style="height:1px; background:#f1f1f1;"></div>
+
+            <div style="padding:14px 18px 18px 18px;">
+                <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; margin-bottom:10px;">REGEX CODE</div>
+                <pre style="margin:0; background:#f8f8f8; border:1px solid #efefef; border-radius:16px; padding:14px; font-size:12px; line-height:1.65; color:#333; font-family:Consolas, Monaco, monospace; white-space:pre-wrap; word-break:break-word; overflow-x:auto;">${escapeHtml(regexCode)}</pre>
             </div>
         `;
-        leftPanel.appendChild(div);
-    });
 
-    container.appendChild(leftPanel);
-    container.appendChild(rightPanel);
-    
-    // Initial render for regex
-    if (window._currentSelectedPresetListId) {
-        // Needs a slight delay because element might not be fully in DOM yet
-        setTimeout(() => renderRegexForPreset(window._currentSelectedPresetListId), 0);
-    } else if (tavernPresets.length > 0) {
-        window._currentSelectedPresetListId = tavernPresets[0].id;
-        setTimeout(() => renderRegexForPreset(tavernPresets[0].id), 0);
-    }
+        card.onclick = () => {
+            offlineConfig.activePresetId = p.id;
+            localStorage.setItem(OFFLINE_CONFIG_KEY, JSON.stringify(offlineConfig));
+            renderPresetsList();
+        };
+
+        container.appendChild(card);
+    });
 }
 
 window.createNewPreset = function() {
@@ -12449,39 +12420,42 @@ function executeDeliveryClosure(chatId, shopName) {
 
 
 // === [新增] 线下模式后台静默生成系统 (修复加强版) ===
-async function generateOfflineExtrasBackground(chatId, userInput, aiReply, settings, friend) {
+async function generateOfflineExtrasBackground(chatId, userInput, aiReply, settings, friend, needs = {}) {
+    const needStatus = needs.needStatus !== false;
+    const needDanmaku = !!needs.needDanmaku;
+    const needOptions = !!needs.needOptions;
+
     let requests = [];
 
-    // 1. 状态请求
-    requests.push(`[STATUS_START]\nAction: （当前角色的动作）\nLocation: （当前地点）\nWeather: （当前天气）\nBGM: （符合氛围的歌名 - 歌手）\nMurmur: （3-4句角色的内心真实想法或吐槽，这非常重要）\nKaomoji: （颜文字）\nAffection: （0-100的数字，当前好感度）\n[STATUS_END]`);
-
-    // 2. 弹幕请求
-    if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn) {
-        requests.push(`[DANMAKU_START]\n（在此生成3-5条搞笑的网友弹幕评论，每行一条，不要带任何序号）\n[DANMAKU_END]`);
+    if (needStatus) {
+        requests.push(`[STATUS_START]\nAction: （当前角色的动作）\nLocation: （当前地点）\nWeather: （当前天气）\nBGM: （符合氛围的歌名 - 歌手）\nMurmur: （3-4句角色的内心真实想法或吐槽，这非常重要）\nKaomoji: （颜文字）\nAffection: （0-100的数字，当前好感度）\n[STATUS_END]`);
     }
 
-    // 3. 选项请求
-    if (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) {
-        requests.push(`[OPTIONS_START]\n1. （用户接下来可以执行的动作选项1）\n2. （用户可以执行的动作选项2）\n3. （用户可以执行的动作选项3）\n[OPTIONS_END]`);
+    if (needDanmaku) {
+        requests.push(`[DANMAKU_START]\n（网友弹幕一）\n（网友弹幕二）\n[DANMAKU_END]`);
     }
+
+    if (needOptions) {
+        requests.push(`[OPTIONS_START]\n1. （用户接下来可执行的选项一）\n2. （选项二）\n[OPTIONS_END]`);
+    }
+
+    if (requests.length === 0) return;
 
     const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
     
-    // 构造符合标准 API 的 System Prompt (规则与要求)
     const sysPrompt = `你是一个辅助分析系统，负责为角色扮演游戏生成后台的 UI 面板数据。
 【当前角色】：${friend.realName}
 【角色人设】：${friend.persona}
 
 【核心指令】
-1. 根据最新对话推测角色的状态、弹幕及选项。
+1. 只补全缺失的数据块，不要重复输出没有要求的块。
 2. 绝对不要输出任何 markdown 代码块标记 (如 \`\`\`json 等)，不要任何问候语、分析解释。
 3. 必须严格输出以下格式的方括号结构，不要漏掉结束标签，也不要合并标签！
 
 格式要求：
 ${requests.join('\n\n')}`;
 
-    // 构造 User Prompt (提供上下文)
-    const userPrompt = `【最新对话互动】\nUser(${myName}): ${userInput}\n${friend.realName}: ${aiReply}\n\n请立刻按照规定格式生成所有后台数据块。`;
+    const userPrompt = `【最新对话互动】\nUser(${myName}): ${userInput}\n${friend.realName}: ${aiReply}\n\n请立刻按照规定格式生成缺失的后台数据块。`;
 
     try {
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
@@ -12510,33 +12484,29 @@ ${requests.join('\n\n')}`;
 
         const data = await response.json();
         let content = data.choices?.[0]?.message?.content || '';
-
-        // 去除可能的 markdown 代码块包裹
         content = content.replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/g, '').trim();
 
-              // 1. 解析 STATUS
-        const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-        const statusMatch = content.match(statusRegex);
-
-        if (statusMatch) {
-            if (typeof updateMindStateFromText === 'function') {
+        if (needStatus) {
+            const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
+            const statusMatch = content.match(statusRegex);
+            if (statusMatch && typeof updateMindStateFromText === 'function') {
                 updateMindStateFromText(statusMatch[1], chatId);
             }
         }
 
-               // 2. 解析 OPTIONS (放宽了限制，AI 输出没带序号也能抓到)
-        if (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) {
+        if (needOptions) {
             const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-
             const optMatch = content.match(optRegex);
             if (optMatch) {
-                // 剔除空行以及开头的数字(1. )、破折号(- )或星号(* )
                 const extractedOptions = optMatch[1].split('\n')
-                    .map(s => s.replace(/^(\d+\.|-|\*)\s*/, '').trim())
+                    .map(s => s.replace(/^(\d+\s*[\.、)\]）]|Option\s*\d+\s*[:：]|[-*•])\s*/i, '').trim())
                     .filter(s => s.length > 0 && !s.toLowerCase().startsWith('option'));
-                
-                const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === chatId;
-                
+
+                const isLookingOfflineNow =
+                    document.getElementById('offlineModeView')?.classList.contains('show') &&
+                    currentChatId === chatId &&
+                    currentChatType === 'single';
+
                 if (isLookingOfflineNow && extractedOptions.length > 0) {
                     const container = document.getElementById('offline-log-container');
                     if (container) {
@@ -12546,15 +12516,12 @@ ${requests.join('\n\n')}`;
                             optDiv.id = 'vn-options-box';
                             optDiv.className = 'vn-options-container';
                             const dmArea = container.querySelector('.offline-danmaku-area');
-                            if (dmArea) {
-                                container.insertBefore(optDiv, dmArea);
-                            } else {
-                                container.appendChild(optDiv);
-                            }
+                            if (dmArea) container.insertBefore(optDiv, dmArea);
+                            else container.appendChild(optDiv);
                         } else {
-                            optDiv.innerHTML = ''; // 清空上一次的选项
+                            optDiv.innerHTML = '';
                         }
-                        
+
                         extractedOptions.forEach(opt => {
                             const btn = document.createElement('div');
                             btn.className = 'vn-option-btn';
@@ -12570,16 +12537,14 @@ ${requests.join('\n\n')}`;
             }
         }
 
-         // 3. 解析 DANMAKU (放宽限制)
-        if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn) {
+        if (needDanmaku) {
             const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-
             const danmakuMatch = content.match(danmakuRegex);
             if (danmakuMatch) {
                 const dList = danmakuMatch[1].split('\n')
-                    .map(s => s.replace(/^(\d+\.|-|\*)\s*/, '').trim())
+                    .map(s => s.replace(/^(\d+\s*[\.、)\]）]|Option\s*\d+\s*[:：]|[-*•])\s*/i, '').trim())
                     .filter(s => s.length > 0);
-                    
+
                 if (dList.length > 0) {
                     if (typeof danmakuPool !== 'undefined') danmakuPool = dList;
                     if (typeof startDanmakuBatch === 'function') startDanmakuBatch(0);

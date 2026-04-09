@@ -681,6 +681,17 @@ window.sendGroupMessageToAI = async function (userMessage) {
         // 获取群公告
         const announcementStr = group.announcement ? `\n[最高优先级规则，必须严格遵守]\n以下是群公告，你扮演的所有角色在接下来的对话中受此规则约束：\n${group.announcement}` : '';
 
+        const groupDanmakuInstr = (typeof isDanmakuOn !== 'undefined' && isDanmakuOn)
+            ? `\n8. 在 JSON 数组全部输出完后，额外追加一个弹幕块，格式严格如下：
+[DANMAKU_START]
+弹幕1
+弹幕2
+弹幕3
+[DANMAKU_END]
+- 生成 3-6 条简短中文吐槽，像群聊围观弹幕。
+- 绝对不要把弹幕写进 JSON 数组里。`
+            : '';
+
         const systemPrompt = `
 [系统指令: 动态群聊模拟器]
 你是一个同时扮演多个角色的群聊模拟引擎。你的任务是扮演且仅能扮演下述【群成员花名册】中未被禁言的NPC，每个角色的语气必须符合其人设。
@@ -704,7 +715,7 @@ ${historyText || '(暂无历史记录)'}
 4. 每条消息 ≤ 30 字，像真实微信群一样碎片化。
 5. 被@的角色必须优先且强制回复。
 6. 你绝对不能扮演用户（${myName}），严禁生成用户的对话！
-7. 只输出 JSON，不要任何多余文字。
+7. 只输出 JSON，不要任何多余文字。${groupDanmakuInstr}
 
 现在，用户${groupAnonymousMode ? `（化名"${myAnonName}"）` : `（${myName}）`}发送了: "${userMessage}"
 请生成群聊回复（纯 JSON 数组）:
@@ -736,6 +747,19 @@ ${historyText || '(暂无历史记录)'}
         // 检查是否有红包抢包指令 [open_red_packet:xxx]
         await checkAndProcessGroupCommands(rawReply, targetGroupId);
 
+        let hasDanmaku = false;
+        const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[(?:\/)?DANMAKU_END\]|$)/i;
+        const danmakuMatch = rawReply.match(danmakuRegex);
+        if (danmakuMatch) {
+            hasDanmaku = true;
+            const dList = danmakuMatch[1].split('\n').map(s => s.trim()).filter(Boolean);
+            if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn && dList.length > 0) {
+                danmakuPool = dList;
+                startDanmakuBatch(0);
+            }
+            rawReply = rawReply.replace(danmakuRegex, '').trim();
+        }
+
         let messages = [];
         try {
             messages = JSON.parse(rawReply);
@@ -765,6 +789,15 @@ ${historyText || '(暂无历史记录)'}
             }
             return true;
         });
+
+        if (messages.length > 0 && typeof generateGroupSceneExtrasBackground === 'function') {
+            generateGroupSceneExtrasBackground(targetGroupId, userMessage, messages, settings, {
+                needMind: true,
+                needDanmaku: (typeof isDanmakuOn !== 'undefined' && isDanmakuOn && !hasDanmaku),
+                needOptions: false,
+                mode: 'chat'
+            });
+        }
 
         // 逐条延迟展示
         let cumulativeDelay = 0;
@@ -3620,9 +3653,12 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
 
         // ── 提取选项分支 ──
         let extractedOptions = [];
+        let hasOptions = false;
+        let hasDanmaku = false;
         const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[(?:\/)?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
         const optMatch = rawReply.match(optRegex);
         if (optMatch) {
+            hasOptions = true;
             extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => /^\d+\./.test(s));
             rawReply = rawReply.replace(optMatch[0], '').trim();
         }
@@ -3631,6 +3667,7 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
         const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[(?:\/)?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
         const danmakuMatch = rawReply.match(danmakuRegex);
         if (danmakuMatch) {
+            hasDanmaku = true;
             const dList = danmakuMatch[1].split('\n').map(s => s.trim()).filter(Boolean);
             if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn && dList.length > 0) {
                 if (typeof danmakuPool !== 'undefined') danmakuPool = dList;
@@ -3660,6 +3697,15 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
             if (typeof showAiErrorModal === 'function')
                 showAiErrorModal('群聊线下解析失败', `无法从以下内容中解析出角色叙事：\n\n${rawReply.substring(0, 300)}`);
             return;
+        }
+
+        if (typeof generateGroupSceneExtrasBackground === 'function') {
+            generateGroupSceneExtrasBackground(targetGroupId, cleanText || userText, messages, settings, {
+                needMind: true,
+                needDanmaku: (typeof isDanmakuOn !== 'undefined' && isDanmakuOn && !hasDanmaku),
+                needOptions: (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn && !hasOptions),
+                mode: 'offline'
+            });
         }
 
         // ── 逐条延迟展示 ──
@@ -3754,6 +3800,213 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
         if (typeof showAiErrorModal === 'function') {
             showAiErrorModal('群聊线下模式生成失败', (e && e.message) ? e.message : String(e));
         }
+    }
+}
+
+async function generateGroupSceneExtrasBackground(groupId, userInput, aiMessages, settings, options = {}) {
+    const group = groupsData[groupId];
+    if (!group || !Array.isArray(aiMessages) || aiMessages.length === 0 || !settings) return;
+
+    const needMind = options.needMind !== false;
+    const needDanmaku = !!options.needDanmaku;
+    const needOptions = !!options.needOptions;
+
+    if (!needMind && !needDanmaku && !needOptions) return;
+
+    const me = personasMeta[currentPersonaId];
+    const myName = group.myNickname || (me ? me.name : '我') || '用户';
+    const speakerNames = [...new Set(
+        aiMessages
+            .map(msg => (msg && msg.name ? String(msg.name).trim() : ''))
+            .filter(Boolean)
+    )];
+
+    let membersInfo = '';
+    speakerNames.forEach(name => {
+        const mem = findMemberByName(name, group.members);
+        if (!mem) return;
+        membersInfo += `- ${mem.remark || mem.realName}: ${mem.persona || '普通群成员'}\n`;
+    });
+    if (!membersInfo) return;
+
+    const requests = [];
+    if (needMind) {
+        requests.push(`[GROUP_MIND_START]
+Name: 角色名
+Action: （当前动作）
+Location: （当前地点）
+Weather: （当前天气）
+Murmur: （这个角色此刻最真实的内心吐槽，2-4句）
+Kaomoji: （一个符合情绪的颜文字）
+Affection: （0-100）
+[GROUP_MIND_END]
+- 请为本轮有发言的每个角色都生成一段，允许连续输出多个 GROUP_MIND 块。`);
+    }
+    if (needDanmaku) {
+        requests.push(`[DANMAKU_START]
+弹幕1
+弹幕2
+弹幕3
+[DANMAKU_END]`);
+    }
+    if (needOptions) {
+        requests.push(`[OPTIONS_START]
+1. 选项一
+2. 选项二
+[OPTIONS_END]`);
+    }
+
+    const aiText = aiMessages.map(msg => `${msg.name}: ${msg.content}`).join('\n');
+    const modeNote = options.mode === 'offline' ? '多人线下聚会叙事' : '微信群聊对话';
+
+    const sysPrompt = `你是一个群聊场景的后台状态生成器。
+当前模式：${modeNote}
+用户名：${myName}
+
+[本轮涉及角色]
+${membersInfo}
+
+[最新互动]
+用户: ${userInput || '（继续）'}
+${aiText}
+
+[任务要求]
+1. 只输出下面要求的数据块，不要解释，不要 markdown。
+2. 不要生成未要求的数据块。
+3. 心声必须符合各角色本轮发言后的心理状态。
+
+${requests.join('\n\n')}`;
+
+    try {
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [
+                    { role: 'system', content: sysPrompt },
+                    { role: 'user', content: '请立即生成缺失的后台数据块。' }
+                ],
+                temperature: 0.7,
+                max_tokens: 900
+            })
+        });
+
+        if (!response.ok) return;
+        const data = await response.json();
+        let content = data?.choices?.[0]?.message?.content || '';
+        content = content.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+
+        let updatedMind = false;
+
+        if (needMind) {
+            const mindRegex = /\[GROUP_MIND_START\]([\s\S]*?)\[GROUP_MIND_END\]/gi;
+            let match;
+            while ((match = mindRegex.exec(content)) !== null) {
+                const block = match[1] || '';
+                const getVal = (key) => {
+                    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const reg = new RegExp(`${escapedKey}[:：]\\s*([\\s\\S]*?)(?=\\n(?:Name|Action|Location|Weather|Murmur|Kaomoji|Affection)[:：]|$)`, 'i');
+                    const m = block.match(reg);
+                    return m ? m[1].trim() : '';
+                };
+
+                const roleName = getVal('Name');
+                if (!roleName) continue;
+
+                const mem = findMemberByName(roleName, group.members);
+                const memberId = (group.members || []).find(id => friendsData[id] === mem);
+                if (!memberId || !friendsData[memberId]) continue;
+
+                const target = friendsData[memberId];
+                if (!target.mindState) target.mindState = {};
+
+                target.mindState.action = getVal('Action') || target.mindState.action || '正在发呆';
+                target.mindState.location = getVal('Location') || target.mindState.location || group.name || '群聊中';
+                target.mindState.weather = getVal('Weather') || target.mindState.weather || '晴';
+                target.mindState.murmur = getVal('Murmur') || target.mindState.murmur || '...';
+                target.mindState.kaomoji = getVal('Kaomoji') || target.mindState.kaomoji || '( ˙W˙ )';
+
+                const affStr = getVal('Affection');
+                if (affStr) {
+                    const num = affStr.match(/\d+/);
+                    if (num) target.affection = parseInt(num[0], 10);
+                }
+                updatedMind = true;
+            }
+        }
+
+        if (updatedMind) {
+            if (typeof saveFriendsData === 'function') await saveFriendsData();
+            const overlay = document.getElementById('group-mind-card-overlay');
+            if (overlay && overlay.classList.contains('active') && currentChatId === groupId && currentChatType === 'group') {
+                refreshGroupMindCardUI(groupId, false);
+            }
+        }
+
+        if (needDanmaku) {
+            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[(?:\/)?DANMAKU_END\]|$)/i;
+            const danmakuMatch = content.match(danmakuRegex);
+            if (danmakuMatch) {
+                const dList = danmakuMatch[1].split('\n').map(s => s.trim()).filter(Boolean);
+                if (dList.length > 0) {
+                    danmakuPool = dList;
+                    startDanmakuBatch(0);
+                }
+            }
+        }
+
+        if (needOptions) {
+            const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[(?:\/)?OPTIONS_END\]|$)/i;
+            const optMatch = content.match(optRegex);
+            if (optMatch) {
+                const extractedOptions = optMatch[1]
+                    .split('\n')
+                    .map(s => s.trim())
+                    .filter(s => /^\d+\./.test(s));
+
+                const isLookingOfflineNow =
+                    document.getElementById('offlineModeView')?.classList.contains('show') &&
+                    currentChatId === groupId &&
+                    currentChatType === 'group';
+
+                if (isLookingOfflineNow && extractedOptions.length > 0) {
+                    const container = document.getElementById('offline-log-container');
+                    if (container) {
+                        let optDiv = document.getElementById('vn-options-box');
+                        if (!optDiv) {
+                            optDiv = document.createElement('div');
+                            optDiv.id = 'vn-options-box';
+                            optDiv.className = 'vn-options-container';
+                            const dmArea = container.querySelector('.offline-danmaku-area');
+                            if (dmArea) container.insertBefore(optDiv, dmArea);
+                            else container.appendChild(optDiv);
+                        } else {
+                            optDiv.innerHTML = '';
+                        }
+
+                        extractedOptions.forEach(opt => {
+                            const btn = document.createElement('div');
+                            btn.className = 'vn-option-btn';
+                            btn.innerText = opt;
+                            btn.onclick = () => {
+                                const input = document.getElementById('offline-input');
+                                if (input) input.value = opt.replace(/^\d+\.\s*/, '').trim();
+                                sendGroupOfflineMessage();
+                            };
+                            optDiv.appendChild(btn);
+                        });
+
+                        setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('群聊后台扩展生成失败:', e);
     }
 }
 
