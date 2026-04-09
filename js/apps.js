@@ -9173,13 +9173,18 @@ function renderPresetsList() {
             scripts = [{ regex: p.regex, flags: 'g', replace: '' }];
         }
 
-        const scriptCount = scripts.length;
+                // 1. 过滤掉空正则，得出真正有效的正则数量
+        const validScripts = scripts.filter(s => s && s.regex && s.regex.trim() !== '');
+        const scriptCount = validScripts.length;
+        
         const promptPreview = p.systemPrompt
             ? escapeHtml(p.systemPrompt).replace(/\n/g, '<br>')
             : '无提示词';
 
-        const regexCode = scriptCount > 0
-            ? scripts.map((script, idx) => {
+        // 2. 核心修改：只有当正则数量大于 0 时，才生成下半部分的“样式框框”！
+        let regexHtmlBlock = '';
+        if (scriptCount > 0) {
+            const regexCode = validScripts.map((script, idx) => {
                 const pattern = script.regex || '';
                 const flags = script.flags || 'g';
                 const replaceText = script.replace || '';
@@ -9188,8 +9193,17 @@ function renderPresetsList() {
                     `/${pattern}/${flags}`,
                     replaceText !== '' ? `=> ${replaceText}` : '=> '
                 ].join('\n');
-            }).join('\n\n')
-            : '// 此预设无正则脚本';
+            }).join('\n\n');
+            
+            // 这是你说的带有灰色背景和边框的框框
+            regexHtmlBlock = `
+            <div style="height:1px; background:#f1f1f1;"></div>
+            <div style="padding:14px 18px 18px 18px;">
+                <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; margin-bottom:10px;">REGEX CODE</div>
+                <pre style="margin:0; background:#f8f8f8; border:1px solid #efefef; border-radius:16px; padding:14px; font-size:12px; line-height:1.65; color:#333; font-family:Consolas, Monaco, monospace; white-space:pre-wrap; word-break:break-word; overflow-x:auto;">${escapeHtml(regexCode)}</pre>
+            </div>
+            `;
+        }
 
         const card = document.createElement('div');
         card.className = 'preset-list-item' + (p.id === offlineConfig.activePresetId ? ' active-preset' : '');
@@ -9203,6 +9217,7 @@ function renderPresetsList() {
 
         card.ondblclick = () => openPresetEditor(p.id);
 
+        // 3. 把底部换成变量 regexHtmlBlock，为空则什么都不渲染
         card.innerHTML = `
             <div style="padding:16px 18px 14px 18px;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px;">
@@ -9222,13 +9237,8 @@ function renderPresetsList() {
                 </div>
                 <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700;">PRESET</div>
             </div>
-
-            <div style="height:1px; background:#f1f1f1;"></div>
-
-            <div style="padding:14px 18px 18px 18px;">
-                <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; margin-bottom:10px;">REGEX CODE</div>
-                <pre style="margin:0; background:#f8f8f8; border:1px solid #efefef; border-radius:16px; padding:14px; font-size:12px; line-height:1.65; color:#333; font-family:Consolas, Monaco, monospace; white-space:pre-wrap; word-break:break-word; overflow-x:auto;">${escapeHtml(regexCode)}</pre>
-            </div>
+            
+            ${regexHtmlBlock}
         `;
 
         card.onclick = () => {
@@ -9236,6 +9246,7 @@ function renderPresetsList() {
             localStorage.setItem(OFFLINE_CONFIG_KEY, JSON.stringify(offlineConfig));
             renderPresetsList();
         };
+
 
         container.appendChild(card);
     });
