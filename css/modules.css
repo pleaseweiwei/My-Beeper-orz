@@ -7794,3 +7794,38 @@ img.msg-sticker-img {
 .live-tab-content {
     overscroll-behavior-y: none !important;
 }
+
+/* =========================================
+   [修复] 解决手机端界面被撑破 / 左右出现滚动条的问题
+   ========================================= */
+
+/* 1. 强制所有 Flex 布局下的输入框允许缩小到极小，绝不撑破屏幕 */
+.regex-input, 
+.preset-prompt-title, 
+.r-flags, 
+.r-replace,
+.p-name,
+.p-content {
+    min-width: 0 !important;
+}
+
+/* 2. 预设/正则界面的行，允许在极窄屏幕（如 iPhone SE）上自动折行 */
+.regex-row,
+.preset-prompt-header {
+    flex-wrap: wrap;
+}
+
+/* 3. 修复某些被硬编码了宽度的弹窗（如 width: 340px），在窄屏手机上强制自适应 */
+.modal-box, 
+.image-desc-modal-box,
+.g7-machine-body,
+.g5-contract-card {
+    max-width: 90vw !important;
+    box-sizing: border-box !important;
+}
+
+/* 4. 强制所有文本域（textarea）不会横向超出父容器 */
+textarea {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
