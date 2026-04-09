@@ -7795,66 +7795,25 @@ img.msg-sticker-img {
     overscroll-behavior-y: none !important;
 }
 
-/* =========================================
-   [ä¿®å¤] è§£å†³æ‰‹æœºç«¯ç•Œé¢è¢«æ’‘ç ´ / å·¦å³å‡ºç°æ»šåŠ¨æ¡çš„é—®é¢˜
-   ========================================= */
-
-/* 1. å¼ºåˆ¶æ‰€æœ‰ Flex å¸ƒå±€ä¸‹çš„è¾“å…¥æ¡†å…è®¸ç¼©å°åˆ°æå°ï¼Œç»ä¸æ’‘ç ´å±å¹• */
-.regex-input, 
-.preset-prompt-title, 
-.r-flags, 
-.r-replace,
-.p-name,
-.p-content {
-    min-width: 0 !important;
-}
-
-/* 2. é¢„è®¾/æ­£åˆ™ç•Œé¢çš„è¡Œï¼Œå…è®¸åœ¨æçª„å±å¹•ï¼ˆå¦‚ iPhone SEï¼‰ä¸Šè‡ªåŠ¨æŠ˜è¡Œ */
-.regex-row,
-.preset-prompt-header {
-    flex-wrap: wrap;
-}
-
-/* 3. ä¿®å¤æŸäº›è¢«ç¡¬ç¼–ç äº†å®½åº¦çš„å¼¹çª—ï¼ˆå¦‚ width: 340pxï¼‰ï¼Œåœ¨çª„å±æ‰‹æœºä¸Šå¼ºåˆ¶è‡ªé€‚åº” */
-.modal-box, 
-.image-desc-modal-box,
-.g7-machine-body,
-.g5-contract-card {
-    max-width: 90vw !important;
-    box-sizing: border-box !important;
-}
-
-/* 4. å¼ºåˆ¶æ‰€æœ‰æ–‡æœ¬åŸŸï¼ˆtextareaï¼‰ä¸ä¼šæ¨ªå‘è¶…å‡ºçˆ¶å®¹å™¨ */
-textarea {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-}
-/* =========================================
-   [ç»ˆæä¿®å¤] è§£å†³é¡µé¢è¢«é•¿æ–‡æœ¬æ’‘å¤§å¯¼è‡´é€€å‡ºæ—¶ç¼©å°ä¸€åœˆçš„é—®é¢˜
-   ========================================= */
-
-/* 1. å¼ºåˆ¶å…¨å±APPå’Œä¸»å±å¹•ç»å¯¹ä¸èƒ½æ¨ªå‘æº¢å‡º */
-body, html, .phone, .app-fullscreen-view {
-    max-width: 100vw !important;
-    overflow-x: hidden !important;
-}
-
-/* 2. å¼ºåˆ¶é¢„è®¾åˆ—è¡¨å’Œç¼–è¾‘å™¨å®¹å™¨ä¸èƒ½è¶…å‡ºçˆ¶çº§å®½åº¦ */
-.preset-list-item, 
-#preset-list-pane, 
-#preset-editor-pane {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    overflow-x: hidden !important;
-}
-
-/* 3. å¼ºåˆ¶é¢„è®¾é‡Œé¢æ‰€æœ‰çš„ä»£ç æ¡†ã€æ–‡å­—æ¡†é‡åˆ°é•¿å­—æ¯å¿…é¡»æš´åŠ›æŠ˜è¡Œ */
-.preset-list-item pre, 
-.preset-list-item div,
-.preset-prompt-item textarea {
-    white-space: pre-wrap !important; 
-    word-wrap: break-word !important; 
-    word-break: break-all !important; 
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-}
+/* =========================================  
+   [ĞŞ¸´] ½â¾öÊÖ»ú¶Ë½çÃæ±»³ÅÆÆ / ×óÓÒ³öÏÖ¹ö¶¯ÌõµÄÎÊÌâ  
+   ========================================= */  
+/* 1. Ç¿ÖÆËùÓĞ Flex ²¼¾ÖÏÂµÄÊäÈë¿òÔÊĞíËõĞ¡µ½¼«Ğ¡£¬¾ø²»³ÅÆÆÆÁÄ» */  
+.regex-input, .preset-prompt-title, .r-flags, .r-replace, .p-name, .p-content { min-width: 0 !important; }  
+/* 2. Ô¤Éè/ÕıÔò½çÃæµÄĞĞ£¬ÔÊĞíÔÚ¼«Õ­ÆÁÄ»£¨Èç iPhone SE£©ÉÏ×Ô¶¯ÕÛĞĞ */  
+.regex-row, .preset-prompt-header { flex-wrap: wrap; }  
+/* 3. ĞŞ¸´Ä³Ğ©±»Ó²±àÂëÁË¿í¶ÈµÄµ¯´°£¨Èç width: 340px£©£¬ÔÚÕ­ÆÁÊÖ»úÉÏÇ¿ÖÆ×ÔÊÊÓ¦ */  
+.modal-box, .image-desc-modal-box, .g7-machine-body, .g5-contract-card { max-width: 90vw !important; box-sizing: border-box !important; }  
+/* 4. Ç¿ÖÆËùÓĞÎÄ±¾Óò£¨textarea£©²»»áºáÏò³¬³ö¸¸ÈİÆ÷ */  
+textarea { max-width: 100% !important; box-sizing: border-box !important; }  
+/* =========================================  
+   [ÖÕ¼«ĞŞ¸´] ½â¾öÒ³Ãæ±»³¤ÎÄ±¾³Å´óµ¼ÖÂÍË³öÊ±ËõĞ¡Ò»È¦µÄÎÊÌâ  
+   ========================================= */  
+/* 1. Ç¿ÖÆÈ«ÆÁAPPºÍÖ÷ÆÁÄ»¾ø¶Ô²»ÄÜºáÏòÒç³ö */  
+body, html, .phone, .app-fullscreen-view { max-width: 100vw !important; overflow-x: hidden !important; }  
+/* 2. Ç¿ÖÆÔ¤ÉèÁĞ±íºÍ±à¼­Æ÷ÈİÆ÷²»ÄÜ³¬³ö¸¸¼¶¿í¶È */  
+.preset-list-item, #preset-list-pane, #preset-editor-pane { max-width: 100% !important; box-sizing: border-box !important; overflow-x: hidden !important; }  
+/* 3. Ç¿ÖÆÔ¤ÉèÀïÃæËùÓĞµÄ´úÂë¿ò¡¢ÎÄ×Ö¿òÓöµ½³¤×ÖÄ¸±ØĞë±©Á¦ÕÛĞĞ */  
+.preset-list-item pre, .preset-list-item div, .preset-prompt-item textarea { white-space: pre-wrap !important; word-wrap: break-word !important; word-break: break-all !important; max-width: 100% !important; box-sizing: border-box !important; }  
+/* 4. ½â¾öÔ¤Éè±à¼­Æ÷¿ÉÄÜ´æÔÚµÄ¿í¶ÈÒç³ö */  
+.preset-editor-overlay { max-width: 100vw !important; overflow-x: hidden !important; } 

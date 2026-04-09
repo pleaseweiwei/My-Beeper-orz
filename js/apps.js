@@ -9147,109 +9147,59 @@ window.closePresetsApp = function() {
 function renderPresetsList() {
     const container = document.getElementById('presets-list-container');
     if (!container) return;
+    
     container.innerHTML = '';
-
-    container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.height = '100%';
-    container.style.overflowY = 'auto';
-    container.style.padding = '15px';
-    container.style.gap = '12px';
-    container.style.boxSizing = 'border-box';
-
+    
     if (!Array.isArray(tavernPresets) || tavernPresets.length === 0) {
         container.innerHTML = '<div style="text-align:center; color:#aaa; font-size:12px; padding:40px 20px;">暂无预设，点击右上角新建一个吧</div>';
         return;
     }
-
-    const escapeHtml = (str) => String(str || '')
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>');
-
+    
     tavernPresets.forEach(p => {
         let scripts = p.regexScripts || [];
-        if (typeof p.regex === 'string' && scripts.length === 0 && p.regex) {
-            scripts = [{ regex: p.regex, flags: 'g', replace: '' }];
-        }
-
-                // 1. 过滤掉空正则，得出真正有效的正则数量
-        const validScripts = scripts.filter(s => s && s.regex && s.regex.trim() !== '');
-        const scriptCount = validScripts.length;
         
-        const promptPreview = p.systemPrompt
-            ? escapeHtml(p.systemPrompt).replace(/\n/g, '<br>')
-            : '无提示词';
-
-        // 2. 核心修改：只有当正则数量大于 0 时，才生成下半部分的“样式框框”！
-        let regexHtmlBlock = '';
-        if (scriptCount > 0) {
-            const regexCode = validScripts.map((script, idx) => {
-                const pattern = script.regex || '';
-                const flags = script.flags || 'g';
-                const replaceText = script.replace || '';
-                return [
-                    `#${idx + 1}`,
-                    `/${pattern}/${flags}`,
-                    replaceText !== '' ? `=> ${replaceText}` : '=> '
-                ].join('\n');
-            }).join('\n\n');
-            
-            // 这是你说的带有灰色背景和边框的框框
-            regexHtmlBlock = `
-            <div style="height:1px; background:#f1f1f1;"></div>
-            <div style="padding:14px 18px 18px 18px;">
-                <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; margin-bottom:10px;">REGEX CODE</div>
-                <pre style="margin:0; background:#f8f8f8; border:1px solid #efefef; border-radius:16px; padding:14px; font-size:12px; line-height:1.65; color:#333; font-family:Consolas, Monaco, monospace; white-space:pre-wrap; word-break:break-word; overflow-x:auto;">${escapeHtml(regexCode)}</pre>
-            </div>
-            `;
-        }
-
         const card = document.createElement('div');
-        card.className = 'preset-list-item' + (p.id === offlineConfig.activePresetId ? ' active-preset' : '');
-        card.style.background = '#fff';
-        card.style.borderRadius = '22px';
-        card.style.overflow = 'hidden';
-        card.style.border = p.id === offlineConfig.activePresetId ? '1px solid #111' : '1px solid #eee';
-        card.style.boxShadow = '0 6px 18px rgba(0,0,0,0.04)';
-        card.style.cursor = 'pointer';
-        card.style.transition = 'all 0.2s ease';
-
-        card.ondblclick = () => openPresetEditor(p.id);
-
-        // 3. 把底部换成变量 regexHtmlBlock，为空则什么都不渲染
-        card.innerHTML = `
-            <div style="padding:16px 18px 14px 18px;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px;">
-                    <div style="min-width:0; flex:1;">
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-                            <h4 style="margin:0; font-size:15px; color:#222; font-weight:700; line-height:1.3;">${escapeHtml(p.name || '未命名预设')}</h4>
-                            ${p.id === offlineConfig.activePresetId ? '<span style="background:#111; color:#fff; font-size:10px; padding:3px 8px; border-radius:999px;">当前</span>' : ''}
-                        </div>
-                        <div style="font-size:11px; color:#666; line-height:1.6; word-break:break-word; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
-                            ${promptPreview}
-                        </div>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                        <span style="font-size:10px; color:#999; white-space:nowrap;">${scriptCount} 条正则</span>
-                        <i class="fas fa-edit" style="color:#999; padding:6px; border-radius:10px; background:#f7f7f7; cursor:pointer;" onclick="event.stopPropagation(); openPresetEditor('${p.id}');"></i>
-                    </div>
-                </div>
-                <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700;">PRESET</div>
-            </div>
-            
-            ${regexHtmlBlock}
+        card.style.cssText = `
+            background: #fff;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid ${p.id === offlineConfig.activePresetId ? '#222' : '#f0f0f0'};
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
         `;
-
-        card.onclick = () => {
-            offlineConfig.activePresetId = p.id;
-            localStorage.setItem(OFFLINE_CONFIG_KEY, JSON.stringify(offlineConfig));
-            renderPresetsList();
+        
+        if (p.id === offlineConfig.activePresetId) {
+            card.style.transform = 'translateY(-2px)';
+            card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+        }
+        
+        card.onclick = (e) => {
+            if (e.target.closest('button')) return;
+            openPresetEditor(p.id);
         };
-
-
+        
+          card.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="flex:1; padding-right:10px;">
+                      <div style="display:flex; align-items:center; gap:8px;">
+                          <h4 style="margin:0; font-size:15px; color:#222; font-weight:700; line-height:1.3;">${p.name ? p.name.replace(/[&<>'"]/g, match => ({ '&': '&', '<': '<', '>': '>', "'": '&#39;', '"': '"' })[match]) : '未命名预设'}</h4>
+                      </div>
+                  </div>
+              </div>
+          `;
+        
         container.appendChild(card);
     });
+}
+
+window.applyOfflinePreset = function(id) {
+    offlineConfig.activePresetId = id;
+    localStorage.setItem(OFFLINE_CONFIG_KEY, JSON.stringify(offlineConfig));
+    renderPresetsList();
+    if(typeof showToast === 'function') showToast("预设已应用");
 }
 
 window.createNewPreset = function() {

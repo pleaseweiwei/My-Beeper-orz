@@ -297,7 +297,6 @@ const NovelApp = (() => {
     state.fateCards = [];
     state.liveReactions = [];
     render();
-    bindEvents();
     startAwayTracker();
     checkPendingReactions();
   }
@@ -2782,12 +2781,8 @@ ${outline}
       item.onclick = function() {
         list.querySelectorAll('.novel-chara-item').forEach(function(i) {
           i.classList.remove('selected');
-          var c = i.querySelector('.novel-chara-check');
-          if (c) c.classList.remove('active');
         });
         item.classList.add('selected');
-        var chk = item.querySelector('.novel-chara-check');
-        if (chk) chk.classList.add('active');
         state.companion = item.dataset.companionid || null;
         saveState();
         updateCompanionBar();

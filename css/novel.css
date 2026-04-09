@@ -346,10 +346,18 @@
 .novel-chara-name { flex: 1; font-size: 13px; font-weight: bold; color: var(--n-text1); transition: 0.3s; }
 .novel-chara-check {
   width: 20px; height: 20px; border-radius: 50%; background: var(--n-surface2);
-  display: flex; align-items: center; justify-content: center; font-size: 10px; color: transparent;
+  display: flex; align-items: center; justify-content: center; font-size: 10px; color: transparent; /* 默认隐藏勾 */
   transition: all 0.3s;
+  border: 1px solid rgba(0,0,0,0.1);
 }
-.novel-chara-item.selected .novel-chara-check { background: #fff; color: var(--n-text1); animation: popIn 0.3s ease; }
+.novel-chara-item.selected .novel-chara-check,
+.novel-chara-check.active { 
+  background: #ffffff; /* 选中后变成白色圆圈 */
+  color: var(--n-text1); /* 打勾变深色 */
+  border-color: #ffffff;
+  animation: popIn 0.3s ease; 
+}
+
 
 /* Chapter count selector */
 .novel-chapter-count-row {
