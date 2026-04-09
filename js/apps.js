@@ -9601,20 +9601,38 @@ window.handleImportPresets = function(input) {
 function renderRegexList(scripts) {
     const container = document.getElementById('pe-regex-container');
     container.innerHTML = '';
-    
+
+    const escapeAttr = (str) => String(str || '')
+        .replace(/&/g, '&')
+        .replace(/"/g, '"')
+        .replace(/</g, '<')
+        .replace(/>/g, '>');
+
     (scripts || []).forEach((script, index) => {
         const div = document.createElement('div');
         div.className = 'regex-script-item';
+        div.style.cssText = 'background:#fff; border:1px solid #ececec; border-radius:16px; padding:14px; box-shadow:0 2px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:12px;';
         div.innerHTML = `
-            <div class="regex-row">
-                <span style="font-size:10px; color:#999; width:20px;">/${index+1}</span>
-                <input type="text" class="regex-input r-pattern" placeholder="Regex Pattern" value="${script.regex || ''}">
-                <input type="text" class="regex-flags r-flags" placeholder="g" value="${script.flags || 'g'}">
-                <i class="fas fa-trash btn-del-regex" onclick="this.closest('.regex-script-item').remove()"></i>
+            <div class="regex-row" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                    <span style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; text-transform:uppercase;">Regex Script</span>
+                    <span style="font-size:12px; color:#222; font-weight:700;">#${index + 1}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <div style="display:flex; align-items:center; gap:6px; background:#f6f6f6; border:1px solid #ececec; border-radius:999px; padding:4px 10px;">
+                        <span style="font-size:10px; color:#999; letter-spacing:0.8px; font-weight:700; text-transform:uppercase;">Flags</span>
+                        <input type="text" class="regex-flags r-flags" placeholder="g" value="${escapeAttr(script.flags || 'g')}" style="width:36px; border:none; background:transparent; outline:none; font-size:12px; color:#222; font-weight:700; padding:0; text-align:center;">
+                    </div>
+                    <i class="fas fa-trash btn-del-regex" onclick="this.closest('.regex-script-item').remove()" style="width:30px; height:30px; border-radius:10px; background:#f8f8f8; border:1px solid #ececec; color:#999; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="删除正则"></i>
+                </div>
             </div>
-            <div class="regex-row">
-                <span style="font-size:10px; color:#999; width:20px;">-></span>
-                <input type="text" class="regex-input r-replace" placeholder="Replacement" value="${script.replace || ''}">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; text-transform:uppercase;">Find Regex</div>
+                <textarea class="regex-input r-pattern" rows="3" placeholder="输入要匹配的正则，例如：\\(.*?\\)" style="width:100%; border:1px solid #e9e9e9; border-radius:12px; background:#fafafa; padding:12px; font-size:13px; line-height:1.6; color:#333; resize:vertical; outline:none; box-sizing:border-box; font-family:Consolas, Monaco, monospace;">${escapeAttr(script.regex || '')}</textarea>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; text-transform:uppercase;">Replace String</div>
+                <textarea class="regex-input r-replace" rows="2" placeholder="替换内容；留空表示删除匹配文本" style="width:100%; border:1px solid #e9e9e9; border-radius:12px; background:#fafafa; padding:12px; font-size:13px; line-height:1.6; color:#333; resize:vertical; outline:none; box-sizing:border-box; font-family:Consolas, Monaco, monospace;">${escapeAttr(script.replace || '')}</textarea>
             </div>
         `;
         container.appendChild(div);
@@ -9624,18 +9642,31 @@ function renderRegexList(scripts) {
 // 添加新脚本空行
 window.addRegexScriptItem = function() {
     const container = document.getElementById('pe-regex-container');
+    const index = container.querySelectorAll('.regex-script-item').length + 1;
     const div = document.createElement('div');
     div.className = 'regex-script-item';
+    div.style.cssText = 'background:#fff; border:1px solid #ececec; border-radius:16px; padding:14px; box-shadow:0 2px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:12px;';
     div.innerHTML = `
-        <div class="regex-row">
-            <span style="font-size:10px; color:#999; width:20px;">NEW</span>
-            <input type="text" class="regex-input r-pattern" placeholder="Pattern (e.g. \\(.*?\\))">
-            <input type="text" class="regex-flags r-flags" placeholder="g" value="g">
-            <i class="fas fa-trash btn-del-regex" onclick="this.closest('.regex-script-item').remove()"></i>
+        <div class="regex-row" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                <span style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; text-transform:uppercase;">Regex Script</span>
+                <span style="font-size:12px; color:#222; font-weight:700;">#${index}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:6px; background:#f6f6f6; border:1px solid #ececec; border-radius:999px; padding:4px 10px;">
+                    <span style="font-size:10px; color:#999; letter-spacing:0.8px; font-weight:700; text-transform:uppercase;">Flags</span>
+                    <input type="text" class="regex-flags r-flags" placeholder="g" value="g" style="width:36px; border:none; background:transparent; outline:none; font-size:12px; color:#222; font-weight:700; padding:0; text-align:center;">
+                </div>
+                <i class="fas fa-trash btn-del-regex" onclick="this.closest('.regex-script-item').remove()" style="width:30px; height:30px; border-radius:10px; background:#f8f8f8; border:1px solid #ececec; color:#999; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="删除正则"></i>
+            </div>
         </div>
-        <div class="regex-row">
-            <span style="font-size:10px; color:#999; width:20px;">-></span>
-            <input type="text" class="regex-input r-replace" placeholder="Replacement (empty to delete)">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; text-transform:uppercase;">Find Regex</div>
+            <textarea class="regex-input r-pattern" rows="3" placeholder="输入要匹配的正则，例如：\\(.*?\\)" style="width:100%; border:1px solid #e9e9e9; border-radius:12px; background:#fafafa; padding:12px; font-size:13px; line-height:1.6; color:#333; resize:vertical; outline:none; box-sizing:border-box; font-family:Consolas, Monaco, monospace;"></textarea>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:700; text-transform:uppercase;">Replace String</div>
+            <textarea class="regex-input r-replace" rows="2" placeholder="替换内容；留空表示删除匹配文本" style="width:100%; border:1px solid #e9e9e9; border-radius:12px; background:#fafafa; padding:12px; font-size:13px; line-height:1.6; color:#333; resize:vertical; outline:none; box-sizing:border-box; font-family:Consolas, Monaco, monospace;"></textarea>
         </div>
     `;
     container.appendChild(div);
