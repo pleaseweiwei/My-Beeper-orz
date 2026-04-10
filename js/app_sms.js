@@ -282,6 +282,13 @@ const SMSApp = (() => {
       reply = reply.replace(/\*[^*\n]+\*/g, '').trim();
       reply = reply.replace(/\[STATUS[\s\S]*?\]/gi, '').trim();
 
+      // WeChat invite trigger
+      let wechatTriggered = false;
+      if (/\[ADD_WECHAT\]/i.test(reply)) {
+          reply = reply.replace(/\[ADD_WECHAT\]/gi, '').trim();
+          wechatTriggered = true;
+      }
+
       // Phone call trigger
       if (/\[PHONE_CALL\]/i.test(reply)) {
         reply = reply.replace(/\[PHONE_CALL\]/gi, '').trim();
@@ -301,6 +308,14 @@ const SMSApp = (() => {
         _addMsg(threadId, reply, 'received');
         if (_currentThreadId === threadId) renderThread(threadId);
         else showNotifToast(conv.name, reply, threadId);
+        
+        // 弹出添加微信申请
+        if(wechatTriggered && conv.type === 'unknown' && typeof PhoneCallApp !== 'undefined') {
+            setTimeout(() => {
+                PhoneCallApp.openWechatInvite(conv.number);
+            }, 1000);
+        }
+        
         renderList();
       }
     } catch (e) {

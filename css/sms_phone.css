@@ -1,100 +1,135 @@
 /* ============================================
-   SMS + PHONE CALL — 极致韩系黑白灰 ins风
+   SMS + PHONE CALL — 打破规范的韩系INS风 (黑白灰 + 拟物毛玻璃)
    ============================================ */
 
 /* ─── SMS App ─── */
 #smsApp {
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: #f8f9fa; /* 极简的浅灰背景，突出毛玻璃和拟物卡片 */
   z-index: 900;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* 顶部毛玻璃导航 */
+/* 顶部毛玻璃导航 - 打破常规的悬浮气泡设计 */
 .sms-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px 14px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border-radius: 30px;
+  margin: 12px 16px 4px;
+  box-shadow: 
+    0 10px 30px -10px rgba(0, 0, 0, 0.05),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
   flex-shrink: 0;
   min-height: 60px;
   position: sticky;
-  top: 0;
+  top: 12px;
   z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 .sms-header-title { 
-  font-size: 20px; 
+  font-size: 22px; 
   font-weight: 800; 
-  color: #111; 
-  letter-spacing: -0.8px; 
+  color: #1a1a1a; 
+  letter-spacing: -0.5px; 
 }
 .sms-header-icons { 
   display: flex; 
   gap: 20px; 
-  color: #333; 
+  color: #1a1a1a; 
   font-size: 18px; 
 }
-.sms-header-icons i { cursor: pointer; transition: opacity 0.2s; }
-.sms-header-icons i:active { opacity: 0.5; }
+.sms-header-icons i { 
+  cursor: pointer; 
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.03), inset 0 2px 5px rgba(255,255,255,1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+}
+.sms-header-icons i:active { 
+  transform: scale(0.9);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02), inset 0 1px 3px rgba(0,0,0,0.1);
+}
 
 .sms-list { 
   flex: 1; 
   overflow-y: auto; 
-  background: #ffffff; 
+  background: transparent; 
+  padding: 10px 16px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-/* 列表项更柔和的交互 */
+/* 列表项 - 拟物化卡片 */
 .sms-conversation-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 24px;
+  gap: 16px;
+  padding: 16px 20px;
   background: #ffffff;
-  border-bottom: 1px solid rgba(0,0,0,0.03);
+  border-radius: 24px;
+  box-shadow: 
+    0 8px 20px -8px rgba(0, 0, 0, 0.05),
+    inset 0 1px 1px rgba(255, 255, 255, 1);
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative;
+  border: 1px solid rgba(0,0,0,0.02);
   -webkit-tap-highlight-color: transparent;
 }
-.sms-conversation-item:active { background: #f8f9fa; }
+.sms-conversation-item:active { 
+  transform: scale(0.97);
+  box-shadow: 
+    0 4px 10px -4px rgba(0, 0, 0, 0.05),
+    inset 0 2px 5px rgba(0, 0, 0, 0.02);
+  background: #fdfdfd; 
+}
 
 .sms-conv-avatar {
-  width: 50px; height: 50px; border-radius: 25px;
-  background: #111; color: #fff;
-  font-size: 16px; font-weight: 700;
+  width: 54px; height: 54px; border-radius: 20px; /* 打破纯圆规范，采用偏圆角矩形 */
+  background: linear-gradient(135deg, #2a2a2a, #000000); 
+  color: #fff;
+  font-size: 18px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; letter-spacing: -0.5px;
   font-family: 'Montserrat', sans-serif;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15), inset 0 1px 3px rgba(255,255,255,0.2);
 }
-.sms-conv-avatar.system     { background: #f0f0f0; color: #555; font-size: 12px; font-weight: 800; box-shadow: none; }
-.sms-conv-avatar.unknown    { background: #8e8e93; }
-.sms-conv-avatar.blocked    { background: #ff3b30; }
+.sms-conv-avatar.system     { background: linear-gradient(135deg, #f5f5f5, #e0e0e0); color: #333; font-size: 14px; font-weight: 800; box-shadow: inset 0 1px 3px rgba(255,255,255,1), 0 4px 10px rgba(0,0,0,0.05); }
+.sms-conv-avatar.unknown    { background: linear-gradient(135deg, #a0a0a0, #7a7a7a); }
+.sms-conv-avatar.blocked    { background: linear-gradient(135deg, #ff5e55, #d92d24); }
 
-.sms-conv-info  { flex: 1; min-width: 0; }
-.sms-conv-name  { font-size: 15px; font-weight: 800; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px; }
-.sms-conv-preview { font-size: 13px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; line-height: 1.4; font-weight: 500; }
+.sms-conv-info  { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;}
+.sms-conv-name  { font-size: 16px; font-weight: 800; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px; }
+.sms-conv-preview { font-size: 13px; color: #7a7a7a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; line-height: 1.4; font-weight: 500; }
 .sms-conv-meta  { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
-.sms-conv-time  { font-size: 11px; color: #aaa; font-weight: 600; white-space: nowrap; letter-spacing: 0.2px; }
+.sms-conv-time  { font-size: 11px; color: #a0a0a0; font-weight: 700; white-space: nowrap; letter-spacing: 0.2px; }
 .sms-unread-badge {
-  min-width: 20px; height: 20px;
-  background: #111; color: #fff;
-  border-radius: 10px; font-size: 10px; font-weight: 800;
+  min-width: 22px; height: 22px;
+  background: #1a1a1a; color: #fff;
+  border-radius: 11px; font-size: 11px; font-weight: 800;
   display: flex; align-items: center; justify-content: center; padding: 0 6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 .sms-section-label {
-  padding: 18px 24px 8px; font-size: 11px; font-weight: 800;
-  color: #999; letter-spacing: 1.5px; text-transform: uppercase; background: #ffffff;
+  padding: 10px 16px 4px; font-size: 12px; font-weight: 800;
+  color: #a0a0a0; letter-spacing: 2px; text-transform: uppercase; background: transparent;
 }
 
 /* Thread view (聊天详情页) */
 .sms-thread-view {
-  position: absolute; inset: 0; background: #ffffff; z-index: 20;
+  position: absolute; inset: 0; background: #f8f9fa; z-index: 20;
   display: flex; flex-direction: column;
   transform: translateX(100%);
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -102,80 +137,109 @@
 .sms-thread-view.open { transform: translateX(0); }
 
 .sms-thread-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 20px; background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0,0,0,0.04); flex-shrink: 0; min-height: 64px;
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 20px; 
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(30px) saturate(200%); 
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border-radius: 30px;
+  margin: 12px 16px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0; min-height: 64px;
+  border: 1px solid rgba(255,255,255,0.6);
 }
 .sms-thread-avatar {
-  width: 40px; height: 40px; border-radius: 20px;
-  background: #111; color: #fff; font-size: 13px; font-weight: 700;
+  width: 44px; height: 44px; border-radius: 16px;
+  background: linear-gradient(135deg, #2a2a2a, #000); color: #fff; font-size: 14px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   font-family: 'Montserrat', sans-serif;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-.sms-thread-avatar.system  { background: #f0f0f0; color: #555; font-size: 11px; font-weight: 800; }
-.sms-thread-avatar.unknown { background: #8e8e93; }
-.sms-thread-avatar.blocked { background: #ff3b30; }
+.sms-thread-avatar.system  { background: linear-gradient(135deg, #f5f5f5, #e0e0e0); color: #333; font-size: 12px; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,0.05);}
+.sms-thread-avatar.unknown { background: linear-gradient(135deg, #a0a0a0, #7a7a7a); }
+.sms-thread-avatar.blocked { background: linear-gradient(135deg, #ff5e55, #d92d24); }
 .sms-thread-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;}
-.sms-thread-name   { font-size: 16px; font-weight: 800; color: #111; letter-spacing: -0.3px; }
-.sms-thread-number { font-size: 11px; color: #999; margin-top: 2px; font-weight: 500; letter-spacing: 0.5px; }
+.sms-thread-name   { font-size: 17px; font-weight: 800; color: #1a1a1a; letter-spacing: -0.2px; }
+.sms-thread-number { font-size: 12px; color: #888; margin-top: 2px; font-weight: 600; letter-spacing: 0.5px; }
 
 /* 聊天气泡区域背景更干净 */
 .sms-messages {
-  flex: 1; overflow-y: auto; padding: 20px 16px;
-  background: #ffffff; display: flex; flex-direction: column; gap: 14px;
+  flex: 1; overflow-y: auto; padding: 10px 16px 20px;
+  background: transparent; display: flex; flex-direction: column; gap: 18px;
 }
-.sms-msg-row { display: flex; flex-direction: column; max-width: 80%; }
+.sms-msg-row { display: flex; flex-direction: column; max-width: 82%; }
 .sms-msg-row.sent     { align-self: flex-end;   align-items: flex-end; }
 .sms-msg-row.received { align-self: flex-start; align-items: flex-start; }
 
+/* 毛玻璃与拟物化融合的气泡 */
 .sms-bubble {
-  padding: 12px 16px; border-radius: 20px;
-  font-size: 14px; line-height: 1.6; word-break: break-word;
-  font-weight: 500; letter-spacing: 0.2px;
+  padding: 14px 18px; 
+  font-size: 15px; line-height: 1.5; word-break: break-word;
+  font-weight: 500; letter-spacing: 0.1px;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
 }
-/* 我发出的：高级纯黑 */
+/* 我发出的：高级深色渐变毛玻璃 */
 .sms-msg-row.sent .sms-bubble     { 
-  background: #111111; color: #ffffff; 
-  border-bottom-right-radius: 4px; 
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  background: rgba(26, 26, 26, 0.9); color: #ffffff; 
+  border-radius: 22px 22px 6px 22px; 
+  box-shadow: 
+    0 8px 20px rgba(0,0,0,0.1),
+    inset 0 1px 1px rgba(255,255,255,0.15);
+  border: 1px solid rgba(0,0,0,0.1);
 }
-/* 收到的：极简浅灰 */
+/* 收到的：清透亮色毛玻璃拟物 */
 .sms-msg-row.received .sms-bubble { 
-  background: #f4f5f7; color: #111111; 
-  border-bottom-left-radius: 4px; 
+  background: rgba(255, 255, 255, 0.85); color: #1a1a1a; 
+  border-radius: 22px 22px 22px 6px; 
+  box-shadow: 
+    0 8px 20px rgba(0,0,0,0.04),
+    inset 0 1px 2px rgba(255,255,255,1);
+  border: 1px solid rgba(255,255,255,0.6);
 }
 .sms-msg-row.system-msg .sms-bubble { 
-  background: #f8f9fa; color: #444; 
-  border: 1px solid rgba(0,0,0,0.03); 
-  font-size: 13px; font-weight: 500;
+  background: rgba(240, 240, 240, 0.6); color: #555; 
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.4); 
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  align-self: center;
+  max-width: 90%;
 }
 
-.sms-msg-time { font-size: 10px; color: #ccc; margin-top: 6px; padding: 0 6px; font-weight: 600; letter-spacing: 0.5px; }
+.sms-msg-time { font-size: 10px; color: #a0a0a0; margin-top: 6px; padding: 0 8px; font-weight: 700; letter-spacing: 0.5px; }
 
 .sms-timestamp-divider {
-  text-align: center; font-size: 11px; font-weight: 700; color: #bbb; margin: 12px 0 8px;
-  display: flex; align-items: center; gap: 12px; letter-spacing: 0.5px;
+  text-align: center; font-size: 11px; font-weight: 800; color: #aaa; margin: 16px 0 10px;
+  display: flex; align-items: center; gap: 16px; letter-spacing: 1px;
 }
 .sms-timestamp-divider::before,
-.sms-timestamp-divider::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.04); }
+.sms-timestamp-divider::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.05); }
 
 .sms-highlight-code {
-  background: #111; color: #fff;
-  padding: 2px 8px; border-radius: 6px;
-  font-weight: 800; font-family: 'Montserrat', monospace;
-  letter-spacing: 1px; font-size: 13px;
+  background: rgba(0,0,0,0.05); color: #1a1a1a;
+  padding: 4px 8px; border-radius: 8px;
+  font-weight: 700; font-family: 'Montserrat', monospace;
+  letter-spacing: 0.5px; font-size: 13px;
   display: inline-block; margin: 0 2px;
+  border: 1px solid rgba(0,0,0,0.05);
 }
-.sms-highlight-link { color: #000; text-decoration: underline; text-underline-offset: 2px; font-weight: 700; cursor: pointer; word-break: break-all; }
+.sms-msg-row.sent .sms-highlight-code {
+  background: rgba(255,255,255,0.15); color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.sms-highlight-link { color: #000; text-decoration: underline; text-underline-offset: 3px; font-weight: 800; cursor: pointer; word-break: break-all; }
+.sms-msg-row.sent .sms-highlight-link { color: #fff; }
 
 .sms-loading {
   display: flex; gap: 6px; padding: 14px 18px;
-  background: #f4f5f7; border-radius: 20px; border-bottom-left-radius: 4px;
+  background: rgba(255,255,255,0.85); border-radius: 22px 22px 22px 6px;
   width: fit-content;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.03);
+  backdrop-filter: blur(10px);
 }
 .sms-loading span {
-  width: 6px; height: 6px; background: #aaa; border-radius: 50%;
+  width: 6px; height: 6px; background: #888; border-radius: 50%;
   animation: smsLoadingBounce 1.4s ease-in-out infinite;
 }
 .sms-loading span:nth-child(2) { animation-delay: 0.2s; }
@@ -185,210 +249,254 @@
   30%            { transform: translateY(-6px); opacity: 1; }
 }
 
-/* 输入框区域：高级无边框感 */
+/* 输入框区域：悬浮胶囊形态 */
 .sms-input-area {
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px 24px; background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0,0,0,0.04); flex-shrink: 0;
+  padding: 10px 14px; 
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(25px) saturate(200%); 
+  -webkit-backdrop-filter: blur(25px) saturate(200%);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 35px;
+  margin: 0 16px 20px;
+  box-shadow: 
+    0 10px 25px rgba(0,0,0,0.06),
+    inset 0 2px 4px rgba(255,255,255,1);
+  flex-shrink: 0;
 }
 .sms-input-area input {
-  flex: 1; background: #f4f5f7; border: none;
-  border-radius: 24px; padding: 12px 18px; font-size: 14px;
-  outline: none; font-family: inherit; color: #111; font-weight: 500;
-  transition: background 0.2s;
+  flex: 1; background: transparent; border: none;
+  padding: 12px 14px; font-size: 15px;
+  outline: none; font-family: inherit; color: #1a1a1a; font-weight: 500;
 }
-.sms-input-area input:focus { background: #ebecee; }
 .sms-input-area input::placeholder { color: #aaa; font-weight: 500; }
 
 .sms-send-btn {
-  width: 42px; height: 42px; background: #111; color: #fff;
-  border-radius: 21px; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0; font-size: 15px; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  width: 44px; height: 44px; 
+  background: linear-gradient(135deg, #2a2a2a, #000); 
+  color: #fff;
+  border-radius: 22px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; font-size: 16px; 
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15), inset 0 1px 2px rgba(255,255,255,0.2);
 }
-.sms-send-btn:active { transform: scale(0.85); }
+.sms-send-btn:active { 
+  transform: scale(0.85); 
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
 
 /* ─── SMS Notification Toast (系统通知弹窗) ─── */
 .sms-notif-toast {
   position: absolute;
-  top: 48px; left: 12px; right: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border-radius: 18px;
-  padding: 14px 16px;
+  top: 48px; left: 16px; right: 16px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border-radius: 24px;
+  padding: 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.02);
+  gap: 16px;
+  box-shadow: 
+    0 20px 40px rgba(0,0,0,0.1), 
+    0 1px 3px rgba(0,0,0,0.05),
+    inset 0 1px 2px rgba(255,255,255,1);
+  border: 1px solid rgba(255,255,255,0.6);
   z-index: 9999;
-  transform: translateY(-100px);
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  transform: translateY(-100px) scale(0.95);
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
   pointer-events: none;
   opacity: 0;
 }
 .sms-notif-toast.show {
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
   pointer-events: auto;
   opacity: 1;
 }
 .sms-notif-icon {
-  width: 40px; height: 40px; border-radius: 14px;
-  background: #111; color: #fff;
-  font-size: 12px; font-weight: 800;
+  width: 46px; height: 46px; border-radius: 16px;
+  background: linear-gradient(135deg, #2a2a2a, #000); color: #fff;
+  font-size: 14px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; letter-spacing: -0.3px; text-align: center; line-height: 1.2;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 .sms-notif-content { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;}
-.sms-notif-sender  { font-size: 14px; font-weight: 800; color: #111; letter-spacing: -0.3px;}
-.sms-notif-preview { font-size: 12px; color: #666; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+.sms-notif-sender  { font-size: 16px; font-weight: 800; color: #1a1a1a; letter-spacing: -0.3px;}
+.sms-notif-preview { font-size: 13px; color: #7a7a7a; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
 
 /* ─────────────────────────────────────────────
-   § PHONE APP (Call History)
+   § PHONE APP (Call History) - 同样风格重构
 ───────────────────────────────────────────── */
 #phoneApp {
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: #f8f9fa;
   z-index: 900;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 .phone-app-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 24px 14px; background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0,0,0,0.04); flex-shrink: 0; min-height: 60px;
-  position: sticky; top: 0; z-index: 10;
+  padding: 16px 24px; 
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(25px) saturate(180%); 
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border-radius: 30px;
+  margin: 12px 16px 4px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  flex-shrink: 0; min-height: 60px;
+  position: sticky; top: 12px; z-index: 10;
+  border: 1px solid rgba(255,255,255,0.5);
 }
-.phone-app-title { font-size: 20px; font-weight: 800; color: #111; letter-spacing: -0.8px; }
+.phone-app-title { font-size: 22px; font-weight: 800; color: #1a1a1a; letter-spacing: -0.5px; }
 
-.phone-call-records { flex: 1; overflow-y: auto; background: #ffffff; }
+.phone-call-records { flex: 1; overflow-y: auto; background: transparent; padding: 10px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
 .phone-record-item {
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px 24px; background: #ffffff;
-  border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer;
-  transition: background 0.2s ease; -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 20px; background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 1);
+  border: 1px solid rgba(0,0,0,0.02);
+  cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); -webkit-tap-highlight-color: transparent;
 }
-.phone-record-item:active { background: #f8f9fa; }
+.phone-record-item:active { transform: scale(0.97); background: #fdfdfd; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.05); }
 .phone-record-avatar {
-  width: 50px; height: 50px; border-radius: 25px;
-  background: #111; color: #fff; font-size: 16px; font-weight: 700;
+  width: 54px; height: 54px; border-radius: 20px;
+  background: linear-gradient(135deg, #2a2a2a, #000); color: #fff; font-size: 18px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; font-family: 'Montserrat', sans-serif;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15), inset 0 1px 3px rgba(255,255,255,0.2);
 }
 .phone-record-info { flex: 1; min-width: 0; }
-.phone-record-name { font-size: 15px; font-weight: 800; color: #111; letter-spacing: -0.3px;}
-.phone-record-meta { font-size: 12px; color: #999; font-weight: 500; margin-top: 4px; }
-.phone-record-duration { font-size: 12px; color: #bbb; font-weight: 600; font-family: 'Montserrat', monospace; letter-spacing: 0.5px;}
+.phone-record-name { font-size: 16px; font-weight: 800; color: #1a1a1a; letter-spacing: -0.2px;}
+.phone-record-meta { font-size: 13px; color: #a0a0a0; font-weight: 600; margin-top: 4px; }
+.phone-record-duration { font-size: 12px; color: #888; font-weight: 700; font-family: 'Montserrat', monospace; letter-spacing: 0.5px;}
 
 /* Call transcript detail page */
 .phone-transcript-page {
-  position: absolute; inset: 0; background: #ffffff; z-index: 30;
+  position: absolute; inset: 0; background: #f8f9fa; z-index: 30;
   display: flex; flex-direction: column;
   transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .phone-transcript-page.open { transform: translateX(0); }
 
 /* ─────────────────────────────────────────────
-   § INCOMING PHONE CALL OVERLAY (极简高级灰)
+   § INCOMING PHONE CALL OVERLAY (磨砂玻璃+深邃拟物)
 ───────────────────────────────────────────── */
 .phone-incoming-overlay {
   position: absolute; inset: 0;
-  background: #111111; /* 纯正高级黑底 */
+  background: rgba(10, 10, 10, 0.85); 
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
   z-index: 9500;
   display: flex; flex-direction: column;
   align-items: center; justify-content: space-between;
-  padding: 60px 30px 60px;
+  padding: 80px 30px 60px;
   transform: translateY(100%);
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .phone-incoming-overlay.active { transform: translateY(0); }
 
 .phone-incoming-avatar-ring {
-  width: 120px; height: 120px; border-radius: 60px; position: relative; margin-top: 20px;
+  width: 130px; height: 130px; border-radius: 40px; position: relative; margin-top: 20px;
 }
 .phone-incoming-avatar-ring img {
-  width: 120px; height: 120px; border-radius: 60px;
-  object-fit: cover; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  width: 130px; height: 130px; border-radius: 40px;
+  object-fit: cover; border: none; 
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
 }
 .phone-incoming-avatar-initials {
-  width: 120px; height: 120px; border-radius: 60px;
-  background: #222; display: flex; align-items: center; justify-content: center;
-  font-size: 42px; font-weight: 800; color: #fff;
+  width: 130px; height: 130px; border-radius: 40px;
+  background: linear-gradient(135deg, #333, #111); display: flex; align-items: center; justify-content: center;
+  font-size: 48px; font-weight: 800; color: #fff;
   font-family: 'Montserrat', sans-serif;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.1);
 }
 .phone-incoming-avatar-ring::before,
 .phone-incoming-avatar-ring::after {
-  content: ''; position: absolute; border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.08);
+  content: ''; position: absolute; border-radius: 48px; /* 匹配外扩圆角 */
+  border: 1px solid rgba(255,255,255,0.15);
   animation: phoneRingPulse 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
-.phone-incoming-avatar-ring::before { inset: -18px; animation-delay: 0s; }
-.phone-incoming-avatar-ring::after  { inset: -36px; animation-delay: 0.8s; }
+.phone-incoming-avatar-ring::before { inset: -20px; animation-delay: 0s; }
+.phone-incoming-avatar-ring::after  { inset: -40px; animation-delay: 0.8s; }
 
 @keyframes phoneRingPulse {
   0%   { opacity: 0.8; transform: scale(1); }
-  100% { opacity: 0;   transform: scale(1.3); }
+  100% { opacity: 0;   transform: scale(1.4); }
 }
 
-.phone-incoming-name     { font-size: 28px; font-weight: 800; color: #fff; margin-top: 30px; letter-spacing: -0.5px; }
-.phone-incoming-number   { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.5); margin-top: 8px; letter-spacing: 1px; }
-.phone-incoming-subtitle { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.3); margin-top: 6px; letter-spacing: 0.5px;}
+.phone-incoming-name     { font-size: 32px; font-weight: 800; color: #fff; margin-top: 40px; letter-spacing: -0.5px; text-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+.phone-incoming-number   { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.6); margin-top: 8px; letter-spacing: 1px; }
+.phone-incoming-subtitle { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.4); margin-top: 6px; letter-spacing: 0.5px;}
 
-.phone-incoming-actions  { display: flex; justify-content: space-around; width: 100%; margin-top: auto; align-items: center; padding: 0 10px; }
+.phone-incoming-actions  { display: flex; justify-content: space-around; width: 100%; margin-top: auto; align-items: center; padding: 0 20px; }
 .phone-incoming-btn {
-  width: 72px; height: 72px; border-radius: 36px;
+  width: 76px; height: 76px; border-radius: 38px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; cursor: pointer; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 28px; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .phone-incoming-btn:active { transform: scale(0.85); }
-.phone-incoming-btn.reject  { background: #ff3b30; color: #fff; box-shadow: 0 8px 20px rgba(255,59,48,0.3); }
-.phone-incoming-btn.accept  { background: #30d158; color: #fff; box-shadow: 0 8px 20px rgba(48,209,88,0.3); animation: phoneAcceptPulse 2s ease-in-out infinite; }
-.phone-incoming-btn.message { background: rgba(255,255,255,0.1); color: #fff; font-size: 20px; }
+.phone-incoming-btn.reject  { 
+  background: linear-gradient(135deg, #ff4b40, #d92d24); color: #fff; 
+  box-shadow: 0 12px 24px rgba(255,59,48,0.3), inset 0 2px 4px rgba(255,255,255,0.3); 
+}
+.phone-incoming-btn.accept  { 
+  background: linear-gradient(135deg, #34e062, #24b048); color: #fff; 
+  box-shadow: 0 12px 24px rgba(48,209,88,0.3), inset 0 2px 4px rgba(255,255,255,0.3); 
+  animation: phoneAcceptPulse 2s ease-in-out infinite; 
+}
+.phone-incoming-btn.message { 
+  background: rgba(255,255,255,0.15); color: #fff; font-size: 22px; 
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
 
 @keyframes phoneAcceptPulse {
-  0%, 100% { box-shadow: 0 8px 20px rgba(48,209,88,0.3), 0 0 0 0 rgba(48,209,88,0.4); }
-  50%       { box-shadow: 0 8px 20px rgba(48,209,88,0.3), 0 0 0 16px rgba(48,209,88,0); }
+  0%, 100% { box-shadow: 0 12px 24px rgba(48,209,88,0.3), 0 0 0 0 rgba(48,209,88,0.2); }
+  50%       { box-shadow: 0 12px 24px rgba(48,209,88,0.3), 0 0 0 20px rgba(48,209,88,0); }
 }
 
 .phone-incoming-label {
-  font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 12px;
-  text-align: center; font-weight: 600; letter-spacing: 0.5px;
+  font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 14px;
+  text-align: center; font-weight: 700; letter-spacing: 0.5px;
 }
 
 /* ─────────────────────────────────────────────
-   § ACTIVE PHONE CALL VIEW (极简纯黑)
+   § ACTIVE PHONE CALL VIEW (高级深色玻璃拟物)
 ───────────────────────────────────────────── */
 .phone-call-view {
   position: absolute; inset: 0;
-  background: #000000;
+  background: rgba(15, 15, 15, 0.9);
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
   z-index: 9400;
   display: flex; flex-direction: column; align-items: center;
   transform: translateY(100%);
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .phone-call-view.active { transform: translateY(0); }
 
 .phone-call-top {
-  width: 100%; padding: 60px 30px 30px;
+  width: 100%; padding: 70px 30px 20px;
   display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
 }
 .phone-call-avatar {
-  width: 88px; height: 88px; border-radius: 44px;
-  object-fit: cover; border: none; margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(255,255,255,0.05);
+  width: 96px; height: 96px; border-radius: 32px;
+  object-fit: cover; border: none; margin-bottom: 24px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.1);
 }
 .phone-call-avatar-initials {
-  width: 88px; height: 88px; border-radius: 44px;
-  background: #1a1a1a; display: flex; align-items: center; justify-content: center;
-  font-size: 28px; font-weight: 800; color: rgba(255,255,255,0.9);
-  margin-bottom: 20px; font-family: 'Montserrat', sans-serif;
+  width: 96px; height: 96px; border-radius: 32px;
+  background: linear-gradient(135deg, #333, #111); display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 800; color: rgba(255,255,255,0.95);
+  margin-bottom: 24px; font-family: 'Montserrat', sans-serif;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.1);
 }
-.phone-call-name   { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
-.phone-call-status { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.4); margin-top: 8px; letter-spacing: 1px; }
-.phone-call-timer  { font-size: 16px; color: rgba(255,255,255,0.7); font-family: 'Montserrat', monospace; margin-top: 8px; font-weight: 600; letter-spacing: 0.5px;}
+.phone-call-name   { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -0.5px; text-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+.phone-call-status { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.5); margin-top: 8px; letter-spacing: 1px; }
+.phone-call-timer  { font-size: 18px; color: rgba(255,255,255,0.8); font-family: 'Montserrat', monospace; margin-top: 8px; font-weight: 700; letter-spacing: 1px;}
 
 /* Waveform area (极细更柔和的波纹) */
 .phone-waveform-container {
@@ -398,10 +506,12 @@
 }
 .phone-sfx-tag {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-  background: rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 18px;
-  font-size: 12px; color: rgba(255,255,255,0.8);
-  letter-spacing: 0.5px; font-weight: 600; white-space: nowrap;
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.15); border-radius: 20px; padding: 8px 20px;
+  font-size: 13px; color: rgba(255,255,255,0.9);
+  letter-spacing: 0.5px; font-weight: 700; white-space: nowrap;
+  backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
   animation: sfxFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes sfxFadeIn {
@@ -410,13 +520,14 @@
 }
 
 .phone-waveform {
-  display: flex; align-items: center; justify-content: center; gap: 5px; height: 80px;
+  display: flex; align-items: center; justify-content: center; gap: 6px; height: 80px;
 }
 .phone-waveform .bar {
-  width: 3px; background: rgba(255,255,255,0.8); border-radius: 3px;
+  width: 4px; background: rgba(255,255,255,0.9); border-radius: 4px;
   animation: phoneWaveBar 1.4s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(255,255,255,0.3);
 }
-.phone-waveform.idle .bar { animation: none !important; height: 4px !important; opacity: 0.2; }
+.phone-waveform.idle .bar { animation: none !important; height: 6px !important; opacity: 0.2; }
 .phone-waveform .bar:nth-child(1) { animation-delay: 0.0s; }
 .phone-waveform .bar:nth-child(2) { animation-delay: 0.15s; }
 .phone-waveform .bar:nth-child(3) { animation-delay: 0.3s; }
@@ -427,83 +538,100 @@
 .phone-waveform .bar:nth-child(8) { animation-delay: 0.15s; }
 .phone-waveform .bar:nth-child(9) { animation-delay: 0.0s; }
 @keyframes phoneWaveBar {
-  0%, 100% { height: 6px; opacity: 0.3; }
+  0%, 100% { height: 8px; opacity: 0.4; }
   50%       { height: 50px; opacity: 1; }
 }
 
 /* Transcript in call (极简深色对话气泡) */
 .phone-call-transcript {
-  width: 100%; padding: 0 20px; max-height: 180px;
-  overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-top: 16px;
+  width: 100%; padding: 0 24px; max-height: 200px;
+  overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-top: 16px;
 }
 .phone-call-transcript::-webkit-scrollbar { display: none; }
 .phone-transcript-line {
-  font-size: 14px; line-height: 1.6; font-weight: 500;
-  padding: 10px 16px; border-radius: 16px;
-  max-width: 85%; word-break: break-word; letter-spacing: 0.3px;
+  font-size: 15px; line-height: 1.5; font-weight: 600;
+  padding: 12px 18px; border-radius: 20px;
+  max-width: 85%; word-break: break-word; letter-spacing: 0.2px;
 }
 .phone-transcript-line.ai {
-  background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9);
-  align-self: flex-start; border-bottom-left-radius: 4px;
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.95);
+  align-self: flex-start; border-bottom-left-radius: 6px;
+  backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 .phone-transcript-line.user {
-  background: #ffffff; color: #111111;
-  align-self: flex-end; border-bottom-right-radius: 4px; text-align: left;
+  background: rgba(255,255,255,0.9); color: #111111;
+  align-self: flex-end; border-bottom-right-radius: 6px; text-align: left;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 /* Controls grid */
 .phone-controls {
   display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 24px 12px; padding: 24px 30px 16px; width: 100%; flex-shrink: 0;
+  gap: 24px 16px; padding: 20px 30px 10px; width: 100%; flex-shrink: 0;
 }
 .phone-ctrl-item {
-  display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer;
 }
 .phone-ctrl-btn {
-  width: 64px; height: 64px; border-radius: 32px;
-  background: rgba(255,255,255,0.12);
+  width: 68px; height: 68px; border-radius: 34px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.1);
   display: flex; align-items: center; justify-content: center;
-  font-size: 22px; color: #fff; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 24px; color: #fff; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
-.phone-ctrl-btn.active { background: rgba(255,255,255,0.9); color: #111; }
-.phone-ctrl-btn.end    { background: #ff3b30; font-size: 24px; box-shadow: 0 4px 16px rgba(255,59,48,0.3);}
+.phone-ctrl-btn.active { 
+  background: rgba(255,255,255,0.9); color: #111; 
+  box-shadow: 0 8px 20px rgba(255,255,255,0.2);
+}
+.phone-ctrl-btn.end    { 
+  background: linear-gradient(135deg, #ff4b40, #d92d24); font-size: 26px; 
+  box-shadow: 0 10px 24px rgba(255,59,48,0.3), inset 0 2px 4px rgba(255,255,255,0.2);
+  border: none;
+}
 .phone-ctrl-btn:active { transform: scale(0.85); }
 .phone-ctrl-label {
-  font-size: 12px; color: rgba(255,255,255,0.5);
-  font-weight: 600; letter-spacing: 0.5px;
+  font-size: 13px; color: rgba(255,255,255,0.6);
+  font-weight: 700; letter-spacing: 0.5px;
 }
 
 /* Input area */
 .phone-input-area {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 20px 30px; width: 100%; flex-shrink: 0;
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 24px 34px; width: 100%; flex-shrink: 0;
 }
 .phone-input-area input {
-  flex: 1; background: rgba(255,255,255,0.1);
-  border: none; border-radius: 24px;
-  padding: 14px 18px; font-size: 14px; color: #fff; outline: none; font-family: inherit; font-weight: 500;
-  transition: background 0.2s;
+  flex: 1; background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 26px;
+  padding: 14px 20px; font-size: 15px; color: #fff; outline: none; font-family: inherit; font-weight: 500;
+  transition: all 0.3s;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
 }
-.phone-input-area input:focus   { background: rgba(255,255,255,0.15); }
-.phone-input-area input::placeholder { color: rgba(255,255,255,0.3); }
+.phone-input-area input:focus   { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.3); }
+.phone-input-area input::placeholder { color: rgba(255,255,255,0.4); }
 .phone-input-send {
-  width: 44px; height: 44px; background: rgba(255,255,255,0.15); border-radius: 22px;
+  width: 48px; height: 48px; 
+  background: rgba(255,255,255,0.2); border-radius: 24px;
+  backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1);
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 16px; cursor: pointer; flex-shrink: 0; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #fff; font-size: 18px; cursor: pointer; flex-shrink: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
 }
-.phone-input-send:active { transform: scale(0.85); background: rgba(255,255,255,0.25); }
+.phone-input-send:active { transform: scale(0.85); background: rgba(255,255,255,0.3); }
 
 /* ─────────────────────────────────────────────
    § 隐藏未激活的视图
 ───────────────────────────────────────────── */
 .phone-incoming-overlay:not(.active) {
   visibility: hidden;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.5s;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.6s;
 }
 .phone-call-view:not(.active) {
   visibility: hidden;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.5s;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.6s;
 }
 .sms-thread-view:not(.open) {
   visibility: hidden;
@@ -513,7 +641,215 @@
 /* ─── Notification dot on dock icon ─── */
 .dock-notif-dot {
   position: absolute; top: -2px; right: -2px;
-  width: 10px; height: 10px; border-radius: 5px;
-  background: #ff3b30; border: 2px solid #ffffff;
+  width: 12px; height: 12px; border-radius: 6px;
+  background: linear-gradient(135deg, #ff4b40, #d92d24); border: 2px solid #ffffff;
   pointer-events: none;
+  box-shadow: 0 2px 6px rgba(255,59,48,0.4);
 }
+
+/* ============================================
+   PHONE APP - 底部导航与拨号盘 (玻璃拟物风格)
+   ============================================ */
+
+/* 1. 底部悬浮岛导航 */
+.phone-bottom-capsule {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(30px) saturate(200%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    border-radius: 40px;
+    padding: 8px 12px;
+    box-shadow: 
+      0 15px 35px rgba(0,0,0,0.08), 
+      inset 0 2px 5px rgba(255,255,255,0.9);
+    z-index: 1000;
+    border: 1px solid rgba(255,255,255,0.8);
+}
+
+.phone-bottom-capsule .phone-tabs {
+    display: flex;
+    gap: 12px;
+}
+
+.phone-bottom-capsule .phone-tab {
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); /* Q弹动画 */
+}
+
+/* 激活状态：向上跳出悬浮，拟物黑曜石质感 */
+.phone-bottom-capsule .phone-tab.active {
+    background: linear-gradient(135deg, #2a2a2a, #000);
+    color: #ffffff;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.2);
+    transform: translateY(-8px);
+}
+
+.phone-view-content {
+    flex: 1; overflow-y: auto; display: none; background: transparent; position: relative; padding-bottom: 120px;
+}
+.phone-view-content.active { display: flex; }
+
+/* ================================== */
+/* 2. 联系人：探探风照片大卡片滑动 (圆角玻璃卡片) */
+/* ================================== */
+.phone-stack-container {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    padding: 10px 0; 
+    height: 100%;
+    align-items: center;
+    scrollbar-width: none;
+    -ms-overflow-style: none; 
+}
+.phone-stack-container::-webkit-scrollbar { display: none; }
+
+.phone-stack-container::before,
+.phone-stack-container::after {
+    content: '';
+    flex: 0 0 10vw;
+}
+
+.phone-contact-card {
+    flex: 0 0 80vw;
+    height: 68vh;
+    max-height: 600px;
+    background: #ffffff; 
+    border-radius: 40px; 
+    margin: 0 10px;
+    scroll-snap-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15), inset 0 2px 4px rgba(255,255,255,0.8);
+    position: relative; 
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.8);
+    display: block;
+    transform: scale(0.96); 
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.phone-contact-card:active {
+    transform: scale(0.92);
+}
+
+.phone-contact-card .c-avatar {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border-radius: 0;
+    border: none;
+    margin: 0;
+    box-shadow: none;
+    object-fit: cover;
+    z-index: 0;
+}
+
+div.c-avatar { font-size: 80px !important; background: linear-gradient(135deg, #2a2a2a, #111) !important; color: #444 !important; }
+
+.phone-contact-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60%;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 40%, transparent 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.phone-contact-card .c-name { 
+    position: absolute;
+    bottom: 120px; left: 28px; right: 28px;
+    font-size: 34px; font-weight: 800; color: #fff; 
+    letter-spacing: -0.5px; z-index: 2; text-align: left;
+    text-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+.phone-contact-card .c-name i {
+    font-size: 20px !important; margin-left: 8px;
+}
+
+.phone-contact-card .c-num { 
+    position: absolute;
+    bottom: 95px; left: 28px; right: 28px;
+    font-size: 15px; color: rgba(255,255,255,0.9); 
+    font-family: 'Montserrat', sans-serif; letter-spacing: 1px; font-weight: 700; 
+    z-index: 2; text-align: left;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.phone-contact-card > div[style*="font-size:10px"] {
+    position: absolute;
+    bottom: 68px; left: 28px; right: 28px;
+    font-size: 13px !important; color: rgba(255,255,255,0.7) !important; 
+    z-index: 2; text-align: left; margin: 0; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.phone-contact-card .c-actions { 
+    position: absolute;
+    bottom: 28px; left: 0; right: 0;
+    display: flex; gap: 24px; width: 100%; justify-content: center; 
+    z-index: 2;
+}
+
+.phone-contact-card .c-btn {
+    width: 64px; height: 64px; border-radius: 32px; 
+    display: flex; align-items: center; justify-content: center; 
+    font-size: 24px; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+    background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4);
+    color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+.phone-contact-card .c-btn.call { 
+    color: #111; background: rgba(255,255,255,0.95); border-color: #fff; 
+    box-shadow: 0 10px 30px rgba(255,255,255,0.4), inset 0 2px 4px rgba(255,255,255,1); 
+}
+.phone-contact-card .c-btn:active { 
+    transform: scale(0.85); background: rgba(255,255,255,0.5); 
+}
+
+/* ================================== */
+/* 3. 拨号键盘：极简留白风格 (拟物压感) */
+/* ================================== */
+.phone-keypad-display { height: 160px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 20px; position: relative; }
+.phone-dial-number { font-size: 42px; font-weight: 300; font-family: 'Montserrat', sans-serif; color: #1a1a1a; letter-spacing: 3px; min-height: 50px; text-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.phone-match-suggest { font-size: 13px; color: #888; font-weight: 700; min-height: 20px; margin-bottom: 8px; cursor: pointer; letter-spacing: 1px; }
+
+.phone-keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 30px; padding: 0 50px; margin-top: auto; }
+.pk-key {
+    aspect-ratio: 1; background: #ffffff; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 34px; font-weight: 300; color: #1a1a1a; font-family: 'Montserrat', sans-serif;
+    cursor: pointer; transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.04), inset 0 1px 2px rgba(255,255,255,1);
+    border: 1px solid rgba(0,0,0,0.02);
+}
+.pk-key small { font-size: 10px; font-weight: 800; color: #a0a0a0; letter-spacing: 2px; margin-top: 2px; }
+.pk-key:active { 
+    background: #f0f0f0; 
+    transform: scale(0.9); 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02), inset 0 2px 5px rgba(0,0,0,0.05); 
+} /* 激活时强烈的拟物压感 */
+
+.phone-keypad-actions { display: flex; justify-content: space-between; align-items: center; padding: 40px 50px 50px; }
+.pk-call-btn {
+    width: 76px; height: 76px; border-radius: 38px; 
+    background: linear-gradient(135deg, #2a2a2a, #000); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; 
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.2); 
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pk-call-btn:active { transform: scale(0.85); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.pk-del-btn { width: 60px; text-align: center; color: #a0a0a0; font-size: 24px; cursor: pointer; transition: 0.2s;}
+.pk-del-btn:active { color: #1a1a1a; transform: scale(0.85); }

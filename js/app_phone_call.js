@@ -24,6 +24,25 @@ const PhoneCallApp = (() => {
 
   let _callData = { records: [] };
   let _ringtoneHandle = null;
+  let currentNumber = "";
+  
+  // 电话簿结构：号码映射到人设
+  let phoneBookData = {};
+  
+  function loadPhoneBook() {
+      try {
+          let pb = localStorage.getItem('phoneBookData');
+          if(pb) phoneBookData = JSON.parse(pb);
+      } catch(e) {}
+  }
+  
+  function savePhoneBook() {
+      try {
+          localStorage.setItem('phoneBookData', JSON.stringify(phoneBookData));
+      } catch(e) {}
+  }
+  
+  loadPhoneBook();
 
   /* ─── Storage ─── */
   function _load() {
@@ -43,13 +62,254 @@ const PhoneCallApp = (() => {
     const app = document.getElementById('phoneApp');
     if (!app) return;
     app.classList.add('open');
-    _renderHistory();
+    switchTab('contacts'); // 默认打开联系人
   }
 
   function closeDialer() {
     const app = document.getElementById('phoneApp');
     if (app) app.classList.remove('open');
     closeTranscript();
+  }
+  
+  function switchTab(tabId) {
+      document.querySelectorAll('.phone-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.phone-view-content').forEach(v => v.classList.remove('active'));
+      
+      const tabEl = document.querySelector(`.phone-tab[onclick="PhoneCallApp.switchTab('${tabId}')"]`);
+      if(tabEl) tabEl.classList.add('active');
+      
+      const viewEl = document.getElementById(`phone-view-${tabId}`);
+      if(viewEl) viewEl.classList.add('active');
+      
+      if(tabId === 'contacts') renderContacts();
+      if(tabId === 'recents') _renderHistory();
+      if(tabId === 'keypad') {
+          currentNumber = "";
+          const numberInput = document.getElementById('phone-dial-number');
+          if(numberInput) numberInput.innerText = "";
+          suggestMatches("");
+      }
+  }
+  
+  // 生成随机 11 位电话号码
+  function generateRandomPhoneNumber() {
+      const prefix = ['13', '15', '17', '18', '19'][Math.floor(Math.random() * 5)];
+      let num = prefix;
+      for(let i=0; i<9; i++) num += Math.floor(Math.random() * 10);
+      return num;
+  }
+  
+  // 按键输入
+  function typeNum(n) {
+      if(currentNumber.length >= 15) return;
+      currentNumber += n;
+      const numberInput = document.getElementById('phone-dial-number');
+      if(numberInput) {
+          numberInput.innerText = currentNumber;
+          suggestMatches(currentNumber);
+      }
+  }
+  
+  // 删除号码
+  function delNum() {
+      if(currentNumber.length === 0) return;
+      currentNumber = currentNumber.slice(0, -1);
+      const numberInput = document.getElementById('phone-dial-number');
+      if(numberInput) {
+          numberInput.innerText = currentNumber;
+          suggestMatches(currentNumber);
+      }
+  }
+  
+  // 号码匹配建议
+  function suggestMatches(num) {
+      const suggestEl = document.getElementById('phone-match-suggest');
+      if(!suggestEl) return;
+      
+      if(!num) { suggestEl.innerText = ""; return; }
+      
+      // 在微信好友中查找
+      let match = Object.values(friendsData || {}).find(f => 
+          (f.chatSettings && f.chatSettings.phoneNumber && f.chatSettings.phoneNumber.includes(num))
+      );
+      
+      // 在电话簿中查找
+      if(!match) {
+          for(let n in phoneBookData) {
+              if(n.includes(num)) {
+                  match = { realName: phoneBookData[n].name, isUnknown: true, number: n };
+                  break;
+              }
+          }
+      }
+      
+      if(match) {
+          let dispName = match.remark || match.realName || match.name || "未知联系人";
+          suggestEl.innerText = dispName;
+          suggestEl.onclick = () => {
+              currentNumber = match.number || (match.chatSettings && match.chatSettings.phoneNumber);
+              document.getElementById('phone-dial-number').innerText = currentNumber;
+              suggestMatches(currentNumber);
+          };
+      } else {
+          suggestEl.innerText = "";
+          suggestEl.onclick = null;
+      }
+  }
+  
+  // 拨打电话
+  function makeCall() {
+      if(!currentNumber) return;
+      
+      // 检查是否是微信好友
+      let friendId = Object.keys(friendsData || {}).find(id => {
+          let f = friendsData[id];
+          return f.chatSettings && f.chatSettings.phoneNumber === currentNumber;
+      });
+      
+      if(friendId) {
+          callByFriendId(friendId);
+          return;
+      }
+      
+      // 不是微信好友，看看电话簿有没有
+      if(!phoneBookData[currentNumber]) {
+          // 生成随机人设
+          const genders = ['男', '女'];
+          const ages = ['年轻人', '中年人', '老人', '小孩'];
+          const traits = ['暴躁', '温柔', '冷漠', '热情', '神秘', '推销员', '送外卖的', '找错人了', '前任', '暗恋者'];
+          
+          let g = genders[Math.floor(Math.random() * genders.length)];
+          let a = ages[Math.floor(Math.random() * ages.length)];
+          let t = traits[Math.floor(Math.random() * traits.length)];
+          
+          phoneBookData[currentNumber] = {
+              name: `未知号码(${currentNumber.slice(-4)})`,
+              persona: `你是一个${a}${g}，性格${t}。接到一个陌生电话。`,
+              number: currentNumber
+          };
+          savePhoneBook();
+      }
+      
+      _state.isIncoming = false;
+      _state.chatId = null; // 临时角色，不在微信列表里
+      _state.number = currentNumber;
+      _launchCallView(null, currentNumber, phoneBookData[currentNumber]);
+  }
+  
+  // 渲染联系人卡片 (堆叠)
+  function renderContacts() {
+      const container = document.getElementById('phone-contacts-stack');
+      if(!container) return;
+      
+      let html = '';
+      
+      // 微信好友
+      Object.values(friendsData || {}).forEach(f => {
+          if(f.isBlocked) return;
+          let name = f.remark || f.realName;
+          let avatar = f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
+          let num = (f.chatSettings && f.chatSettings.phoneNumber) || "未设置号码";
+          let id = Object.keys(friendsData).find(k => friendsData[k] === f);
+          
+          html += `
+          <div class="phone-contact-card">
+              <img class="c-avatar" src="${avatar}" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=err'">
+              <div class="c-name">${name} <i class="fab fa-weixin" style="color:#07c160;font-size:12px;margin-left:4px;" title="微信好友"></i></div>
+              <div class="c-num">${num}</div>
+              <div class="c-actions">
+                  <div class="c-btn msg" onclick="SMSApp.openWith('${id}')"><i class="fas fa-comment-dots"></i></div>
+                  <div class="c-btn call" onclick="PhoneCallApp.callByFriendId('${id}')"><i class="fas fa-phone"></i></div>
+              </div>
+          </div>
+          `;
+      });
+      
+      // 电话簿里的陌生人
+      Object.values(phoneBookData).forEach(p => {
+          html += `
+          <div class="phone-contact-card" style="background:#f9f9f9;">
+              <div class="c-avatar" style="background:#ddd;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;"><i class="fas fa-user-secret"></i></div>
+              <div class="c-name">${p.name}</div>
+              <div class="c-num">${p.number}</div>
+              <div style="font-size:10px; color:#888; margin-bottom:10px;">${p.persona}</div>
+              <div class="c-actions">
+                  <div class="c-btn edit" onclick="PhoneCallApp.editPersona('${p.number}')" title="修改人设" style="background:#e0e0e0;color:#333;"><i class="fas fa-edit"></i></div>
+                  <div class="c-btn msg" onclick="PhoneCallApp.openWechatInvite('${p.number}')" title="添加微信"><i class="fas fa-user-plus"></i></div>
+                  <div class="c-btn call" onclick="PhoneCallApp.callUnknown('${p.number}')"><i class="fas fa-phone"></i></div>
+              </div>
+          </div>
+          `;
+      });
+      
+      container.innerHTML = html;
+  }
+  
+  function editPersona(number) {
+      const p = phoneBookData[number];
+      if(!p) return;
+      const newPersona = prompt(`修改 ${p.name} 的人设：`, p.persona);
+      if(newPersona !== null && newPersona.trim() !== '') {
+          p.persona = newPersona.trim();
+          savePhoneBook();
+          renderContacts();
+          if(typeof showToast === 'function') showToast("人设已更新");
+      }
+  }
+  
+  function callUnknown(number) {
+      currentNumber = number;
+      makeCall();
+  }
+  
+  // 打开微信添加好友弹窗
+  function openWechatInvite(number) {
+      const p = phoneBookData[number];
+      if(!p) return;
+      
+      const modal = document.getElementById('wechat-invite-modal');
+      if(!modal) return;
+      
+      document.getElementById('wechat-invite-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
+      document.getElementById('wechat-invite-name').innerText = p.name;
+      document.getElementById('wechat-invite-msg').value = `你好，我是刚刚和你通电话的。`;
+      
+      modal._targetNumber = number;
+      modal.classList.add('active');
+  }
+  
+  function sendWechatRequest() {
+      const modal = document.getElementById('wechat-invite-modal');
+      const number = modal._targetNumber;
+      const msg = document.getElementById('wechat-invite-msg').value;
+      const p = phoneBookData[number];
+      
+      if(!p) return;
+      
+      // 自动同意并添加到微信好友
+      const newId = p.name;
+      if(!friendsData[newId]) {
+          friendsData[newId] = {
+              realName: p.name,
+              remark: p.name,
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`,
+              persona: p.persona,
+              greeting: `[通过电话号码搜索添加]\n你好，我是刚刚给你打电话的。`,
+              chatSettings: { phoneNumber: p.number }
+          };
+          
+          // 从电话簿删除
+          delete phoneBookData[number];
+          savePhoneBook();
+          
+          if(typeof saveFriendsData === 'function') saveFriendsData();
+          if(typeof rebuildContactsList === 'function') rebuildContactsList();
+          
+          if(typeof showToast === 'function') showToast("对方已同意好友申请");
+      }
+      
+      modal.classList.remove('active');
+      renderContacts();
   }
 
   function _renderHistory() {
@@ -185,14 +445,24 @@ const PhoneCallApp = (() => {
   }
 
   /* ─── Launch Call View ─── */
-  function _launchCallView(chatId, number) {
+  function _launchCallView(chatId, number, unknownData = null) {
     const view = document.getElementById('phoneCallView');
     if (!view) return;
 
-    const friend   = (typeof friendsData !== 'undefined') ? (friendsData[chatId] || {}) : {};
-    const name     = friend.remark || friend.realName || '未知';
-    const avatar   = friend.avatar || '';
-    const initials = _initials(name);
+    let name = '未知';
+    let avatar = '';
+    let initials = '?';
+    
+    if(unknownData) {
+        name = unknownData.name;
+        _state.unknownData = unknownData;
+    } else {
+        const friend   = (typeof friendsData !== 'undefined') ? (friendsData[chatId] || {}) : {};
+        name     = friend.remark || friend.realName || '未知';
+        avatar   = friend.avatar || '';
+        initials = _initials(name);
+        _state.unknownData = null;
+    }
 
     _state.active       = true;
     _state.chatId       = chatId;
@@ -413,9 +683,17 @@ const PhoneCallApp = (() => {
 
   function _buildPhonePrompt() {
     const chatId = _state.chatId;
-    const friend = (typeof friendsData !== 'undefined') ? (friendsData[chatId] || {}) : {};
-    const aiName    = friend.remark || friend.realName || '对方';
-    const aiPersona = friend.persona || '你是一个真实的人，正在接一通电话。';
+    let aiName = '对方';
+    let aiPersona = '你是一个真实的人，正在接一通电话。';
+    
+    if(_state.unknownData) {
+        aiName = _state.unknownData.name;
+        aiPersona = _state.unknownData.persona;
+    } else {
+        const friend = (typeof friendsData !== 'undefined') ? (friendsData[chatId] || {}) : {};
+        aiName    = friend.remark || friend.realName || '对方';
+        aiPersona = friend.persona || aiPersona;
+    }
 
     const myPersona = (() => {
       if (typeof personasMeta === 'undefined' || typeof currentPersonaId === 'undefined') return '';
@@ -424,6 +702,7 @@ const PhoneCallApp = (() => {
 
     // Recent chat history for context
     let historyCtx = '';
+    const friend = (typeof friendsData !== 'undefined') ? (friendsData[chatId] || {}) : {};
     if (typeof friendsData !== 'undefined' && friend.summaries?.length) {
       historyCtx = friend.summaries.slice(-3).map(s => s.text).join('；');
     }
@@ -533,10 +812,16 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
       const settings = JSON.parse(settingsJSON);
       if (!settings.provider?.startsWith('minimax') || !settings.apiKey) return;
 
-      const friend = (typeof friendsData !== 'undefined') ? (friendsData[_state.chatId] || {}) : {};
-      const cs = friend.chatSettings || {};
-      const voiceId  = cs.voiceId    || 'female-shaonv';
-      const speed    = cs.voiceSpeed || 1.0;
+      let voiceId  = 'female-shaonv';
+      let speed    = 1.0;
+      
+      if(!_state.unknownData) {
+          const friend = (typeof friendsData !== 'undefined') ? (friendsData[_state.chatId] || {}) : {};
+          const cs = friend.chatSettings || {};
+          if(cs.voiceId) voiceId = cs.voiceId;
+          if(cs.voiceSpeed) speed = cs.voiceSpeed;
+      }
+      
       const groupId  = settings.voiceGroupId || settings.groupId || '';
       const isGlobal = settings.provider === 'minimax_global';
       const url = isGlobal
@@ -581,6 +866,8 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
     const duration = _getElapsedStr();
     const savedChatId    = _state.chatId;
     const savedTranscript = _state.transcripts.join('\n');
+    const isUnknown = _state.unknownData !== null;
+    const unknownName = _state.unknownData ? _state.unknownData.name : null;
 
     // Stop timer
     if (_state.timerHandle) { clearInterval(_state.timerHandle); _state.timerHandle = null; }
@@ -594,7 +881,7 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
     if (view) { view.classList.remove('active'); view.innerHTML = ''; }
 
     // Save record
-    _saveRecord({ type: _state.isIncoming ? 'incoming' : 'outgoing', duration, transcript: savedTranscript });
+    _saveRecord({ type: _state.isIncoming ? 'incoming' : 'outgoing', duration, transcript: savedTranscript, name: isUnknown ? unknownName : null });
 
     // Reset state
     _state.active       = false;
@@ -602,9 +889,10 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
     _state.messages     = [];
     _state.transcripts  = [];
     _state.isIncoming   = false;
+    _state.unknownData = null;
 
     // Post-call follow-up in WeChat chat
-    if (savedChatId && typeof sendMessageToAI === 'function') {
+    if (savedChatId && typeof sendMessageToAI === 'function' && !isUnknown) {
       setTimeout(() => {
         sendMessageToAI(
           `[System HIDDEN: A voice phone call just ended. Duration: ${duration}.\n` +
@@ -616,6 +904,7 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
     }
 
     if (typeof showToast === 'function') showToast(`<i class="fas fa-phone"></i> 通话时长 ${duration}`);
+    renderContacts(); // update history in UI
   }
 
   /* ─── Transcript Page ─── */
@@ -627,8 +916,11 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
     const page = document.getElementById('phoneTranscriptPage');
     if (!page) return;
 
-    const friend = (typeof friendsData !== 'undefined') ? (friendsData[rec.chatId] || {}) : {};
-    const name = friend.remark || friend.realName || rec.name || '未知';
+    let name = rec.name || '未知';
+    if(rec.chatId) {
+        const friend = (typeof friendsData !== 'undefined') ? (friendsData[rec.chatId] || {}) : {};
+        name = friend.remark || friend.realName || name;
+    }
 
     const lines = (rec.transcript || '').split('\n').filter(Boolean).map(line => {
       const isMe = line.startsWith('[Me]');
@@ -693,11 +985,17 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
   /* ─── Save Record ─── */
   function _saveRecord(extra = {}) {
     _load();
-    const friend = (typeof friendsData !== 'undefined') ? (friendsData[_state.chatId] || {}) : {};
+    
+    let name = extra.name;
+    if(!name) {
+        const friend = (typeof friendsData !== 'undefined') ? (friendsData[_state.chatId] || {}) : {};
+        name = friend.remark || friend.realName || '未知';
+    }
+    
     _callData.records.push({
       id:     'cr_' + Date.now(),
       chatId: _state.chatId,
-      name:   friend.remark || friend.realName || '未知',
+      name:   name,
       time:   Date.now(),
       ...extra
     });
@@ -752,7 +1050,7 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
   }
 
   function _esc(s) {
-    return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return (s || '').replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"');
   }
 
   /* ─── Public API ─── */
@@ -775,5 +1073,14 @@ ${historyCtx ? `【背景记忆】\n${historyCtx}\n` : ''}
     openTranscript,
     closeTranscript,
     checkForPhoneCallRequest,
+    switchTab,
+    typeNum,
+    delNum,
+    suggestMatches,
+    makeCall,
+    callUnknown,
+    openWechatInvite,
+    sendWechatRequest,
+    editPersona
   };
 })();

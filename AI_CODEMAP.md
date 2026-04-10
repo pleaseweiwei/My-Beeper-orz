@@ -181,10 +181,12 @@
 
 ### JS 加载顺序（来自 `index.html`）
 ```html
+<script src="js/app_battery_notify.js"></script>
 <script src="js/core.js"></script>
+<script src="js/app_imagegen.js"></script>
 <script src="js/apps.js"></script>
-<script src="js/desktop_sort.js"></script>
 <script src="js/app_worldbook.js"></script>
+<script src="js/app_offline_msg.js"></script>
 <script src="js/app_bubble.js"></script>
 <script src="js/app_music.js"></script>
 <script src="js/app_pay.js"></script>
@@ -197,19 +199,17 @@
 <script src="js/app_voice_call.js"></script>
 <script src="js/app_memory.js"></script>
 <script src="js/app_transfer.js"></script>
+<script src="js/app_pat.js"></script>
 <script src="js/app_groupchat.js"></script>
-<script src="js/app_sms.js"></script>
-<script src="js/app_phone_call.js"></script>
 <script src="js/app_galgame.js"></script>
 <script src="js/app_tracker.js"></script>
 <script src="js/app_novel.js"></script>
-<script src="js/app_imagegen.js"></script>
 <script src="js/app_floatpet.js"></script>
+<script src="js/app_sms.js"></script>
+<script src="js/app_phone_call.js"></script>
 <script src="js/app_nexus.js"></script>
 <script src="js/app_favorites.js"></script>
-<script src="js/app_offline_msg.js"></script>
-<script src="js/app_pat.js"></script>
-<script src="js/app_battery_notify.js"></script>
+<script src="js/desktop_sort.js"></script>
 ```
 
 ### 结论

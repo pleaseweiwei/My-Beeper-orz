@@ -9680,6 +9680,30 @@ window.addPresetPromptItem = function() {
     container.appendChild(div);
 }
 
+// 切换预设编辑器的 Tab
+window.switchPresetEditorTab = function(tabName) {
+    const tabBasic = document.getElementById('pe-tab-basic');
+    const tabRegex = document.getElementById('pe-tab-regex');
+    const contentBasic = document.getElementById('pe-content-basic');
+    const contentRegex = document.getElementById('pe-content-regex');
+
+    if (tabBasic) {
+        tabBasic.style.background = tabName === 'basic' ? '#fafafa' : '#f0f0f0';
+        tabBasic.style.color = tabName === 'basic' ? '#222' : '#888';
+        tabBasic.style.borderBottom = tabName === 'basic' ? '1px solid #fafafa' : '1px solid #ebebeb';
+        tabBasic.style.zIndex = tabName === 'basic' ? '2' : '1';
+    }
+    if (tabRegex) {
+        tabRegex.style.background = tabName === 'regex' ? '#fafafa' : '#f0f0f0';
+        tabRegex.style.color = tabName === 'regex' ? '#222' : '#888';
+        tabRegex.style.borderBottom = tabName === 'regex' ? '1px solid #fafafa' : '1px solid #ebebeb';
+        tabRegex.style.zIndex = tabName === 'regex' ? '2' : '1';
+    }
+
+    if (contentBasic) contentBasic.style.display = tabName === 'basic' ? 'block' : 'none';
+    if (contentRegex) contentRegex.style.display = tabName === 'regex' ? 'block' : 'none';
+}
+
 // 修改 openPresetEditor 以支持正则列表和多提示词渲染
 window.openPresetEditor = function(id) {
     let listPane = document.getElementById('preset-list-pane');
@@ -9707,6 +9731,9 @@ window.openPresetEditor = function(id) {
     // 渲染列表
     renderPresetPromptsList(p.prompts || []);
     renderRegexList(p.regexScripts || []);
+    
+    // 默认切换到基础预设 Tab
+    switchPresetEditorTab('basic');
 }
 
 // 修改 savePresetEditor 以保存正则列表和多提示词

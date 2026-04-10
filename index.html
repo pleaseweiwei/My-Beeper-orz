@@ -1273,35 +1273,48 @@
                 </div>
             </div>
             
+            <div style="display: flex; padding: 10px 20px 0; background: #fff; border-bottom: 1px solid #ebebeb; gap: 4px; flex-shrink: 0;">
+                <div id="pe-tab-basic" onclick="switchPresetEditorTab('basic')" style="padding: 10px 20px; background: #fafafa; border: 1px solid #ebebeb; border-bottom: 1px solid #fafafa; border-radius: 12px 12px 0 0; cursor: pointer; font-size: 13px; font-weight: 800; color: #222; margin-bottom: -1px; z-index: 2; transition: 0.2s;">
+                    基础预设
+                </div>
+                <div id="pe-tab-regex" onclick="switchPresetEditorTab('regex')" style="padding: 10px 20px; background: #f0f0f0; border: 1px solid #ebebeb; border-bottom: 1px solid #ebebeb; border-radius: 12px 12px 0 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #888; margin-bottom: -1px; z-index: 1; transition: 0.2s;">
+                    正则脚本
+                </div>
+            </div>
+
             <div style="flex: 1; overflow-y: auto; padding: 20px;">
-                <div class="form-group" style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
-                    <label style="font-size: 11px; color: #888; font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 1px;">PRESET NAME</label>
-                    <input type="text" id="pe-name" style="width: 100%; border: none; border-bottom: 2px solid #eee; padding: 8px 0; font-size: 16px; font-weight: 700; color: #222; outline: none; background: transparent; box-sizing: border-box;" placeholder="输入预设名称...">
+                <div id="pe-content-basic">
+                    <div class="form-group" style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
+                        <label style="font-size: 11px; color: #888; font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 1px;">PRESET NAME</label>
+                        <input type="text" id="pe-name" style="width: 100%; border: none; border-bottom: 2px solid #eee; padding: 8px 0; font-size: 16px; font-weight: 700; color: #222; outline: none; background: transparent; box-sizing: border-box;" placeholder="输入预设名称...">
+                    </div>
+
+                    <!-- 新增：多条目提示词容器 -->
+                    <div style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <label style="font-size: 11px; color: #888; font-weight: 700; letter-spacing: 1px; margin: 0;">提示词条目 (PROMPTS)</label>
+                            <button onclick="addPresetPromptItem()" style="background: #f0f0f0; color: #333; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;"><i class="fas fa-plus"></i> 添加条目</button>
+                        </div>
+                        <div id="pe-prompts-container" style="display: flex; flex-direction: column; gap: 12px;">
+                            <!-- JS 动态插入提示词项 -->
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
+                        <label style="font-size: 11px; color: #888; font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 1px;">JAILBREAK (可选)</label>
+                        <textarea id="pe-jailbreak" rows="3" style="width: 100%; border: 1px solid #eee; border-radius: 12px; padding: 12px; font-size: 13px; color: #444; outline: none; resize: vertical; background: #fafafa; box-sizing: border-box;" placeholder="越狱/前置指令..."></textarea>
+                    </div>
                 </div>
 
-                <!-- 新增：多条目提示词容器 -->
-                <div style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <label style="font-size: 11px; color: #888; font-weight: 700; letter-spacing: 1px; margin: 0;">提示词条目 (PROMPTS)</label>
-                        <button onclick="addPresetPromptItem()" style="background: #f0f0f0; color: #333; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;"><i class="fas fa-plus"></i> 添加条目</button>
-                    </div>
-                    <div id="pe-prompts-container" style="display: flex; flex-direction: column; gap: 12px;">
-                        <!-- JS 动态插入提示词项 -->
-                    </div>
-                </div>
-
-                <div class="form-group" style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px;">
-                    <label style="font-size: 11px; color: #888; font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 1px;">JAILBREAK (可选)</label>
-                    <textarea id="pe-jailbreak" rows="3" style="width: 100%; border: 1px solid #eee; border-radius: 12px; padding: 12px; font-size: 13px; color: #444; outline: none; resize: vertical; background: #fafafa; box-sizing: border-box;" placeholder="越狱/前置指令..."></textarea>
-                </div>
-
-                <div style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <label style="font-size: 11px; color: #888; font-weight: 700; letter-spacing: 1px; margin: 0;">REGEX SCRIPTS</label>
-                        <button onclick="addRegexScriptItem()" style="background: #f0f0f0; color: #333; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;"><i class="fas fa-plus"></i> 添加正则</button>
-                    </div>
-                    <div id="pe-regex-container" style="display: flex; flex-direction: column; gap: 12px;">
-                        <!-- JS 动态插入脚本项 -->
+                <div id="pe-content-regex" style="display: none;">
+                    <div style="background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #ebebeb; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <label style="font-size: 11px; color: #888; font-weight: 700; letter-spacing: 1px; margin: 0;">REGEX SCRIPTS</label>
+                            <button onclick="addRegexScriptItem()" style="background: #f0f0f0; color: #333; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;"><i class="fas fa-plus"></i> 添加正则</button>
+                        </div>
+                        <div id="pe-regex-container" style="display: flex; flex-direction: column; gap: 12px;">
+                            <!-- JS 动态插入脚本项 -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3736,18 +3749,93 @@
 </div>
 
 <!-- ═══════════════════════════════════════════
-     PHONE APP (通话记录)
+     PHONE APP (拨号、通话记录、联系人)
 ═══════════════════════════════════════════ -->
 <div class="app-fullscreen-view" id="phoneApp">
+    <!-- 顶部导航 -->
     <div class="phone-app-header">
+        <i class="fas fa-chevron-down" onclick="PhoneCallApp.closeDialer()" style="font-size:18px;color:#333;cursor:pointer;padding:10px;"></i>
         <div class="phone-app-title">Phone</div>
-        <i class="fas fa-chevron-down" onclick="PhoneCallApp.closeDialer()" style="font-size:18px;color:#555;cursor:pointer;"></i>
+        <div style="width: 38px;"></div>
     </div>
-    <div class="phone-call-records" id="phoneCallHistoryList"></div>
+
+    <!-- 内容区：联系人 (堆叠卡片) -->
+    <div class="phone-view-content active" id="phone-view-contacts">
+        <div class="phone-stack-container" id="phone-contacts-stack"></div>
+    </div>
+
+    <!-- 内容区：近期通话 -->
+    <div class="phone-view-content" id="phone-view-recents">
+        <div class="phone-call-records" id="phoneCallHistoryList"></div>
+    </div>
+
+    <!-- 内容区：拨号键盘 -->
+    <div class="phone-view-content" id="phone-view-keypad" style="flex-direction: column;">
+        <div class="phone-keypad-display">
+            <!-- 匹配到的快捷联系人 -->
+            <div id="phone-match-suggest" class="phone-match-suggest"></div>
+            <div id="phone-dial-number" class="phone-dial-number"></div>
+        </div>
+        <div class="phone-keypad-grid">
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('1')">1<small></small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('2')">2<small>ABC</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('3')">3<small>DEF</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('4')">4<small>GHI</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('5')">5<small>JKL</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('6')">6<small>MNO</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('7')">7<small>PQRS</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('8')">8<small>TUV</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('9')">9<small>WXYZ</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('*')">*</div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('0')">0<small>+</small></div>
+            <div class="pk-key" onclick="PhoneCallApp.typeNum('#')">#</div>
+        </div>
+        <div class="phone-keypad-actions">
+            <div style="width: 60px;"></div>
+            <div class="pk-call-btn" onclick="PhoneCallApp.makeCall()"><i class="fas fa-phone"></i></div>
+            <div class="pk-del-btn" onclick="PhoneCallApp.delNum()"><i class="fas fa-backspace"></i></div>
+        </div>
+    </div>
+
+    <!-- 底部悬浮胶囊 Tab -->
+    <div class="phone-bottom-capsule">
+        <div class="phone-tabs">
+            <span class="phone-tab active" onclick="PhoneCallApp.switchTab('contacts')">
+                <i class="fas fa-address-book"></i>
+            </span>
+            <span class="phone-tab" onclick="PhoneCallApp.switchTab('recents')">
+                <i class="fas fa-history"></i>
+            </span>
+            <span class="phone-tab" onclick="PhoneCallApp.switchTab('keypad')">
+                <i class="fas fa-th"></i>
+            </span>
+        </div>
+    </div>
 
     <!-- 通话记录详情页 -->
     <div class="phone-transcript-page" id="phoneTranscriptPage"></div>
 </div>
+
+<!-- 添加微信好友的弹窗 (电话/短信系统专用) -->
+<div id="wechat-invite-modal" class="modal-overlay" style="z-index: 9999;">
+    <div class="modal-box" style="width: 320px;">
+        <div class="modal-header">
+            <span>添加微信好友</span>
+            <i class="fas fa-times" onclick="document.getElementById('wechat-invite-modal').classList.remove('active')"></i>
+        </div>
+        <div class="modal-body" style="text-align: center; padding: 30px 20px;">
+            <img id="wechat-invite-avatar" src="" style="width: 64px; height: 64px; border-radius: 16px; margin-bottom: 10px; object-fit: cover;">
+            <div id="wechat-invite-name" style="font-size: 16px; font-weight: 700; color: #111; margin-bottom: 5px;">未知联系人</div>
+            <div style="font-size: 12px; color: #888; margin-bottom: 20px;">向对方发送微信好友申请，同意后即可在微信聊天。</div>
+            <textarea id="wechat-invite-msg" rows="2" placeholder="我是..." style="width: 100%; border: 1px solid #eee; border-radius: 12px; padding: 10px; font-size: 13px; background: #fafafa; outline: none;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="document.getElementById('wechat-invite-modal').classList.remove('active')">取消</button>
+            <button class="btn-confirm" onclick="PhoneCallApp.sendWechatRequest()">发送申请</button>
+        </div>
+    </div>
+</div>
+
 
 <!-- ═══════════════════════════════════════════
      全局：来电遮罩 + 通话界面 + SMS Toast

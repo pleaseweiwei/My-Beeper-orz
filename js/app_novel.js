@@ -1095,21 +1095,24 @@ const NovelApp = (() => {
     });
 
     // Long Press for Book Card (Context Menu)
-    var pressTimer;
-    app.addEventListener('touchstart', function(e) {
-      var card = e.target.closest('.novel-book-card');
-      if (card && card.dataset.bookid) {
-        pressTimer = setTimeout(function() {
-          e.preventDefault(); // stop click
-          openNovelContextMenu(card.dataset.bookid);
-        }, 600);
-      }
-    });
-    app.addEventListener('touchend', function() { clearTimeout(pressTimer); });
-    app.addEventListener('touchmove', function() { clearTimeout(pressTimer); });
-    
-    // Delegated clicks
-    app.addEventListener('click', function(e) {
+    if (!app.dataset.globalEventsBound) {
+      app.dataset.globalEventsBound = '1';
+      
+      var pressTimer;
+      app.addEventListener('touchstart', function(e) {
+        var card = e.target.closest('.novel-book-card');
+        if (card && card.dataset.bookid) {
+          pressTimer = setTimeout(function() {
+            e.preventDefault(); // stop click
+            openNovelContextMenu(card.dataset.bookid);
+          }, 600);
+        }
+      });
+      app.addEventListener('touchend', function() { clearTimeout(pressTimer); });
+      app.addEventListener('touchmove', function() { clearTimeout(pressTimer); });
+      
+      // Delegated clicks
+      app.addEventListener('click', function(e) {
       // Context menu right-click simulation for desktop
       var cardRightClick = e.target.closest('.novel-book-card');
       if (e.button === 2 && cardRightClick && cardRightClick.dataset.bookid) {
@@ -1194,14 +1197,15 @@ const NovelApp = (() => {
           var chk = charaItem.querySelector('.novel-chara-check');
           if (chk) chk.classList.toggle('active', state.selectedCharas.indexOf(cid) >= 0);
           
-          if (state.selectedCharas.indexOf(cid) >= 0) {
-              const rect = charaItem.getBoundingClientRect();
-              createParticleEffect(rect.left + rect.width / 2, rect.top + rect.height / 2, '✨');
+            if (state.selectedCharas.indexOf(cid) >= 0) {
+                const rect = charaItem.getBoundingClientRect();
+                createParticleEffect(rect.left + rect.width / 2, rect.top + rect.height / 2, '✨');
+            }
           }
+          return;
         }
-        return;
-      }
-    });
+      });
+    }
 
     // Forum gen btn
     var forumGenBtn = document.getElementById('novel-forum-gen-btn');

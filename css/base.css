@@ -15,7 +15,20 @@
     --radius-sm: 24px;
 }
 
-* { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none;}
+* { 
+    box-sizing: border-box; 
+    user-select: none; 
+    -webkit-tap-highlight-color: transparent; 
+    outline: none;
+    /* Hide scrollbars globally but allow scrolling */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+*::-webkit-scrollbar {
+    display: none;
+}
 
 body {
     margin: 0;
