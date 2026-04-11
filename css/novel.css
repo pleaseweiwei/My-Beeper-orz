@@ -5,22 +5,22 @@
    ═══════════════════════════════════════════════════════════ */
 
 #novelApp {
-  --n-bg: #fafafa;
+  --n-bg: #ffffff;
   --n-surface: #ffffff;
-  --n-surface2: #f4f4f4;
-  --n-surface3: #ebebeb;
-  --n-border-light: #f0f0f0;
-  --n-text1: #1c1c1e;
+  --n-surface2: #f8f9fa;
+  --n-surface3: #f1f3f5;
+  --n-border-light: #eeeeee;
+  --n-text1: #262626;
   --n-text2: #8e8e93;
-  --n-text3: #aeaeb2;
-  --n-accent: #1c1c1e;
-  --n-radius-lg: 16px;   /* Huge bubble panels */
-  --n-radius: 12px;      /* Bubbly cards */
-  --n-radius-sm: 50px;  /* Perfect pills */
-  --n-shadow: 0 12px 40px rgba(0, 0, 0, 0.03);
-  --n-shadow-hover: 0 20px 50px rgba(0, 0, 0, 0.06);
-  --n-glass: rgba(255, 255, 255, 0.85);
-  --n-font-serif: 'Georgia', 'Times New Roman', 'Songti SC', 'Noto Serif SC', serif;
+  --n-text3: #adb5bd;
+  --n-accent: #262626;
+  --n-radius-lg: 12px;
+  --n-radius: 8px;
+  --n-radius-sm: 6px;
+  --n-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --n-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --n-glass: rgba(255, 255, 255, 0.95);
+  --n-font-serif: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 #novelApp {
@@ -148,10 +148,9 @@
 
 .novel-book-card {
   background: var(--n-surface); border-radius: var(--n-radius); overflow: hidden;
-  box-shadow: var(--n-shadow); cursor: pointer; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: none; border: 1px solid var(--n-border-light); cursor: pointer; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex; flex-direction: column; position: relative;
   animation: novelCardEntrance 0.6s cubic-bezier(0.16,1,0.3,1) both;
-  border: none;
 }
 .novel-book-card:nth-child(1) { animation-delay: 0.05s; }
 .novel-book-card:nth-child(2) { animation-delay: 0.1s; }
@@ -222,7 +221,7 @@
 
 /* Filter & Pills */
 .novel-genre-filter {
-  display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin-bottom: 12px;
+  display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; margin-bottom: 12px;
   padding-bottom: 6px; padding-top: 4px; scrollbar-width: none;
   min-width: 0; width: 100%; box-sizing: border-box;
 }
@@ -276,15 +275,15 @@
 
 .novel-gen-panel {
   background: var(--n-surface);
-  border-radius: var(--n-radius-lg);
-  margin-bottom: 20px; overflow: hidden;
-  box-shadow: var(--n-shadow);
+  border-radius: 0 0 var(--n-radius-lg) var(--n-radius-lg);
+  margin: -8px 0 20px 0; overflow: hidden;
+  box-shadow: none; border-bottom: 1px solid var(--n-border-light);
   animation: panelEntrance 0.5s cubic-bezier(0.16,1,0.3,1) both;
 }
 
 .novel-gen-panel-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px; background: var(--n-surface);
+  padding: 12px 16px; background: var(--n-surface);
   font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); color: var(--n-accent);
   letter-spacing: 1px;
 }
@@ -302,59 +301,39 @@
 .novel-gen-card-desc { font-size: 11px; color: var(--n-text2); margin-bottom: 12px; line-height: 1.6; }
 
 /* Trope Display & Gacha */
-.novel-trope-display {
-  min-height: 40px; display: flex; flex-wrap: wrap; gap: 6px;
-  padding: 8px; background: var(--n-surface2); border-radius: var(--n-radius); margin-bottom: 12px;
-  align-items: center; 
+.novel-trope-actions { display: flex; gap: 8px; margin-bottom: 8px; justify-content: flex-end; }
+.novel-trope-gacha-btn {
+  padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer; border: 1px solid var(--n-border-light); transition: all 0.3s ease; background: var(--n-surface); color: var(--n-text1);
 }
-.novel-trope-tag {
-  font-size: 11px; font-weight: 700; padding: 4px 8px; background: var(--n-surface);
-  border-radius: var(--n-radius-sm); color: var(--n-text1); 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-  animation: popIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
-  transition: transform 0.2s; cursor: default;
-}
-.novel-trope-tag:hover { transform: scale(1.05) rotate(-2deg); }
-
-.novel-trope-actions { display: flex; gap: 8px; margin-bottom: 12px; }
-.novel-trope-gacha-btn, .novel-trope-clear-btn {
-  padding: 8px 12px; border-radius: var(--n-radius-sm); font-size: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.3s ease; flex: 1;
-}
-.novel-trope-gacha-btn { background: var(--n-accent); color: #fff; box-shadow: 0 6px 20px rgba(28,28,30,0.2); }
-.novel-trope-clear-btn { background: var(--n-surface2); color: var(--n-text2); }
-.novel-trope-gacha-btn:hover { background: #333; transform: translateY(-3px); box-shadow: 0 8px 25px rgba(28,28,30,0.25); }
-.novel-trope-clear-btn:hover { background: #e5e5e5; color: var(--n-text1); }
+.novel-trope-gacha-btn:hover { background: var(--n-surface2); }
 
 .novel-trope-input {
   width: 100%; background: var(--n-surface2); border: 1px solid transparent;
-  color: var(--n-text1); border-radius: var(--n-radius-sm); padding: 8px 12px; box-sizing: border-box;
-  font-size: 13px; font-weight: 500; font-family: inherit; outline: none; transition: all 0.3s ease;
+  color: var(--n-text1); border-radius: var(--n-radius); padding: 12px; box-sizing: border-box;
+  font-size: 13px; font-weight: 500; font-family: inherit; outline: none; transition: all 0.3s ease; resize: vertical; min-height: 80px;
 }
-.novel-trope-input:focus { background: var(--n-surface); box-shadow: var(--n-shadow); }
+.novel-trope-input:focus { background: var(--n-surface); border-color: var(--n-text1); box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
 
 /* Charas in Gen Panel - Pill Rows */
-.novel-chara-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 8px; }
+.novel-chara-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 8px; margin-bottom: 12px;}
 .novel-chara-item {
-  display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px;
-  border-radius: var(--n-radius-sm); background: var(--n-surface); box-shadow: 0 4px 15px rgba(0,0,0,0.03); cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16,1,0.3,1); border: none;
+  display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px;
+  border-radius: 20px; background: var(--n-surface); border: 1px solid var(--n-border-light); cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1); flex: none; width: fit-content;
 }
-.novel-chara-item:hover { transform: translateX(6px); box-shadow: var(--n-shadow); }
-.novel-chara-item.selected { background: var(--n-text1); transform: scale(1.02); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
-.novel-chara-item.selected .novel-chara-name { color: #fff; }
-.novel-chara-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--n-surface3); display: flex; align-items: center; justify-content: center; color: var(--n-text3); }
-.novel-chara-name { flex: 1; font-size: 13px; font-weight: bold; color: var(--n-text1); transition: 0.3s; }
+.novel-chara-item:hover { background: var(--n-surface2); }
+.novel-chara-item.selected { background: transparent; border-color: var(--n-text1); }
+.novel-chara-item.selected .novel-chara-name { color: var(--n-text1); }
+.novel-chara-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--n-surface3); display: flex; align-items: center; justify-content: center; color: var(--n-text3); }
+.novel-chara-name { font-size: 12px; font-weight: bold; color: var(--n-text1); transition: 0.3s; white-space: nowrap;}
 .novel-chara-check {
-  width: 20px; height: 20px; border-radius: 50%; background: var(--n-surface2);
-  display: flex; align-items: center; justify-content: center; font-size: 10px; color: transparent; /* 默认隐藏勾 */
-  transition: all 0.3s;
-  border: 1px solid rgba(0,0,0,0.1);
+  width: 14px; height: 14px; border-radius: 50%; background: transparent;
+  display: flex; align-items: center; justify-content: center; font-size: 8px; color: transparent;
+  transition: all 0.3s; margin-left: 2px;
 }
 .novel-chara-item.selected .novel-chara-check,
 .novel-chara-check.active { 
-  background: #ffffff; /* 选中后变成白色圆圈 */
-  color: var(--n-text1); /* 打勾变深色 */
-  border-color: #ffffff;
+  color: var(--n-text1);
   animation: popIn 0.3s ease; 
 }
 
@@ -376,22 +355,21 @@
 
 /* Main Button */
 .novel-gen-btn, .novel-gen-main-btn {
-  width: 100%; padding: 10px; border-radius: var(--n-radius-sm);
-  background: var(--n-accent); color: #fff;
+  width: 100%; padding: 12px; border-radius: 24px;
+  background: #222; color: #fff;
   font-size: 14px; font-weight: bold; font-family: var(--n-font-serif); border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: all 0.3s ease; margin-bottom: 20px;
   position: relative; overflow: hidden; letter-spacing: 1px;
-  box-shadow: 0 8px 25px rgba(28,28,30,0.25);
 }
-.novel-gen-btn:hover:not(:disabled) { transform: translateY(-3px); background: #333; box-shadow: 0 12px 30px rgba(28,28,30,0.3); }
+.novel-gen-btn:hover:not(:disabled) { transform: translateY(-2px); background: #000; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
 .novel-gen-btn:active:not(:disabled) { transform: scale(0.98); }
 .novel-gen-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* Write mode */
 .novel-gen-card {
   background: var(--n-surface); border-radius: var(--n-radius-lg); padding: 16px;
-  box-shadow: var(--n-shadow); margin-bottom: 20px;
+  box-shadow: none; border: 1px solid var(--n-border-light); margin-bottom: 20px;
 }
 .novel-write-textarea {
   width: 100%; background: var(--n-surface2); border: none; box-sizing: border-box;

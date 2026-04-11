@@ -218,7 +218,7 @@ const PhoneCallApp = (() => {
               <div class="c-name">${name} <i class="fab fa-weixin" style="color:#07c160;font-size:12px;margin-left:4px;" title="微信好友"></i></div>
               <div class="c-num">${num}</div>
               <div class="c-actions">
-                  <div class="c-btn msg" onclick="SMSApp.openWith('${id}')"><i class="fas fa-comment-dots"></i></div>
+                  <div class="c-btn msg" onclick="PhoneCallApp.closeDialer(); SMSApp.openWith('${id}')"><i class="fas fa-comment-dots"></i></div>
                   <div class="c-btn call" onclick="PhoneCallApp.callByFriendId('${id}')"><i class="fas fa-phone"></i></div>
               </div>
           </div>

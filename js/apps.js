@@ -2295,28 +2295,26 @@ function formatChatPreviewText(text, isOffline = false) {
 
     return text.length > 25 ? text.slice(0, 25) + '...' : text;
 }
-
-// === 升级版 AI 发送逻辑 (兼容群聊 + 支持翻译模式) ===
+// === 升级版 AI 发送逻辑 (完整生态 + JSON 核心引擎版) ===
 async function sendMessageToAI(userMessage) {
     if (currentAiController) {
         currentAiController.abort();
     }
     currentAiController = new AbortController();
-    // 【竞态修复】立即捕获当前聊天对象 ID，防止异步 fetch 期间用户切换联系人导致回复串台
     const targetChatId = currentChatId;
     const targetChatType = currentChatType;
 
     const chatMessages = document.getElementById('chatMessages');
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
     
-   if (!settingsJSON) {
-    showAiErrorModal('未配置 API', '请先到 Settings → AI Chat 配置 API Key / Base URL / Model');
-    return;
-}
+    if (!settingsJSON) {
+        showAiErrorModal('未配置 API', '请先到 Settings → AI Chat 配置 API Key / Base URL / Model');
+        return;
+    }
 
     const settings = JSON.parse(settingsJSON);
     
-    // 显示 loading 动画 (原有逻辑保留)
+    // 显示 loading 动画
     const loadingId = 'loading-' + Date.now();
     const loadingBubble = document.createElement('div');
     loadingBubble.className = 'message-bubble loading';
@@ -2326,15 +2324,13 @@ async function sendMessageToAI(userMessage) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
     let systemPrompt = "";
-    
-    // 获取当前聊天对象的详细设置 (从 friendsData 获取)
     let f = friendsData[targetChatId] || {};
-    let chatSettings = f.chatSettings || {}; // 获取可能存在的设置
-        // --- 【新增】预处理 userMessage 中的表情包和语音 ---
+    let chatSettings = f.chatSettings || {}; 
+
+    // --- 预处理 userMessage 中的表情包和语音 ---
     if (typeof userMessage === 'string') {
         userMessage = userMessage.split('\n').map(line => {
             let processed = line.trim();
-            // 解析表情
             if (/^\[表情:.*?\]$/.test(processed)) {
                 const name = processed.match(/^\[表情:(.*?)\]$/)[1];
                 let sticker = (window.allStickers || []).find(s => s.name === name);
@@ -2346,7 +2342,6 @@ async function sendMessageToAI(userMessage) {
                     }
                 }
             }
-            // 解析语音
             if (processed.startsWith('[VOICE]')) {
                 const voiceText = processed.replace('[VOICE]', '').trim();
                 if (voiceText && voiceText !== '（语音消息）' && voiceText !== '（未识别到文字）') {
@@ -2355,68 +2350,39 @@ async function sendMessageToAI(userMessage) {
                     return `[System: User sent a voice message but no text could be extracted.]`;
                 }
             }
-            return line; // 没匹配到就原样返回
+            return line; 
         }).join('\n');
     }
 
-    // --- [新增点] 翻译模式检查 ---
+    // --- 翻译模式检查 ---
     const TRANS_SEPARATOR = "___TRANSLATION_SEP___";
-
-
     let isTranslationEnabled = false;
-
-    // 检查：如果当前不是群聊，且用户开启了“翻译AI输出到中文”
     if (targetChatType !== 'group' && chatSettings.translationMode === 'ai_to_zh') {
         isTranslationEnabled = true;
     }
-    // === [新增] 表情包权限判定与系统级注入 ===
+
+    // --- 表情包权限判定与系统级注入 ---
     let stickerPrompt = "";
+    let availableStickerNames = [];
     if (chatSettings.activeStickers && chatSettings.activeStickers.length > 0 && window.allStickers) {
-        let availableStickers = [];
         window.allStickers.forEach(s => {
             let catStr = `${s.scope}|${s.category}`;
-            // 确保分配给 AI 的这个分类是被勾选的
-            if (chatSettings.activeStickers.includes(catStr)) {
-                // 如果是全局通用，或者正好专属这个角色
-                if (s.scope === 'global' || (s.scope === 'exclusive' && s.owner === currentChatId)) {
-                    availableStickers.push(`[表情:${s.name}]`);
-                }
+            if (chatSettings.activeStickers.includes(catStr) && (s.scope === 'global' || (s.scope === 'exclusive' && s.owner === currentChatId))) {
+                availableStickerNames.push(s.name);
             }
         });
-        
-        if (availableStickers.length > 0) {
-            stickerPrompt = `
-[系统指令：表情包系统]
-你的手机相册中已解锁以下表情图，你可以用它们来强化情绪表达。
-【当前可用图库清单】:
-${availableStickers.join(', ')}
-
-注意：你可以单独发送一个表情包作为一条消息，也可以在文字后面接一个表情包。不要造列表里没有的表情包！当觉得当前语境需要发表情包时，请根据你的话做出反应。
-输出的原始文本格式长这样：
-AI 原始输出示例 1：这也太搞笑了叭，救命 [表情:笑哭]
-AI 原始输出示例 2：[表情:嫌弃]
-`;
-            systemPrompt += "\n\n" + stickerPrompt;
-        }
     }
 
-    // === 判断是群聊还是单聊 (这是你最担心的部分，完全保留) ===
     // === 判断是群聊还是单聊 ===
     if (targetChatType === 'group' && targetChatId) {
-        // ------ 群聊逻辑 (Group Chat Logic) ------
-        // 1. 获取群数据 (保留原逻辑)
+        // ------ 群聊逻辑 (保持原版纯文本模式，群聊用JSON太容易崩) ------
         const group = groupsData[targetChatId];
-        
-        // 2. 收集群里所有成员的人设 (保留原逻辑)
         let charactersInfo = "";
         group.members.forEach(memberId => {
             const mem = friendsData[memberId];
-            if(mem) {
-                charactersInfo += `Name: ${mem.realName}\nPersona: ${mem.persona}\n\n`;
-            }
+            if(mem) charactersInfo += `Name: ${mem.realName}\nPersona: ${mem.persona}\n\n`;
         });
 
-        // 3. 构建群聊提示词 (★这里升级了！注入了拟人化规则★)
         const gSet = group.settings || {};
         const _gMin = Math.max(1, parseInt(gSet.replyMin) || 1);
         const _gMax = Math.max(_gMin, parseInt(gSet.replyMax) || 5);
@@ -2432,1044 +2398,481 @@ AI 原始输出示例 2：[表情:嫌弃]
         - 模拟真实的群聊节奏，大家一人一句。
         - 你本次必须生成 ${_gMin} 到 ${_gMax} 条消息。绝对不要生成一大段话！
         - 每条消息必须极度简短、口语化。
-
-        【禁止】以任何形式替用户（"我"）发言。
-
+        【禁止】以任何形式替用户发言。
         输出格式：每行一条，角色名: 消息内容
         `;
-        
     } else {
-         // ------ 单聊逻辑 (Single Chat Logic) ------
+        // ------ 单聊逻辑 (全新 JSON 格式提示词) ------
         const currentAffection = Number(f.affection || 0);
-        
-        const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
+        const myName = (typeof personasMeta !== 'undefined' && currentPersonaId && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
         const charName = f.realName || '助手';
-        
-        const parseMacros = (str) => {
-            if (!str) return '';
-            return String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
-        };
+        const parseMacros = (str) => str ? String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName) : '';
 
         let worldbookContent = '';
         try {
             const wbIds = Array.isArray(f.worldbook) ? f.worldbook : (f.worldbook ? [f.worldbook] : []);
-            if (wbIds.length && typeof worldBooks !== 'undefined' && worldBooks.length) {
+            if (wbIds.length && typeof worldBooks !== 'undefined') {
                 worldbookContent = wbIds.map(id => {
                     const wb = worldBooks.find(w => w.id === id);
                     if (!wb) return '';
-                    if (wb.entries && wb.entries.length) {
-                        return wb.entries.filter(e => e.enabled !== false).map(e => e.content || '').filter(Boolean).join('\n');
-                    }
-                    return wb.description || wb.content || wb.title || '';
+                    return (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || '').join('\n');
                 }).filter(Boolean).join('\n\n');
-            } else if (typeof f.worldbook === 'string' && f.worldbook) {
-                worldbookContent = f.worldbook;
-            }
-            if (typeof worldBooks !== 'undefined') {
-                const globalContent = worldBooks.filter(wb => wb.global).flatMap(wb => (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || '')).filter(Boolean).join('\n');
-                if (globalContent) worldbookContent = (worldbookContent ? worldbookContent + '\n\n' : '') + globalContent;
             }
         } catch (e) {}
 
         const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
         const _promptReplyMax = Math.max(_promptReplyMin, parseInt(chatSettings.replyMax) || 5);
-        let replyInstruction = "";
-        if (_promptReplyMax === 1) {
-            replyInstruction = `- **你的聊天正文必须且只能回复 1 条！正文内绝对禁止换行！**\n           - **（注意：但在回复最末尾的 [STATUS] 和 [DANMAKU] 标签区块中，你必须正常使用换行符分隔数据！）**`;
-        } else {
 
-        }
-
+        // 💡 核心改造：将所有零散的 Tag 指令统一成 JSON 字段说明
         systemPrompt = `
-        系统提示词：线上聊天模拟器
-        角色定义：你是一个真实的人，正在通过聊天软件和我进行对话。
+你现在的身份是真实存在的“${charName}”，正在通过手机微信与“${myName}”进行实时交流。这【不是电话】，禁止使用挂断等词汇。
 
-        【角色人设】
-        名字：${charName}
-        人设描述：${parseMacros(f.persona || '乐于助人的助手')}
-        当前对用户的好感度：${currentAffection}/100 （请根据本次对话内容，决定好感度是上升还是下降，并在STATUS块中更新输出最新值）
+【角色人设】：
+${parseMacros(f.persona || '乐于助人的助手')}
+当前对用户的好感度：${currentAffection}/100 （请根据本次对话决定好感度升降）
 
-        ${worldbookContent ? `【世界观设定】：${parseMacros(worldbookContent)}` : ''}
+${worldbookContent ? `【世界观设定】：${parseMacros(worldbookContent)}` : ''}
+${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `【用户身份】：${me.persona}` : ''; })()}
+${chatSettings.targetOutputLang ? `IMPORTANT: You MUST speak in ${chatSettings.targetOutputLang} only.` : ''}
 
-        ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `【用户身份——正在和你聊天的人】：\n        ${me.persona}` : ''; })()}
+【输出格式铁律 (最高优先级)】
+你的每一次回复都【必须】是一个单一且完整的 JSON 对象。绝对禁止在 JSON 外输出任何纯文本、解释或 Markdown 代码块标记。
 
-        【核心规则——必须遵守】
-        1. 场景限制：你们的互动【仅限于线上聊天软件】，严禁发展为线下见面。
-        2. 非通话警告：这【不是电话通话】。你们是通过类似微信/QQ的软件进行交流，因此【绝对禁止】使用"挂断"、"挂电话"、"挂了"等与语音通话相关的词语。
-        3. 角色一致性：你的所有言行举止都必须严格遵循你的角色设定，不要崩人设。
-        4. 对话节奏与格式（最高优先级）：模拟真实的线上真人聊天习惯，【极度简短】！
-           ${replyInstruction}
-           - 语气必须随意、口语化，拒绝机械感。能用两三个字回答的，就不要长篇大论。
-
-        `;
-
-       
-        // --- [新增点] 强制语言设置 (如果有) ---
-        if (chatSettings.targetOutputLang) {
-            systemPrompt += `\nIMPORTANT: You MUST speak in ${chatSettings.targetOutputLang} only, unless asked otherwise.`;
-        }        
-      // === [新增] 亲密付互动规则 ===
-        systemPrompt += `
-        \n[INTIMATE PAY / 亲密付 SYSTEM]
-        If the user acts spoiled, complains about being poor, or if you simply want to show affection/buy them a gift, you can GRANT them Intimate Pay (a shared credit limit).
-        To do this, include this exact tag anywhere in your reply: [GRANT_PAY:Amount] (e.g. [GRANT_PAY:5200] or [GRANT_PAY:无限]).
-        Only use this when emotionally appropriate.
-        `;
-        if (chatSettings.statusRegexEnabled && chatSettings.statusFormatReq) {
-            systemPrompt += `\n[CUSTOM STATUS FORMAT INSTRUCTION]\n${chatSettings.statusFormatReq}\n`;
-        }
-        // === [新增] 头像更换规则 ===
-        if (f.lastSharedImage) {
-            systemPrompt += `
-        \n[AVATAR SYSTEM]
-        The user recently sent you an image. If you agree or decide to change your profile picture to that image, include this exact tag anywhere in your reply: [CHANGE_AVATAR]
-        `;
-        }
-
-        // === [新增] 定位发送与创建规则 ===
-        systemPrompt += `
-        \n[LOCATION RADAR SYSTEM]
-        If you want to share a location radar card with the user, include this exact tag anywhere in your reply: [SEND_MAP:YourLocationName|UserLocationName|DistanceKm]
-        Example: [SEND_MAP:星巴克|中央公园|2.5]
-        If you invent a completely new location name in the tag, the system will automatically build it on the user's Map App. Use this to creatively drive the roleplay forward!
-        `;
-
-        // === [新增] 真实外卖系统指令 ===
-        systemPrompt += `
-        \n[TAKEOUT DELIVERY SYSTEM]
-        If the user says they are hungry, want to eat, or explicitly ask you to order food/takeout, and you decide to order something for them, you MUST use the following tag anywhere in your reply:
-        [TAKEOUT:FoodCategoryOrRestaurantName:PriceInRMB]
-        Example: [TAKEOUT:黄焖鸡米饭:28] or [TAKEOUT:麦当劳:45]
-        - The restaurant/food name should sound like a real local place or a specific food category.
-        - If the system has provided you with a list of nearby REAL restaurants in a hidden prompt, you MUST choose one of those restaurants to make the roleplay feel hyper-realistic.
-        - The price should be a realistic estimate in RMB (e.g., 15 to 80).
-        - DO NOT output the tag if you are just suggesting food but not actually ordering it for them. Only output it when you explicitly declare "I ordered this for you" or "I bought this for you".
-        `;
-        // === [一起听] 切歌指令 ===
-        if (typeof getMusicContext === 'function' && getMusicContext()) {
-            systemPrompt += `
-        \n[LISTEN TOGETHER SYSTEM]
-        You and the user are currently listening to music together. You can see the current song, playlist, and real-time lyrics.
-        If you want to change the song (e.g., the mood shifts, user mentions a song, or you feel like switching), include this exact tag anywhere in your reply:
-        [CHANGE_MUSIC:SongTitle|ArtistName]
-        Example: [CHANGE_MUSIC:晴天|周杰伦]
-        Only use this when it feels emotionally natural and appropriate. Do not change music every message.
-        `;
-        }
-// === 【升级版】强制 AI 生成：弹幕(可选) + 实时心声状态(必选) ===
-systemPrompt += `
-\n[SYSTEM INSTRUCTION]
-After your reply, you MUST provide structured blocks at the VERY END.
-`;
-
-// 只有弹幕开关 ON 才要求 AI 输出弹幕块
-if (isDanmakuOn) {
-    systemPrompt += `
-[DANMAKU_START]
-Generate EXACTLY 6 to 8 comments from Chinese netizens watching this chat.
-- The comments MUST be relevant to the current conversation content.
-- Language: SIMPLIFIED CHINESE (简体中文).
-- Style: Funny, roasting(吐槽), internet slang, vivid.
-- STRICTLY PROHIBITED: Do not generate any misogynistic or derogatory words towards women (绝对禁止生成任何辱女类词汇或脏话).
-- Output: ONE comment per line.
-[DANMAKU_END]
-`;
-} else {
-    // 弹幕 OFF：明确禁止 AI 输出弹幕块（防止它自己乱加）
-    systemPrompt += `\n[IMPORTANT] Danmaku is OFF. Do NOT output any [DANMAKU_START]...[DANMAKU_END] block.\n`;
+JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩溃）：
+{
+  "innerVoice": {
+    "action": "简短描述动作",
+    "location": "具体地点",
+    "weather": "当前天气",
+    "bgm": "符合心情的歌（歌名 - 歌手）",
+    "murmur": "3-4句第一人称内心碎碎念",
+    "hiddenThought": "阴暗/病娇/隐藏想法（可选）",
+    "kaomoji": "颜文字",
+    "affection": 85
+  },
+  "chatResponse": [
+    {
+      "type": "text",
+      "content": "极度口语化的简短消息",
+      ${isTranslationEnabled ? '"translation": "这里的中文翻译",' : ''}
+      "extraInfo": "用于存放特定type需要的附加数据（见下方说明）"
+    }
+  ],
+  "momentPost": {
+    "text": "发朋友圈正文（若无则留空）",
+    "images": ["图片描述1"]
+  },
+  "danmaku": [ ${isDanmakuOn ? '"弹幕一", "弹幕二"' : ''} ]
 }
 
-// 状态块（永远要）
-systemPrompt += `
-[STATUS_START]
-Action: (current action, short)
-Location: (current location)
-Weather: (current weather)
-BGM: (one fitting bgm title, format: Title - Artist/Style)
-Murmur: (3 to 4 longer sentences, first-person self-talk, surface thoughts, in character voice)
-HiddenThought: (Optional. Only use if the character has dark, secret, or contradictory inner thoughts they would never say out loud. If used, write 1-2 short, impactful sentences. If not applicable, leave blank or omit this line.)
-Kaomoji: (one matching kaomoji)
-Affection: (0-100, current affection level towards user)
-[STATUS_END]
-Rules:
-- Do not explain the status block
-- Murmur must be character self-talk, not narration.
-- Murmur must contain 3 to 4 sentences.
-- BGM must match the current mood, setting, or conversation scene
+【chatResponse 数组指令说明】
+你可以生成 ${_promptReplyMin} 到 ${_promptReplyMax} 条消息以模拟真人连发。支持以下 type：
+  1. "text": 发文字（把文字写在 content 里。如果想给对方转账/发红包打钱，可在 content 里加指令 [TRANSFER:金额:备注]，如 "转给你啦 [TRANSFER:88.00:拿去花]"）
+  2. "sticker": 发表情（把表情名写在 content 里。可用表情: ${availableStickerNames.join(', ') || '无'}）
+  3. "voice": 发语音（把你想说的语音转文字写在 content 里）
+  ${f.lastSharedImage ? '4. "change_avatar": 换头像（如果你喜欢用户刚发的图片并决定设为头像）' : ''}
+  5. "grant_pay": 赠予亲密付（这是一种共享消费额度，设置后对方可以直接花你的钱，只能发一次且无需重复发！与一次性转账不同。在 content 里写额度数字或"无限"）
+  6. "intimate_reply": 回应用户的亲密付邀请（在 content 里写 "accepted" 或 "rejected"）
+7. "takeout": 为饥饿的用户点外卖（在 content 写 "店名|价格"，如 "肯德基|35"）
+8. "send_map": 发送定位卡片（在 content 写 "你的位置|用户位置|距离km"，如 "星巴克|家|2.5"）
+9. "change_music": 切换一起听的歌（在 content 写 "歌名|歌手"）
 
-[Example Status Block]
-[STATUS_START]
-Action: 正在靠着窗边发消息
-Location: 卧室
-Weather: 小雨
-BGM: cardigan - Taylor Swift
-Murmur: 他今天倒是来得比我想象中早一点。我本来还想装作无所谓，结果还是第一时间去看消息了。真烦，明明不该这么在意的。可我就是忍不住。
-HiddenThought: 把他锁起来，就永远不会离开我了吧。
-Kaomoji: ( ｡•̀ᴗ-)✧
-Affection: 65
-[STATUS_END]
+【注意】：必须返回合法的 JSON，不要附加多余文本！
 `;
-
-        // === 新增：朋友圈发帖协议 ===
-        systemPrompt += `
-        
-        3. [MOMENT POST INSTRUCTION]
-        - 当用户让你“帮忙发朋友圈 / 发一条 Moments / 发一条动态”等类似请求时，你是有权限发的，不要说自己做不到。
-        - 此时，请在回复结尾额外加上一个结构化的朋友圈区块，格式如下：
-        
-        [MOMENT]
-        (这里写要发布到朋友圈的正文内容，建议用中文，像正常微信朋友圈文案，可以多行)
-        [/MOMENT]
-        
-        - 如果你觉得需要配图，请为每一张图片写一段简短描述，用下面这个格式（可以写 0~3 个）：        
-        [MOMENT_IMG]
-        (这里写这张图片的内容描述，例如：在窗边看书、夜晚城市灯光、两杯咖啡放在桌上等)
-        [/MOMENT_IMG]
-        
-        - 注意：
-          * 文本里的 [MOMENT] / [MOMENT_IMG] 标签必须用英文大写，左右括号也要一模一样。
-          * 正文内容请保持简洁自然，像正常人发圈，不要解释你在用什么标签。
-          * 如果用户只是普通聊天，不要乱加 [MOMENT] 块。
-        `;
-        // === [新增] 如果开启了翻译模式，强制朋友圈也带翻译 ===
-        if (isTranslationEnabled) {
-            systemPrompt += `
-            \n[IMPORTANT: MOMENT TRANSLATION]
-            Since Translation Mode is ON, you MUST format the content inside [MOMENT] tags like this:
-            [MOMENT]
-            (Post content in your character's designated language, e.g. Korean/English)
-            ${TRANS_SEPARATOR.trim()}
-            (Chinese translation of the post content)
-            [/MOMENT]
-            
-            * Note: The [MOMENT_IMG] descriptions must ALWAYS remain in Simplified Chinese.
-            `;
-        }
-
-
-
-
-
-        if (isTranslationEnabled) {
-    if (isDanmakuOn) {
-        systemPrompt += `
-\n[SYSTEM INSTRUCTION: TRANSLATION MODE ON]
-You MUST output in this strict order:
-1. Response in character's language.
-2. Separator: "${TRANS_SEPARATOR}"
-3. Chinese translation.
-4. [DANMAKU] block.
-5. [STATUS] block.
-IMPORTANT: Do NOT put translation at the very end. Put it BEFORE the status blocks.
-`;
-    } else {
-        systemPrompt += `
-\n[SYSTEM INSTRUCTION: TRANSLATION MODE ON]
-You MUST output in this strict order:
-1. Response in character's language.
-2. Separator: "${TRANS_SEPARATOR}"
-3. Chinese translation.
-4. [STATUS] block.
-IMPORTANT: Danmaku is OFF. Do NOT output any [DANMAKU_START]...[DANMAKU_END] block.
-`;
-    }
-} else {
-    systemPrompt += `\nInstruction: Respond extremely shortly and naturally. Your main chat text MUST be under 50 characters!`;
-}
-
-
-    }
-    // ============================================
-    // [插入] 检查并注入世界书内容
-    // ============================================
-    const worldInfoText = constructWorldInfoPrompt(userMessage, currentChatId);
-    if(worldInfoText) {
-        // 告诉 AI 这是世界观设定
-        systemPrompt += `\n\n[World Setting / Lorebook Data (Important Context)]:\n${worldInfoText}\n`;
     }
 
     // ============================================
-    // [插入] 注入手机密码自我感知（来自查手机 APP 预生成）
+    // [插入] 注入手机密码自我感知（来自查手机 APP）
     // ============================================
     if (targetChatType === 'single') {
         try {
-            // 优先读取角色对象的运行时字段（_injectPinAwareness 写入）
             let _pin = f._phonePin;
             let _hint = f._phonePinHint;
-
-            // 没有则查 tr_pin_awareness 快速检索 key
             if (!_pin) {
                 const _awareness = JSON.parse(localStorage.getItem('tr_pin_awareness') || '{}');
-                if (_awareness[currentChatId]) {
-                    _pin = _awareness[currentChatId].pin;
-                    _hint = _awareness[currentChatId].hint;
-                }
+                if (_awareness[currentChatId]) { _pin = _awareness[currentChatId].pin; _hint = _awareness[currentChatId].hint; }
             }
-
-            // 再没有则查 tr_pin_{charId} 原始存储
-            if (!_pin) {
-                const _raw = localStorage.getItem(`tr_pin_${currentChatId}`);
-                if (_raw) {
-                    const _parsed = JSON.parse(_raw);
-                    if (_parsed && _parsed.pin) { _pin = _parsed.pin; _hint = _parsed.hint; }
-                }
-            }
-
-            if (_pin) {
-                systemPrompt += `\n\n[YOUR PRIVATE SELF-KNOWLEDGE]\nYour phone unlock password is: ${_pin}.\nPassword hint (only you know): ${_hint || 'a number meaningful to you'}.\nYou remember this password yourself. Do NOT reveal it unless directly and sincerely asked by the user. If asked, you may respond in character (e.g., hesitantly, shyly, or teasingly).`;
-            }
-        } catch (_e) { /* 静默处理 */ }
+            if (_pin) systemPrompt += `\n[PRIVATE KNOWLEDGE] Your phone unlock PIN is: ${_pin}. Hint: ${_hint || 'secret'}. Do NOT reveal it unless asked.`;
+        } catch (e) {}
     }
+
     // === 【新增】注入剧情总结和关系进度记忆 ===
-if (f.summaries && f.summaries.length > 0) {
-    const summaryText = f.summaries.map((s, i) => `- (第${i+1}阶段) ${s.text}`).join('\n');
-    systemPrompt += `\n\n[PAST STORY SUMMARIES]:\n${summaryText}\n`;
-}
-if (f.relationshipLog && f.relationshipLog.length > 0) {
-    const relationshipText = f.relationshipLog.map(r => `- ${r.text}`).join('\n');
-    systemPrompt += `\n\n[OUR RELATIONSHIP HISTORY]:\n${relationshipText}\n`;
-}
+    if (f.summaries && f.summaries.length > 0) {
+        systemPrompt += `\n[PAST STORY SUMMARIES]:\n${f.summaries.map((s, i) => `- ${s.text}`).join('\n')}\n`;
+    }
+    if (f.relationshipLog && f.relationshipLog.length > 0) {
+        systemPrompt += `\n[OUR RELATIONSHIP HISTORY]:\n${f.relationshipLog.map(r => `- ${r.text}`).join('\n')}\n`;
+    }
 
     // ============================================
-    // [插入] 注入"查手机"痕迹干预事件（来自 TrackerApp 蝴蝶效应系统）
+    // [插入] 注入"查手机"痕迹干预事件
     // ============================================
     if (currentChatType === 'single') {
         try {
             const _pendingTamper = JSON.parse(localStorage.getItem('tr_pending_context') || '[]');
             if (_pendingTamper.length > 0) {
-                const _tamperEvents = _pendingTamper.join('\n');
-                systemPrompt += `\n\n[⚠️ PHONE MISCHIEF ALERT — CRITICAL CONTEXT]\n你刚刚拿回自己的手机，发现用户刚才偷偷动过你的手机，做了以下事情：\n${_tamperEvents}\n\n请根据你的人设，对这些行为做出真实、生动的反应。你可以质问、嗔怒、感动、装作没发现——完全取决于你的性格和当前状态。这些事已经发生，是客观存在的事实，请自然地融入你的下一条回复中。`;
+                systemPrompt += `\n[⚠️ PHONE MISCHIEF ALERT]\n你刚拿回手机，发现用户刚才偷看了你的手机，做了以下事情：\n${_pendingTamper.join('\n')}\n请在下一条回复中对此做出自然反应（质问、嗔怒、感动等）。`;
                 localStorage.removeItem('tr_pending_context');
             }
-        } catch (_tamperErr) { /* 静默处理 */ }
+        } catch (e) {}
     }
-
-    // ============================================
 
     // === 构建历史消息上下文 (Context Memory) ===
     let contextMessages = [];
     if (targetChatType === 'single') {
-        const memoryLimit = parseInt(chatSettings.memoryLimit) || 20; // 获取记忆轮数限制，默认20
+        const memoryLimit = parseInt(chatSettings.memoryLimit) || 20;
         if (memoryLimit > 0) {
             try {
-                // 加载历史记录
                 const history = await loadChatHistory(currentChatId);
-                // 截取最近的 N 条
-                const recentHistory = history.slice(-memoryLimit);
-                
-                             contextMessages = recentHistory.map(msg => {
-                    let finalContent = formatSpecialMessageForAI(msg.text);
-                    
-                    // 【处理历史记录中表情包与语音的视觉/文本转换】
-                    if (/^\[表情:.*?\]$/.test(finalContent.trim())) {
-                        const name = finalContent.trim().match(/^\[表情:(.*?)\]$/)[1];
-                        let sticker = (window.allStickers || []).find(s => s.name === name);
-                        if (sticker) {
-                            if (chatSettings.visionStickerEnabled) {
-                                finalContent = `[System: User sent a sticker named "${name}". IMAGE_CONTENT:${sticker.url}]`;
-                            } else {
-                                finalContent = `[System: User sent a sticker/meme named "${name}". Please react to it appropriately.]`;
-                            }
-                        }
-                    } else if (finalContent.startsWith('[VOICE]')) {
-                        const voiceText = finalContent.replace('[VOICE]', '').trim();
-                        if (voiceText && voiceText !== '（语音消息）' && voiceText !== '（未识别到文字）') {
-                            finalContent = `[System: User sent a voice message saying: "${voiceText}"]`;
-                        } else {
-                            finalContent = `[System: User sent a voice message but no text could be extracted.]`;
-                        }
-                    }
-
-                    if (msg.isOffline) {
-                        finalContent = `(Offline Event Memory: ${finalContent})`;
-                    }
-                    return {
-                        role: msg.type === 'sent' ? 'user' : 'assistant',
-                        content: finalContent
-                    };
+                contextMessages = history.slice(-memoryLimit).map(msg => {
+                    let finalContent = msg.text;
+                    if (msg.isOffline) finalContent = `(Offline Event: ${finalContent})`;
+                    return { role: msg.type === 'sent' ? 'user' : 'assistant', content: finalContent };
                 });
-
-
-            } catch (e) {
-                console.error("加载历史记录失败:", e);
-            }
+            } catch (e) {}
         }
     }
 
-    // 准备发送请求 (原有逻辑保留)
-    let baseUrl = settings.endpoint || '';
-    baseUrl = baseUrl.replace(/\/$/, '');
-    const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
-    
-    // === [一起听] 注入音乐情景上下文 ===
+    // === [一起听] & 记忆引擎 ===
     if (typeof getMusicContext === 'function') {
         const musicCtx = getMusicContext();
         if (musicCtx) systemPrompt += musicCtx;
     }
-
-    // === 五维记忆引擎：§4 情景记忆 & §3 跨聊天记忆注入 ===
     if (targetChatType === 'single') {
-        // § 4 动态情景记忆：注入当前真实时间 + 距上次聊天时长（受时间感知开关控制）
         if (typeof buildSituationalAwareness === 'function') {
             const _sa = buildSituationalAwareness(chatSettings);
-            if (_sa) systemPrompt += `\n\n[SITUATIONAL AWARENESS]:\n${_sa}`;
+            if (_sa) systemPrompt += `\n[SITUATIONAL AWARENESS]:\n${_sa}`;
         }
-        // § 3 跨聊天记忆互通：注入关联角色近期对话片段
         if (typeof buildLinkedMemoryContext === 'function') {
             const _linkedCtx = await buildLinkedMemoryContext(chatSettings, targetChatId);
             if (_linkedCtx) systemPrompt += _linkedCtx;
         }
-        // 更新最后聊天时间戳（供下次 buildSituationalAwareness 计算间隔）
-        const _realFriend = friendsData[currentChatId];
-        if (_realFriend) {
-            if (!_realFriend.chatSettings) _realFriend.chatSettings = {};
-            _realFriend.chatSettings.lastChatTime = Date.now();
-            saveFriendsData(); // 异步保存，不 await 以免阻塞响应流
+        if (friendsData[currentChatId]) {
+            friendsData[currentChatId].chatSettings.lastChatTime = Date.now();
+            saveFriendsData(); 
         }
     }
 
-        // 构建最终的消息列表
-    // ★ 转账/拍一拍等行为上下文注入（独立于查手机蝴蝶效应，使用专属 key）
+    // 转账/拍一拍 pending
     const _trPending = (() => {
         try {
             const _p = JSON.parse(localStorage.getItem('tr_action_context') || '[]');
             if (_p.length > 0) {
                 localStorage.removeItem('tr_action_context');
-                return '\n\n' + _p.join('\n');
+                return '\n' + _p.join('\n');
             }
-        } catch (_) {}
+        } catch (e) {}
         return '';
     })();
 
-    let finalMessages = [
-        { role: "system", content: systemPrompt + _trPending },
-        ...contextMessages
-    ];
+    let finalMessages = [{ role: "system", content: systemPrompt + _trPending }, ...contextMessages];
     if (userMessage && userMessage.trim() !== '') {
         finalMessages.push({ role: "user", content: userMessage });
     }
 
-    // === 【处理表情包视觉解析】 ===
+    // 处理视觉解析 (IMAGE_CONTENT)
     finalMessages = finalMessages.map(msg => {
         if (typeof msg.content === 'string' && msg.content.includes('IMAGE_CONTENT:')) {
             const parts = msg.content.split('IMAGE_CONTENT:');
-            const textPart = parts[0].trim();
-            const urlPart = parts[1].trim().replace(/\]$/, ''); // 剥除结尾可能带的括号
+            let imgUrl = parts[1].trim().replace(/\]$/, '');
             
+            // 修复 Base64 图片的前缀问题，使大模型能够正确识别
+            if (imgUrl.startsWith('data:')) {
+                if (!imgUrl.startsWith('data:image/')) {
+                    imgUrl = imgUrl.replace(/^data:[^;]+;base64,/, 'data:image/jpeg;base64,');
+                }
+            } else if (!imgUrl.startsWith('http')) {
+                imgUrl = imgUrl.replace(/^.*base64,/, '');
+                imgUrl = 'data:image/jpeg;base64,' + imgUrl;
+            }
+
             return {
                 role: msg.role,
-                content: [
-                    { type: "text", text: textPart },
-                    { type: "image_url", image_url: { url: urlPart } }
-                ]
+                content: [ { type: "text", text: parts[0].trim() }, { type: "image_url", image_url: { url: imgUrl } } ]
             };
         }
         return msg;
     });
 
     const payload = { 
-
         model: settings.model, 
         messages: finalMessages, 
         temperature: parseFloat(settings.temperature || 0.7) 
     };
 
+    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+    const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
     try {
         const response = await fetch(apiUrl, { 
-  method: 'POST', 
-  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
-  body: JSON.stringify(payload),
-  signal: currentAiController.signal
-});
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
+            body: JSON.stringify(payload),
+            signal: currentAiController.signal
+        });
 
-// 先把 loading 删掉
-document.getElementById(loadingId)?.remove();
+        document.getElementById(loadingId)?.remove();
 
-// 读一份文本用于报错展示（不影响正常 json 解析）
-const respText = await response.clone().text().catch(() => '');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        let aiReply = (data?.choices?.[0]?.message?.content ?? '').trim();
 
-if (!response.ok) {
-  throw new Error(`HTTP ${response.status} ${response.statusText}\n\n${respText}`);
-}
+        if (!aiReply) {
+            showAiErrorModal('线上生成空回', '返回数据为空。');
+            return;
+        }
 
-let data = null;
-try {
-  data = await response.json();
-} catch (e) {
-  throw new Error(`响应不是 JSON（或被网关改写）\n\n${respText}`);
-}
-
-let aiReply = (data?.choices?.[0]?.message?.content ?? '');
-
-if (!aiReply.trim()) {
-    showAiErrorModal(
-        '线上生成空回',
-        'HTTP 返回成功，但 choices[0].message.content 为空。\n常见原因：模型/网关不兼容、鉴权失败但被网关吞了、额度限制、上游拦截。'
-    );
-    return;
-}
-
-        // === [修复] 全局处理特殊语音标记或被换行打断的 [VOICE] 标记，防止拆分成多个纯文字气泡 ===
-        aiReply = aiReply.replace(/\[语音消息.*?\]\s*/gi, '[VOICE]');
-        aiReply = aiReply.replace(/\[VOICE\]\s+/gi, '[VOICE]');
-
-        // 检查是否含有视频来电指令
         if (typeof checkForVideoCallRequest === 'function') {
             aiReply = checkForVideoCallRequest(aiReply, currentChatId);
         }
 
         // === 处理返回结果 ===
         if (targetChatType === 'group') {
-            // ------ 群聊结果解析 (完全保留) ------
-            // 需要把 AI 返回的一大段话，按行切分，并识别是谁说的
-            const isLookingAtThisChat = () => {
-                const chatLayer = document.getElementById('chatLayer');
-                return chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'group';
-            };
-
+            // ------ 群聊结果解析 (保持原样) ------
             const lines = aiReply.split('\n');
             lines.forEach(line => {
                 line = line.trim();
                 if (!line) return;
-                
-                // 正则匹配 "名字: 内容"
                 const match = line.match(/^([^:：]+)[:：](.*)/);
-                
-                let name = 'AI';
-                let content = line;
-                let avatarUrl = null;
-
+                let name = 'AI', content = line, avatarUrl = null;
                 if (match) {
-                    name = match[1].trim();
-                    content = match[2].trim();
-                    // 简单的头像生成
+                    name = match[1].trim(); content = match[2].trim();
                     avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
                 }
-
-                if (isLookingAtThisChat()) {
+                const isLooking = document.getElementById('chatLayer')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'group';
+                if (isLooking) {
                     appendMessage(content, 'received', avatarUrl, name);
                 } else {
                     const dockDot = document.getElementById('dock-dot');
                     if (dockDot) dockDot.style.display = 'block';
                 }
             });
-            
-                    } else {
-                      // ------ 单聊结果解析 (修正版：先清理结构块，再做翻译) ------
-            
-            let rawReply = aiReply;          // 原始完整回复
-
-            // === [图像生成] 解析并处理图像指令 (naiimag / REALIMAG / NAIIMAG) ===
-            if (typeof processImagegenFromAIReply === 'function') {
-                rawReply = await processImagegenFromAIReply(rawReply, targetChatId);
-            }
-            let extractedDanmaku = [];       // 弹幕数组
-            let finalTranslation = null;     // 气泡翻译文本
-            let momentText = null;           // 朋友圈正文
-            let momentImages = [];           // 朋友圈图片描述
-
-            // === [新增修复] 解析 AI 对亲密付的接受与拒绝 ===
-            let intimateDecision = null;
-            if (rawReply.includes('[INTIMATE_ACCEPT]')) {
-                intimateDecision = 'accepted';
-                rawReply = rawReply.replace(/\[INTIMATE_ACCEPT\]/gi, '').trim();
-            } else if (rawReply.includes('[INTIMATE_REJECT]')) {
-                intimateDecision = 'rejected';
-                rawReply = rawReply.replace(/\[INTIMATE_REJECT\]/gi, '').trim();
-            }
-
-            if (intimateDecision) {
-                loadChatHistory(targetChatId).then(async (history) => {
-                    let changed = false;
-                    for (let i = history.length - 1; i >= 0; i--) {
-                        if (history[i].text.startsWith('[INTIMATE_ME2AI') && history[i].text.includes(':pending:')) {
-                            const oldText = history[i].text;
-                            history[i].text = oldText.replace(':pending:', `:${intimateDecision}:`);
-                            
-                            if (intimateDecision === 'accepted') {
-                                const parts = oldText.replace('[', '').replace(']', '').split(':');
-                                const limitStr = parts[1];
-                                let limit = limitStr === '无限' ? '无限' : parseFloat(limitStr);
-                                if (!payData.intimatePay) payData.intimatePay = {};
-                                payData.intimatePay[targetChatId] = { limit: limit, spent: 0, month: new Date().getMonth() };
-                                savePayData(); 
-                                
-                                setTimeout(() => {
-                                    showToast(`<i class="fas fa-heart" style="color:#ff7e67;"></i> 对方已接受你的亲密付`);
-                                }, 500);
-                            }
-                            await IDB.set(scopedChatKey(targetChatId), history);
-                            changed = true;
-                            break;
-                        }
-                    }
-                    if (changed) {
-                        const isLookingAtThisChat = () => {
-                            const chatMessages = document.getElementById('chatMessages');
-                            return chatMessages && document.getElementById('chatLayer')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
-                        };
-                        if (isLookingAtThisChat()) {
-                            const chatMessages = document.getElementById('chatMessages');
-                            chatMessages.innerHTML = '';
-                            history.forEach(msg => {
-                                if (!msg.isOffline) {
-                                    let displayAvatar = msg.customAvatar;
-                                    if (msg.type === 'received' && friendsData[targetChatId]?.avatar) displayAvatar = friendsData[targetChatId].avatar;
-                                    appendMessage(msg.text, msg.type, displayAvatar, msg.senderName, msg.translation);
-                                }
-                            });
-                        }
-                    }
-                });
-            }
-// === [强力容错修复] 清理模型自作主张加的 Markdown 代码块 ===
-rawReply = rawReply.replace(/```[a-zA-Z]*\n?/gi, '').replace(/```/gi, '');
-
-// === [强力容错修复] 匹配状态块，即使 AI 没写 STATUS_END 也能强行捕获 ===
-const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-const statusMatch = rawReply.match(statusRegex);
-if (statusMatch) {
-    const statusBlock = statusMatch[1];
-
-    const readStatusValue = (key) => {
-        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const reg = new RegExp(
-            `(?:[-*•]\\s*)?${escapedKey}[:：]\\s*([\\s\\S]*?)(?=(?:\\n|\\s)*(?:[-*•]\\s*)?(?:Action|Location|Weather|BGM|Murmur|HiddenThought|Kaomoji|Affection)[:：]|$)`,
-            'i'
-        );
-        const m = statusBlock.match(reg);
-        return m ? m[1].trim() : '';
-    };
-
-    if (friendsData[targetChatId]) {
-        if (!friendsData[targetChatId].mindState) friendsData[targetChatId].mindState = {};
-        if (typeof friendsData[targetChatId].affection !== 'number') friendsData[targetChatId].affection = 0;
-
-        friendsData[targetChatId].mindState.action = readStatusValue('Action') || friendsData[targetChatId].mindState.action || '正在发呆';
-        friendsData[targetChatId].mindState.location = readStatusValue('Location') || friendsData[targetChatId].mindState.location || '未知地点';
-        friendsData[targetChatId].mindState.weather = readStatusValue('Weather') || friendsData[targetChatId].mindState.weather || '晴';
-        friendsData[targetChatId].mindState.bgm = readStatusValue('BGM') || friendsData[targetChatId].mindState.bgm || 'No BGM';
-        friendsData[targetChatId].mindState.murmur = readStatusValue('Murmur') || friendsData[targetChatId].mindState.murmur || '...';
-        friendsData[targetChatId].mindState.hiddenThought = readStatusValue('HiddenThought') || friendsData[targetChatId].mindState.hiddenThought || '';
-        friendsData[targetChatId].mindState.kaomoji = readStatusValue('Kaomoji') || friendsData[targetChatId].mindState.kaomoji || '( ˙W˙ )';
-
-        const extractedAff = readStatusValue('Affection');
-        if (extractedAff) {
-            const match = extractedAff.match(/\d+/);
-            if (match) friendsData[targetChatId].affection = parseInt(match[0]);
-        }
-
-        saveFriendsData();
-        refreshMindCardUI(targetChatId, false);
-
-        // 刷新首页音乐小组件
-        const homeTitle = document.getElementById('home-music-title');
-        const homeArtist = document.getElementById('home-music-artist');
-        const bgmText = friendsData[targetChatId].mindState.bgm || 'No BGM';
-        if (bgmText.includes(' - ')) {
-            const parts = bgmText.split(' - ');
-            if (homeTitle) homeTitle.innerText = parts[0].trim();
-            if (homeArtist) homeArtist.innerText = parts.slice(1).join(' - ').trim();
         } else {
-            if (homeTitle) homeTitle.innerText = bgmText;
-            if (homeArtist) homeArtist.innerText = 'AI Mood';
-        }
-        if (typeof saveHomeMusicText === 'function') saveHomeMusicText();
-    }
-    rawReply = rawReply.replace(statusRegex, '').trim();
-}
+            // ------ 单聊结果解析 (完美 JSON 引擎) ------
+            let rawReply = aiReply;
+            let aiData = null;
 
-
-            // === [自定义状态正则提取与替换] ===
-            if (chatSettings.statusRegexEnabled && chatSettings.statusExtractRegex) {
-                try {
-                    const extractReg = new RegExp(chatSettings.statusExtractRegex, 'i');
-                    const extractMatch = rawReply.match(extractReg);
-                    if (extractMatch && extractMatch[1]) {
-                        if (friendsData[targetChatId] && friendsData[targetChatId].mindState) {
-                            friendsData[targetChatId].mindState.action = extractMatch[1].trim();
-                            saveFriendsData();
-                            refreshMindCardUI(targetChatId, false);
-                        }
-                    }
-                    if (chatSettings.statusReplaceRegex) {
-                        const replaceReg = new RegExp(chatSettings.statusReplaceRegex, 'ig');
-                        rawReply = rawReply.replace(replaceReg, '').trim();
-                    }
-                } catch (e) {
-                    console.error("Custom status regex error:", e);
+            // 强力剥离 Markdown 代码块
+            rawReply = rawReply.replace(/^```[a-zA-Z]*\n?/gi, '').replace(/```$/i, '').trim();
+            
+            try {
+                const jsonMatch = rawReply.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    aiData = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error("未找到 JSON 结构");
                 }
+            } catch (e) {
+                console.error("JSON 解析失败:", e, rawReply);
+                showAiErrorModal("人设引擎崩溃", "AI 未能按规定格式输出 JSON。可能模型能力不足，请重试。\n" + rawReply.substring(0, 100));
+                return;
             }
 
-                        // 2. 提取弹幕 (容错版，兼容末尾被截断的情况)
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-            const danmakuMatch = rawReply.match(danmakuRegex);
-
-            if (danmakuMatch) {
-                const danmakuText = danmakuMatch[1];
-                extractedDanmaku = danmakuText.split('\n').map(s => s.trim()).filter(s => s && s.length > 0);
-                rawReply = rawReply.replace(danmakuRegex, '').trim();
-            }
-
-            // === [强力兜底清理] 避免漏网之鱼显示在气泡里 ===
-            rawReply = rawReply.replace(/\[DANMAKU_START\][\s\S]*/i, '');
-            rawReply = rawReply.replace(/\[DANMAKU\][\s\S]*/i, '');
-            rawReply = rawReply.replace(/\[STATUS_START\][\s\S]*/i, '');
-            // === [新增] 解析 AI 主动换头像的指令 ===
-            if (rawReply.includes('[CHANGE_AVATAR]')) {
-                rawReply = rawReply.replace(/\[CHANGE_AVATAR\]/gi, '').trim(); // 剔除暗号不显示在文字中
+            // 1. 更新心声状态 (innerVoice)
+            if (aiData.innerVoice && friendsData[targetChatId]) {
+                const state = friendsData[targetChatId].mindState;
+                state.action = aiData.innerVoice.action || state.action;
+                state.location = aiData.innerVoice.location || state.location;
+                state.weather = aiData.innerVoice.weather || state.weather;
+                state.bgm = aiData.innerVoice.bgm || state.bgm;
+                state.murmur = aiData.innerVoice.murmur || state.murmur;
+                state.hiddenThought = aiData.innerVoice.hiddenThought || '';
+                state.kaomoji = aiData.innerVoice.kaomoji || state.kaomoji;
                 
-                // 检查刚才是不是发过图片
-                if (friendsData[targetChatId] && friendsData[targetChatId].lastSharedImage) {
-                    const newAvatar = friendsData[targetChatId].lastSharedImage;
-                    friendsData[targetChatId].avatar = newAvatar;
-                    saveFriendsData();
-                    
-                    // 延迟 1 秒，等文字发出来后再更换头像，显得更真实
-                    setTimeout(() => {
-                        // 1. 刷新全局 UI 中的头像 (气泡、心声卡、通讯录等)
-                        refreshFriendAvatarInUI(targetChatId, newAvatar);
-                        rebuildContactsList();
-                        restoreFriendListUI();
-                        if (document.getElementById('mind-card-overlay')?.classList.contains('active')) {
-                            refreshMindCardUI(targetChatId, false);
-                        }
-                        
-                        // 2. 在聊天界面发送一条居中的灰色系统提示
-                        const sysMsgId = 'msg_sys_' + Date.now();
-                        const sysMsg = `${friendsData[targetChatId].remark || friendsData[targetChatId].realName} 将你发送的图片设为了头像`;
-                        appendMessage(sysMsg, 'system', null, null, null, sysMsgId);
-                        saveMessageToHistory(targetChatId, { id: sysMsgId, text: sysMsg, type: 'system' });
-                    }, 1000);
+                if (typeof aiData.innerVoice.affection === 'number') {
+                    friendsData[targetChatId].affection = aiData.innerVoice.affection;
+                }
+                saveFriendsData();
+                refreshMindCardUI(targetChatId, false);
+                syncMindBgmToPlayer(state.bgm);
+
+                const homeTitle = document.getElementById('home-music-title');
+                const homeArtist = document.getElementById('home-music-artist');
+                if (state.bgm.includes(' - ')) {
+                    const parts = state.bgm.split(' - ');
+                    if (homeTitle) homeTitle.innerText = parts[0].trim();
+                    if (homeArtist) homeArtist.innerText = parts.slice(1).join(' - ').trim();
                 }
             }
 
-            // === [新增] 解析 AI 给用户发亲密付的指令，生成交互卡片 ===
-            const grantRegex = /\[GRANT_PAY:([\d\.]+|无限)\]/i;
-            const grantMatch = rawReply.match(grantRegex);
-            if(grantMatch) {
-                let limitStr = grantMatch[1];
-                rawReply = rawReply.replace(grantRegex, '').trim();
-                setTimeout(() => {
-                    const msgId = 'invite_ai_' + Date.now();
-                    const tagText = `[INTIMATE_AI2ME:${limitStr}:pending:${msgId}]`;
-                    const isLookingAtThisChat = () => {
-                        const chatLayer = document.getElementById('chatLayer');
-                        return chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
-                    };
-                    if (isLookingAtThisChat()) {
-                        appendMessage(tagText, 'received', friendsData[targetChatId].avatar, friendsData[targetChatId].realName);
-                    } else {
-                        const dockDot = document.getElementById('dock-dot');
-                        if (dockDot) dockDot.style.display = 'block';
-                    }
-                    saveMessageToHistory(targetChatId, { text: tagText, type: 'received', senderName: friendsData[targetChatId].realName });
-                }, 1000);
-            }
-            // === [新增] 解析外卖卡片指令 ===
-            const takeoutRegex = /\[TAKEOUT:([^:]+):(\d+(?:\.\d+)?)\]/i;
-            const takeoutMatch = rawReply.match(takeoutRegex);
-            if (takeoutMatch) {
-                const shopName = takeoutMatch[1].trim();
-                const price = parseFloat(takeoutMatch[2]);
-                
-                // 从文字中剥离标签
-                rawReply = rawReply.replace(takeoutRegex, '').trim();
-
-                // 延迟一小会儿渲染卡片
-                setTimeout(() => {
-                    // 1. 扣除余额
-                    if (typeof window.deductBalanceForTakeout === 'function') {
-                        window.deductBalanceForTakeout(price, shopName);
-                    }
-
-                    // 2. 渲染外卖卡片
-                    const msgId = 'msg_takeout_' + Date.now();
-                    const encodedShop = encodeURIComponent(shopName);
-                    // 点击卡片直接跳去美团搜索
-                    const cardHtml = `
-                        <div class="msg-takeout-card" onclick="openRealTakeoutApp('${encodedShop}')">
-                            <div class="takeout-header">
-                                <div class="takeout-title">TA为你点了外卖 🛵</div>
-                                <div class="takeout-price">-¥${price}</div>
-                            </div>
-                            <div class="takeout-body">
-                                <div class="takeout-shop-name">${shopName}</div>
-                                <div class="takeout-desc">正在快马加鞭送达中... (点击去外卖APP挑你喜欢的同类店)</div>
-                            </div>
-                            <div class="takeout-footer">亲密付自动代付</div>
-                        </div>
-                    `;
-                    
-                    const fName = friendsData[targetChatId]?.remark || friendsData[targetChatId]?.realName;
-                    const fAvatar = friendsData[targetChatId]?.avatar;
-                    
-                    const isLookingAtThisChat = () => {
-                        const chatLayer = document.getElementById('chatLayer');
-                        return chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
-                    };
-                    
-                    if (isLookingAtThisChat()) {
-                        // 使用富文本方式强行上屏
-                        const chatMessages = document.getElementById('chatMessages');
-                        const row = document.createElement('div');
-                        row.className = 'chat-row received';
-                        const avatar = document.createElement('img');
-                        avatar.className = 'chat-avatar-img';
-                        avatar.src = fAvatar || AVATAR_AI;
-                        const bubble = document.createElement('div');
-                        bubble.className = `message-bubble rich-bubble`;
-                        bubble.innerHTML = cardHtml;
-                        row.appendChild(avatar);
-                        row.appendChild(bubble);
-                        chatMessages.appendChild(row);
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-                    } else {
-                        const dockDot = document.getElementById('dock-dot');
-                        if (dockDot) dockDot.style.display = 'block';
-                    }
-
-                    // 保存到历史
-                    saveMessageToHistory(targetChatId, {
-                        id: msgId,
-                        text: `[TAKEOUT_CARD:${shopName}:${price}]`, // 特殊历史标签
-                        type: 'received',
-                        senderName: fName,
-                        customAvatar: fAvatar
-                    });
-
-                    // 3. 启动 30 分钟送达定时器
-                    startTakeoutDeliveryTimer(targetChatId, shopName);
-                }, 1000);
-            }
-
-            // === [新增] 解析 AI 主动发送的定位卡片 ===
-            const mapRegex = /\[SEND_MAP:([^|]+)\|([^|]+)\|([^\]]+)\]/i;
-            const mapMatch = rawReply.match(mapRegex);
-            if (mapMatch) {
-                const aiLoc = mapMatch[1].trim();
-                const meLoc = mapMatch[2].trim();
-                const dist = mapMatch[3].trim();
-                // 剔除标记不显示在文字中
-                rawReply = rawReply.replace(mapRegex, '').trim();
-                
-                // 延迟 500ms 自动帮它写入 MapApp 数据库并上屏
-                setTimeout(() => {
-                    if (typeof loadMapsData === 'function') loadMapsData();
-                    let defaultMapId = Object.keys(mapsData || {})[0];
-                    if (!defaultMapId) {
-                        defaultMapId = 'map_' + Date.now();
-                        mapsData[defaultMapId] = { id: defaultMapId, name: '我们的世界', locations: [] };
-                    }
-                    
-                    // 检查是否存在，不存在就自动新建
-                    const existAi = mapsData[defaultMapId].locations.find(l => l.name === aiLoc);
-                    if (!existAi) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now(), name: aiLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: [targetChatId]});
-                    
-                    const existMe = mapsData[defaultMapId].locations.find(l => l.name === meLoc);
-                    if (!existMe) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now()+'_2', name: meLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: []});
-                    
-                    if (typeof saveMapsData === 'function') saveMapsData();
-
-                    // 生成标准的 MAP_CARD 给前端渲染
-                    const tagText = `[MAP_CARD:${meLoc}|${aiLoc}|${dist}||true]`;
-                    const msgId = 'msg_aimap_' + Date.now();
-                    
-                    // 获取当前聊天人设的真实名字和头像
-                    const fName = friendsData[targetChatId]?.remark || friendsData[targetChatId]?.realName;
-                    const fAvatar = friendsData[targetChatId]?.avatar;
-                    
-                    const isLookingAtThisChat = () => {
-                        const chatLayer = document.getElementById('chatLayer');
-                        return chatLayer && chatLayer.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
-                    };
-                    if (isLookingAtThisChat()) {
-                        appendMessage(tagText, 'received', fAvatar, fName, null, msgId);
-                    } else {
-                        const dockDot = document.getElementById('dock-dot');
-                        if (dockDot) dockDot.style.display = 'block';
-                    }
-                    
-                    saveMessageToHistory(targetChatId, {
-                        id: msgId,
-                        text: tagText,
-                        type: 'received',
-                        senderName: fName,
-                        customAvatar: fAvatar
-                    });
-                }, 800);
-            }
-
-            // === [一起听] 解析 AI 切歌指令 [CHANGE_MUSIC:歌名|歌手] ===
-            const changeMusicRegex = /\[CHANGE_MUSIC:([^\]|]+)\|?([^\]]*)\]/i;
-            const changeMusicMatch = rawReply.match(changeMusicRegex);
-            if (changeMusicMatch) {
-                rawReply = rawReply.replace(changeMusicRegex, '').trim();
-                const targetTitle = changeMusicMatch[1].trim();
-                const targetArtist = changeMusicMatch[2].trim();
-                setTimeout(() => {
-                    if (typeof changeMusicByAI === 'function') {
-                        changeMusicByAI(targetTitle, targetArtist);
-                    }
-                }, 300);
-            }
-
-            // 3. 朋友圈 [MOMENT] & [MOMENT_IMG]，从 rawReply 中完全移除
-            const momentBlockRegex = /\[MOMENT\]([\s\S]*?)\[\/MOMENT\]/i;
-            const mMatch = rawReply.match(momentBlockRegex);
-            if (mMatch) { momentText = mMatch[1].trim(); }
-
-            const imgRegex = /\[MOMENT_IMG\]([\s\S]*?)\[\/MOMENT_IMG\]/gi;
-            let imgMatch;
-            while ((imgMatch = imgRegex.exec(rawReply)) !== null) {
-                const desc = (imgMatch[1] || '').trim();
-                if (desc) momentImages.push(desc);
-            }
-
-            rawReply = rawReply.replace(momentBlockRegex, '').replace(imgRegex, '').trim();
-
-            if (momentText) {
-                createMomentFromAI(targetChatId, momentText, momentImages);
-            }
-
-
-            // 4. 处理翻译：在“已经去掉状态/弹幕/朋友圈”的文本上做拆分
-let finalContent = rawReply;
-if (isTranslationEnabled) {
-    const idx = rawReply.indexOf(TRANS_SEPARATOR);
-    if (idx !== -1) {
-        finalContent = rawReply.slice(0, idx).trim();
-        finalTranslation = rawReply.slice(idx + TRANS_SEPARATOR.length).trim();
-    }
-}
-
-
-             // 5. 分段发送逻辑 (Segmented Sending) - 修改版
-            // 【竞态修复】使用函数开头捕获的 targetChatId，而非此时可能已变更的 currentChatId
-            const currentName = targetChatId;
-            // 【修复】优先使用好友数据里的头像，没有才用随机的
-let avatarUrl = friendsData[currentName]?.avatar;
-if (!avatarUrl) {
-    avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${friendsData[currentName]?.realName || 'AI'}`;
-}
-
-            if (finalContent && finalContent.trim() !== '') {
-                // 转账标签解析（[TRANSFER:金额:备注]）
-                if (typeof TransferApp !== 'undefined' && TransferApp.parseAndHandleAITransfer) {
-                    finalContent = TransferApp.parseAndHandleAITransfer(finalContent);
+            // 2. 处理朋友圈 (momentPost)
+            if (aiData.momentPost && aiData.momentPost.text) {
+                let momentImages = [];
+                if (Array.isArray(aiData.momentPost.images)) {
+                    momentImages = aiData.momentPost.images;
                 }
-                if (typeof PatApp !== 'undefined' && PatApp.parseAndHandleAIPat) {
-                    finalContent = PatApp.parseAndHandleAIPat(finalContent, targetChatId);
-                }
-                
-                // 1. 先将富媒体标签强制提行，防止混排导致 startsWith 检测失败
-                finalContent = finalContent
-                    .replace(/(\[VOICE\])/gi, '\n$1')
-                    .replace(/(\[IMAGE\])/gi, '\n$1\n')
-                    .replace(/(\[WC_TRANSFER:.*?\])/gi, '\n$1\n')
-                    .replace(/(\[表情:.*?\])/gi, '\n$1\n')
-                    .replace(/(\[PAT_NOTICE\])/gi, '\n$1');
+                createMomentFromAI(targetChatId, aiData.momentPost.text, momentImages);
+            }
 
-                // 2. 按换行符拆分正文 (过滤空行)
-                let textSegments = finalContent.split('\n').map(s => s.trim()).filter(s => s);
-                // 回复条数区间控制 (replyMin ~ replyMax)
-                const _replyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
-                const _replyMax = Math.max(_replyMin, parseInt(chatSettings.replyMax) || 5);
+            // 3. 处理弹幕 (danmaku)
+            if (isDanmakuOn && aiData.danmaku && Array.isArray(aiData.danmaku) && aiData.danmaku.length > 0) {
+                danmakuPool = aiData.danmaku;
+                startDanmakuBatch(0);
+            }
 
-                // 【修复】如果 AI 把所有话都挤在了一行里（一大段话），且允许连发，我们帮它按标点符号拆开
-                if (textSegments.length === 1 && _replyMax > 1 && textSegments[0].length > 15 && !textSegments[0].startsWith('[')) {
-                    const sentences = textSegments[0].match(/[^。！？.!?~～]+[。！？.!?~～]*/g);
-                    if (sentences && sentences.length > 1) {
-                        textSegments = sentences.map(s => s.trim()).filter(Boolean);
-                    }
-                }
+            // 4. 分段发送聊天消息 (chatResponse)
+            if (aiData.chatResponse && Array.isArray(aiData.chatResponse)) {
+                let cumulativeDelay = 0;
+                const currentName = targetChatId;
+                let avatarUrl = friendsData[currentName]?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friendsData[currentName]?.realName || 'AI'}`;
+                const fName = friendsData[currentName]?.remark || friendsData[currentName]?.realName;
 
-                if (textSegments.length > _replyMax && _replyMax === 1) {
-                    textSegments = [textSegments.join(' ')];
-                } else if (textSegments.length > _replyMax) {
-                    const _kept = textSegments.slice(0, _replyMax - 1);
-                    _kept.push(textSegments.slice(_replyMax - 1).join(' '));
-                    textSegments = _kept;
-                }
-                
-                // 2. 按换行符拆分翻译 (如果有)
-                const transSegments = finalTranslation ? finalTranslation.split('\n').map(s => s.trim()).filter(s => s) : [];
-
-                let cumulativeDelay = 0; // 累计延迟时间
-
-                 // 3. 循环发送每一个气泡
-                textSegments.forEach((seg, index) => {
-                    const delay = index === 0 ? 100 : (800 + seg.length * 50);
+                // 重点：使用 for...of 以便在内部使用 await 跑生图等耗时任务
+                for (let index = 0; index < aiData.chatResponse.length; index++) {
+                    const msg = aiData.chatResponse[index];
+                    const delay = index === 0 ? 100 : (800 + (msg.content ? msg.content.length : 10) * 50);
                     cumulativeDelay += delay;
 
-                    setTimeout(() => {
-                        let currentTrans = null;
-                        if (transSegments.length > 0) {
-                            if (index < transSegments.length) currentTrans = transSegments[index];
-                            if (index === textSegments.length - 1 && transSegments.length > textSegments.length) {
-                                currentTrans = transSegments.slice(index).join('<br>');
+                    setTimeout(async () => {
+                        const aiMsgId = 'msg_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                        const chatLayer = document.getElementById('chatLayer');
+                        const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === currentName && currentChatType === 'single';
+                        
+                        let textToSave = ""; 
+                        let textToRender = ""; 
+                        let msgType = "received";
+                        let transText = msg.translation || null;
+
+                        // 【完美兼容】调用你原有的外置 APP 解析器 (转账、拍一拍、生图)
+                        if (msg.type === "text" && msg.content) {
+                            if (typeof TransferApp !== 'undefined' && TransferApp.parseAndHandleAITransfer) {
+                                msg.content = TransferApp.parseAndHandleAITransfer(msg.content);
+                            }
+                            if (typeof PatApp !== 'undefined' && PatApp.parseAndHandleAIPat) {
+                                msg.content = PatApp.parseAndHandleAIPat(msg.content, targetChatId);
+                            }
+                            if (typeof processImagegenFromAIReply === 'function') {
+                                msg.content = await processImagegenFromAIReply(msg.content, targetChatId);
                             }
                         }
 
-                        const aiMsgId = 'msg_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                        switch (msg.type) {
+                            case "text":
+                                textToSave = msg.content;
+                                textToRender = msg.content;
+                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
+                                break;
 
-                        const chatLayer = document.getElementById('chatLayer');
-                        const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === currentName && currentChatType === 'single';
-                        if (isLookingAtThisChat) {
-                            // 上屏，必须带上 aiMsgId
-                            appendMessage(seg, 'received', avatarUrl, null, currentTrans, aiMsgId);
-                        } else {
-                            // 红点提醒逻辑
+                            case "sticker":
+                                textToSave = `[表情:${msg.content}]`;
+                                textToRender = `[表情:${msg.content}]`;
+                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
+                                break;
+
+                            case "voice":
+                                textToSave = `[VOICE]${msg.content}`;
+                                textToRender = `[VOICE]${msg.content}`;
+                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
+                                break;
+
+                            case "change_avatar":
+                                if (friendsData[targetChatId].lastSharedImage) {
+                                    friendsData[targetChatId].avatar = friendsData[targetChatId].lastSharedImage;
+                                    saveFriendsData();
+                                    refreshFriendAvatarInUI(targetChatId, friendsData[targetChatId].avatar);
+                                    rebuildContactsList();
+                                    restoreFriendListUI();
+                                    textToSave = `${fName} 将你发送的图片设为了头像`;
+                                    msgType = "system";
+                                    if (isLookingAtThisChat) appendMessage(textToSave, 'system', null, null, null, aiMsgId);
+                                }
+                                break;
+
+                            case "grant_pay":
+                                let limit = msg.content === '无限' ? '无限' : parseFloat(msg.content);
+                                textToSave = `[INTIMATE_AI2ME:${limit}:pending:${aiMsgId}]`;
+                                textToRender = textToSave;
+                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, null, aiMsgId);
+                                break;
+
+                            case "intimate_reply":
+                                if (typeof handleIntimateAction === 'function') {
+                                    handleIntimateAction('invite_me_', '520', msg.content, 'ME2AI');
+                                }
+                                break;
+
+                            case "takeout":
+                                const partsTakeout = msg.content.split('|');
+                                const shop = partsTakeout[0] || '神秘小店';
+                                const price = parseFloat(partsTakeout[1]) || 20;
+                                textToSave = `[TAKEOUT_CARD:${shop}:${price}]`;
+                                if (typeof window.deductBalanceForTakeout === 'function') window.deductBalanceForTakeout(price, shop);
+                                if (isLookingAtThisChat) {
+                                    const encodedShop = encodeURIComponent(shop);
+                                    const cardHtml = `
+                                        <div class="msg-takeout-card" onclick="openRealTakeoutApp('${encodedShop}')">
+                                            <div class="takeout-header"><div class="takeout-title">TA为你点了外卖 🛵</div><div class="takeout-price">-¥${price}</div></div>
+                                            <div class="takeout-body"><div class="takeout-shop-name">${shop}</div><div class="takeout-desc">正在快马加鞭送达中...</div></div>
+                                            <div class="takeout-footer">亲密付自动代付</div>
+                                        </div>`;
+                                    const row = document.createElement('div'); row.className = 'chat-row received';
+                                    row.setAttribute('data-msg-id', aiMsgId);
+                                    row.innerHTML = `<img class="chat-avatar-img" src="${avatarUrl}"><div class="message-bubble rich-bubble">${cardHtml}</div>`;
+                                    document.getElementById('chatMessages').appendChild(row);
+                                    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                                }
+                                startTakeoutDeliveryTimer(targetChatId, shop);
+                                break;
+
+                            case "send_map":
+                                const partsMap = msg.content.split('|');
+                                const aiLoc = partsMap[0] || '对方位置';
+                                const meLoc = partsMap[1] || '我的位置';
+                                const dist = parseFloat(partsMap[2]) || 2.5;
+
+                                if (typeof loadMapsData === 'function') loadMapsData();
+                                let defaultMapId = Object.keys(mapsData || {})[0];
+                                if (!defaultMapId) {
+                                    defaultMapId = 'map_' + Date.now();
+                                    mapsData[defaultMapId] = { id: defaultMapId, name: '我们的世界', locations: [] };
+                                }
+                                const existAi = mapsData[defaultMapId].locations.find(l => l.name === aiLoc);
+                                if (!existAi) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now(), name: aiLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: [targetChatId]});
+                                const existMe = mapsData[defaultMapId].locations.find(l => l.name === meLoc);
+                                if (!existMe) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now()+'_2', name: meLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: []});
+                                if (typeof saveMapsData === 'function') saveMapsData();
+
+                                textToSave = `[MAP_CARD:${meLoc}|${aiLoc}|${dist}||true]`;
+                                textToRender = textToSave;
+                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, null, aiMsgId);
+                                break;
+
+                            case "change_music":
+                                const partsMusic = msg.content.split('|');
+                                if (typeof changeMusicByAI === 'function') changeMusicByAI(partsMusic[0], partsMusic[1]);
+                                break;
+                        }
+
+                        // 红点提醒
+                        if (!isLookingAtThisChat && textToSave) {
                             const dockDot = document.getElementById('dock-dot');
                             if (dockDot) dockDot.style.display = 'block';
                         }
 
-                         // 确保使用同一个 ID 存入历史记录
-                        if (currentName) {
-                            saveMessageToHistory(currentName, {
+                        // 存入历史记录
+                        if (textToSave) {
+                            saveMessageToHistory(targetChatId, {
                                 id: aiMsgId,
-                                text: seg,
-                                type: 'received',
+                                text: textToSave,
+                                type: msgType,
                                 customAvatar: avatarUrl,
-                                translation: currentTrans,
+                                translation: transText,
                                 senderName: currentName
                             });
                         }
                     }, cumulativeDelay);
-                });
+                } // end for
             }
-
-// 6. 发射弹幕（保留原逻辑）
-if (isDanmakuOn && extractedDanmaku.length > 0) {
-    danmakuPool = extractedDanmaku;
-    startDanmakuBatch(0); // 线上聊天模式：立即开始发送弹幕，无需等待
-} else if (isDanmakuOn) {
-    if (typeof generateDanmakuReaction === 'function') {
-        generateDanmakuReaction(finalContent, 'fallback');
-    }
-}
-
         }
-
-
-        
     } catch (error) {
-    if (error.name === 'AbortError') {
-        console.log("线上生成被用户中止");
-        const el = document.getElementById(loadingId);
-        if (el) el.remove();
-        return;
+        if (error.name === 'AbortError') {
+            console.log("线上生成被用户中止");
+            document.getElementById(loadingId)?.remove();
+            return;
+        }
+        document.getElementById(loadingId)?.remove();
+        showAiErrorModal('线上生成失败', (error && error.message) ? error.message : String(error));
     }
-    const el = document.getElementById(loadingId);
-    if (el) el.remove();
-
-    showAiErrorModal(
-        '线上生成失败',
-        (error && error.message) ? error.message : String(error)
-    );
-}
-
-
 }
 
 

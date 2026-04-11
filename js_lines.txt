@@ -1,0 +1,130 @@
+    var importBtn = document.getElementById('novel-import-btn');
+    if (importBtn) importBtn.onclick = showImportDialog;
+    var sImport = document.getElementById('novel-shelf-import-btn');
+    if (sImport) sImport.onclick = showImportDialog;
+    var sForum = document.getElementById('novel-shelf-forum-btn');
+    if (sForum) sForum.onclick = function() { switchTab('forum'); };
+
+    // Community
+    var commRefresh = document.getElementById('novel-community-refresh');
+    if (commRefresh) commRefresh.onclick = generateCommunityContent;
+
+    // Profile write
+    bindWriteEvents();
+
+    // Reader
+    bindReaderEvents();
+
+    // Dialogs
+    bindDialogEvents();
+  }
+
+  function bindGenPanelEvents() {
+    var gachaBtn = document.getElementById('novel-gacha-btn');
+    if (gachaBtn) gachaBtn.onclick = rollTropes;
+    var clearBtn = document.getElementById('novel-trope-clear');
+    if (clearBtn) clearBtn.onclick = function() { state.currentTropes = []; refreshTropeDisplay(); };
+    var tropeInput = document.getElementById('novel-trope-input');
+    if (tropeInput) tropeInput.onkeydown = function(e) {
+      if (e.key === 'Enter') {
+        var v = tropeInput.value.trim();
+        if (v) { state.currentTropes.push(v); tropeInput.value = ''; refreshTropeDisplay(); }
+      }
+    };
+    var genBtn = document.getElementById('novel-generate-btn');
+    if (genBtn) genBtn.onclick = doGenerateNovel;
+    var closePanel = document.getElementById('novel-gen-panel-close');
+    if (closePanel) closePanel.onclick = closeGenPanel;
+  }
+
+  function bindWriteEvents() {
+    // Basic stuff
+    var coopStart = document.getElementById('novel-coop-start-btn');
+    if (coopStart) coopStart.onclick = function() {
+        state.workshopPhase = 'coop_writing';
+        state.brawlMode = false;
+        refreshProfile();
+        showNovelToast('🤝 已开启温和接龙模式');
+    };
+
+    var brawlStart = document.getElementById('novel-brawl-start-btn');
+    if (brawlStart) brawlStart.onclick = startBrawlMode;
+    var brawlAttack = document.getElementById('novel-brawl-attack-btn');
+    if (brawlAttack) brawlAttack.onclick = doBrawlAttack;
+    var brawlQuit = document.getElementById('novel-brawl-quit-btn');
+    if (brawlQuit) brawlQuit.onclick = quitBrawlMode;
+    var fanResolve = document.getElementById('novel-fan-resolve-btn');
+    if (fanResolve) fanResolve.onclick = resolveFanEvent;
+
+    // Workshop bindings
+    var wsApp = document.getElementById('novelApp');
+    if (!wsApp) return;
+    
+    // Casting Chara Select
+    wsApp.querySelectorAll('.novel-chara-item[data-ws-charaid]').forEach(function(item) {
+      item.onclick = function() {
+        var cid = item.dataset.wsCharaid;
+        var idx = state.selectedCharas.indexOf(cid);
+        if (idx >= 0) state.selectedCharas.splice(idx, 1);
+        else state.selectedCharas.push(cid);
+        refreshProfile();
+      };
+    });
+
+    var castBtn = document.getElementById('novel-ws-cast-btn');
+    if (castBtn) castBtn.onclick = doWsCasting;
+
+    var toPlotBtn = document.getElementById('novel-ws-to-plot-btn');
+    if (toPlotBtn) toPlotBtn.onclick = function() { state.workshopPhase = 'plotting'; state.plottingChat = []; refreshProfile(); };
+
+    var plotSendBtn = document.getElementById('novel-plot-send-btn');
+    if (plotSendBtn) plotSendBtn.onclick = doPlotChatSend;
+    var plotInput = document.getElementById('novel-plot-input');
+    if (plotInput) plotInput.onkeydown = function(e) { if (e.key === 'Enter') doPlotChatSend(); };
+
+    var toWriteBtn = document.getElementById('novel-ws-to-write-btn');
+    if (toWriteBtn) toWriteBtn.onclick = doWsGenerateOutlineAndWrite;
+
+    var writeBtn = document.getElementById('novel-ws-write-btn');
+    if (writeBtn) writeBtn.onclick = doWsExpandChapter;
+    
+    var coopWriteBtn = document.getElementById('novel-coop-write-btn');
+    if (coopWriteBtn) coopWriteBtn.onclick = doCoopWrite;
+
+    var drawFateBtn = document.getElementById('novel-ws-draw-fate-btn');
+    if (drawFateBtn) drawFateBtn.onclick = doWsDrawFateCards;
+
+    var wsReset = document.getElementById('novel-ws-reset');
+    if (wsReset) wsReset.onclick = function() {
+      state.workshopPhase = 'init';
+      state.castingCards = [];
+      state.plottingChat = [];
+      state.fateCards = [];
+      state.liveReactions = [];
+      state._wsTempOutline = '';
+      state._pendingExpandedContent = '';
+      refreshProfile();
+    };
+
+    wsApp.querySelectorAll('.novel-fate-card').forEach(function(card) {
+      card.onclick = function() {
+        var idx = card.dataset.fateidx;
+        var f = state.fateCards[idx];
+        var ta = document.getElementById('novel-write-prompt');
+        if (ta) ta.value += '\n【命运分支】：' + f.desc;
+        state.fateCards = [];
+        refreshProfile();
+      };
+    });
+
+    var publishBtn = document.getElementById('novel-write-publish-btn');
+    if (publishBtn) publishBtn.onclick = publishWrittenChapter;
+  }
+
+  function bindReaderEvents() {
+    var frClose = document.getElementById('novel-fr-close');
+    if (frClose) frClose.onclick = closeReader;
+    var frPrev = document.getElementById('novel-fr-prev');
+    if (frPrev) frPrev.onclick = prevPage;
+    var frNext = document.getElementById('novel-fr-next');
+    if (frNext) frNext.onclick = nextPage;

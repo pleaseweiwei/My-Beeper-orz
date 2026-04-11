@@ -1,0 +1,50 @@
+  function buildTavernPrompt(title, genre, tropeStr, charaPersonas, userPersona, worldContent, context, isFirstChapter, userChoice = '') {
+    let prompt = `[System Note: 你是一位顶尖的驻站网文大神和互动小说家。请以沉浸式、Show-don't-tell（展现而非陈述）的细腻文风创作小说。严禁使用生硬的AI套话。]
+
+[Novel Metadata]
+Title: 《${title}》
+Genre: ${genre}
+Tropes/Tags: ${tropeStr}
+
+[World/Lore]
+${worldContent || '现代日常背景'}
+
+[Protagonist (User)]
+${userPersona || '代入感极强的普通主角视角'}
+
+[Main Characters (NPCs)]
+${charaPersonas || '未指定'}
+
+[Style Guidance & Relationship Dynamics]
+1. 深度贴合NPC人设，必须符合他们的真实性格和思维方式。
+2. 呈现出主角与NPC之间的特定羁绊和张力（比如暗流涌动的敌意、极致的拉扯感或甜宠日常）。
+3. 侧重感官描写（视觉、听觉、嗅觉）和微妙的心理活动。
+4. 文本必须包含丰富的对话，切忌流水账叙述。
+
+[Task]
+`;
+    if (isFirstChapter) {
+        prompt += `请撰写本作的【第一章】（800-1200字）。如果书名未定，请在最开头用《书名》格式输出。\n开头请直接进入核心场景，制造张力。`;
+    } else {
+        prompt += `请根据上文续写【下一章】（800-1200字）。\n【前情提要】\n${context}\n`;
+        if (userChoice) {
+            prompt += `【主角(User)的决定】：主角选择了——“${userChoice}”。请务必让后续剧情强烈反映这一选择的后果！\n`;
+        }
+    }
+
+    prompt += `
+[Output Format Requirements - STRICT]
+1. 必须在合适的高潮/绝美场景处，插入且仅插入一个英文配图提示词，格式严格为：[IMAGE: highly detailed masterpiece, 1girl, 1boy, cinematic lighting, describing the scene...]
+2. 章节正文结束后，为了增加互动性，请基于当前局势，为主角提供2-3个走向不同的【命运抉择】，格式如下：
+[Option A: 拔出武器反击]
+[Option B: 握住他的手，尝试安抚]
+`;
+    return prompt;
+  }
+
+  // ─── WORKSHOP API ACTIONS ──────────────────────────────────
+  async function doWsCasting() {
+    if (state.selectedCharas.length === 0) { showNovelToast('请至少选择一位角色参演'); return; }
+    var genre = document.getElementById('novel-ws-genre') ? document.getElementById('novel-ws-genre').value : '异世界';
+    var btn = document.getElementById('novel-ws-cast-btn');
+    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 构思身份卡中...'; btn.disabled = true; }

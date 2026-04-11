@@ -54,6 +54,44 @@ const SMSApp = (() => {
     closeThread(); // ensure thread not open
   }
 
+  function openWith(chatId) {
+    if (!chatId) return;
+    _load();
+
+    let targetThreadId = null;
+    // 优先寻找已有对话
+    for (const tid in _db.conversations) {
+      if (_db.conversations[tid].chatId === chatId) {
+        // 找到与该好友的最近对话
+        if (!targetThreadId || (_db.conversations[tid].lastTime > _db.conversations[targetThreadId].lastTime)) {
+          targetThreadId = tid;
+        }
+      }
+    }
+
+    // 若没有则创建新对话
+    if (!targetThreadId) {
+      targetThreadId = 'friend_' + chatId;
+      const friend = (typeof friendsData !== 'undefined' && friendsData[chatId]) ? friendsData[chatId] : null;
+      const name = friend ? (friend.remark || friend.realName || friend.name || '未知联系人') : '未知联系人';
+      _db.conversations[targetThreadId] = {
+        id: targetThreadId,
+        type: 'friend',
+        name: name,
+        number: _genFakeNumber(), // 生成假号码
+        chatId: chatId,
+        messages: [],
+        unread: 0,
+        lastMessage: '',
+        lastTime: Date.now()
+      };
+      _save();
+    }
+
+    open();
+    setTimeout(() => openThread(targetThreadId), 50);
+  }
+
   function close() {
     const app = document.getElementById('smsApp');
     if (app) app.classList.remove('open');
@@ -730,6 +768,7 @@ ${historyCtx ? `【你们最近的经历/记忆】\n${historyCtx}\n` : ''}
   return {
     open,
     close,
+    openWith,
     openThread,
     closeThread,
     renderList,

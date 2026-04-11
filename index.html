@@ -64,6 +64,7 @@
     <link rel="stylesheet" href="css/favorites.css">
     <link rel="stylesheet" href="css/overrides.css">
     <link rel="stylesheet" href="css/desktop_sort.css">
+    <link rel="stylesheet" href="css/files.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js" crossorigin="anonymous"></script>
 
@@ -277,7 +278,7 @@
                 </div>
 
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="notes" onclick="alert('便签')"><div class="icon-box"><i class="far fa-sticky-note"></i></div><span class="app-label">Notes</span></div>
-                <div class="app-cell widget-1x1 sortable-item" data-app-id="files" onclick="alert('文件管理')"><div class="icon-box"><i class="far fa-folder"></i></div><span class="app-label">Files</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="files" onclick="openFilesApp()"><div class="icon-box"><i class="far fa-folder"></i></div><span class="app-label">Files</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="backpack" onclick="openBackpackApp()"><div class="icon-box"><i class="fas fa-bag-shopping" style="color:#f59e0b;"></i></div><span class="app-label">Backpack</span></div>
                 <div class="app-cell widget-1x1 sortable-item" style="opacity:0.3;"><div class="icon-box" style="border:1px dashed #ccc; box-shadow:none;"><i class="fas fa-plus"></i></div></div>
             </div>
@@ -4439,6 +4440,7 @@
     <script src="js/app_nexus.js"></script>
     <script src="js/app_favorites.js"></script>
     <script src="js/desktop_sort.js"></script>
+    <script src="js/app_files.js"></script>
 <script>
 // Init Nexus on load
 document.addEventListener('DOMContentLoaded', function() {
@@ -4466,7 +4468,92 @@ function switchCsTab(id) {
 </script>
 
 <!-- ============================================== -->
-<!-- 查手机 (TRACKER) APP                           -->
+<!-- [韩系极简] Files APP (存储空间可视化) -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="filesApp" style="background: #fdfdfd; font-family: 'Montserrat', 'PingFang SC', sans-serif; display: none; flex-direction: column;">
+    <div class="k-header" style="background: transparent; padding-top: 20px; border:none; flex-shrink:0;">
+        <i class="fas fa-chevron-left" onclick="closeFilesApp()" style="font-size: 20px; cursor:pointer; color:#333;"></i>
+        <span style="font-weight: 700; font-size: 16px; color:#333; letter-spacing: 1px;">STORAGE</span>
+        <div style="width: 20px;"></div>
+    </div>
+    
+    <div class="files-body-container" style="padding: 10px 24px 30px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto;">
+        
+        <div class="files-title-area">
+            <div style="font-size: 24px; font-weight: 800; color: #111;">Device Storage</div>
+            <div style="font-size: 11px; color: #888; margin-top: 4px;">64 GB / 128 GB Used</div>
+        </div>
+
+        <!-- 环形图区域 -->
+        <div class="files-chart-card">
+            <div class="files-donut-wrapper">
+                <div class="files-donut-chart" id="files-donut-chart"></div>
+                <div class="files-donut-inner">
+                    <span style="font-size:24px; font-weight:800; color:#111;">50%</span>
+                    <span style="font-size:10px; color:#999; font-weight:600; letter-spacing:1px;">USED</span>
+                </div>
+            </div>
+            
+            <div class="files-legend-area">
+                <div class="files-legend-item">
+                    <div class="files-legend-color" style="background: #111;"></div>
+                    <div class="files-legend-text">Apps</div>
+                    <div class="files-legend-val">30 GB</div>
+                </div>
+                <div class="files-legend-item">
+                    <div class="files-legend-color" style="background: #888;"></div>
+                    <div class="files-legend-text">Photos</div>
+                    <div class="files-legend-val">20 GB</div>
+                </div>
+                <div class="files-legend-item">
+                    <div class="files-legend-color" style="background: #ccc;"></div>
+                    <div class="files-legend-text">System</div>
+                    <div class="files-legend-val">10 GB</div>
+                </div>
+                <div class="files-legend-item">
+                    <div class="files-legend-color" style="background: #eee;"></div>
+                    <div class="files-legend-text">Other</div>
+                    <div class="files-legend-val">4 GB</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 700; color: #111; letter-spacing: 1px; margin-top: 10px;">ADVANCED TOOLS</div>
+        
+        <div class="files-tools-grid">
+            <div class="files-tool-card" onclick="simulateFilesTool('cache', this)">
+                <div class="files-tool-icon"><i class="fas fa-broom"></i></div>
+                <div class="files-tool-info">
+                    <div class="files-tool-title">Clear Cache</div>
+                    <div class="files-tool-sub">Free up 1.2 GB</div>
+                </div>
+                <div class="files-tool-progress"><div class="files-tool-progress-bar"></div></div>
+            </div>
+            
+            <div class="files-tool-card" onclick="simulateFilesTool('compress', this)">
+                <div class="files-tool-icon"><i class="fas fa-compress-arrows-alt"></i></div>
+                <div class="files-tool-info">
+                    <div class="files-tool-title">Compress Photos</div>
+                    <div class="files-tool-sub">Optimize Library</div>
+                </div>
+                <div class="files-tool-progress"><div class="files-tool-progress-bar"></div></div>
+            </div>
+
+            <div class="files-tool-card" onclick="simulateFilesTool('repair', this)">
+                <div class="files-tool-icon"><i class="fas fa-wrench"></i></div>
+                <div class="files-tool-info">
+                    <div class="files-tool-title">Repair Data</div>
+                    <div class="files-tool-sub">Fix corrupted files</div>
+                </div>
+                <div class="files-tool-progress"><div class="files-tool-progress-bar"></div></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ============================================== -->
+<!-- [背包 APP] Bubble 购物收藏 -->
 <!-- ============================================== -->
 <div class="app-fullscreen-view" id="trackerApp" style="display:none; position:absolute; inset:0; z-index:2000;">
 
