@@ -254,6 +254,8 @@ window.generateOfflineMsgsForFriend = async function(friendId, forceGenerate) {
         let writingStyleText = '';
         if (typeof offlineConfig !== 'undefined' && offlineConfig.writingStyle) {
             writingStyleText = offlineConfig.writingStyle;
+        } else {
+            writingStyleText = "采用真实互动小说文风。善用准确的感官细节与动作描写（Show, don't tell），将情绪与内心独白自然融入叙事中。对话需符合真实口语习惯，与叙事节奏张弛有度地交织。保持文字的通透、流畅与真实感。";
         }
 
         // ── 6. 记忆总结 ────────────────────────────────────────────

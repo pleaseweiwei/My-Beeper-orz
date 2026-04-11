@@ -65,6 +65,7 @@
     <link rel="stylesheet" href="css/overrides.css">
     <link rel="stylesheet" href="css/desktop_sort.css">
     <link rel="stylesheet" href="css/files.css">
+    <link rel="stylesheet" href="css/forum.css">
         <!-- 新增：读取 DOCX 需要的库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js" crossorigin="anonymous"></script>
 
@@ -277,7 +278,7 @@
                     </div>
                 </div>
 
-                <div class="app-cell widget-1x1 sortable-item" data-app-id="notes" onclick="alert('便签')"><div class="icon-box"><i class="far fa-sticky-note"></i></div><span class="app-label">Notes</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="forum" onclick="openForumApp()"><div class="icon-box" style="background:#fff; color:#111;"><i class="fas fa-comments"></i></div><span class="app-label">Forum</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="files" onclick="openFilesApp()"><div class="icon-box"><i class="far fa-folder"></i></div><span class="app-label">Files</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="backpack" onclick="openBackpackApp()"><div class="icon-box"><i class="fas fa-bag-shopping" style="color:#f59e0b;"></i></div><span class="app-label">Backpack</span></div>
                 <div class="app-cell widget-1x1 sortable-item" style="opacity:0.3;"><div class="icon-box" style="border:1px dashed #ccc; box-shadow:none;"><i class="fas fa-plus"></i></div></div>
@@ -2777,16 +2778,35 @@
                 <span id="scene-modal-title">地点详情</span>
                 <i class="fas fa-times" onclick="closeSceneModal()"></i>
             </div>
-            <div class="modal-body" style="padding: 20px;">
-                <!-- 场景描述区 -->
-                <div id="scene-description-area">
-                    <p id="scene-desc-text" style="font-size: 14px; line-height: 1.6; color: #555; min-height: 60px; white-space: pre-wrap;"></p>
-                </div>
-                <!-- 探索选项区 -->
-                <div id="scene-choices-area" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
-                    <!-- JS动态生成选项按钮 -->
-                </div>
-            </div>
+        <div class="modal-body" style="padding: 20px;">
+            <div id="fav-imgtext-content" class="fav-reveal-content"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-confirm"
+                    onclick="document.getElementById('fav-imgtext-modal').classList.remove('active')"
+                    style="width:100%;">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- === [新增] 粉丝群群聊弹窗 === -->
+<div id="fan-group-modal" class="k-full-modal" style="z-index: 5000; background: rgba(255,255,255,0.98);">
+    <div class="k-modal-header" style="border-bottom:none; padding-top:15px;">
+        <i class="fas fa-chevron-down" onclick="document.getElementById('fan-group-modal').classList.remove('active')"></i>
+        <span id="fan-group-title">我的死忠粉交流群</span>
+        <div style="width:20px;"></div>
+    </div>
+    
+    <div class="g4-modal-body" style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:15px;" id="fan-group-messages">
+        <!-- 聊天记录将在这里填充 -->
+    </div>
+
+    <!-- 底部输入框 -->
+    <div class="g4-input-bar">
+        <input type="text" id="fan-group-input" placeholder="和粉丝们说点什么..." onkeydown="if(event.key==='Enter') sendFanGroupMessage()">
+        <button onclick="sendFanGroupMessage()"><i class="fas fa-arrow-up"></i></button>
+    </div>
+</div>
             <div class="modal-footer" id="scene-modal-footer">
                 <button class="btn-cancel" onclick="openLocationEditorForCurrent()">编辑地点</button>
             </div>
@@ -4453,6 +4473,7 @@
     <script src="js/app_favorites.js"></script>
     <script src="js/desktop_sort.js"></script>
     <script src="js/app_files.js"></script>
+    <script src="js/app_forum.js"></script>
 <script>
 // Init Nexus on load
 document.addEventListener('DOMContentLoaded', function() {
@@ -4478,6 +4499,235 @@ function switchCsTab(id) {
   });
 }
 </script>
+
+<!-- ============================================== -->
+<!-- [全新] 社区 APP (韩系极简黑白灰 杂志风) -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="forumApp" style="background: #fdfdfd; font-family: 'Montserrat', 'PingFang SC', sans-serif; display: none; flex-direction: column;">
+    <!-- 顶部标题栏 -->
+    <div class="forum-header">
+        <i class="fas fa-chevron-left" onclick="closeForumApp()" style="cursor:pointer; padding: 10px;"></i>
+        <span class="forum-header-title" id="forum-header-title">COMMUNITY</span>
+        <div style="display:flex; gap:15px; align-items:center; padding-right: 10px;">
+            <i class="fas fa-magic" onclick="forumGenerateRandomPosts()" style="cursor:pointer; color:#ff7e67;" title="AI一键生成新帖"></i>
+            <i class="fas fa-pen-nib" onclick="forumCreatePost()" style="cursor:pointer;"></i>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="forum-body-container">
+        
+        <!-- Tab 1: 首页 (Home) -->
+        <div id="forum-tab-home" class="forum-tab-content active">
+            <!-- 杂志风 Header -->
+            <div class="forum-mag-header">
+                <div class="mag-headline">DAILY<br>FEED.</div>
+                <div class="mag-sub">在这个微观世界里，一切都在发生</div>
+            </div>
+
+            <!-- 分类导航 -->
+            <div class="forum-categories" id="forum-categories-scroll">
+                <div class="forum-cat-item active" onclick="forumSwitchCategory('all', this)">All / 全部</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('hot', this)">🔥 热搜</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('daily', this)">Daily / 日常分享</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('creative', this)">Creative / 同人创作</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('secret', this)">Secret / 匿名树洞</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('market', this)">Market / 闲置黑市</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('urban', this)">Urban / 都市怪谈</div>
+            </div>
+
+            <!-- 帖子列表 -->
+            <div class="forum-feed-list" id="forum-feed-list">
+                <!-- 骨架屏占位 -->
+                <div style="text-align:center; padding:40px; color:#aaa; font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+        </div>
+
+        <!-- Tab 2: 消息 (Inbox) -->
+        <div id="forum-tab-inbox" class="forum-tab-content" style="display:none;">
+            <div class="forum-mag-header">
+                <div class="mag-headline">INBOX<br>NOTIF.</div>
+                <div class="mag-sub">收到的回声与互动</div>
+            </div>
+            <div style="padding: 0 24px 10px;">
+                <div style="background:#111; color:#fff; padding:15px; border-radius:16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="forumOpenFanGroup()">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-users" style="font-size:20px; color:#ff7e67;"></i>
+                        <div>
+                            <div style="font-size:14px; font-weight:800;">我的死忠粉群</div>
+                            <div style="font-size:10px; color:#aaa; margin-top:2px;">和粉丝们一起互动</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#aaa;"></i>
+                </div>
+            </div>
+            <div class="forum-inbox-list" id="forum-inbox-list">
+                <!-- 消息列表 -->
+                <div style="text-align:center; padding:40px; color:#ccc; font-size:12px;">暂无新消息</div>
+            </div>
+        </div>
+
+        <!-- Tab 3: 个人 (My) -->
+        <div id="forum-tab-my" class="forum-tab-content" style="display:none;">
+            <div class="forum-profile-card">
+                <div class="fp-avatar">
+                    <img id="forum-my-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop">
+                </div>
+                <div class="fp-info">
+                    <div class="fp-name" id="forum-my-name">Me</div>
+                    <div class="fp-bio">Living in the moment ☁️</div>
+                </div>
+            </div>
+            
+            <div class="forum-stats-bar">
+                <div class="fp-stat">
+                    <div class="fp-stat-val" id="forum-stat-posts">0</div>
+                    <div class="fp-stat-label">POSTS</div>
+                </div>
+                <div class="fp-divider"></div>
+                <div class="fp-stat">
+                    <div class="fp-stat-val" id="forum-stat-likes">0</div>
+                    <div class="fp-stat-label">LIKES</div>
+                </div>
+            </div>
+
+            <div class="forum-my-sections">
+                <div class="fp-section-title">MY POSTS / 我的发布</div>
+                <div class="forum-feed-list" id="forum-my-posts-list"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 底部导航 (底栏) -->
+    <div class="forum-bottom-nav">
+        <div class="fb-nav-item active" onclick="forumSwitchMainTab('home', this)">
+            <i class="fas fa-layer-group"></i>
+            <span>HOME</span>
+        </div>
+        <div class="fb-nav-item" onclick="forumSwitchMainTab('inbox', this)">
+            <div style="position:relative;">
+                <i class="far fa-bell"></i>
+                <div class="fb-badge" id="forum-inbox-badge" style="display:none;"></div>
+            </div>
+            <span>INBOX</span>
+        </div>
+        <div class="fb-nav-item" onclick="forumSwitchMainTab('my', this)">
+            <i class="far fa-user"></i>
+            <span>MY</span>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================== -->
+<!-- 帖子详情页面 (Forum Post Detail) -->
+<!-- ============================================== -->
+<div class="app-fullscreen-view" id="forumPostDetail" style="background: #fdfdfd; z-index: 1001; font-family: 'Montserrat', 'PingFang SC', sans-serif; display: none; flex-direction: column;">
+    <div class="forum-header">
+        <i class="fas fa-chevron-left" onclick="closeForumPostDetail()" style="cursor:pointer; padding: 10px;"></i>
+        <span class="forum-header-title">POST DETAIL</span>
+        <i class="fas fa-ellipsis-h" style="cursor:pointer; padding: 10px;"></i>
+    </div>
+    
+    <div class="forum-detail-body" id="forum-detail-body">
+        <!-- 帖子内容 -->
+        <div id="forum-detail-content"></div>
+        <!-- 分割线 -->
+        <div class="forum-comments-divider">COMMENTS / 评论区</div>
+        <!-- 评论列表 -->
+        <div id="forum-detail-comments"></div>
+    </div>
+
+    <!-- 底部输入框 -->
+    <div class="forum-comment-input-bar">
+        <input type="text" id="forum-comment-input" placeholder="Say something..." onkeydown="if(event.key==='Enter') forumSubmitComment()">
+        <button onclick="forumSubmitComment()"><i class="fas fa-arrow-up"></i></button>
+    </div>
+</div>
+
+<!-- 虚拟用户主页 -->
+<div class="app-fullscreen-view" id="forumUserProfile" style="background: #fdfdfd; z-index: 1001; font-family: 'Montserrat', 'PingFang SC', sans-serif; display: none; flex-direction: column;">
+    <div class="forum-header">
+        <i class="fas fa-chevron-left" onclick="closeForumUserProfile()" style="cursor:pointer; padding: 10px;"></i>
+        <span class="forum-header-title">USER PROFILE</span>
+        <i class="fas fa-ellipsis-h" style="cursor:pointer; padding: 10px;"></i>
+    </div>
+    <div class="forum-body-container" style="flex:1; overflow-y:auto;">
+        <div class="forum-profile-card">
+            <div class="fp-avatar">
+                <img id="fup-avatar" src="">
+            </div>
+            <div class="fp-info">
+                <div class="fp-name" id="fup-name">Name</div>
+                <div class="fp-bio" id="fup-bio">Virtual User ✨ AI模拟</div>
+            </div>
+        </div>
+        <div style="padding: 0 24px 20px; display:flex; gap:10px;">
+            <button id="fup-follow-btn" onclick="forumToggleFollow()" style="flex:1; padding:10px; background:#111; color:#fff; border:none; border-radius:20px; font-weight:700; cursor:pointer;">关注</button>
+            <button onclick="forumOpenChatFromProfile()" style="flex:1; padding:10px; background:#f0f0f0; color:#111; border:none; border-radius:20px; font-weight:700; cursor:pointer;">私信</button>
+        </div>
+        
+        <div class="forum-my-sections">
+            <div class="fp-section-title">POSTS / 发布的帖子</div>
+            <div class="forum-feed-list" id="fup-posts-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 论坛聊天/私信页面 -->
+<div class="app-fullscreen-view" id="forumChatView" style="background: #fdfdfd; z-index: 1002; font-family: 'Montserrat', 'PingFang SC', sans-serif; display: none; flex-direction: column;">
+    <div class="forum-header" style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+        <i class="fas fa-chevron-left" onclick="closeForumChat()" style="cursor:pointer; padding: 10px;"></i>
+        <span class="forum-header-title" id="forum-chat-title">CHAT</span>
+        <i class="fas fa-ellipsis-h" style="cursor:pointer; padding: 10px;"></i>
+    </div>
+    <div class="forum-body-container" id="forum-chat-messages" style="flex:1; overflow-y:auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #f9f9f9;">
+        <!-- 聊天记录将在这里填充 -->
+    </div>
+    <div class="forum-comment-input-bar" style="position:static;">
+        <input type="text" id="forum-chat-input" placeholder="发消息..." onkeydown="if(event.key==='Enter') forumSendChatMessage()">
+        <button onclick="forumSendChatMessage()"><i class="fas fa-arrow-up"></i></button>
+    </div>
+</div>
+
+<!-- 发帖弹窗 -->
+<div id="forum-create-modal" class="modal-overlay" style="z-index: 1002;">
+    <div class="modal-box" style="width: 340px; border-radius: 20px;">
+        <div class="modal-header">
+            <span>CREATE POST / 新帖</span>
+            <i class="fas fa-times" onclick="closeForumCreateModal()"></i>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label>选择分区</label>
+                <select id="forum-create-cat" style="width: 100%; border: 1px solid #eee; border-radius: 12px; padding: 12px; background: #fafafa; font-size: 14px; outline: none;">
+                    <option value="daily">Daily / 日常分享</option>
+                    <option value="creative">Creative / 同人创作</option>
+                    <option value="secret">Secret / 匿名树洞</option>
+                    <option value="market">Market / 闲置黑市</option>
+                    <option value="urban">Urban / 都市怪谈</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>标题 (选填)</label>
+                <input type="text" id="forum-create-title" placeholder="吸引人的标题..." style="width: 100%; border: none; border-bottom: 2px solid #111; padding: 10px 0; font-size: 16px; font-weight: 700; outline: none; background: transparent;">
+            </div>
+            <div class="input-group">
+                <label>正文内容</label>
+                <textarea id="forum-create-content" rows="5" placeholder="想说点什么？" style="width: 100%; border: 1px solid #eee; border-radius: 12px; padding: 12px; background: #fafafa; font-size: 14px; outline: none; resize: vertical;"></textarea>
+            </div>
+            <!-- 可以后续加入图片/配图 -->
+            <div class="input-group">
+                <label>配图意境 (选填，AI会渲染出配图)</label>
+                <input type="text" id="forum-create-img-desc" placeholder="例如：桌上放着一杯冰美式..." style="width: 100%; border: 1px solid #eee; border-radius: 12px; padding: 12px; background: #fafafa; font-size: 12px; outline: none;">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeForumCreateModal()">取消</button>
+            <button class="btn-confirm" onclick="confirmForumCreatePost()" style="background: #111; color: #fff;">发布</button>
+        </div>
+    </div>
+</div>
 
 <!-- ============================================== -->
 <!-- [韩系极简] Files APP (存储空间可视化) -->
@@ -4588,6 +4838,26 @@ function switchCsTab(id) {
     <div class="tr-busted-title">被抓包了！</div>
     <div class="tr-busted-sub">TA回来了……手机还在你手里<br>这次的后果需要你自己承担</div>
     <div class="tr-busted-btn" onclick="TrackerApp.dismissBusted()">关闭并退出</div>
+  </div>
+
+  <!-- ── 视图0：模式选择 (数字骇入 / 物理潜入) ── -->
+  <div class="tr-view" id="tr-view-mode-select" style="display: none;">
+    <div class="tr-mode-container">
+      <div class="tr-mode-title">SELECT OPERATION</div>
+      <div class="tr-mode-options">
+        <div class="tr-mode-card" onclick="TrackerApp.selectMode('hack')">
+          <div class="tr-mode-icon"><i class="fas fa-mobile-alt"></i></div>
+          <div class="tr-mode-name">[ DIGITAL HACK ]</div>
+          <div class="tr-mode-desc">远程骇入 TA 的手机，查看隐私数据</div>
+        </div>
+        <div class="tr-mode-card" onclick="TrackerApp.selectMode('infiltrate')">
+          <div class="tr-mode-icon"><i class="fas fa-door-open"></i></div>
+          <div class="tr-mode-name">[ PHYSICAL INFILTRATE ]</div>
+          <div class="tr-mode-desc">潜入 TA 的房间进行物理搜查</div>
+        </div>
+      </div>
+    </div>
+    <div class="tr-select-close" onclick="TrackerApp.close()">✕ ABORT</div>
   </div>
 
   <!-- ── 视图1：角色选择 ── -->
@@ -4864,6 +5134,76 @@ function switchCsTab(id) {
     </div>
 
   </div><!-- /tr-view-desktop -->
+
+  <!-- ── 视图4：线下潜入模式 (Home Exploration) ── -->
+  <div class="tr-view" id="tr-view-infiltrate" style="display: none; background: #111; color: #fff;">
+    <!-- 顶部状态栏 -->
+    <div class="tr-inf-header">
+      <div class="tr-inf-target">TARGET: <span id="tr-inf-name">Loading...</span></div>
+      <div class="tr-inf-time" id="tr-inf-time">00:00:00:00</div>
+    </div>
+
+    <!-- 中间：平面蓝图与手电筒聚光区 -->
+    <div class="tr-inf-blueprint-area" id="tr-inf-blueprint">
+      <!-- 噪点与暗角遮罩 -->
+      <div class="tr-inf-vignette"></div>
+      <div class="tr-inf-noise"></div>
+      
+      <!-- 房间区域线框图 -->
+      <div class="tr-inf-room-grid">
+        <div class="tr-inf-zone" data-zone="bed" onclick="TrackerApp.infSelectZone('bed')">
+          <div class="tr-inf-zone-label">[ BED ]<br>床铺区域</div>
+        </div>
+        <div class="tr-inf-zone" data-zone="desk" onclick="TrackerApp.infSelectZone('desk')">
+          <div class="tr-inf-zone-label">[ DESK ]<br>书桌抽屉</div>
+        </div>
+        <div class="tr-inf-zone" data-zone="wardrobe" onclick="TrackerApp.infSelectZone('wardrobe')">
+          <div class="tr-inf-zone-label">[ WARDROBE ]<br>衣柜</div>
+        </div>
+        <div class="tr-inf-zone" data-zone="trash" onclick="TrackerApp.infSelectZone('trash')">
+          <div class="tr-inf-zone-label">[ TRASH ]<br>废纸篓</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部：特工控制台 -->
+    <div class="tr-inf-control-deck">
+      <!-- 警戒值仪表盘 -->
+      <div class="tr-inf-gauge-container">
+        <div class="tr-inf-gauge-label">TENSION LEVEL</div>
+        <div class="tr-inf-gauge-bar">
+          <div class="tr-inf-gauge-fill" id="tr-inf-tension-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- 当前选中区域提示 -->
+      <div class="tr-inf-status-text" id="tr-inf-status-text">
+        <span class="blinking-cursor">_</span> AWAITING COMMAND...
+      </div>
+
+      <!-- 操作拨杆/按钮 -->
+      <div class="tr-inf-actions">
+        <button class="tr-inf-action-btn" id="tr-inf-btn-search" onclick="TrackerApp.infSearch()" disabled>
+          <i class="fas fa-search"></i> SEARCH
+        </button>
+        <button class="tr-inf-action-btn" id="tr-inf-btn-tamper" onclick="TrackerApp.infTamper()" disabled>
+          <i class="fas fa-hand-sparkles"></i> TAMPER
+        </button>
+        <button class="tr-inf-action-btn escape" onclick="TrackerApp.infEscape()">
+          <i class="fas fa-sign-out-alt"></i> ESCAPE
+        </button>
+      </div>
+    </div>
+    
+    <!-- 搜查结果弹窗 (拟物化纸条) -->
+    <div id="tr-inf-result-modal" class="tr-inf-result-modal" style="display:none;" onclick="this.style.display='none'">
+      <div class="tr-inf-paper-slip" onclick="event.stopPropagation()">
+        <div class="tr-inf-paper-content" id="tr-inf-result-text">...</div>
+        <div class="tr-inf-paper-close" onclick="document.getElementById('tr-inf-result-modal').style.display='none'">[ CONFIRM ]</div>
+      </div>
+    </div>
+
+  </div><!-- /tr-view-infiltrate -->
 
 
 </div><!-- /trackerApp -->
@@ -5265,7 +5605,11 @@ function switchCsTab(id) {
         </div>
 
         <div class="form-group">
-            <label>回复最大字数 (Target Length): <span id="off-len-val">200</span></label>
+            <label>回复最小字数 (Min Length): <span id="off-min-len-val">50</span></label>
+            <input type="range" id="offline-min-len" min="10" max="1000" step="10" oninput="document.getElementById('off-min-len-val').innerText=this.value; saveOfflineConfig();">
+        </div>
+        <div class="form-group">
+            <label>回复最大字数 (Max Length): <span id="off-len-val">200</span></label>
             <input type="range" id="offline-max-len" min="50" max="5000" step="50" oninput="document.getElementById('off-len-val').innerText=this.value; saveOfflineConfig();">
             <div class="form-text">注意：这只是建议长度，并非绝对截断。</div>
         </div>
@@ -5294,33 +5638,32 @@ function switchCsTab(id) {
             <textarea id="offline-custom-css" rows="4" placeholder="/* 仅在此模式生效的 CSS */&#10;.offline-entry { font-size: 16px; }" onchange="saveOfflineConfig()"></textarea>
         </div>
 
-        <!-- 场景提示词 -->
-        <div style="margin-top:16px;">
-            <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;">场景提示词 (Scene Prompt)</label>
-            <textarea id="offline-scene-prompt" rows="3"
-                placeholder="描述当前约会场景，例如：两人在咖啡馆靠窗座位，窗外下着小雨，桌上放着两杯拿铁..."
-                onchange="saveOfflineConfig()"
-                style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid #e8e8e8;font-size:13px;resize:vertical;box-sizing:border-box;background:#fafafa;"></textarea>
-        </div>
-
         <!-- 文风输入 + 预设 -->
-        <div style="margin-top:14px;">
-            <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;">文风要求 (Writing Style)</label>
+        <div style="margin-top:14px; background:#fff; border-radius:12px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border:1px solid #f0f0f0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <label style="font-size:12px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-pen-nib" style="color:#111;"></i> 文风要求 (Writing Style)
+                </label>
+                <span id="writing-style-mode-badge" style="font-size:10px; background:#f0f0f0; color:#333; padding:2px 6px; border-radius:4px;">模式</span>
+            </div>
             <textarea id="offline-writing-style" rows="3"
-                placeholder="例如：文字细腻唯美，多用感官描写，对话克制留白，像村上春树的散文风格..."
+                placeholder="若不填写，将使用内置默认文风..."
                 onchange="saveOfflineConfig()"
-                style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid #e8e8e8;font-size:13px;resize:vertical;box-sizing:border-box;background:#fafafa;"></textarea>
+                style="width:100%;padding:10px;border-radius:8px;border:1px solid #e8e8e8;font-size:13px;resize:vertical;box-sizing:border-box;background:#fafafa;line-height:1.5;transition:all 0.3s;"></textarea>
+            
+            <div id="builtin-writing-style-display" style="display:none;"></div>
+            
             <!-- 文风预设 -->
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
-                <select id="offline-style-preset-select" style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid #e0e0e0;font-size:12px;background:#fff;">
+            <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center; border-top:1px dashed #eee; padding-top:10px;">
+                <select id="offline-style-preset-select" style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid #e0e0e0;font-size:12px;background:#f9f9f9;color:#333;outline:none;">
                     <option value="">── 选择文风预设 ──</option>
                 </select>
-                <button onclick="applyOfflineStylePreset()" style="padding:6px 10px;border-radius:8px;background:#333;color:#fff;border:none;font-size:12px;cursor:pointer;">应用</button>
-                <button onclick="deleteOfflineStylePreset()" style="padding:6px 10px;border-radius:8px;background:#fff;color:#999;border:1px solid #e0e0e0;font-size:12px;cursor:pointer;">删除</button>
+                <button onclick="applyOfflineStylePreset()" style="padding:6px 12px;border-radius:8px;background:#111;color:#fff;border:none;font-size:12px;cursor:pointer;font-weight:600;">应用</button>
+                <button onclick="deleteOfflineStylePreset()" style="padding:6px 12px;border-radius:8px;background:#f5f5f5;color:#ff4d4f;border:none;font-size:12px;cursor:pointer;font-weight:600;">删除</button>
             </div>
-            <div style="display:flex;gap:6px;margin-top:6px;">
-                <input type="text" id="offline-style-preset-name" placeholder="预设名称..." style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid #e0e0e0;font-size:12px;">
-                <button onclick="saveOfflineStylePreset()" style="padding:6px 12px;border-radius:8px;background:#07c160;color:#fff;border:none;font-size:12px;cursor:pointer;white-space:nowrap;">保存预设</button>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+                <input type="text" id="offline-style-preset-name" placeholder="给当前文风起个名字..." style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid #eee;font-size:12px;background:#fafafa;outline:none;transition:0.2s;" onfocus="this.style.borderColor='#111'">
+                <button onclick="saveOfflineStylePreset()" style="padding:8px 16px;border-radius:8px;background:#fff;color:#111;border:1px solid #111;font-size:12px;cursor:pointer;font-weight:700;white-space:nowrap;transition:0.2s;" onmouseover="this.style.background='#111';this.style.color='#fff';" onmouseout="this.style.background='#fff';this.style.color='#111';">保存预设</button>
             </div>
         </div>
     </div>

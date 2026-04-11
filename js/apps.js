@@ -337,7 +337,7 @@ refreshMindCardUI(friendId, false);
 const PRESETS_DATA_KEY = 'myCoolPhone_tavernPresets';
 const OFFLINE_CONFIG_KEY = 'myCoolPhone_offlineConfig';
 let tavernPresets = [];
-let offlineConfig = { activePresetId: 'default', maxLength: 200, streamingEnabled: false };
+let offlineConfig = { activePresetId: 'default', minLength: 50, maxLength: 200, streamingEnabled: false };
 let currentModifyingMsgId = null; // 用于记录当前正在修改哪条消息
 
 let currentReplyTarget = null; // 记录朋友圈回复目标
@@ -7918,6 +7918,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
         `${h.type==='sent'?'User':friend.realName}: ${h.isOffline?h.text:'(Online Memory: '+h.text+')'}`
     ).join('\n');
 
+    const minLength = parseInt(offlineConfig.minLength) || 50;
     const limit = parseInt(offlineConfig.maxLength) || 200;
     const currentLocation = friend.mindState?.location || '当前约会场景';
 
@@ -7959,10 +7960,6 @@ window.sendOfflineMessage = async function(isRegen = false) {
         return String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
     };
 
-    const scenePromptText = document.getElementById('offline-scene-prompt')?.value.trim() || currentLocation;
-    const stylePromptText = offlineConfig.writingStyle || '第一人称；包含动作、表情、环境细节；情绪细腻';
-    const timeStr = new Date().toLocaleString();
-
      // ==========================================
     // 核心重构：三明治 Prompt 结构 (强化人设权重)
     // ==========================================
@@ -7987,12 +7984,6 @@ ${parseMacros(friend.persona)}
 
 ${worldbookContent ? `\n<ConstantWorldInfo>\n${parseMacros(worldbookContent)}\n</ConstantWorldInfo>` : ''}
 ${preset && preset.jailbreak ? '\n<JailbreakRules>\n' + parseMacros(preset.jailbreak) + '\n</JailbreakRules>' : ''}
-
-<CurrentScenario>
-- 场景：${scenePromptText}
-- 时间：${timeStr}
-- 文风要求：${stylePromptText}
-</CurrentScenario>
 `;
 
     if (typeof constructWorldInfoPrompt === 'function') {
@@ -8028,11 +8019,11 @@ ${preset && preset.jailbreak ? '\n<JailbreakRules>\n' + parseMacros(preset.jailb
 <OutputFormatDirectives>
 【最高系统指令：格式与人设强校验】
 在你生成回复前，请再次检视你是否符合“${charName}”的人设语气！
-你的回复【必须且只能】是一个单一、完整、可解析的 JSON 对象，禁止任何前后缀或 \`\`\`json 标记。
+你的回复【必须且只能】是一个单一、完整、可解析的 JSON 对象，绝对禁止任何前后缀、任何 Markdown 代码块标记（如 \`\`\`json 等）。
 
-JSON 结构必须如下：
+JSON 结构必须严格如下：
 {
-  "chatResponse": "你的回应正文（约 ${limit} 字，包含动作、对话和环境描写）",
+  "chatResponse": "你的回应正文（约 ${limit}-${minLength} 字，包含动作、对话和环境描写）",
   "innerVoice": {
     "clothing": "当前穿搭",
     "behavior": "当前细微动作神态",
@@ -8044,7 +8035,6 @@ JSON 结构必须如下：
     "kaomoji": "颜文字",
     "affection": ${Number(friend.affection || 0)}
   }
-  }${isDanmakuOn ? ',\n  "danmaku": ["弹幕吐槽1", "弹幕吐槽2", "弹幕吐槽3", "弹幕吐槽4"]' : ''}${isOfflineOptionsOn ? ',\n  "options": ["互动选项1", "互动选项2"]' : ''}
 }
 </OutputFormatDirectives>`;
     // 将格式要求作为最后一条系统消息（或追加在 user 消息之后，这里作为最后一条 system 消息）
@@ -8191,19 +8181,6 @@ JSON 结构必须如下：
                         if(typeof syncMindBgmToPlayer === 'function') syncMindBgmToPlayer(state.bgm);
                     }
                     
-                    if (isOfflineOptionsOn && aiData.options && Array.isArray(aiData.options)) {
-                        hasOptions = true;
-                        extractedOptions = aiData.options;
-                    }
-                    
-                    if (isDanmakuOn && aiData.danmaku && Array.isArray(aiData.danmaku)) {
-                        hasDanmaku = true;
-                        const dList = aiData.danmaku.filter(s => s && s.trim().length > 0);
-                        if (dList.length > 0) {
-                            danmakuPool = dList;
-                            startDanmakuBatch();
-                        }
-                    }
                 }
             } catch (e) {
                 console.warn("Offline JSON parse failed, fallback text extraction", e);
@@ -8218,24 +8195,13 @@ JSON 结构必须如下：
                 customAvatar: friend.avatar, isOffline: true, id: aiMsgId
             });
 
-            // 渲染选项分支
-            if (isLookingOffline && isOfflineOptionsOn && extractedOptions.length > 0) {
-                const container = document.getElementById('offline-log-container');
-                const optDiv = document.createElement('div');
-                optDiv.id = 'vn-options-box';
-                optDiv.className = 'vn-options-container';
-                extractedOptions.forEach(opt => {
-                    const btn = document.createElement('div');
-                    btn.className = 'vn-option-btn';
-                    btn.innerText = opt;
-                    btn.onclick = () => selectOfflineOption(opt);
-                    optDiv.appendChild(btn);
+            // 触发后台静默生成弹幕和选项
+            if (typeof generateOfflineExtrasBackground === 'function') {
+                generateOfflineExtrasBackground(targetChatId, cleanText || text, cleanReply, settings, friend, {
+                    needStatus: false,
+                    needDanmaku: typeof isDanmakuOn !== 'undefined' && isDanmakuOn,
+                    needOptions: typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn
                 });
-                const dmArea = container.querySelector('.offline-danmaku-area');
-                if (dmArea) container.insertBefore(optDiv, dmArea);
-                else container.appendChild(optDiv);
-
-                setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
             
         } catch (e) {
@@ -8347,19 +8313,6 @@ JSON 结构必须如下：
                         if(typeof syncMindBgmToPlayer === 'function') syncMindBgmToPlayer(state.bgm);
                     }
                     
-                    if (isOfflineOptionsOn && aiData.options && Array.isArray(aiData.options)) {
-                        hasOptions = true;
-                        extractedOptions = aiData.options;
-                    }
-                    
-                    if (isDanmakuOn && aiData.danmaku && Array.isArray(aiData.danmaku)) {
-                        hasDanmaku = true;
-                        const dList = aiData.danmaku.filter(s => s && s.trim().length > 0);
-                        if (dList.length > 0) {
-                            danmakuPool = dList;
-                            startDanmakuBatch();
-                        }
-                    }
                 }
             } catch (e) {
                 console.warn("Offline JSON parse failed, fallback", e);
@@ -8379,21 +8332,13 @@ JSON 结构必须如下：
                 customAvatar: friend.avatar, isOffline: true, id: aiMsgId
             });
             
-            if (isLookingOffline && isOfflineOptionsOn && extractedOptions.length > 0) {
-                const optDiv = document.createElement('div');
-                optDiv.id = 'vn-options-box';
-                optDiv.className = 'vn-options-container';
-                extractedOptions.forEach(opt => {
-                    const btn = document.createElement('div');
-                    btn.className = 'vn-option-btn';
-                    btn.innerText = opt;
-                    btn.onclick = () => selectOfflineOption(opt);
-                    optDiv.appendChild(btn);
+            // 触发后台静默生成弹幕和选项
+            if (typeof generateOfflineExtrasBackground === 'function') {
+                generateOfflineExtrasBackground(targetChatId, cleanText || text, cleanReply, settings, friend, {
+                    needStatus: false,
+                    needDanmaku: typeof isDanmakuOn !== 'undefined' && isDanmakuOn,
+                    needOptions: typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn
                 });
-                const dmArea = container.querySelector('.offline-danmaku-area');
-                if (dmArea) container.insertBefore(optDiv, dmArea);
-                else container.appendChild(optDiv);
-                setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
 
         } catch (e) {
@@ -8522,6 +8467,10 @@ window.toggleOfflineSettings = function() {
             select.appendChild(opt);
         });
         select.value = offlineConfig.activePresetId;
+        if(document.getElementById('offline-min-len')) {
+            document.getElementById('offline-min-len').value = offlineConfig.minLength || 50;
+            document.getElementById('off-min-len-val').innerText = offlineConfig.minLength || 50;
+        }
         document.getElementById('offline-max-len').value = offlineConfig.maxLength;
         document.getElementById('off-len-val').innerText = offlineConfig.maxLength;
         
@@ -8630,6 +8579,9 @@ window.deleteCurrentPreset = function() {
 // 在 saveOfflineConfig 中保存背景和CSS
 window.saveOfflineConfig = function() {
     offlineConfig.activePresetId = document.getElementById('offline-active-preset').value;
+    if(document.getElementById('offline-min-len')) {
+        offlineConfig.minLength = document.getElementById('offline-min-len').value;
+    }
     offlineConfig.maxLength = document.getElementById('offline-max-len').value;
     
     // 新增：保存背景和CSS
@@ -8639,7 +8591,14 @@ window.saveOfflineConfig = function() {
 
     // 【修复】保存文风字段
     const writingStyleEl = document.getElementById('offline-writing-style');
-    if (writingStyleEl) offlineConfig.writingStyle = writingStyleEl.value;
+    if (writingStyleEl) {
+        const isGroup = (typeof currentChatType !== 'undefined' && currentChatType === 'group');
+        if (isGroup) {
+            offlineConfig.writingStyleGroup = writingStyleEl.value;
+        } else {
+            offlineConfig.writingStyle = writingStyleEl.value;
+        }
+    }
     
     localStorage.setItem(OFFLINE_CONFIG_KEY, JSON.stringify(offlineConfig));
     applyOfflineVisuals();
@@ -8727,6 +8686,65 @@ window.handleCsChatBgUpload = function(input) {
     reader.readAsDataURL(file);
 };
 
+const OFFLINE_STYLE_PRESETS_KEY = 'myCoolPhone_offlineStylePresets';
+
+function loadOfflineStylePresetsToUI() {
+    const sel = document.getElementById('offline-style-preset-select');
+    if (!sel) return;
+    const presets = JSON.parse(localStorage.getItem(OFFLINE_STYLE_PRESETS_KEY) || '{}');
+    sel.innerHTML = '<option value="">── 选择文风预设 ──</option>';
+    Object.keys(presets).forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k; opt.text = k;
+        sel.appendChild(opt);
+    });
+}
+
+window.saveOfflineStylePreset = function() {
+    const name = (document.getElementById('offline-style-preset-name')?.value || '').trim();
+    if (!name) { if (typeof showToast === 'function') showToast('请输入文风预设名称'); return; }
+    
+    const styleText = document.getElementById('offline-writing-style')?.value || '';
+    if (!styleText) { if (typeof showToast === 'function') showToast('请先输入文风内容'); return; }
+
+    const presets = JSON.parse(localStorage.getItem(OFFLINE_STYLE_PRESETS_KEY) || '{}');
+    presets[name] = styleText;
+    localStorage.setItem(OFFLINE_STYLE_PRESETS_KEY, JSON.stringify(presets));
+    
+    document.getElementById('offline-style-preset-name').value = '';
+    loadOfflineStylePresetsToUI();
+    if (typeof showToast === 'function') showToast(`文风预设 "${name}" 已保存 ✓`);
+};
+
+window.applyOfflineStylePreset = function() {
+    const sel = document.getElementById('offline-style-preset-select');
+    const name = sel ? sel.value : '';
+    if (!name) return;
+    
+    const presets = JSON.parse(localStorage.getItem(OFFLINE_STYLE_PRESETS_KEY) || '{}');
+    const text = presets[name];
+    if (text !== undefined) {
+        const writingStyleEl = document.getElementById('offline-writing-style');
+        if (writingStyleEl) writingStyleEl.value = text;
+        if (typeof showToast === 'function') showToast(`已应用文风：${name}`);
+    }
+};
+
+window.deleteOfflineStylePreset = function() {
+    const sel = document.getElementById('offline-style-preset-select');
+    const name = sel ? sel.value : '';
+    if (!name) { if (typeof showToast === 'function') showToast('请先选择一个预设'); return; }
+    
+    if (!confirm(`删除文风预设 "${name}"？`)) return;
+    
+    const presets = JSON.parse(localStorage.getItem(OFFLINE_STYLE_PRESETS_KEY) || '{}');
+    delete presets[name];
+    localStorage.setItem(OFFLINE_STYLE_PRESETS_KEY, JSON.stringify(presets));
+    
+    loadOfflineStylePresetsToUI();
+    if (typeof showToast === 'function') showToast('已删除 · Deleted');
+};
+
 // 修改 toggleOfflineSettings 以填充新数据
 const originalToggleOffline = window.toggleOfflineSettings;
 window.toggleOfflineSettings = function() {
@@ -8739,9 +8757,31 @@ window.toggleOfflineSettings = function() {
         document.getElementById('offline-bg-input').value = offlineConfig.bgImage || '';
         document.getElementById('offline-custom-css').value = offlineConfig.customCSS || '';
         document.getElementById('offline-streaming-toggle').checked = !!offlineConfig.streamingEnabled;
-        // 【修复】回填文风字段
+        
+        // 【修复】根据单聊和群聊回填及提示不同文风
         const writingStyleEl = document.getElementById('offline-writing-style');
-        if (writingStyleEl) writingStyleEl.value = offlineConfig.writingStyle || '';
+        if (writingStyleEl) {
+            const isGroup = (typeof currentChatType !== 'undefined' && currentChatType === 'group');
+            const badge = document.getElementById('writing-style-mode-badge');
+            if (badge) {
+                badge.innerText = isGroup ? '群聊模式' : '单聊模式';
+                badge.style.background = isGroup ? '#fff0f6' : '#f6ffed';
+                badge.style.color = isGroup ? '#eb2f96' : '#52c41a';
+            }
+            
+            const builtinDisplay = document.getElementById('builtin-writing-style-display');
+            if (builtinDisplay) {
+                const singleBuiltin = "采用真实互动小说文风。善用准确的感官细节与动作描写（Show, don't tell），将情绪与内心独白自然融入叙事中。对话需符合真实口语习惯，与叙事节奏张弛有度地交织。保持文字的通透、流畅与真实感。";
+                const groupBuiltin = "采用写实的群像文风。聚焦多角色场景下的自然交互，严格遵循各自人设与说话习惯，体现角色间的互动。通过简练的动作与神态穿插来推进群聊画面。对话要符合多人聊天的真实节奏与临场感。";
+                builtinDisplay.innerHTML = `<strong style="color:#07c160;">内置默认文风：</strong><br>${isGroup ? groupBuiltin : singleBuiltin}`;
+            }
+            
+            writingStyleEl.value = isGroup ? (offlineConfig.writingStyleGroup || '') : (offlineConfig.writingStyle || '');
+        }
+        
+        if (typeof loadOfflineStylePresetsToUI === 'function') {
+            loadOfflineStylePresetsToUI();
+        }
     }
 }
 
@@ -11852,27 +11892,28 @@ async function generateOfflineExtrasBackground(chatId, userInput, aiReply, setti
     }
 
     if (needDanmaku) {
-        requests.push(`[DANMAKU_START]\n（网友弹幕一）\n（网友弹幕二）\n[DANMAKU_END]`);
+        requests.push(`[DANMAKU_START]\n（网友弹幕一）\n（网友弹幕二）\n（网友弹幕三）\n（网友弹幕四）\n（网友弹幕五）\n[DANMAKU_END]`);
     }
 
     if (needOptions) {
-        requests.push(`[OPTIONS_START]\n1. （用户接下来可执行的选项一）\n2. （选项二）\n[OPTIONS_END]`);
+        requests.push(`[OPTIONS_START]\n1. （用户接下来可执行的选项一）\n2. （选项二）\n3. （选项三）\n[OPTIONS_END]`);
     }
 
     if (requests.length === 0) return;
 
     const myName = (typeof personasMeta !== 'undefined' && typeof currentPersonaId !== 'undefined' && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
     
-    const sysPrompt = `你是一个辅助分析系统，负责为角色扮演游戏生成后台的 UI 面板数据。
+    const sysPrompt = `你是一个专业的后台数据生成引擎，负责为角色扮演游戏生成后台 UI 面板数据。
 【当前角色】：${friend.realName}
 【角色人设】：${friend.persona}
 
-【核心指令】
-1. 只补全缺失的数据块，不要重复输出没有要求的块。
-2. 绝对不要输出任何 markdown 代码块标记 (如 \`\`\`json 等)，不要任何问候语、分析解释。
-3. 必须严格输出以下格式的方括号结构，不要漏掉结束标签，也不要合并标签！
+【核心指令 - 必须严格遵守】
+1. 你的输出只能且必须包含指定的格式块，绝对禁止输出任何寒暄、解释、Markdown代码块（如 \`\`\` 等）。
+2. 你必须严格按照以下指定的方括号结构输出数据，绝不能合并标签，绝不能漏掉开始或结束标签。
+3. 对于选项分支（[OPTIONS_START]），请务必结合当前剧情的悬念或冲突，以数字序号（如 1. 2. 3.）开头提供【恰好 3 个】供用户选择的行动选项，这三个选项必须引导用户走向截然不同的剧情方向。
+4. 对于弹幕（[DANMAKU_START]），请提供 5-8 条极具网感、犀利吐槽风格的网友实时弹幕，每行一条，字数不要太长。
 
-格式要求：
+【需要生成的数据块格式】：
 ${requests.join('\n\n')}`;
 
     const userPrompt = `【最新对话互动】\nUser(${myName}): ${userInput}\n${friend.realName}: ${aiReply}\n\n请立刻按照规定格式生成缺失的后台数据块。`;

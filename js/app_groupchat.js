@@ -681,6 +681,13 @@ window.sendGroupMessageToAI = async function (userMessage) {
         // 获取群公告
         const announcementStr = group.announcement ? `\n[最高优先级规则，必须严格遵守]\n以下是群公告，你扮演的所有角色在接下来的对话中受此规则约束：\n${group.announcement}` : '';
 
+        let writingStyleText = '';
+        if (typeof offlineConfig !== 'undefined' && offlineConfig.writingStyle) {
+            writingStyleText = offlineConfig.writingStyle;
+        } else {
+            writingStyleText = "采用写实的群像文风。聚焦多角色场景下的自然交互，严格遵循各自人设与说话习惯，体现角色间的互动。通过简练的动作与神态穿插来推进群聊画面。对话要符合多人聊天的真实节奏与临场感。";
+        }
+
         const groupDanmakuInstr = (typeof isDanmakuOn !== 'undefined' && isDanmakuOn)
             ? `\n8. 在 JSON 数组全部输出完后，额外追加一个弹幕块，格式严格如下：
 [DANMAKU_START]
@@ -703,6 +710,7 @@ ${myPersonaStr}
 ${anonNote}${atNote}
 ${announcementStr}
 ${worldStr}${longTermMemoryStr}${linkedMemoryCtx}
+\n[文风要求]\n${writingStyleText}
 
 [近期群聊记录]
 ${historyText || '(暂无历史记录)'}
@@ -3529,29 +3537,6 @@ async function sendGroupOfflineMessage(isRegen = false) {
     const maxLen = parseInt((typeof offlineConfig !== 'undefined' && offlineConfig.maxLength) || 200);
     const perCharLen = Math.max(60, Math.round(maxLen / Math.max(dispatched.length, 1)));
 
-    // ── 选项指令 ──
-    const optionsInstr = (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn)
-        ? `\n[选项分支指令（强烈要求）]
-你必须在回复的最末尾（JSON 数组之外，或如果无法放在外面，则作为一个特殊消息对象，或者直接包含在回复文本末尾，但为了格式兼容，请严格按照以下格式附加在全部 JSON 文本之后），提供 2-3 个供用户选择的行动选项。
-格式必须严格为：
-[OPTIONS_START]
-1. 选项一
-2. 选项二
-[OPTIONS_END]`
-        : '';
-
-    // ── 弹幕指令 ──
-    const danmakuInstr = (typeof isDanmakuOn !== 'undefined' && isDanmakuOn)
-        ? `\n[实时弹幕指令（强烈要求）]
-你必须在回复的末尾（紧接在 JSON 之后，或在 OPTIONS_START 之前），提供 3-5 条旁观者视角的"实时弹幕"（即网络观众的吐槽）。
-格式必须严格为：
-[DANMAKU_START]
-弹幕内容一
-弹幕内容二
-弹幕内容三
-[DANMAKU_END]`
-        : '';
-
     // ── 群公告 ──
     const announcementStr = group.announcement ? `\n[群公告（最高优先级，所有人必须遵守）]: ${group.announcement}` : '';
 
@@ -3567,6 +3552,13 @@ async function sendGroupOfflineMessage(isRegen = false) {
         }
     }
 
+    let writingStyleText = '';
+    if (typeof offlineConfig !== 'undefined' && offlineConfig.writingStyle) {
+        writingStyleText = offlineConfig.writingStyle;
+    } else {
+        writingStyleText = "采用写实的群像文风。聚焦多角色场景下的自然交互，严格遵循各自人设与说话习惯，体现角色间的互动。通过简练的动作与神态穿插来推进群聊画面。对话要符合多人聊天的真实节奏与临场感。";
+    }
+
     const systemPrompt = `[系统：群体线下聚会叙事引擎 V1.0]
 你正在模拟一场多人共同参与的真实线下聚会。你的任务是扮演且仅能扮演下述【群成员花名册】中未被禁言的NPC，每个角色的语气必须符合其人设。
 当前地点：【${currentLocation}】
@@ -3579,6 +3571,7 @@ ${myPersonaStr}
 ${announcementStr}
 ${worldInfoText ? `\n[核心世界观设定]\n${worldInfoText}` : ''}
 ${longTermMemoryStr}${linkedMemoryCtx}
+\n[文风要求]\n${writingStyleText}
 
 [近期线下互动记录]
 ${historyText || '（刚刚开始聚会）'}
@@ -3594,9 +3587,6 @@ ${historyText || '（刚刚开始聚会）'}
 5. 【输出格式】：必须输出纯 JSON 数组，每项格式：{"name":"角色名","content":"叙事正文"}
    - 不要在 JSON 数组外添加任何多余文字。
 6. 【防出戏死命令】：你绝对不能扮演用户（${myName}），严禁生成用户的对话！
-
-${danmakuInstr}
-${optionsInstr}
 
 ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n` : ''}
 用户（${myName}）刚才说/做了："${cleanText}"
@@ -3684,61 +3674,41 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
             return;
         }
 
-        // ── 提取选项分支 ──
-        let extractedOptions = [];
-        let hasOptions = false;
-        let hasDanmaku = false;
-        const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[(?:\/)?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-        const optMatch = rawReply.match(optRegex);
-        if (optMatch) {
-            hasOptions = true;
-            extractedOptions = optMatch[1].split('\n').map(s => s.trim()).filter(s => /^\d+\./.test(s));
-            rawReply = rawReply.replace(optMatch[0], '').trim();
-        }
-
-        // ── 提取弹幕 ──
-        const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[(?:\/)?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-        const danmakuMatch = rawReply.match(danmakuRegex);
-        if (danmakuMatch) {
-            hasDanmaku = true;
-            const dList = danmakuMatch[1].split('\n').map(s => s.trim()).filter(Boolean);
-            if (typeof isDanmakuOn !== 'undefined' && isDanmakuOn && dList.length > 0) {
-                if (typeof danmakuPool !== 'undefined') danmakuPool = dList;
-                if (typeof startDanmakuBatch === 'function') startDanmakuBatch(0);
-            }
-            rawReply = rawReply.replace(danmakuMatch[0], '').trim();
-        }
-
         // ── 清理 Markdown ──
         rawReply = rawReply.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
 
-        // ── 解析 JSON ──
         let messages = [];
+
         try {
-            messages = JSON.parse(rawReply);
-            if (!Array.isArray(messages)) messages = [];
+            const aiData = JSON.parse(rawReply);
+            
+            if (aiData.messages && Array.isArray(aiData.messages)) {
+                messages = aiData.messages;
+            } else if (Array.isArray(aiData)) {
+                messages = aiData;
+            }
+
         } catch (e) {
-            // 备用：逐行解析 "名字: 内容" 格式
-            rawReply.split('\n').forEach(line => {
-                line = line.trim();
-                const m = line.match(/^([^:：\[{]+)[:：](.*)/);
-                if (m && m[2].trim()) messages.push({ name: m[1].trim(), content: m[2].trim() });
-            });
+            console.warn('群聊线下模式 JSON 解析失败，尝试备用解析逻辑:', rawReply);
+
+            try {
+                messages = JSON.parse(rawReply);
+                if (!Array.isArray(messages)) messages = [];
+            } catch (e2) {
+                rawReply.split('\n').forEach(line => {
+                    line = line.trim();
+                    const m = line.match(/^([^:：\[{]+)[:：](.*)/);
+                    if (m && m[2].trim() && !line.startsWith('{') && !line.startsWith('[')) {
+                        messages.push({ name: m[1].trim(), content: m[2].trim() });
+                    }
+                });
+            }
         }
 
         if (messages.length === 0) {
             if (typeof showAiErrorModal === 'function')
                 showAiErrorModal('群聊线下解析失败', `无法从以下内容中解析出角色叙事：\n\n${rawReply.substring(0, 300)}`);
             return;
-        }
-
-        if (typeof generateGroupSceneExtrasBackground === 'function') {
-            generateGroupSceneExtrasBackground(targetGroupId, cleanText || userText, messages, settings, {
-                needMind: true,
-                needDanmaku: (typeof isDanmakuOn !== 'undefined' && isDanmakuOn && !hasDanmaku),
-                needOptions: (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn && !hasOptions),
-                mode: 'offline'
-            });
         }
 
         // ── 逐条延迟展示 ──
@@ -3793,29 +3763,14 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
             }
         }
 
-        // ── 渲染选项分支 ──
-        if (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn && extractedOptions.length > 0) {
-            const optDiv = document.createElement('div');
-            optDiv.id = 'vn-options-box';
-            optDiv.className = 'vn-options-container';
-            extractedOptions.forEach(opt => {
-                const btn = document.createElement('div');
-                btn.className = 'vn-option-btn';
-                btn.innerText = opt;
-                btn.onclick = () => {
-                    if (typeof selectOfflineOption === 'function') selectOfflineOption(opt);
-                };
-                optDiv.appendChild(btn);
-            });
-            const dmAreaFinal = container.querySelector('.offline-danmaku-area');
-            if (dmAreaFinal) container.insertBefore(optDiv, dmAreaFinal);
-            else container.appendChild(optDiv);
-            setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
-        }
-        
         // --- 后台生成状态等 ---
-        if (typeof generateOfflineExtrasBackground === 'function') {
-            generateOfflineExtrasBackground(targetGroupId, userText, rawReply, settings, friendsData[(group.members||[])[0]] || {realName:group.name, persona:''});
+        if (typeof generateGroupSceneExtrasBackground === 'function') {
+            generateGroupSceneExtrasBackground(targetGroupId, cleanText || userText, messages, settings, {
+                needMind: true,
+                needDanmaku: (typeof isDanmakuOn !== 'undefined' && isDanmakuOn),
+                needOptions: (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn),
+                mode: 'offline'
+            });
         }
 
     } catch (e) {
@@ -3877,22 +3832,25 @@ Affection: （0-100）
     }
     if (needDanmaku) {
         requests.push(`[DANMAKU_START]
-弹幕1
-弹幕2
-弹幕3
+（网友弹幕一）
+（网友弹幕二）
+（网友弹幕三）
+（网友弹幕四）
+（网友弹幕五）
 [DANMAKU_END]`);
     }
     if (needOptions) {
         requests.push(`[OPTIONS_START]
 1. 选项一
 2. 选项二
+3. 选项三
 [OPTIONS_END]`);
     }
 
     const aiText = aiMessages.map(msg => `${msg.name}: ${msg.content}`).join('\n');
     const modeNote = options.mode === 'offline' ? '多人线下聚会叙事' : '微信群聊对话';
 
-    const sysPrompt = `你是一个群聊场景的后台状态生成器。
+    const sysPrompt = `你是一个群聊场景的专业后台状态生成引擎。
 当前模式：${modeNote}
 用户名：${myName}
 
@@ -3903,11 +3861,15 @@ ${membersInfo}
 用户: ${userInput || '（继续）'}
 ${aiText}
 
-[任务要求]
-1. 只输出下面要求的数据块，不要解释，不要 markdown。
-2. 不要生成未要求的数据块。
-3. 心声必须符合各角色本轮发言后的心理状态。
+【核心指令 - 必须严格遵守】
+1. 你的输出只能且必须包含指定的格式块，绝对禁止输出任何寒暄、解释、Markdown代码块（如 \`\`\` 等）。
+2. 你必须严格按照以下指定的方括号结构输出数据，绝不能合并标签，绝不能漏掉开始或结束标签。
+3. 不要生成未要求的数据块。
+4. 心声必须符合各角色本轮发言后的心理状态。
+5. 对于选项分支（[OPTIONS_START]），请务必结合当前剧情的悬念或冲突，以数字序号（如 1. 2. 3.）开头提供【恰好 3 个】供用户选择的行动选项，这三个选项必须引导用户走向截然不同的剧情方向。
+6. 对于弹幕（[DANMAKU_START]），请提供 5-8 条极具网感、犀利吐槽风格的网友实时弹幕，每行一条，字数不要太长。
 
+【需要生成的数据块格式】：
 ${requests.join('\n\n')}`;
 
     try {
