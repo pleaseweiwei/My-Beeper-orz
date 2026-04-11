@@ -2408,17 +2408,10 @@ async function sendMessageToAI(userMessage) {
         const charName = f.realName || '助手';
         const parseMacros = (str) => str ? String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName) : '';
 
-        let worldbookContent = '';
-        try {
-            const wbIds = Array.isArray(f.worldbook) ? f.worldbook : (f.worldbook ? [f.worldbook] : []);
-            if (wbIds.length && typeof worldBooks !== 'undefined') {
-                worldbookContent = wbIds.map(id => {
-                    const wb = worldBooks.find(w => w.id === id);
-                    if (!wb) return '';
-                    return (wb.entries || []).filter(e => e.enabled !== false).map(e => e.content || '').join('\n');
-                }).filter(Boolean).join('\n\n');
-            }
-        } catch (e) {}
+        let wbData = { before_char: '', after_char: '', depth_items: [] };
+        if (typeof constructWorldInfoPrompt === 'function') {
+            wbData = constructWorldInfoPrompt(userMessage, targetChatId);
+        }
 
         const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
         const _promptReplyMax = Math.max(_promptReplyMin, parseInt(chatSettings.replyMax) || 5);
@@ -2431,7 +2424,7 @@ async function sendMessageToAI(userMessage) {
 ${parseMacros(f.persona || '乐于助人的助手')}
 当前对用户的好感度：${currentAffection}/100 （请根据本次对话决定好感度升降）
 
-${worldbookContent ? `【世界观设定】：${parseMacros(worldbookContent)}` : ''}
+${wbData.before_char ? `${parseMacros(wbData.before_char)}` : ''}
 ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `【用户身份】：${me.persona}` : ''; })()}
 ${chatSettings.targetOutputLang ? `IMPORTANT: You MUST speak in ${chatSettings.targetOutputLang} only.` : ''}
 
@@ -2566,8 +2559,25 @@ JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩
     })();
 
     let finalMessages = [{ role: "system", content: systemPrompt + _trPending }, ...contextMessages];
+    
+    // 注入 WorldBook after_char
+    if (targetChatType === 'single' && typeof wbData !== 'undefined' && wbData.after_char) {
+        finalMessages.push({ role: "system", content: parseMacros(wbData.after_char) });
+    }
+
     if (userMessage && userMessage.trim() !== '') {
         finalMessages.push({ role: "user", content: userMessage });
+    }
+
+    // 处理深度插入 (Depth)
+    if (targetChatType === 'single' && typeof wbData !== 'undefined' && wbData.depth_items && wbData.depth_items.length > 0) {
+        // 按深度从大到小排序（从前往后插）
+        wbData.depth_items.sort((a, b) => b.depth - a.depth);
+        wbData.depth_items.forEach(item => {
+            const depth = parseInt(item.depth) || 2;
+            const insertIndex = Math.max(0, finalMessages.length - depth);
+            finalMessages.splice(insertIndex, 0, { role: "system", content: parseMacros(item.content) });
+        });
     }
 
     // 处理视觉解析 (IMAGE_CONTENT)
@@ -7959,30 +7969,36 @@ window.sendOfflineMessage = async function(isRegen = false) {
     
     // 1. 顶部：绝对核心的人设与背景 (让 AI 建立基础认知)
     let systemPrompt = `
-# 核心任务：线下场景角色扮演
-你现在【就是】角色“${charName}”，正在和用户进行一次【线下约会】。
-请你【必须】完全代入该角色的人设、语气、用词习惯、心理状态进行回应。绝对禁止像AI助手一样说话！
+<RoleplayDirectives>
+你现在的身份是真实存在的“${charName}”，正在和用户进行一次【线下互动】。
+你必须完全代入该角色的人设、语气、用词习惯、心理状态进行回应。绝对禁止像AI助手一样说话！
+【绝对禁令】：你只能扮演“${charName}”，绝不可以代替用户(User/我)说话，绝不可以描写用户的动作、表情或心理活动！
+</RoleplayDirectives>
 
-# 角色核心设定
+<CharacterPersona>
 ${parseMacros(friend.persona)}
+</CharacterPersona>
 
-# 补充背景与记忆
-- 世界观设定：${worldbookContent ? parseMacros(worldbookContent) : '无'}
+<BackgroundAndMemory>
 - 剧情记忆总结：${friend.summaries && friend.summaries.length > 0 ? friend.summaries.map((s, i) => `- ${s.text}`).join(' ') : '无'}
 - 当前好感度与关系：${Number(friend.affection || 0)}/100。${friend.relationshipLog && friend.relationshipLog.length > 0 ? friend.relationshipLog.map(r => r.text).join(' ') : ''}
 - 用户身份：${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? parseMacros(me.persona) : '无'; })()}
-${preset && preset.jailbreak ? '\n# 附加规则\n' + parseMacros(preset.jailbreak) : ''}
+</BackgroundAndMemory>
 
-# 当前情景与时间
+${worldbookContent ? `\n<ConstantWorldInfo>\n${parseMacros(worldbookContent)}\n</ConstantWorldInfo>` : ''}
+${preset && preset.jailbreak ? '\n<JailbreakRules>\n' + parseMacros(preset.jailbreak) + '\n</JailbreakRules>' : ''}
+
+<CurrentScenario>
 - 场景：${scenePromptText}
 - 时间：${timeStr}
 - 文风要求：${stylePromptText}
+</CurrentScenario>
 `;
 
     if (typeof constructWorldInfoPrompt === 'function') {
         const offlineWorldInfo = constructWorldInfoPrompt(text, targetChatId);
         if (offlineWorldInfo) {
-            systemPrompt += `\n\n[当前场景触发的知识库]:\n${offlineWorldInfo}\n`;
+            systemPrompt += `\n\n<TriggeredWorldInfo>\n${offlineWorldInfo}\n</TriggeredWorldInfo>\n`;
         }
     }
 
@@ -8009,6 +8025,7 @@ ${preset && preset.jailbreak ? '\n# 附加规则\n' + parseMacros(preset.jailbre
 
     // 3. 底部：利用“近因效应”在最后一次系统提示中，强制重申 JSON 格式和人设警告！
     const formatPrompt = `
+<OutputFormatDirectives>
 【最高系统指令：格式与人设强校验】
 在你生成回复前，请再次检视你是否符合“${charName}”的人设语气！
 你的回复【必须且只能】是一个单一、完整、可解析的 JSON 对象，禁止任何前后缀或 \`\`\`json 标记。
@@ -8019,7 +8036,7 @@ JSON 结构必须如下：
   "innerVoice": {
     "clothing": "当前穿搭",
     "behavior": "当前细微动作神态",
-    "thoughts": "内心碎碎念（符合人设）",
+    "thoughts": "内心碎碎念（符合char人设）",
     "naughtyThoughts": "隐藏/阴暗/深层心思",
     "location": "当前具体地点",
     "weather": "当前天气",
@@ -8027,10 +8044,9 @@ JSON 结构必须如下：
     "kaomoji": "颜文字",
     "affection": ${Number(friend.affection || 0)}
   }
-  ${(typeof isDanmakuOn !== 'undefined' && isDanmakuOn) ? ',"danmaku": ["弹幕1", "弹幕2"]' : ''}
-  ${(typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) ? ',"options": ["互动选项1", "互动选项2"]' : ''}
-}`;
-
+  }${isDanmakuOn ? ',\n  "danmaku": ["弹幕吐槽1", "弹幕吐槽2", "弹幕吐槽3", "弹幕吐槽4"]' : ''}${isOfflineOptionsOn ? ',\n  "options": ["互动选项1", "互动选项2"]' : ''}
+}
+</OutputFormatDirectives>`;
     // 将格式要求作为最后一条系统消息（或追加在 user 消息之后，这里作为最后一条 system 消息）
     const finalMessages = [
         { role: "system", content: systemPrompt },

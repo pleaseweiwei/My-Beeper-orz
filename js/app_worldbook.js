@@ -257,13 +257,19 @@ window.openEntryModal = function(index) {
         document.getElementById('entry-content').value = '';
         document.getElementById('entry-comment').value = '';
         document.getElementById('entry-enabled').checked = true;
+        document.getElementById('entry-position').value = 'before_char';
+        document.getElementById('entry-depth').value = '2';
+        document.getElementById('entry-depth-container').style.display = 'none';
     } else {
         // 编辑：填充
         const entry = tempEntries[index];
-        document.getElementById('entry-keys').value = entry.keys;
-        document.getElementById('entry-content').value = entry.content;
+        document.getElementById('entry-keys').value = entry.keys || '';
+        document.getElementById('entry-content').value = entry.content || '';
         document.getElementById('entry-comment').value = entry.comment || '';
         document.getElementById('entry-enabled').checked = entry.enabled !== false;
+        document.getElementById('entry-position').value = entry.position || 'before_char';
+        document.getElementById('entry-depth').value = entry.depth || '2';
+        document.getElementById('entry-depth-container').style.display = entry.position === 'depth' ? 'block' : 'none';
     }
     
     modal.classList.add('active');
@@ -278,10 +284,12 @@ window.saveEntryToMemory = function() {
     const content = document.getElementById('entry-content').value;
     const comment = document.getElementById('entry-comment').value;
     const enabled = document.getElementById('entry-enabled').checked;
+    const position = document.getElementById('entry-position').value;
+    const depth = parseInt(document.getElementById('entry-depth').value) || 2;
 
     if(!content) { alert("内容不能为空"); return; }
 
-    const entryData = { keys, content, comment, enabled };
+    const entryData = { keys, content, comment, enabled, position, depth };
 
     if(editingEntryIndex === -1) {
         tempEntries.push(entryData);
@@ -396,8 +404,13 @@ window.exportCurrentWorldBook = function() {
 }
 
 // 7. [核心] 将世界书逻辑注入到 AI 对话中
+// 返回格式: { before_char: "...", after_char: "...", depth_items: [{depth: 2, content: "..."}] }
 function constructWorldInfoPrompt(userMessage, characterName) {
-    let injectedContent = [];
+    let results = {
+        before_char: [],
+        after_char: [],
+        depth_items: []
+    };
     
     // 获取关联的世界书ID（支持私聊和群聊）
     let linkedBookIds = [];
@@ -434,7 +447,6 @@ function constructWorldInfoPrompt(userMessage, characterName) {
         // 条件：要么是全局开启，要么是当前角色关联的
         const isLinked = linkedBookIds.includes(book.id);
         if (book.global || isLinked) {
-            let bookContent = [];
             book.entries.forEach(entry => {
                 if(!entry.enabled) return;
                 
@@ -454,14 +466,27 @@ function constructWorldInfoPrompt(userMessage, characterName) {
                 }
 
                 if (shouldInject) {
-                    bookContent.push(entry.content);
+                    const pos = entry.position || 'before_char';
+                    const formattedContent = `[World Info: ${book.title}]\n${entry.content}`;
+                    
+                    if (pos === 'before_char') {
+                        results.before_char.push(formattedContent);
+                    } else if (pos === 'after_char') {
+                        results.after_char.push(formattedContent);
+                    } else if (pos === 'depth') {
+                        results.depth_items.push({
+                            depth: entry.depth || 2,
+                            content: formattedContent
+                        });
+                    }
                 }
             });
-            if (bookContent.length > 0) {
-                injectedContent.push(`【世界书：${book.title}】\n` + bookContent.join('\n\n'));
-            }
         }
     });
 
-    return injectedContent.join('\n\n---\n\n');
+    return {
+        before_char: results.before_char.length > 0 ? `<WorldInfo>\n${results.before_char.join('\n\n')}\n</WorldInfo>` : '',
+        after_char: results.after_char.length > 0 ? `<WorldInfo>\n${results.after_char.join('\n\n')}\n</WorldInfo>` : '',
+        depth_items: results.depth_items
+    };
 }

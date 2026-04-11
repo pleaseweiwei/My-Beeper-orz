@@ -298,13 +298,28 @@ const SMSApp = (() => {
       content: m.text
     }));
 
+    let messages = [{ role: 'system', content: systemPrompt }, ...history];
+
+    const wbData = (typeof constructWorldInfoPrompt === 'function' && conv.chatId)
+        ? constructWorldInfoPrompt(userText || '[短信沟通中]', conv.chatId)
+        : { before_char: '', after_char: '', depth_items: [] };
+    
+    if (wbData && wbData.depth_items && wbData.depth_items.length > 0) {
+        wbData.depth_items.sort((a, b) => b.depth - a.depth);
+        wbData.depth_items.forEach(item => {
+            const depth = parseInt(item.depth) || 2;
+            const insertIndex = Math.max(0, messages.length - depth);
+            messages.splice(insertIndex, 0, { role: "system", content: item.content });
+        });
+    }
+
     try {
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
         body: JSON.stringify({
           model: settings.model,
-          messages: [{ role: 'system', content: systemPrompt }, ...history],
+          messages: messages,
           temperature: 0.88,
           max_tokens: 150
         })
@@ -392,6 +407,10 @@ const SMSApp = (() => {
       return (personasMeta[currentPersonaId] || {}).persona || '';
     })();
 
+    const wbData = (typeof constructWorldInfoPrompt === 'function' && conv.chatId)
+        ? constructWorldInfoPrompt(userText || '[短信沟通中]', conv.chatId)
+        : { before_char: '', after_char: '', depth_items: [] };
+
     return `[SMS SYSTEM — 短信模式]
 你是 ${aiName}，正在通过短信与用户沟通。
 
@@ -400,6 +419,8 @@ ${aiPersona || '你是一个真实的人，用短信与用户联系。'}
 ${contextNote}
 
 ${myPersona ? `【用户信息】\n${myPersona}\n` : ''}
+${wbData.before_char ? `【世界设定】\n${wbData.before_char}\n` : ''}
+${wbData.after_char  ? `【补充设定】\n${wbData.after_char}\n` : ''}
 
 【短信铁律 — 绝对遵守】
 1. 【禁止动作描写】：短信里没有 *动作*，只有文字。绝对不能写 *微笑* *看着你* 这类。

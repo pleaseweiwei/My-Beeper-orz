@@ -190,9 +190,9 @@ async function _buildCallSystemPrompt(userMessage) {
     const memoryLimit     = parseInt(chatSettings.memoryLimit) || 20;
 
     // ── 世界书注入 ──
-    const worldInfo = (typeof constructWorldInfoPrompt === 'function')
+    const wbData = (typeof constructWorldInfoPrompt === 'function')
         ? constructWorldInfoPrompt(userMessage || '[视频通话中]', chatId)
-        : '';
+        : { before_char: '', after_char: '', depth_items: [] };
 
     // ── 近期聊天记录 ──
     let historyCtx = '';
@@ -234,7 +234,8 @@ ${myPersona ? `[USER IDENTITY (the person calling you)]\n${myPersona}\n` : ''}
 4. If user is using camera, react naturally to what you see (describe it in *actions*).
 
 ${memorySummaries ? `[STORY MEMORY]\n${memorySummaries}\n` : ''}
-${worldInfo       ? `[WORLD SETTING]\n${worldInfo}\n`           : ''}
+${wbData.before_char ? `[WORLD SETTING]\n${wbData.before_char}\n` : ''}
+${wbData.after_char  ? `[Additional Setting]\n${wbData.after_char}\n` : ''}
 ${historyCtx      ? `[RECENT CHAT (${memoryLimit} msgs)]\n${historyCtx}\n` : ''}
 
 [INFO TAGS — internal only, do NOT mention to user]
@@ -281,12 +282,26 @@ async function _sendCallAI(userText, imgDataBase64) {
         userContent = userText || '[静默中]';
     }
 
-    const messages = [
+    let messages = [
         { role: 'system', content: systemPrompt },
         // 注入最近几条通话历史
         ...VideoCallState.messages.slice(-8),
         { role: 'user', content: userContent }
     ];
+
+    // 处理 depth (世界书深度插入)
+    const wbData = (typeof constructWorldInfoPrompt === 'function')
+        ? constructWorldInfoPrompt(userText || '[视频通话中]', VideoCallState.chatId)
+        : { before_char: '', after_char: '', depth_items: [] };
+    
+    if (wbData && wbData.depth_items && wbData.depth_items.length > 0) {
+        wbData.depth_items.sort((a, b) => b.depth - a.depth);
+        wbData.depth_items.forEach(item => {
+            const depth = parseInt(item.depth) || 2;
+            const insertIndex = Math.max(0, messages.length - depth);
+            messages.splice(insertIndex, 0, { role: "system", content: item.content });
+        });
+    }
 
     try {
         const res = await fetch(apiUrl, {

@@ -422,7 +422,7 @@ const FloatPet = (function () {
 
             /* ── 世界书（全量关键词匹配，截断到 1500 字） ── */
             var wbCtx = _getWorldbookContext(charId);
-            window.AndroidBridge.saveString('pet_worldbook', wbCtx.slice(0, 1500));
+            window.AndroidBridge.saveString('pet_worldbook', wbCtx.slice(0, 1500)); // Android 悬浮窗目前只支持 before_char 部分
 
             /* ── 我的人设 ── */
             window.AndroidBridge.saveString('pet_my_name',    myInfo.name    || '主人');
@@ -1500,14 +1500,16 @@ const FloatPet = (function () {
         }
 
         // 世界书：优先用 constructWorldInfoPrompt 做关键词触发，兜底用全量读取
-        var wbCtx = '';
+        var wbData = { before_char: '', after_char: '', depth_items: [] };
         try {
             if (typeof constructWorldInfoPrompt === 'function') {
                 var trigger = contextText + ' ' + (recentChat || '');
-                wbCtx = constructWorldInfoPrompt(trigger, charId) || '';
+                wbData = constructWorldInfoPrompt(trigger, charId) || { before_char: '', after_char: '', depth_items: [] };
             }
         } catch (_) {}
-        if (!wbCtx) { wbCtx = _getWorldbookContext(charId); }
+        
+        var fallbackCtx = _getWorldbookContext(charId);
+        var wbCtx = wbData.before_char || fallbackCtx;
 
         // 时间感知（与 sendMessageToAI § 4 一致）
         var situationalCtx = '';
@@ -1535,6 +1537,9 @@ const FloatPet = (function () {
 
                 // ③ 世界设定（关键词触发）
                 wbCtx ? '[World Setting / Lorebook Data (Important Context)]:\n' + wbCtx : '',
+
+                // 附加世界书 (after_char)
+                wbData.after_char ? '[Additional Setting]:\n' + wbData.after_char : '',
 
                 // ④ 用户身份（与主聊天 USER IDENTITY 一致）
                 myInfo.persona
@@ -1604,6 +1609,20 @@ const FloatPet = (function () {
                 ? base + '/chat/completions'
                 : base + '/v1/chat/completions';
 
+            let finalMessages = [
+                { role: 'system', content: sysArr },
+                { role: 'user',   content: userContent }
+            ];
+
+            if (wbData.depth_items && wbData.depth_items.length > 0) {
+                wbData.depth_items.sort(function(a, b) { return b.depth - a.depth; });
+                wbData.depth_items.forEach(function(item) {
+                    var depth = parseInt(item.depth) || 2;
+                    var insertIndex = Math.max(0, finalMessages.length - depth);
+                    finalMessages.splice(insertIndex, 0, { role: "system", content: item.content });
+                });
+            }
+
             fetch(url, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
@@ -1611,10 +1630,7 @@ const FloatPet = (function () {
                     model:       model,
                     max_tokens:  500,
                     temperature: 0.80,
-                    messages: [
-                        { role: 'system', content: sysArr },
-                        { role: 'user',   content: userContent }
-                    ]
+                    messages: finalMessages
                 })
             })
             .then(function (r) { return r.json(); })

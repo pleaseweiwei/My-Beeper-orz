@@ -666,10 +666,10 @@ window.sendGroupMessageToAI = async function (userMessage) {
         });
 
         // 世界书注入（核心世界观设定）
-        const worldInfoText = (typeof constructWorldInfoPrompt === 'function')
+        const wbData = (typeof constructWorldInfoPrompt === 'function')
             ? constructWorldInfoPrompt(userMessage, targetGroupId)
-            : '';
-        const worldStr = worldInfoText ? `\n[核心世界观设定]\n${worldInfoText}` : '';
+            : { before_char: '', after_char: '', depth_items: [] };
+        const worldStr = wbData.before_char ? `\n[核心世界观设定]\n${wbData.before_char}` : '';
 
         // 匿名模式处理
         const anonNote = groupAnonymousMode ? `\n[匿名模式已开启]: 用户此刻的身份是"${myAnonName}"，请以此称呼用户。` : '';
@@ -724,12 +724,27 @@ ${historyText || '(暂无历史记录)'}
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
         const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
+        let finalMessages = [{ role: 'system', content: systemPrompt }];
+        if (wbData.after_char) {
+            finalMessages.push({ role: 'system', content: wbData.after_char });
+        }
+        finalMessages.push({ role: 'user', content: userMessage });
+
+        if (wbData.depth_items && wbData.depth_items.length > 0) {
+            wbData.depth_items.sort((a, b) => b.depth - a.depth);
+            wbData.depth_items.forEach(item => {
+                const depth = parseInt(item.depth) || 2;
+                const insertIndex = Math.max(0, finalMessages.length - depth);
+                finalMessages.splice(insertIndex, 0, { role: "system", content: item.content });
+            });
+        }
+
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
             body: JSON.stringify({
                 model: settings.model,
-                messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }],
+                messages: finalMessages,
                 temperature: parseFloat(settings.temperature || 0.9)
             }),
             signal: currentAiController ? currentAiController.signal : undefined
@@ -3084,9 +3099,10 @@ window.confirmAiGenerateMembers = async function () {
                 }
             }
         }
-        const worldInfoText = (typeof constructWorldInfoPrompt === 'function')
+        const wbData = (typeof constructWorldInfoPrompt === 'function')
             ? constructWorldInfoPrompt('', groupId)
-            : '';
+            : { before_char: '', after_char: '', depth_items: [] };
+        const worldInfoText = [wbData.before_char, wbData.after_char, ...(wbData.depth_items||[]).map(i=>i.content)].filter(Boolean).join('\n\n');
 
         const systemPrompt = `请生成 ${count} 个群聊成员，场景：${promptText}。
 ${worldInfoText ? `\n[世界观设定]:\n${worldInfoText}\n` : ''}${existingMembersInfo}
@@ -3504,9 +3520,10 @@ async function sendGroupOfflineMessage(isRegen = false) {
     }
 
     // ── 世界书 ──
-    const worldInfoText = (typeof constructWorldInfoPrompt === 'function')
+    const wbData = (typeof constructWorldInfoPrompt === 'function')
         ? constructWorldInfoPrompt(userText, targetGroupId)
-        : '';
+        : { before_char: '', after_char: '', depth_items: [] };
+    const worldInfoText = wbData.before_char;
 
     // ── 字数限制 ──
     const maxLen = parseInt((typeof offlineConfig !== 'undefined' && offlineConfig.maxLength) || 200);
@@ -3611,6 +3628,26 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
     }));
 
     try {
+        let finalMessages = [
+            { role: 'system', content: systemPrompt },
+            ...contextMsgs
+        ];
+        
+        if (wbData.after_char) {
+            finalMessages.push({ role: 'system', content: wbData.after_char });
+        }
+        
+        finalMessages.push({ role: 'user', content: cleanText || '（继续）' });
+        
+        if (wbData.depth_items && wbData.depth_items.length > 0) {
+            wbData.depth_items.sort((a, b) => b.depth - a.depth);
+            wbData.depth_items.forEach(item => {
+                const depth = parseInt(item.depth) || 2;
+                const insertIndex = Math.max(0, finalMessages.length - depth);
+                finalMessages.splice(insertIndex, 0, { role: "system", content: item.content });
+            });
+        }
+
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -3619,11 +3656,7 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
             },
             body: JSON.stringify({
                 model: settings.model,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    ...contextMsgs,
-                    { role: 'user', content: cleanText || '（继续）' }
-                ],
+                messages: finalMessages,
                 temperature: parseFloat(settings.temperature || 0.9),
                 max_tokens: Math.max(maxLen * 4, 1200)
             }),

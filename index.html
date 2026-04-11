@@ -3333,6 +3333,18 @@
                 <textarea id="entry-content" rows="6" placeholder="当关键词出现时，AI会看到这段设定..."></textarea>
             </div>
             <div class="input-group">
+                <label>插入位置 (Position)</label>
+                <select id="entry-position" onchange="document.getElementById('entry-depth-container').style.display = this.value === 'depth' ? 'block' : 'none'" style="width: 100%; border: 1px solid #eee; border-radius: 8px; padding: 10px; font-size: 13px; background: #fafafa; outline: none;">
+                    <option value="before_char">角色设定前 (Before Character Def)</option>
+                    <option value="after_char">角色设定后 (After Character Def)</option>
+                    <option value="depth">聊天记录中 (In Chat History)</option>
+                </select>
+            </div>
+            <div class="input-group" id="entry-depth-container" style="display:none; margin-top: 10px;">
+                <label>深度 (Depth, 距离最新对话条数)</label>
+                <input type="number" id="entry-depth" value="2" min="1" max="100" style="width: 100%; border: 1px solid #eee; border-radius: 8px; padding: 10px; font-size: 13px; background: #fafafa; outline: none;">
+            </div>
+            <div class="input-group">
                 <label>备注 (Comment)</label>
                 <input type="text" id="entry-comment" placeholder="仅用于自己看">
             </div>

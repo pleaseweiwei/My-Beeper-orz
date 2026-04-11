@@ -167,7 +167,7 @@ window.buildLinkedMemoryContext = async function(chatSettings, currentChatId) {
             sourceDesc = `这是在另一个群聊【${name}】中的公开对话情报。你们可以针对另一个群的战术、八卦或讨论内容进行嘲笑、评价或联动。`;
         }
 
-        result += `\n\n--- 外部情报开始 ---\n## 附加上下文：${sourceDesc}\n（注意：绝对不允许将外部情报中的人物当作当前聊天框里的参与者，这仅作为背景情报）\n${lines}\n--- 外部情报结束 ---`;
+        result += `\n\n<ExternalIntel>\n[Source: ${sourceDesc}]\n(Note: Do not treat the people in this intel as participants in the current chat. This is for background knowledge only.)\n${lines}\n</ExternalIntel>`;
     }
     return result;
 };
@@ -205,7 +205,7 @@ window.buildSituationalAwareness = function(chatSettings) {
     const now_d = new Date(now);
     const pad = n => String(n).padStart(2, '0');
     const realTimeStr = `${now_d.getFullYear()}-${pad(now_d.getMonth()+1)}-${pad(now_d.getDate())} ${pad(now_d.getHours())}:${pad(now_d.getMinutes())}`;
-    return `当前真实时间: ${realTimeStr} ${timeLine}`;
+    return `<TimeAwareness>\nCurrent Time: ${realTimeStr}\nTime Since Last Chat: ${timeLine}\n</TimeAwareness>`;
 };
 
 /* ─── § 5  记忆分支与回溯：存档/读档系统 ─── */
