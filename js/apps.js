@@ -7859,7 +7859,7 @@ window.sendOfflineMessage = async function(isRegen = false) {
         text = "*静静地等待事情发展*"; 
     }
     
-    // 【新增】解析【】内的指令，将其作为系统提示词注入
+    // 解析【】内的指令，将其作为系统提示词注入
     let userInstruction = "";
     const instructionRegex = /【(.*?)】/g;
     let match;
@@ -7878,13 +7878,9 @@ window.sendOfflineMessage = async function(isRegen = false) {
     if (!isRegen) {
         const userMsgId = 'off_u_' + Date.now();
         if (isLookingOffline) {
-            // 界面上只显示清除了【】的正文，如果没有正文就显示默认动作
             let displayText = cleanText;
-            // 如果只有指令，我们可以在界面上显示一个带有系统图标的提示，或者就显示动作
             appendOfflineEntry('user', displayText, 'You', userMsgId); 
         }
-        // 历史记录也只保存清除后的文本，指令在本次请求中生效，不留在长期记忆里（避免污染之后的对话）
-        // 如果想把指令留在记忆里，可以把 text 换回去。通常跑团中 () 或 [] 都是带入 prompt。
         saveMessageToHistory(targetChatId, {
             text: cleanText, type: 'sent', senderName: 'ME', isOffline: true, id: userMsgId
         });
@@ -7896,15 +7892,13 @@ window.sendOfflineMessage = async function(isRegen = false) {
     
     const settingsJSON = localStorage.getItem(SETTINGS_KEY);
     if (!settingsJSON) {
-    showAiErrorModal('线下模式无法生成', '请先在 Settings → AI Chat 配置 API Key / Base URL / Model');
-    return;
-}
+        showAiErrorModal('线下模式无法生成', '请先在 Settings → AI Chat 配置 API Key / Base URL / Model');
+        return;
+    }
     const settings = JSON.parse(settingsJSON);
     const presetId = offlineConfig.activePresetId;
-    // 取消默认兜底，如果没选就是 undefined
     const preset = tavernPresets.find(p => p.id === presetId); 
 
-    // 【修复】先移除旧的选项框，防止重复
     const oldOpts = document.getElementById('vn-options-box');
     if (oldOpts) oldOpts.remove();
 
@@ -7917,7 +7911,6 @@ window.sendOfflineMessage = async function(isRegen = false) {
     const limit = parseInt(offlineConfig.maxLength) || 200;
     const currentLocation = friend.mindState?.location || '当前约会场景';
 
-    // --- 收集世界书全文内容（与线上模式保持一致） ---
     let worldbookContent = '';
     try {
         const wbIds = Array.isArray(friend.worldbook)
@@ -7939,7 +7932,6 @@ window.sendOfflineMessage = async function(isRegen = false) {
         } else if (typeof friend.worldbook === 'string' && friend.worldbook) {
             worldbookContent = friend.worldbook;
         }
-        // 补充全局世界书
         if (typeof worldBooks !== 'undefined') {
             const globalContent = worldBooks
                 .filter(wb => wb.global)
@@ -7957,58 +7949,47 @@ window.sendOfflineMessage = async function(isRegen = false) {
         return String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName);
     };
 
-let systemPrompt = `你是${charName}，正在与用户面对面相处，地点：${currentLocation}。
+    const scenePromptText = document.getElementById('offline-scene-prompt')?.value.trim() || currentLocation;
+    const stylePromptText = offlineConfig.writingStyle || '第一人称；包含动作、表情、环境细节；情绪细腻';
+    const timeStr = new Date().toLocaleString();
+
+     // ==========================================
+    // 核心重构：三明治 Prompt 结构 (强化人设权重)
+    // ==========================================
+    
+    // 1. 顶部：绝对核心的人设与背景 (让 AI 建立基础认知)
+    let systemPrompt = `
+# 核心任务：线下场景角色扮演
+你现在【就是】角色“${charName}”，正在和用户进行一次【线下约会】。
+请你【必须】完全代入该角色的人设、语气、用词习惯、心理状态进行回应。绝对禁止像AI助手一样说话！
+
+# 角色核心设定
 ${parseMacros(friend.persona)}
-当前对用户的好感度：${Number(friend.affection || 0)}/100
-${worldbookContent ? `\n【世界观 / 背景设定】：\n${parseMacros(worldbookContent)}` : ''}
-${preset && preset.jailbreak ? parseMacros(preset.jailbreak) + '\n' : ''}
-${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `\n【用户身份】：${parseMacros(me.persona)}` : ''; })()}
-${offlineConfig.writingStyle ? `\n【文风要求】：${offlineConfig.writingStyle}` : ''}
 
-${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一人称写沉浸式叙事，自然的延续互动。禁止描写用户内心，禁止暗示自己是AI。\n【重要】：你就是角色。\n格式：动作/神态/心理用*星号*包裹，对话用「书名号」包裹，两者自然混用。'}
+# 补充背景与记忆
+- 世界观设定：${worldbookContent ? parseMacros(worldbookContent) : '无'}
+- 剧情记忆总结：${friend.summaries && friend.summaries.length > 0 ? friend.summaries.map((s, i) => `- ${s.text}`).join(' ') : '无'}
+- 当前好感度与关系：${Number(friend.affection || 0)}/100。${friend.relationshipLog && friend.relationshipLog.length > 0 ? friend.relationshipLog.map(r => r.text).join(' ') : ''}
+- 用户身份：${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? parseMacros(me.persona) : '无'; })()}
+${preset && preset.jailbreak ? '\n# 附加规则\n' + parseMacros(preset.jailbreak) : ''}
 
-【篇幅与句式控制】：
-- 视当前剧情发展自然叙述，单次回复的实际正文（不包括思维链等思考过程）约为${limit} 字。
-- 该停顿时自然换行或结束。`;
+# 当前情景与时间
+- 场景：${scenePromptText}
+- 时间：${timeStr}
+- 文风要求：${stylePromptText}
+`;
 
-    // === 注入剧情总结 ===
-    if (friend.summaries && friend.summaries.length > 0) {
-        const summaryText = friend.summaries.map((s, i) => `- (第${i+1}阶段) ${s.text}`).join('\n');
-        systemPrompt += `\n\n[PAST STORY SUMMARIES]:\n${summaryText}\n`;
-    }
-    // === 注入关系日志 ===
-    if (friend.relationshipLog && friend.relationshipLog.length > 0) {
-        const relationshipText = friend.relationshipLog.map(r => `- ${r.text}`).join('\n');
-        systemPrompt += `\n\n[OUR RELATIONSHIP HISTORY]:\n${relationshipText}\n`;
-    }
- // === 附加特殊数据块指令（动态检测开关状态） ===
-    const optionsInstr = (typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn)
-        ? `[OPTIONS_START]\n1. （用户接下来可执行的选项一）\n2. （选项二）\n[OPTIONS_END]` : '';
-
-    const danmakuInstr = (typeof isDanmakuOn !== 'undefined' && isDanmakuOn)
-        ? `[DANMAKU_START]\n（网友弹幕一）\n（网友弹幕二）\n[DANMAKU_END]` : '';
-
-    const statusInstr = `[STATUS_START]\nAction: (动作)\nLocation: (地点)\nWeather: (天气)\nBGM: (歌名-歌手)\nMurmur: (3句内心想法)\nHiddenThought: (阴暗面心声)\nKaomoji: (颜文字)\nAffection: (0-100)\n[STATUS_END]`;
-
-    let extraBlocks = [statusInstr];
-    if (optionsInstr) extraBlocks.push(optionsInstr);
-    if (danmakuInstr) extraBlocks.push(danmakuInstr);
-
-    systemPrompt += `\n\n【后台数据生成指令】\n你必须在回复正文的最末尾，严格按以下格式附加系统数据（如果没有被要求则不要乱加）：\n${extraBlocks.join('\n\n')}`;
-
-    // === 注入世界书关键词触发 ===
     if (typeof constructWorldInfoPrompt === 'function') {
-
         const offlineWorldInfo = constructWorldInfoPrompt(text, targetChatId);
         if (offlineWorldInfo) {
-            systemPrompt += `\n\n[World Setting / Lorebook Data]:\n${offlineWorldInfo}\n`;
+            systemPrompt += `\n\n[当前场景触发的知识库]:\n${offlineWorldInfo}\n`;
         }
     }
 
+    // 2. 中部：组装历史聊天记录
     const recentHistory = history.slice(-memoryLimit);
     let chatMessagesArr = [];
     recentHistory.forEach(h => {
-        // 如果历史消息是用户发的，并且包含【】，我们需要将其转换为系统指令格式，确保大模型理解这是指令而不是角色说的话
         let hContent = h.isOffline ? h.text : `(Online Memory: ${h.text})`;
         if (h.type === 'sent' && hContent.includes('【') && hContent.includes('】')) {
             hContent = hContent.replace(/【(.*?)】/g, '\n[System: User Instruction - $1]\n');
@@ -8020,27 +8001,53 @@ ${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一�
     });
     
     if (userInstruction) {
-        // 把提取出来的指令包装成特殊的格式放在用户发言的末尾（或开头）
         const instructionBlock = `\n[System: User Instruction - ${userInstruction.trim()}]\n`;
         chatMessagesArr.push({ role: "user", content: cleanText + instructionBlock });
     } else if (cleanText) {
         chatMessagesArr.push({ role: "user", content: cleanText });
     }
 
+    // 3. 底部：利用“近因效应”在最后一次系统提示中，强制重申 JSON 格式和人设警告！
+    const formatPrompt = `
+【最高系统指令：格式与人设强校验】
+在你生成回复前，请再次检视你是否符合“${charName}”的人设语气！
+你的回复【必须且只能】是一个单一、完整、可解析的 JSON 对象，禁止任何前后缀或 \`\`\`json 标记。
+
+JSON 结构必须如下：
+{
+  "chatResponse": "你的回应正文（约 ${limit} 字，包含动作、对话和环境描写）",
+  "innerVoice": {
+    "clothing": "当前穿搭",
+    "behavior": "当前细微动作神态",
+    "thoughts": "内心碎碎念（符合人设）",
+    "naughtyThoughts": "隐藏/阴暗/深层心思",
+    "location": "当前具体地点",
+    "weather": "当前天气",
+    "bgm": "符合氛围的歌（歌名-歌手）",
+    "kaomoji": "颜文字",
+    "affection": ${Number(friend.affection || 0)}
+  }
+  ${(typeof isDanmakuOn !== 'undefined' && isDanmakuOn) ? ',"danmaku": ["弹幕1", "弹幕2"]' : ''}
+  ${(typeof isOfflineOptionsOn !== 'undefined' && isOfflineOptionsOn) ? ',"options": ["互动选项1", "互动选项2"]' : ''}
+}`;
+
+    // 将格式要求作为最后一条系统消息（或追加在 user 消息之后，这里作为最后一条 system 消息）
+    const finalMessages = [
+        { role: "system", content: systemPrompt },
+        ...chatMessagesArr,
+        { role: "system", content: formatPrompt }
+    ];
+
     const payload = { 
         model: settings.model, 
-        messages: [ 
-            { role: "system", content: systemPrompt },
-            ...chatMessagesArr
-        ], 
+        messages: finalMessages, 
         temperature: parseFloat(settings.temperature || 0.8),
         max_tokens: Math.max(Math.ceil(limit * 2.5) + 700, 700)
     };
 
+
     if (offlineConfig.streamingEnabled) {
         const aiMsgId = 'off_ai_' + Date.now();
-        const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
-        
         let textElement = null;
         let entryDiv = null;
         
@@ -8105,12 +8112,20 @@ ${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一�
                         if (content) {
                             fullReply += content;
                             if (textElement) {
-                                // 动态截断所有的特殊后台标签，彻底防止它们在打字机效果中暴露在屏幕上
-                                let partialClean = fullReply.split(/\[(?:STATUS|OPTIONS|DANMAKU)_START\]/i)[0];
-                                textElement.innerHTML = partialClean.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
+                                // 实时通过正则抽取出 JSON 中的 chatResponse 用于流式显示
+                                let partialClean = "";
+                                const m1 = fullReply.match(/"chatResponse"\s*:\s*"([\s\S]*?)",\s*"/);
+                                if (m1) {
+                                    partialClean = m1[1];
+                                } else {
+                                    const m2 = fullReply.match(/"chatResponse"\s*:\s*"([\s\S]*)$/);
+                                    if (m2) partialClean = m2[1];
+                                }
+                                try { partialClean = partialClean.replace(/\\n/g, '\n').replace(/\\"/g, '"'); } catch(e){}
+                                if (partialClean) {
+                                    textElement.innerHTML = partialClean.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
+                                }
                             }
-
-                            // 【修复】移除滚动，保持位置
                         }
                     } catch (e) { /* ignore parse errors */ }
                 }
@@ -8123,235 +8138,71 @@ ${preset && preset.systemPrompt ? parseMacros(preset.systemPrompt) : '以第一�
             if (textElement) textElement.classList.remove('streaming');
             if (entryDiv) entryDiv.querySelector('.oe-actions').style.display = 'flex';
 
+            // 等到流式传输全部完成，统一解析 JSON 数据
             let cleanReply = fullReply;
             let hasStatus = false;
             let hasOptions = false;
             let hasDanmaku = false;
-
             let extractedOptions = [];
-            const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-            const optMatch = cleanReply.match(optRegex);
-            if (optMatch) {
-                hasOptions = true;
-                extractedOptions = optMatch[1]
-                    .split('\n')
-                    .map(s => s.trim())
-                    .map(s => s.replace(/^(\d+\s*[\.、)\]）]|Option\s*\d+\s*[:：]|[-*•])\s*/i, '').trim())
-                    .filter(s => s.length > 0);
-                cleanReply = cleanReply.replace(optRegex, '').trim();
-            }
 
-            const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-            const statusMatch = cleanReply.match(statusRegex);
-            if (statusMatch) {
-                hasStatus = true;
-                updateMindStateFromText(statusMatch[1], targetChatId);
-                cleanReply = cleanReply.replace(statusRegex, '').trim();
-            }
-
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-            const danmakuMatch = cleanReply.match(danmakuRegex);
-            if (danmakuMatch) {
-                hasDanmaku = true;
-                const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
-                if (isDanmakuOn && dList.length > 0) {
-                    danmakuPool = dList;
-                    startDanmakuBatch();
+            try {
+                let jsonStr = fullReply.replace(/^```[a-zA-Z]*\n?/gi, '').replace(/```[\s\S]*$/i, '').trim();
+                const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const aiData = JSON.parse(jsonMatch[0]);
+                    
+                    if (aiData.chatResponse) {
+                        cleanReply = aiData.chatResponse;
+                        if (textElement) textElement.innerHTML = cleanReply.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
+                    }
+                    
+                    if (aiData.innerVoice) {
+                        hasStatus = true;
+                        const state = friend.mindState || {};
+                        const v = aiData.innerVoice;
+                        state.action = v.behavior || state.action;
+                        state.location = v.location || state.location;
+                        state.weather = v.weather || state.weather;
+                        state.bgm = v.bgm || state.bgm;
+                        state.murmur = v.thoughts || state.murmur;
+                        state.hiddenThought = v.naughtyThoughts || '';
+                        state.kaomoji = v.kaomoji || state.kaomoji;
+                        if (typeof v.affection === 'number') friend.affection = v.affection;
+                        
+                        friend.mindState = state;
+                        saveFriendsData();
+                        refreshMindCardUI(targetChatId, false);
+                        if(typeof syncMindBgmToPlayer === 'function') syncMindBgmToPlayer(state.bgm);
+                    }
+                    
+                    if (isOfflineOptionsOn && aiData.options && Array.isArray(aiData.options)) {
+                        hasOptions = true;
+                        extractedOptions = aiData.options;
+                    }
+                    
+                    if (isDanmakuOn && aiData.danmaku && Array.isArray(aiData.danmaku)) {
+                        hasDanmaku = true;
+                        const dList = aiData.danmaku.filter(s => s && s.trim().length > 0);
+                        if (dList.length > 0) {
+                            danmakuPool = dList;
+                            startDanmakuBatch();
+                        }
+                    }
                 }
-                cleanReply = cleanReply.replace(danmakuRegex, '').trim();
+            } catch (e) {
+                console.warn("Offline JSON parse failed, fallback text extraction", e);
+                const fallbackMatch = fullReply.match(/"chatResponse"\s*:\s*"([\s\S]*?)"(?=\s*,|\s*\})/);
+                if (fallbackMatch) {
+                    try { cleanReply = fallbackMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'); } catch(ex){}
+                }
             }
 
-            if (textElement) {
-                textElement.innerHTML = cleanReply.replace(/\*(.*?)\*/g, '<i>*$1*</i>').replace(/「(.*?)」/g, '<b>「$1」</b>').replace(/\n/g, '<br>');
-            }
-            
             await saveMessageToHistory(targetChatId, {
                 text: cleanReply, type: 'received', senderName: friend.realName,
                 customAvatar: friend.avatar, isOffline: true, id: aiMsgId
             });
 
-            // 【修复】渲染选项分支
-            const isLookingOfflineNow = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId;
-            if (isLookingOfflineNow && isOfflineOptionsOn && extractedOptions.length > 0) {
-                const container = document.getElementById('offline-log-container');
-                const optDiv = document.createElement('div');
-                optDiv.id = 'vn-options-box';
-                optDiv.className = 'vn-options-container';
-                extractedOptions.forEach(opt => {
-                    const btn = document.createElement('div');
-                    btn.className = 'vn-option-btn';
-                    btn.innerText = opt;
-                    btn.onclick = () => selectOfflineOption(opt);
-                    optDiv.appendChild(btn);
-                });
-                const dmArea = container.querySelector('.offline-danmaku-area');
-                if (dmArea) {
-                    container.insertBefore(optDiv, dmArea);
-                } else {
-                    container.appendChild(optDiv);
-                }
-
-             // 【修复】选项出现后自动滚动到底部，确保能看到
-                setTimeout(() => container.scrollTop = container.scrollHeight, 150);
-            }
-            
-            const needsExtraFallback =
-                !hasStatus ||
-                (isOfflineOptionsOn && !hasOptions) ||
-                (isDanmakuOn && !hasDanmaku);
-
-            if (needsExtraFallback && typeof generateOfflineExtrasBackground === 'function') {
-                generateOfflineExtrasBackground(
-                    targetChatId,
-                    cleanText || text,
-                    cleanReply,
-                    settings,
-                    friend,
-                    {
-                        needStatus: !hasStatus,
-                        needOptions: isOfflineOptionsOn && !hasOptions,
-                        needDanmaku: isDanmakuOn && !hasDanmaku
-                    }
-                );
-            }
-
-       } catch (e) {
-    if (e.name === 'AbortError') {
-        console.log("线下流式生成被用户中止");
-        if(sendBtn) {
-            sendBtn.classList.remove('sending');
-            sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-        }
-        textElement.classList.remove('streaming');
-        entryDiv.querySelector('.oe-actions').style.display = 'flex';
-        return;
-    }
-    if (sendBtn) {
-        sendBtn.classList.remove('sending');
-        sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-    }
-
-    // 不把错误留在剧情里
-    entryDiv?.remove();
-
-    showAiErrorModal(
-        '线下模式生成失败（Streaming）',
-        (e && e.message) ? e.message : String(e)
-    );
-}
-
-
-    } else {
-       const loadingId = 'loading-' + Date.now();
-const container = document.getElementById('offline-log-container');
-
-// 线下 loading 条目（不会写进聊天记录，只是临时 UI）
-const loadDiv = document.createElement('div');
-loadDiv.id = loadingId;
-loadDiv.className = 'offline-entry ai';
-loadDiv.innerHTML = `
-  <div class="oe-name">SYSTEM</div>
-  <div class="oe-text"><i class="fas fa-circle-notch fa-spin"></i> 生成中...</div>
-`;
-
-const dmArea = container.querySelector('.offline-danmaku-area');
-if (dmArea) container.insertBefore(loadDiv, dmArea);
-else container.appendChild(loadDiv);
-
-
-        // 【修复】移除滚动，保持位置
-        
-        try {
-            let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
-            const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
-            
-            const sendBtn = document.querySelector('.offline-send-btn');
-            if(sendBtn) {
-                sendBtn.classList.add('sending');
-                sendBtn.innerHTML = '<i class="fas fa-stop"></i>';
-            }
-
-           const res = await fetch(apiUrl, { 
-  method: 'POST', 
-  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
-  body: JSON.stringify(payload),
-  signal: currentAiController.signal
-});
-
-const resText = await res.clone().text().catch(() => '');
-
-document.getElementById(loadingId)?.remove();
-if (sendBtn) {
-    sendBtn.classList.remove('sending');
-    sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-}
-
-if (!res.ok) {
-  throw new Error(`HTTP ${res.status} ${res.statusText}\n\n${resText}`);
-}
-
-let data = null;
-try {
-  data = await res.json();
-} catch (e) {
-  throw new Error(`响应不是 JSON（或被网关改写）\n\n${resText}`);
-}
-
-let rawReply = (data?.choices?.[0]?.message?.content ?? '');
-if (!rawReply.trim()) {
-  showAiErrorModal('线下生成空回', 'choices[0].message.content 为空');
-  return;
-}
-
-            let hasStatus = false;
-            let hasOptions = false;
-            let hasDanmaku = false;
-            let extractedOptions = [];
-            const optRegex = /\[OPTIONS_START\]([\s\S]*?)(?:\[\/?OPTIONS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-            const optMatch = rawReply.match(optRegex);
-            if (optMatch) {
-                hasOptions = true;
-                extractedOptions = optMatch[1]
-                    .split('\n')
-                    .map(s => s.trim())
-                    .map(s => s.replace(/^(\d+\s*[\.、)\]）]|Option\s*\d+\s*[:：]|[-*•])\s*/i, '').trim())
-                    .filter(s => s.length > 0);
-                rawReply = rawReply.replace(optRegex, '').trim();
-            }
-
-            const statusRegex = /\[STATUS_START\]([\s\S]*?)(?:\[\/?STATUS_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-            const statusMatch = rawReply.match(statusRegex);
-            if (statusMatch) {
-                hasStatus = true;
-                updateMindStateFromText(statusMatch[1], targetChatId);
-                rawReply = rawReply.replace(statusRegex, '').trim();
-            }
-
-            const danmakuRegex = /\[DANMAKU_START\]([\s\S]*?)(?:\[\/?DANMAKU_END\]|(?=\[[A-Za-z_]+_START\])|$)/i;
-            const danmakuMatch = rawReply.match(danmakuRegex);
-            if (danmakuMatch) {
-                hasDanmaku = true;
-                const dList = danmakuMatch[1].split('\n').map(s=>s.trim()).filter(s=>s);
-                // 【修复】仅在弹幕开关开启时才处理
-                if (isDanmakuOn && dList.length > 0) {
-                    danmakuPool = dList;
-                    startDanmakuBatch();
-                }
-                rawReply = rawReply.replace(danmakuRegex, '').trim();
-            }
-
-            const aiMsgId = 'off_ai_' + Date.now();
-            const isLookingOffline = document.getElementById('offlineModeView')?.classList.contains('show') && currentChatId === targetChatId && currentChatType === 'single';
-            if (isLookingOffline) {
-                appendOfflineEntry('ai', rawReply, friend.realName, aiMsgId);
-            }
-            
-            saveMessageToHistory(targetChatId, {
-                text: rawReply, type: 'received', senderName: friend.realName,
-                customAvatar: friend.avatar, isOffline: true, id: aiMsgId
-            });
-            
-            // 【修复】渲染选项分支
+            // 渲染选项分支
             if (isLookingOffline && isOfflineOptionsOn && extractedOptions.length > 0) {
                 const container = document.getElementById('offline-log-container');
                 const optDiv = document.createElement('div');
@@ -8365,58 +8216,189 @@ if (!rawReply.trim()) {
                     optDiv.appendChild(btn);
                 });
                 const dmArea = container.querySelector('.offline-danmaku-area');
-                if (dmArea) {
-                    container.insertBefore(optDiv, dmArea);
-                } else {
-                    container.appendChild(optDiv);
+                if (dmArea) container.insertBefore(optDiv, dmArea);
+                else container.appendChild(optDiv);
+
+                setTimeout(() => container.scrollTop = container.scrollHeight, 150);
+            }
+            
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                console.log("线下流式生成被用户中止");
+                if(sendBtn) {
+                    sendBtn.classList.remove('sending');
+                    sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
                 }
+                if (textElement) textElement.classList.remove('streaming');
+                if (entryDiv) entryDiv.querySelector('.oe-actions').style.display = 'flex';
+                return;
+            }
+            if (sendBtn) {
+                sendBtn.classList.remove('sending');
+                sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            }
+            entryDiv?.remove();
+            showAiErrorModal('线下模式生成失败（Streaming）', (e && e.message) ? e.message : String(e));
+        }
+
+    } else {
+        // 非流式情况
+        const loadingId = 'loading-' + Date.now();
+        const container = document.getElementById('offline-log-container');
+
+        const loadDiv = document.createElement('div');
+        loadDiv.id = loadingId;
+        loadDiv.className = 'offline-entry ai';
+        loadDiv.innerHTML = `
+          <div class="oe-name">SYSTEM</div>
+          <div class="oe-text"><i class="fas fa-circle-notch fa-spin"></i> 生成中...</div>
+        `;
+
+        const dmArea = container.querySelector('.offline-danmaku-area');
+        if (dmArea) container.insertBefore(loadDiv, dmArea);
+        else container.appendChild(loadDiv);
+        container.scrollTop = container.scrollHeight;
+        
+        try {
+            let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+            const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+            
+            const sendBtn = document.querySelector('.offline-send-btn');
+            if(sendBtn) {
+                sendBtn.classList.add('sending');
+                sendBtn.innerHTML = '<i class="fas fa-stop"></i>';
+            }
+
+            const res = await fetch(apiUrl, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` }, 
+                body: JSON.stringify(payload),
+                signal: currentAiController.signal
+            });
+
+            const resText = await res.clone().text().catch(() => '');
+
+            document.getElementById(loadingId)?.remove();
+            if (sendBtn) {
+                sendBtn.classList.remove('sending');
+                sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            }
+
+            if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}\n\n${resText}`);
+
+            let data = null;
+            try {
+                data = await res.json();
+            } catch (e) {
+                throw new Error(`响应不是 JSON（或被网关改写）\n\n${resText}`);
+            }
+
+            let fullReply = (data?.choices?.[0]?.message?.content ?? '');
+            if (!fullReply.trim()) {
+                showAiErrorModal('线下生成空回', 'choices[0].message.content 为空');
+                return;
+            }
+
+            let cleanReply = fullReply;
+            let hasStatus = false;
+            let hasOptions = false;
+            let hasDanmaku = false;
+            let extractedOptions = [];
+
+            try {
+                let jsonStr = fullReply.replace(/^```[a-zA-Z]*\n?/gi, '').replace(/```[\s\S]*$/i, '').trim();
+                const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const aiData = JSON.parse(jsonMatch[0]);
+                    if (aiData.chatResponse) cleanReply = aiData.chatResponse;
+                    
+                    if (aiData.innerVoice) {
+                        hasStatus = true;
+                        const state = friend.mindState || {};
+                        const v = aiData.innerVoice;
+                        state.action = v.behavior || state.action;
+                        state.location = v.location || state.location;
+                        state.weather = v.weather || state.weather;
+                        state.bgm = v.bgm || state.bgm;
+                        state.murmur = v.thoughts || state.murmur;
+                        state.hiddenThought = v.naughtyThoughts || '';
+                        state.kaomoji = v.kaomoji || state.kaomoji;
+                        if (typeof v.affection === 'number') friend.affection = v.affection;
+                        
+                        friend.mindState = state;
+                        saveFriendsData();
+                        refreshMindCardUI(targetChatId, false);
+                        if(typeof syncMindBgmToPlayer === 'function') syncMindBgmToPlayer(state.bgm);
+                    }
+                    
+                    if (isOfflineOptionsOn && aiData.options && Array.isArray(aiData.options)) {
+                        hasOptions = true;
+                        extractedOptions = aiData.options;
+                    }
+                    
+                    if (isDanmakuOn && aiData.danmaku && Array.isArray(aiData.danmaku)) {
+                        hasDanmaku = true;
+                        const dList = aiData.danmaku.filter(s => s && s.trim().length > 0);
+                        if (dList.length > 0) {
+                            danmakuPool = dList;
+                            startDanmakuBatch();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Offline JSON parse failed, fallback", e);
+                const fallbackMatch = fullReply.match(/"chatResponse"\s*:\s*"([\s\S]*?)"(?=\s*,|\s*\})/);
+                if (fallbackMatch) {
+                    try { cleanReply = fallbackMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'); } catch(ex){}
+                }
+            }
+
+            const aiMsgId = 'off_ai_' + Date.now();
+            if (isLookingOffline) {
+                appendOfflineEntry('ai', cleanReply, friend.realName, aiMsgId);
+            }
+            
+            saveMessageToHistory(targetChatId, {
+                text: cleanReply, type: 'received', senderName: friend.realName,
+                customAvatar: friend.avatar, isOffline: true, id: aiMsgId
+            });
+            
+            if (isLookingOffline && isOfflineOptionsOn && extractedOptions.length > 0) {
+                const optDiv = document.createElement('div');
+                optDiv.id = 'vn-options-box';
+                optDiv.className = 'vn-options-container';
+                extractedOptions.forEach(opt => {
+                    const btn = document.createElement('div');
+                    btn.className = 'vn-option-btn';
+                    btn.innerText = opt;
+                    btn.onclick = () => selectOfflineOption(opt);
+                    optDiv.appendChild(btn);
+                });
+                const dmArea = container.querySelector('.offline-danmaku-area');
+                if (dmArea) container.insertBefore(optDiv, dmArea);
+                else container.appendChild(optDiv);
                 setTimeout(() => container.scrollTop = container.scrollHeight, 150);
             }
 
-            const needsExtraFallback =
-                !hasStatus ||
-                (isOfflineOptionsOn && !hasOptions) ||
-                (isDanmakuOn && !hasDanmaku);
-
-            if (needsExtraFallback && typeof generateOfflineExtrasBackground === 'function') {
-                generateOfflineExtrasBackground(
-                    targetChatId,
-                    cleanText || text,
-                    rawReply,
-                    settings,
-                    friend,
-                    {
-                        needStatus: !hasStatus,
-                        needOptions: isOfflineOptionsOn && !hasOptions,
-                        needDanmaku: isDanmakuOn && !hasDanmaku
-                    }
-                );
-            }
-
         } catch (e) {
-    if (e.name === 'AbortError') {
-        console.log("线下非流式生成被用户中止");
-        document.getElementById(loadingId)?.remove();
-        const sendBtn = document.querySelector('.offline-send-btn');
-        if (sendBtn) {
-            sendBtn.classList.remove('sending');
-            sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            if (e.name === 'AbortError') {
+                console.log("线下非流式生成被用户中止");
+                document.getElementById(loadingId)?.remove();
+                const sendBtn = document.querySelector('.offline-send-btn');
+                if (sendBtn) {
+                    sendBtn.classList.remove('sending');
+                    sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                }
+                return;
+            }
+            document.getElementById(loadingId)?.remove();
+            const sendBtn = document.querySelector('.offline-send-btn');
+            if (sendBtn) {
+                sendBtn.classList.remove('sending');
+                sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            }
+            showAiErrorModal('线下模式生成失败', (e && e.message) ? e.message : String(e));
         }
-        return;
-    }
-    document.getElementById(loadingId)?.remove();
-    const sendBtn = document.querySelector('.offline-send-btn');
-    if (sendBtn) {
-        sendBtn.classList.remove('sending');
-        sendBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-    }
-
-    showAiErrorModal(
-        '线下模式生成失败',
-        (e && e.message) ? e.message : String(e)
-    );
-}
-
     }
 }
 // END: 替换结束
