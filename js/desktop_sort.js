@@ -807,6 +807,7 @@ window.executeCustomWidgetAction = function(type, param) {
         else if (param === 'pay') { if(window.openPayApp) window.openPayApp(); }
         else if (param === 'lovespace') { if(window.openLoveSpaceApp) window.openLoveSpaceApp(); }
         else if (param === 'backpack') { if(window.openBackpackApp) window.openBackpackApp(); }
+        else if (param === 'snoop') { if(window.openSnoopApp) window.openSnoopApp(); }
     } else if (type === 'url') {
         if (param && param.trim() !== '') {
             window.open(param, '_blank');

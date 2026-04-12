@@ -122,8 +122,54 @@ const TrackerApp = (() => {
 
   function selectChar(c) {
     state.selectedChar = c;
+    
+    document.querySelector('#trackerApp .tr-action-sheet')?.remove();
+    const sheet = document.createElement('div');
+    sheet.className = 'tr-action-sheet';
+    sheet.innerHTML = `
+      <div class="tr-action-sheet-mask" onclick="this.parentElement.remove()"></div>
+      <div class="tr-action-sheet-box">
+        <div class="tr-action-sheet-handle"></div>
+        <div class="tr-action-sheet-header" style="flex-direction:column;align-items:flex-start;gap:4px">
+          <div class="tr-action-sheet-name">🔍 调查目标：${c.name}</div>
+          <div class="tr-action-sheet-preview">选择你要进行的调查方式</div>
+        </div>
+        <div class="tr-action-sheet-grid">
+          <div class="tr-action-card-btn" onclick="TrackerApp.startPhoneTracker()">
+            <div class="tr-ac-icon">📱</div>
+            <div class="tr-ac-title">线上入侵</div>
+            <div class="tr-ac-desc">查阅手机隐私数据</div>
+          </div>
+          <div class="tr-action-card-btn" onclick="TrackerApp.startOfflineSnoop()">
+            <div class="tr-ac-icon">🏠</div>
+            <div class="tr-ac-title">线下潜入</div>
+            <div class="tr-ac-desc">实地潜入TA的房间</div>
+          </div>
+        </div>
+        <div class="tr-action-sheet-btns" style="margin-top: 8px;">
+          <div class="tr-action-btn cancel" onclick="this.closest('.tr-action-sheet').remove()">取消行动</div>
+        </div>
+      </div>`;
+    document.getElementById('trackerApp').appendChild(sheet);
+    requestAnimationFrame(() => sheet.querySelector('.tr-action-sheet-box').classList.add('open'));
+  }
+
+  function startPhoneTracker() {
+    document.querySelector('#trackerApp .tr-action-sheet')?.remove();
     renderScenarioModal();
-    $('tr-scenario-modal').classList.add('active');
+    document.getElementById('tr-scenario-modal').classList.add('active');
+  }
+
+  function startOfflineSnoop() {
+    document.querySelector('#trackerApp .tr-action-sheet')?.remove();
+    // 1. 先把角色ID存下来，防止被 close() 清空
+    const targetCharId = state.selectedChar.id || state.selectedChar.name;
+    // 2. 再关闭当前Tracker面板
+    close();
+    // 3. 打开线下搜查APP并传入保存好的角色ID
+    if (window.openSnoopApp) {
+        window.openSnoopApp(targetCharId);
+    }
   }
 
   // ── 场景弹窗（随机抽卡版）────────────────────────────────
@@ -2072,6 +2118,8 @@ ${history}
     openPhoto, closePhoto,
     tamperAdd, tamperRefresh, tamperClear,
     refreshAll, dismissBusted,
+    startPhoneTracker,
+    startOfflineSnoop,
     // ★ 新增：痕迹干预公共方法
     changeRemark,
     openContactAction,
@@ -2253,4 +2301,410 @@ function _injectPinAwareness(charId, pin, hint) {
   } catch (e) {
     console.warn('[_injectPinAwareness]', e);
   }
+}
+// =========================================================
+// Snoop App - 线下搜查模式 (大图沉浸 + 一键全屋全量生成版)
+// =========================================================
+
+let snoopCurrentChatId = null;
+let snoopCurrentLoc = 'home_bedroom'; 
+let snoopCurrentParent = 'home'; // 记录当前的大类
+
+// 场景结构（保留为了切换背景大图用，但生成报告时会一把抓）
+const snoopLocs = {
+    home_bedroom: { name: '卧室', bg: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&q=80', parent: 'home' },
+    home_kitchen: { name: '厨房', bg: 'https://images.unsplash.com/photo-1556910103-1c02745a872f?w=600&q=80', parent: 'home' },
+    home_bathroom:{ name: '卫生间', bg: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=600&q=80', parent: 'home' },
+    home_balcony: { name: '阳台', bg: 'https://images.unsplash.com/photo-1502672260266-1c1c651e06fa?w=600&q=80', parent: 'home' },
+    home_study:   { name: '书房', bg: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=600&q=80', parent: 'home' },
+    daily:        { name: '日常地点', bg: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80', parent: 'daily' },
+    property:     { name: '个人财产', bg: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&q=80', parent: 'property' }
+};
+
+const parentNames = {
+    'home': '住所 (全屋)',
+    'daily': '日常活动轨迹',
+    'property': '个人财产与云端'
+};
+
+window.openSnoopApp = function(chatId) {
+    snoopCurrentChatId = chatId || window.currentChatId;
+    if (!snoopCurrentChatId || typeof friendsData === 'undefined' || !friendsData[snoopCurrentChatId]) {
+        alert("请先选择一个要搜查的角色。");
+        return;
+    }
+    
+    const conf = JSON.parse(localStorage.getItem('myCoolPhone_snoopConf') || '{}');
+    if (conf[snoopCurrentChatId]) {
+        Object.keys(conf[snoopCurrentChatId]).forEach(locKey => {
+            if (snoopLocs[locKey]) snoopLocs[locKey].bg = conf[snoopCurrentChatId][locKey];
+        });
+    }
+
+    const app = document.getElementById('snoopApp');
+    if(app) {
+        app.style.display = 'block';
+        app.classList.add('open');
+        snoopSwitchLoc('home');
+    }
+}
+
+window.closeSnoopApp = function() {
+    const app = document.getElementById('snoopApp');
+    if(app) {
+        app.classList.remove('open');
+        app.style.display = 'none';
+    }
+}
+
+// 切换顶级分类 Tab
+window.snoopSwitchLoc = function(parentId) {
+    snoopCurrentParent = parentId;
+    document.querySelectorAll('.snoop-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.snoop-tab[onclick="snoopSwitchLoc('${parentId}')"]`).classList.add('active');
+
+    // 动态更新那个巨大按钮的文字，提示用户是“一键搜查全部”
+    const btnText = parentId === 'home' ? '全面搜查整个【住所】' : (parentId === 'daily' ? '调查所有【日常轨迹】' : '清查所有【个人财产】');
+    const exploreBtn = document.querySelector('.snoop-huge-explore-btn');
+    if(exploreBtn) exploreBtn.innerHTML = `<i class="fas fa-search"></i> ${btnText}`;
+
+    const subTabsContainer = document.getElementById('snoop-sub-tabs');
+    subTabsContainer.innerHTML = '';
+    let firstLocId = null;
+    
+    Object.keys(snoopLocs).forEach(locId => {
+        if (snoopLocs[locId].parent === parentId) {
+            if (!firstLocId) firstLocId = locId;
+            const btn = document.createElement('div');
+            btn.className = 'snoop-sub-tab';
+            btn.innerText = snoopLocs[locId].name;
+            btn.onclick = () => snoopSwitchSubLoc(locId);
+            subTabsContainer.appendChild(btn);
+        }
+    });
+
+    if (parentId !== 'home') subTabsContainer.style.display = 'none';
+    else subTabsContainer.style.display = 'flex';
+
+    if (firstLocId) snoopSwitchSubLoc(firstLocId);
+}
+
+// 切换具体场景（现在只用来换背景图，不影响一把生成的逻辑）
+window.snoopSwitchSubLoc = function(locId) {
+    snoopCurrentLoc = locId;
+    const parentId = snoopLocs[locId].parent;
+    
+    if (parentId === 'home') {
+        let index = 0;
+        Object.keys(snoopLocs).forEach(id => {
+            if (snoopLocs[id].parent === 'home') {
+                const btn = document.getElementById('snoop-sub-tabs').children[index];
+                if (btn) {
+                    if (id === locId) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                }
+                index++;
+            }
+        });
+    }
+
+    const layer = document.getElementById('snoop-bg-layer');
+    layer.style.backgroundImage = `url('${snoopLocs[locId].bg}')`;
+    document.getElementById('snoop-title-text').innerText = snoopLocs[locId].name;
+}
+
+window.handleSnoopBgChange = async function(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            let base64 = e.target.result;
+            if (typeof compressImage === 'function') base64 = await compressImage(base64, 800);
+            snoopLocs[snoopCurrentLoc].bg = base64;
+            document.getElementById('snoop-bg-layer').style.backgroundImage = `url('${base64}')`;
+            
+            let conf = JSON.parse(localStorage.getItem('myCoolPhone_snoopConf') || '{}');
+            if(!conf[snoopCurrentChatId]) conf[snoopCurrentChatId] = {};
+            conf[snoopCurrentChatId][snoopCurrentLoc] = base64;
+            localStorage.setItem('myCoolPhone_snoopConf', JSON.stringify(conf));
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+    input.value = '';
+}
+
+// ==========================================
+// 核心：点击按钮，生成数据并进入沉浸式闪光点探索模式
+// ==========================================
+async function startFullSnoopExploration() {
+    const friend = friendsData[snoopCurrentChatId];
+    if (!friend) return;
+    
+    const categoryName = parentNames[snoopCurrentParent];
+    let allAreas = [];
+    Object.values(snoopLocs).forEach(loc => {
+        if(loc.parent === snoopCurrentParent) allAreas.push(loc.name);
+    });
+    const areasString = allAreas.join('、');
+
+    document.getElementById('snoopActionOverlay').classList.add('active');
+
+    let trPending = JSON.parse(localStorage.getItem('tr_pending_context') || '[]');
+    trPending.push(`用户趁你不在，对你的【${categoryName}】进行了地毯式大搜查，翻遍了包括 ${areasString} 等所有区域。`);
+    localStorage.setItem('tr_pending_context', JSON.stringify(trPending));
+
+    const settingsJSON = localStorage.getItem('myCoolPhone_aiSettings');
+    if (!settingsJSON) {
+        setTimeout(() => {
+            document.getElementById('snoopActionOverlay').classList.remove('active');
+            alert("请先配置 API Key。");
+        }, 1000);
+        return;
+    }
+    
+    const settings = JSON.parse(settingsJSON);
+    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+    const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+    // ★ 修改提示词：要求强制返回含有多个房间及物品的 JSON
+    const sysPrompt = `你是一个剧情文字游戏引擎。
+玩家正在全方位搜查角色 ${friend.realName} 的【整个${categoryName}】。
+包含区域：${areasString}。
+角色人设：${friend.persona}
+
+请严格按以下 JSON 格式生成线下搜查报告，不要输出任何其他文字或 markdown 标记：
+{
+  "areas": [
+    {
+      "name": "卧室",
+      "items": [
+        {"name": "床头柜的日记", "desc": "发现了一本落灰的日记，里面记录了TA对你的真实想法。"},
+        {"name": "枕头下的私物", "desc": "藏着一张模糊的照片。"}
+      ]
+    }
+  ]
+}
+要求：
+1. 包含上述提及的所有区域名。
+2. 每个区域必须随机生成 3 到 4 个具体的搜查物品(items)。
+3. 描述(desc)必须使用第二人称（你），充满窥探他人隐私的沉浸感。`;
+
+    try {
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [{ role: "system", content: sysPrompt }],
+                temperature: 0.8
+            })
+        });
+        
+        if (!res.ok) throw new Error("API Request Failed");
+        const data = await res.json();
+        let report = data.choices[0].message.content.trim();
+        
+        // 尝试解析 JSON
+        let parsedData;
+        try {
+            report = report.replace(/^```json/i, '').replace(/```$/i, '').trim();
+            parsedData = JSON.parse(report);
+        } catch(e) {
+            // 如果 AI 智障没按格式返回 JSON，则回退到阅读纯文字模式
+            document.getElementById('snoopActionOverlay').classList.remove('active');
+            document.getElementById('snoop-report-content').innerHTML = parseMarkdownToHtml(report);
+            document.getElementById('snoop-report-view').classList.add('active');
+            return;
+        }
+        
+        // 解析成功！唤起全屏互动探索模式
+        document.getElementById('snoopActionOverlay').classList.remove('active');
+        window.currentSnoopInteractiveData = parsedData.areas;
+        openSnoopInteractiveView();
+
+    } catch(e) {
+        document.getElementById('snoopActionOverlay').classList.remove('active');
+        alert("搜查失败：" + e.message);
+    }
+}
+
+function parseMarkdownToHtml(text) {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<b style="color:#fff; font-size: 15px;">$1</b>')
+        .replace(/\n/g, '<br><br>');
+}
+
+window.closeSnoopReport = function() {
+    document.getElementById('snoop-report-view').classList.remove('active');
+}
+
+// 实时监控微缩卡片（保留了，用来生成实时小动态）
+window.openSnoopCam = async function() {
+    document.getElementById('snoop-cam-view').classList.add('active');
+    document.getElementById('cam-time').innerText = new Date().toLocaleTimeString();
+    
+    if(window.snoopCamInterval) clearInterval(window.snoopCamInterval);
+    window.snoopCamInterval = setInterval(() => {
+        document.getElementById('cam-time').innerText = new Date().toLocaleTimeString();
+    }, 1000);
+
+    const friend = friendsData[snoopCurrentChatId];
+    document.getElementById('cam-text').innerText = "正在建立连接...";
+
+    let trPending = JSON.parse(localStorage.getItem('tr_pending_context') || '[]');
+    trPending.push(`用户正在通过隐藏摄像头实时偷窥你。`);
+    localStorage.setItem('tr_pending_context', JSON.stringify(trPending));
+
+    const settingsJSON = localStorage.getItem('myCoolPhone_aiSettings');
+    if (!settingsJSON) {
+        document.getElementById('cam-text').innerText = "连接失败：无 API 配置";
+        return;
+    }
+    const settings = JSON.parse(settingsJSON);
+    let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+    const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+    const sysPrompt = `你是一个隐藏摄像头监控系统。
+目标：${friend.realName}
+人设：${friend.persona}
+请用【纯画面描述】客观、不带主观评价地描述摄像头现在拍到了 ${friend.realName} 在做什么。字数控制在 40-60 字。`;
+
+    try {
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [{ role: "system", content: sysPrompt }],
+                temperature: 0.7
+            })
+        });
+        if (!res.ok) throw new Error("API Request Failed");
+        const data = await res.json();
+        document.getElementById('cam-text').innerText = data.choices[0].message.content.trim();
+    } catch(e) {
+        document.getElementById('cam-text').innerText = "连接中断：" + e.message;
+    }
+}
+
+window.closeSnoopCam = function() {
+    document.getElementById('snoop-cam-view').classList.remove('active');
+    if(window.snoopCamInterval) clearInterval(window.snoopCamInterval);
+}
+// ==========================================
+// 沉浸式互动探索模式逻辑 (动态渲染区域和闪光点)
+// ==========================================
+// ==========================================
+// 沉浸式互动探索模式逻辑 (动态渲染区域和闪光点)
+// ==========================================
+window.openSnoopInteractiveView = function() {
+    const view = document.getElementById('snoop-interactive-view');
+    const menu = document.getElementById('snoop-dropdown-menu'); // 🌟 改找新的悬浮菜单
+    const label = document.getElementById('snoop-dropdown-label'); // 🌟 找顶部的文字标签
+    if (!view || !menu) return;
+    
+    const areas = window.currentSnoopInteractiveData || [];
+    
+    // 🌟 用自定义的 div 替换难看的原生 option
+    let html = '';
+    areas.forEach((area, index) => {
+        // 默认让第一个选项加上选中的小黑点
+        let isSelected = index === 0 ? ' selected' : '';
+        html += `<div class="snoop-dropdown-item${isSelected}" onclick="selectCustomArea('${index}', '${area.name}', this)">${area.name}</div>`;
+    });
+    
+    menu.innerHTML = html;
+    
+    // 默认把触发器按钮上的文字改成第一个区域的名字
+    if (areas.length > 0 && label) {
+        label.innerText = areas[0].name;
+    }
+    
+    view.classList.add('active');
+    changeSnoopInteractiveArea(0); // 默认打开第一个场景
+}
+
+window.changeSnoopInteractiveArea = function(index) {
+    const areas = window.currentSnoopInteractiveData || [];
+    const area = areas[index];
+    if (!area) return;
+    
+    // 切换场景时隐藏掉当前的物品提示框
+    document.getElementById('snoop-item-modal').classList.remove('active');
+    
+    // 寻找匹配的背景大图
+    let bgUrl = '';
+    Object.values(snoopLocs).forEach(loc => {
+        if (loc.name.includes(area.name) || area.name.includes(loc.name)) {
+            bgUrl = loc.bg;
+        }
+    });
+    // 如果该区域没有特殊配图，找一个当前大类的图兜底
+    if (!bgUrl) {
+        let parentBg = '';
+        Object.values(snoopLocs).forEach(loc => {
+            if (loc.parent === snoopCurrentParent && loc.bg) parentBg = loc.bg;
+        });
+        bgUrl = parentBg || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&q=80';
+    }
+    document.getElementById('snoop-inter-bg').style.backgroundImage = `url('${bgUrl}')`;
+    
+    // 撒布随机闪光点
+    const pointsContainer = document.getElementById('snoop-inter-points');
+    pointsContainer.innerHTML = '';
+    
+    if (area.items && Array.isArray(area.items)) {
+        area.items.forEach(item => {
+            let pt = document.createElement('div');
+            pt.className = 'snoop-flash-point';
+            // 随机坐标：限定在画面中心区域，避免贴边点不到
+            let top = 25 + Math.random() * 50; 
+            let left = 15 + Math.random() * 70; 
+            pt.style.top = top + '%';
+            pt.style.left = left + '%';
+            
+            // 点击弹出物品详情
+            pt.onclick = () => {
+                document.getElementById('snoop-item-title').innerText = item.name;
+                document.getElementById('snoop-item-desc').innerText = item.desc;
+                document.getElementById('snoop-item-modal').classList.add('active');
+            };
+            pointsContainer.appendChild(pt);
+        });
+    }
+}
+
+window.closeSnoopInteractive = function() {
+    document.getElementById('snoop-interactive-view').classList.remove('active');
+    document.getElementById('snoop-item-modal').classList.remove('active');
+}
+// 1. 控制下拉菜单的展开与收起
+function toggleSnoopDropdown() {
+    document.getElementById('snoop-dropdown-menu').classList.toggle('active');
+    document.getElementById('snoop-dropdown-arrow').classList.toggle('active');
+}
+
+// 2. 点击外部区域时自动关闭菜单
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('snoop-custom-dropdown');
+    if (dropdown && !dropdown.contains(e.target)) {
+        document.getElementById('snoop-dropdown-menu').classList.remove('active');
+        document.getElementById('snoop-dropdown-arrow').classList.remove('active');
+    }
+});
+
+// 3. 选中某个区域时触发的函数
+function selectCustomArea(areaId, areaName, element) {
+    // 改变触发器上的文字
+    document.getElementById('snoop-dropdown-label').innerText = areaName;
+    
+    // 移除所有选项的 selected 样式，给当前项加上
+    const items = document.querySelectorAll('.snoop-dropdown-item');
+    items.forEach(item => item.classList.remove('selected'));
+    element.classList.add('selected');
+
+    // 收起菜单
+    toggleSnoopDropdown();
+
+    // 🌟调用你原本的切换场景函数
+    changeSnoopInteractiveArea(areaId); 
 }

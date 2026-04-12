@@ -4840,26 +4840,6 @@ function switchCsTab(id) {
     <div class="tr-busted-btn" onclick="TrackerApp.dismissBusted()">关闭并退出</div>
   </div>
 
-  <!-- ── 视图0：模式选择 (数字骇入 / 物理潜入) ── -->
-  <div class="tr-view" id="tr-view-mode-select" style="display: none;">
-    <div class="tr-mode-container">
-      <div class="tr-mode-title">SELECT OPERATION</div>
-      <div class="tr-mode-options">
-        <div class="tr-mode-card" onclick="TrackerApp.selectMode('hack')">
-          <div class="tr-mode-icon"><i class="fas fa-mobile-alt"></i></div>
-          <div class="tr-mode-name">[ DIGITAL HACK ]</div>
-          <div class="tr-mode-desc">远程骇入 TA 的手机，查看隐私数据</div>
-        </div>
-        <div class="tr-mode-card" onclick="TrackerApp.selectMode('infiltrate')">
-          <div class="tr-mode-icon"><i class="fas fa-door-open"></i></div>
-          <div class="tr-mode-name">[ PHYSICAL INFILTRATE ]</div>
-          <div class="tr-mode-desc">潜入 TA 的房间进行物理搜查</div>
-        </div>
-      </div>
-    </div>
-    <div class="tr-select-close" onclick="TrackerApp.close()">✕ ABORT</div>
-  </div>
-
   <!-- ── 视图1：角色选择 ── -->
   <div class="tr-view" id="tr-view-select">
     <div class="tr-select-hero">
@@ -5135,79 +5115,122 @@ function switchCsTab(id) {
 
   </div><!-- /tr-view-desktop -->
 
-  <!-- ── 视图4：线下潜入模式 (Home Exploration) ── -->
-  <div class="tr-view" id="tr-view-infiltrate" style="display: none; background: #111; color: #fff;">
-    <!-- 顶部状态栏 -->
-    <div class="tr-inf-header">
-      <div class="tr-inf-target">TARGET: <span id="tr-inf-name">Loading...</span></div>
-      <div class="tr-inf-time" id="tr-inf-time">00:00:00:00</div>
-    </div>
-
-    <!-- 中间：平面蓝图与手电筒聚光区 -->
-    <div class="tr-inf-blueprint-area" id="tr-inf-blueprint">
-      <!-- 噪点与暗角遮罩 -->
-      <div class="tr-inf-vignette"></div>
-      <div class="tr-inf-noise"></div>
-      
-      <!-- 房间区域线框图 -->
-      <div class="tr-inf-room-grid">
-        <div class="tr-inf-zone" data-zone="bed" onclick="TrackerApp.infSelectZone('bed')">
-          <div class="tr-inf-zone-label">[ BED ]<br>床铺区域</div>
-        </div>
-        <div class="tr-inf-zone" data-zone="desk" onclick="TrackerApp.infSelectZone('desk')">
-          <div class="tr-inf-zone-label">[ DESK ]<br>书桌抽屉</div>
-        </div>
-        <div class="tr-inf-zone" data-zone="wardrobe" onclick="TrackerApp.infSelectZone('wardrobe')">
-          <div class="tr-inf-zone-label">[ WARDROBE ]<br>衣柜</div>
-        </div>
-        <div class="tr-inf-zone" data-zone="trash" onclick="TrackerApp.infSelectZone('trash')">
-          <div class="tr-inf-zone-label">[ TRASH ]<br>废纸篓</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 底部：特工控制台 -->
-    <div class="tr-inf-control-deck">
-      <!-- 警戒值仪表盘 -->
-      <div class="tr-inf-gauge-container">
-        <div class="tr-inf-gauge-label">TENSION LEVEL</div>
-        <div class="tr-inf-gauge-bar">
-          <div class="tr-inf-gauge-fill" id="tr-inf-tension-fill" style="width: 0%;"></div>
-        </div>
-      </div>
-
-      <!-- 当前选中区域提示 -->
-      <div class="tr-inf-status-text" id="tr-inf-status-text">
-        <span class="blinking-cursor">_</span> AWAITING COMMAND...
-      </div>
-
-      <!-- 操作拨杆/按钮 -->
-      <div class="tr-inf-actions">
-        <button class="tr-inf-action-btn" id="tr-inf-btn-search" onclick="TrackerApp.infSearch()" disabled>
-          <i class="fas fa-search"></i> SEARCH
-        </button>
-        <button class="tr-inf-action-btn" id="tr-inf-btn-tamper" onclick="TrackerApp.infTamper()" disabled>
-          <i class="fas fa-hand-sparkles"></i> TAMPER
-        </button>
-        <button class="tr-inf-action-btn escape" onclick="TrackerApp.infEscape()">
-          <i class="fas fa-sign-out-alt"></i> ESCAPE
-        </button>
-      </div>
-    </div>
-    
-    <!-- 搜查结果弹窗 (拟物化纸条) -->
-    <div id="tr-inf-result-modal" class="tr-inf-result-modal" style="display:none;" onclick="this.style.display='none'">
-      <div class="tr-inf-paper-slip" onclick="event.stopPropagation()">
-        <div class="tr-inf-paper-content" id="tr-inf-result-text">...</div>
-        <div class="tr-inf-paper-close" onclick="document.getElementById('tr-inf-result-modal').style.display='none'">[ CONFIRM ]</div>
-      </div>
-    </div>
-
-  </div><!-- /tr-view-infiltrate -->
-
 
 </div><!-- /trackerApp -->
+<!-- =========================================================
+   Snoop App - 线下搜查模式 (精美柔和卡片版)
+   ========================================================= -->
+<div class="app-fullscreen-view" id="snoopApp" style="display:none; position:absolute; inset:0; z-index:2000; overflow:hidden;">
 
+    <!-- 顶部毛玻璃导航 -->
+    <div class="snoop-header-glass">
+        <div class="snoop-back-btn" onclick="window.closeSnoopApp()"><i class="fas fa-chevron-left"></i></div>
+        <div class="snoop-title">Offline Tracking</div>
+        <div class="snoop-cam-icon" onclick="openSnoopCam()" title="实时监控"><i class="fas fa-video"></i></div>
+    </div>
+    
+    <!-- 分类 Tabs -->
+    <div class="snoop-tabs-wrap">
+        <div class="snoop-tabs">
+            <div class="snoop-tab active" onclick="snoopSwitchLoc('home')">住所</div>
+            <div class="snoop-tab" onclick="snoopSwitchLoc('daily')">日常地点</div>
+            <div class="snoop-tab" onclick="snoopSwitchLoc('property')">个人财产</div>
+        </div>
+        <div class="snoop-sub-tabs" id="snoop-sub-tabs">
+            <!-- JS 动态填充子分类 -->
+        </div>
+    </div>
+
+    <!-- 卡片主体滚动区 -->
+    <div class="snoop-content-scroll">
+        <!-- 悬浮的图像卡片 -->
+        <div class="snoop-image-card">
+            <div id="snoop-bg-layer" class="snoop-full-bg"></div>
+            <!-- 卡片阴影与标题叠加 -->
+            <div class="snoop-card-overlay">
+                <div class="snoop-loc-info">
+                    <div id="snoop-title-text" class="snoop-loc-title">卧室</div>
+                    <div class="snoop-loc-status">Target is currently absent. Secure to infiltrate.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部按钮区 -->
+        <div class="snoop-bottom-action-new">
+            <button class="snoop-huge-explore-btn" onclick="startFullSnoopExploration()">
+                <i class="fas fa-search"></i> 潜入并全面搜查
+            </button>
+            <div style="text-align:center; margin-top:15px;">
+                <span class="snoop-change-bg-text" onclick="document.getElementById('snoopBgUpload').click()">更换场景底图</span>
+                <input type="file" id="snoopBgUpload" accept="image/*" style="display:none;" onchange="handleSnoopBgChange(this)">
+            </div>
+        </div>
+    </div>
+    <!-- 隐蔽行动 Loading 动画 -->
+    <div class="snoop-action-overlay" id="snoopActionOverlay">
+        <div class="snoop-spinner"></div>
+        <div class="snoop-action-text" id="snoopActionText">INFILTRATING...</div>
+        <div style="font-size:11px; color:#aaa; margin-top:10px;">正在生成全景搜查报告，请稍候</div>
+    </div>
+
+    <!-- 一次性全量生成的阅读面板 (剧本视图) -->
+    <div id="snoop-report-view" class="snoop-report-view">
+        <div class="snoop-report-header">
+            <span>搜查档案 (CLASSIFIED)</span>
+            <i class="fas fa-times" onclick="closeSnoopReport()"></i>
+        </div>
+        <div class="snoop-report-body" id="snoop-report-content">
+            <!-- AI 生成的大段剧本将在这里呈现 -->
+        </div>
+    </div>
+    <!-- 【新增】沉浸式全屏互动探索视图 (高定优化版) -->
+    <div id="snoop-interactive-view" class="snoop-interactive-view">
+        <!-- 全屏背景图及暗色遮罩 -->
+        <div id="snoop-inter-bg" class="snoop-inter-bg"></div>
+        
+        <!-- 随机闪光点容器 -->
+        <div id="snoop-inter-points" style="position: absolute; inset: 0; z-index: 5;"></div>
+
+               <!-- 顶部导航条 -->
+        <div class="snoop-inter-header">
+            <!-- 【重制】高级自定义下拉菜单 -->
+            <div class="snoop-custom-dropdown" id="snoop-custom-dropdown">
+                <div class="snoop-dropdown-trigger" onclick="toggleSnoopDropdown()">
+                    <span id="snoop-dropdown-label">探索区域</span>
+                    <i class="fas fa-chevron-down" id="snoop-dropdown-arrow"></i>
+                </div>
+                <!-- 下拉列表面板 -->
+                <div class="snoop-dropdown-menu" id="snoop-dropdown-menu">
+                    <!-- JS动态填入自定义的 div 选项 -->
+                </div>
+            </div>
+            
+            <div class="snoop-inter-close-btn" onclick="closeSnoopInteractive()">
+                <i class="fas fa-times"></i>
+            </div>
+        </div>
+
+        
+        <!-- 物品发现详情小卡片 (杂志排版风) -->
+        <div id="snoop-item-modal" class="snoop-item-modal">
+            <div class="snoop-item-close" onclick="document.getElementById('snoop-item-modal').classList.remove('active')">
+                <i class="fas fa-times"></i>
+            </div>
+            <div id="snoop-item-title" class="snoop-item-title">物品名</div>
+            <div id="snoop-item-desc" class="snoop-item-desc">详细描述...</div>
+        </div>
+    </div>
+
+    <!-- 实时监控弹窗 (保留小微缩黑盒) -->
+    <div id="snoop-cam-view" class="snoop-action-overlay" style="z-index: 3000;">
+        <div class="snoop-cam-card">
+            <div class="cam-rec-indicator">REC</div>
+            <div id="cam-time" style="font-family:'Courier New', monospace; color:#fff; font-size:11px; margin-bottom:15px; opacity:0.7;">00:00:00</div>
+            <div id="cam-text" style="font-size:13px; color:#fff; line-height:1.7; min-height:80px; font-weight:300;">正在接入隐藏摄像头信号...</div>
+            <button class="snoop-btn" style="background:#fff; color:#111; margin-top:20px; width:100%; border-radius:12px; padding:12px;" onclick="closeSnoopCam()">断开连接</button>
+        </div>
+    </div>
+</div><!-- /snoopApp -->
 
 <!-- ============================================== -->
 <!-- 📚 Novel App                                   -->
