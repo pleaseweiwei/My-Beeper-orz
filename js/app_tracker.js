@@ -120,39 +120,72 @@ const TrackerApp = (() => {
     } catch { return []; }
   }
 
-  function selectChar(c) {
+   function selectChar(c) {
     state.selectedChar = c;
     
     document.querySelector('#trackerApp .tr-action-sheet')?.remove();
     const sheet = document.createElement('div');
     sheet.className = 'tr-action-sheet';
+    
+    // 【韩系 ins 风重构】
     sheet.innerHTML = `
-      <div class="tr-action-sheet-mask" onclick="this.parentElement.remove()"></div>
-      <div class="tr-action-sheet-box">
-        <div class="tr-action-sheet-handle"></div>
-        <div class="tr-action-sheet-header" style="flex-direction:column;align-items:flex-start;gap:4px">
-          <div class="tr-action-sheet-name">🔍 调查目标：${c.name}</div>
-          <div class="tr-action-sheet-preview">选择你要进行的调查方式</div>
+      <div class="tr-action-sheet-mask" onclick="this.parentElement.remove()" style="background: rgba(0,0,0,0.4); backdrop-filter: blur(6px);"></div>
+      <div class="tr-action-sheet-box" style="padding: 30px 24px; border-radius: 32px 32px 0 0; background: #ffffff; box-shadow: 0 -10px 40px rgba(0,0,0,0.08);">
+        
+        <!-- 顶部小横条 -->
+        <div class="tr-action-sheet-handle" style="width: 36px; height: 4px; background: #e4e4e4; border-radius: 4px; margin: 0 auto 28px;"></div>
+        
+        <!-- 杂志风标题区 -->
+        <div class="tr-action-sheet-header" style="flex-direction:column; align-items:center; gap:6px; border:none; padding:0; margin-bottom:28px;">
+          <div style="font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 800; letter-spacing: 2px; color: #999; text-transform: uppercase;">TARGET: ${c.name}</div>
+          <div style="font-family: 'Playfair Display', serif; font-style: italic; font-weight: 700; font-size: 24px; color: #111; letter-spacing: 0.5px;">Select Action</div>
         </div>
-        <div class="tr-action-sheet-grid">
-          <div class="tr-action-card-btn" onclick="TrackerApp.startPhoneTracker()">
-            <div class="tr-ac-icon">📱</div>
-            <div class="tr-ac-title">线上入侵</div>
-            <div class="tr-ac-desc">查阅手机隐私数据</div>
+        
+        <!-- 选项卡片区 -->
+        <div class="tr-action-sheet-grid" style="display:flex; flex-direction:column; gap: 14px; padding: 0;">
+          
+          <!-- 线上入侵选项 -->
+          <div class="tr-action-card-btn" onclick="TrackerApp.startPhoneTracker()" style="display:flex; flex-direction: row; align-items:center; padding: 18px 20px; border-radius: 20px; border: 1px solid #f0f0f0; background: #fafafa; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: none;">
+            <!-- 纯净白底图标圈 -->
+            <div style="margin-right: 18px; width: 46px; height: 46px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(0,0,0,0.04); flex-shrink: 0;">
+              <i class="fas fa-mobile-alt" style="font-size: 18px; color: #111;"></i>
+            </div>
+            <!-- 文字区 -->
+            <div style="flex: 1; text-align: left;">
+                <div style="font-size: 15px; font-weight: 800; color: #111; margin-bottom: 4px; letter-spacing: 0.5px;">线上入侵 / PHONE</div>
+                <div style="font-size: 11px; color: #888; font-weight: 500;">查阅手机隐私与隐藏数据</div>
+            </div>
+            <i class="fas fa-chevron-right" style="color: #ddd; font-size: 12px; margin-left: 10px;"></i>
           </div>
-          <div class="tr-action-card-btn" onclick="TrackerApp.startOfflineSnoop()">
-            <div class="tr-ac-icon">🏠</div>
-            <div class="tr-ac-title">线下潜入</div>
-            <div class="tr-ac-desc">实地潜入TA的房间</div>
+
+          <!-- 线下潜入选项 -->
+          <div class="tr-action-card-btn" onclick="TrackerApp.startOfflineSnoop()" style="display:flex; flex-direction: row; align-items:center; padding: 18px 20px; border-radius: 20px; border: 1px solid #f0f0f0; background: #fafafa; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: none;">
+            <!-- 纯净白底图标圈 -->
+            <div style="margin-right: 18px; width: 46px; height: 46px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(0,0,0,0.04); flex-shrink: 0;">
+              <i class="fas fa-door-open" style="font-size: 16px; color: #111;"></i>
+            </div>
+            <!-- 文字区 -->
+            <div style="flex: 1; text-align: left;">
+                <div style="font-size: 15px; font-weight: 800; color: #111; margin-bottom: 4px; letter-spacing: 0.5px;">线下潜入 / ROOM</div>
+                <div style="font-size: 11px; color: #888; font-weight: 500;">实地搜查TA的住所与物品</div>
+            </div>
+            <i class="fas fa-chevron-right" style="color: #ddd; font-size: 12px; margin-left: 10px;"></i>
+          </div>
+
+        </div>
+
+        <!-- 取消按钮 (极简文字留白) -->
+        <div style="text-align: center; margin-top: 24px;">
+          <div onclick="this.closest('.tr-action-sheet').remove()" style="display: inline-block; font-size: 10px; font-weight: 800; color: #aaa; letter-spacing: 2px; cursor: pointer; padding: 10px 20px; text-transform: uppercase;">
+            Cancel
           </div>
         </div>
-        <div class="tr-action-sheet-btns" style="margin-top: 8px;">
-          <div class="tr-action-btn cancel" onclick="this.closest('.tr-action-sheet').remove()">取消行动</div>
-        </div>
+        
       </div>`;
     document.getElementById('trackerApp').appendChild(sheet);
     requestAnimationFrame(() => sheet.querySelector('.tr-action-sheet-box').classList.add('open'));
   }
+
 
   function startPhoneTracker() {
     document.querySelector('#trackerApp .tr-action-sheet')?.remove();
@@ -2312,6 +2345,7 @@ let snoopCurrentParent = 'home'; // 记录当前的大类
 
 // 场景结构（保留为了切换背景大图用，但生成报告时会一把抓）
 const snoopLocs = {
+    home_livingroom: { name: '客厅', bg: 'https://images.unsplash.com/photo-1583847268964-b28ce8f311eb?w=600&q=80', parent: 'home' },
     home_bedroom: { name: '卧室', bg: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&q=80', parent: 'home' },
     home_kitchen: { name: '厨房', bg: 'https://images.unsplash.com/photo-1556910103-1c02745a872f?w=600&q=80', parent: 'home' },
     home_bathroom:{ name: '卫生间', bg: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=600&q=80', parent: 'home' },
@@ -2320,6 +2354,7 @@ const snoopLocs = {
     daily:        { name: '日常地点', bg: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80', parent: 'daily' },
     property:     { name: '个人财产', bg: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&q=80', parent: 'property' }
 };
+
 
 const parentNames = {
     'home': '住所 (全屋)',
@@ -2432,9 +2467,6 @@ window.handleSnoopBgChange = async function(input) {
     input.value = '';
 }
 
-// ==========================================
-// 核心：点击按钮，生成数据并进入沉浸式闪光点探索模式
-// ==========================================
 async function startFullSnoopExploration() {
     const friend = friendsData[snoopCurrentChatId];
     if (!friend) return;
@@ -2449,7 +2481,7 @@ async function startFullSnoopExploration() {
     document.getElementById('snoopActionOverlay').classList.add('active');
 
     let trPending = JSON.parse(localStorage.getItem('tr_pending_context') || '[]');
-    trPending.push(`用户趁你不在，对你的【${categoryName}】进行了地毯式大搜查，翻遍了包括 ${areasString} 等所有区域。`);
+    trPending.push(`用户趁你不在，对你的【${categoryName}】进行了地毯式大搜查。`);
     localStorage.setItem('tr_pending_context', JSON.stringify(trPending));
 
     const settingsJSON = localStorage.getItem('myCoolPhone_aiSettings');
@@ -2465,28 +2497,53 @@ async function startFullSnoopExploration() {
     let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
     const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
-    // ★ 修改提示词：要求强制返回含有多个房间及物品的 JSON
-    const sysPrompt = `你是一个剧情文字游戏引擎。
-玩家正在全方位搜查角色 ${friend.realName} 的【整个${categoryName}】。
-包含区域：${areasString}。
+      // ===== 区分Prompt：财产 vs 线下搜查 =====
+    let sysPrompt = "";
+    if (snoopCurrentParent === 'property') {
+        sysPrompt = `你是一个私人财富调查局。玩家正在查询角色 ${friend.realName} 的【名下资产清单】。
+角色人设：${friend.persona}
+请严格按以下 JSON 格式生成一份客观的资产报告（只写客观事实，包括隐瞒的资产）：
+{
+  "summary": { "netWorth": "估算总净资产，如 1500万", "debt": "无负债 / 房贷500万等" },
+  "realEstate": [
+    { "name": "汤臣一品 江景大平层", "location": "上海市 浦东新区", "size": "430㎡", "desc": "全款购入，目前处于空置状态，似乎打算用作私人会所。" }
+  ],
+  "vehicles": [
+    { "name": "保时捷 911 Carrera", "plate": "沪A·888**", "desc": "登记在他人名下，但实际由TA长期使用。" }
+  ],
+  "financials": [
+    { "type": "储蓄卡", "bank": "招商银行", "balance": "¥ 8,500,000", "cardNum": "**** 4399" }
+  ],
+  "investments": [
+    { "name": "海外信托基金", "amount": "¥ 5,000,000", "desc": "高风险风投，隐秘性极高。" }
+  ]
+}
+要求：必须包含上述5个字段。房产、车产、金融账户三个必须提供，其他理财提供0-3个。数据要符合该角色的人设身价。`;
+        } else {
+        // 住所和日常地点的搜查提示词（纯客观物品描述版）
+        sysPrompt = `你是一个冷酷客观的现场调查取证系统。玩家正在搜查角色 ${friend.realName} 的【${categoryName}】。包含区域：${areasString}。
 角色人设：${friend.persona}
 
-请严格按以下 JSON 格式生成线下搜查报告，不要输出任何其他文字或 markdown 标记：
+请严格按以下 JSON 格式生成搜查报告，必须包含上述所有区域名，每个区域生成 3 到 4 个搜查物品。
+
 {
   "areas": [
     {
       "name": "卧室",
       "items": [
-        {"name": "床头柜的日记", "desc": "发现了一本落灰的日记，里面记录了TA对你的真实想法。"},
-        {"name": "枕头下的私物", "desc": "藏着一张模糊的照片。"}
+        {"name": "半开抽屉里的深色日记本", "desc": "摊开的页面上用黑色墨水写着：'今天TA还是没有发现那件事，我不知道还能瞒多久。'"},
+        {"name": "床底边缘的揉皱的收据", "desc": "一张昂贵的珠宝店购物小票，日期是上周，但目前没有看到任何实物。"}
       ]
     }
   ]
 }
-要求：
-1. 包含上述提及的所有区域名。
-2. 每个区域必须随机生成 3 到 4 个具体的搜查物品(items)。
-3. 描述(desc)必须使用第二人称（你），充满窥探他人隐私的沉浸感。`;
+
+⚠️ 严格要求：
+1. desc 字段必须是【纯客观的物品状态】+【物品上承载的关键内容/细节】。
+2. 细节内容必须与 TA 的【人设、隐藏的秘密、或者对玩家的真实态度】产生强烈的剧情关联。
+3. 绝对禁止使用主观动作描写（严禁出现"你看到"、"你发现"、"你小心翼翼地"等废话），直接描述物品本身的客观存在！`;
+    }
+
 
     try {
         const res = await fetch(apiUrl, {
@@ -2503,35 +2560,325 @@ async function startFullSnoopExploration() {
         const data = await res.json();
         let report = data.choices[0].message.content.trim();
         
-        // 尝试解析 JSON
         let parsedData;
         try {
-            report = report.replace(/^```json/i, '').replace(/```$/i, '').trim();
-            parsedData = JSON.parse(report);
+            // 强化提取，防止AI说废话导致变成纯文字
+            const match = report.match(/\{[\s\S]*\}/);
+            if (!match) throw new Error("No JSON found");
+            let jsonStr = match[0].replace(/^```json/i, '').replace(/```$/i, '').trim();
+            parsedData = JSON.parse(jsonStr);
         } catch(e) {
-            // 如果 AI 智障没按格式返回 JSON，则回退到阅读纯文字模式
             document.getElementById('snoopActionOverlay').classList.remove('active');
             document.getElementById('snoop-report-content').innerHTML = parseMarkdownToHtml(report);
             document.getElementById('snoop-report-view').classList.add('active');
             return;
         }
         
-        // 解析成功！唤起全屏互动探索模式
         document.getElementById('snoopActionOverlay').classList.remove('active');
-        window.currentSnoopInteractiveData = parsedData.areas;
-        openSnoopInteractiveView();
+
+        // ===== 区分打开的视图 =====
+        if (snoopCurrentParent === 'property' && parsedData.summary) {
+            renderSnoopAssets(parsedData); // 打开杂志风资产面板
+        } else if (parsedData.areas) {
+            window.currentSnoopInteractiveData = parsedData.areas;
+            openSnoopInteractiveView(); // 打开手电筒光点面板
+        }
 
     } catch(e) {
         document.getElementById('snoopActionOverlay').classList.remove('active');
         alert("搜查失败：" + e.message);
     }
 }
+// 【重制】韩系Ins风优化版：全中文高级排版 + 理财卡片自适应高度显示全
+function renderSnoopAssets(data) {
+    const summary = document.getElementById('snoop-asset-summary');
+    const list = document.getElementById('snoop-asset-list');
+    
+    // 初始化翻页状态
+    window.snoopDeckIndexes = { estate: 0, vehicle: 0, bank: 0, invest: 0 };
 
-function parseMarkdownToHtml(text) {
-    return text
-        .replace(/\*\*(.*?)\*\*/g, '<b style="color:#fff; font-size: 15px;">$1</b>')
-        .replace(/\n/g, '<br><br>');
+    // 1. 顶部 Tab - 韩系极简细线风格
+    summary.innerHTML = `
+        <div id="asset-tab-bar" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0 30px; border-bottom:1px solid #f0f0f0; position:relative; z-index:50; height:60px;">
+            <div class="asset-tab-btn active" style="font-size:13px; font-weight:600; color:#111; cursor:pointer; position:relative; height:100%; display:flex; align-items:center; letter-spacing:1px;" onclick="switchSnoopAssetTab('overview', this)">概览</div>
+            <div class="asset-tab-btn" style="font-size:13px; font-weight:400; color:#999; cursor:pointer; position:relative; height:100%; display:flex; align-items:center; letter-spacing:1px;" onclick="switchSnoopAssetTab('estate', this)">房产</div>
+            <div class="asset-tab-btn" style="font-size:13px; font-weight:400; color:#999; cursor:pointer; position:relative; height:100%; display:flex; align-items:center; letter-spacing:1px;" onclick="switchSnoopAssetTab('vehicle', this)">车产</div>
+            <div class="asset-tab-btn" style="font-size:13px; font-weight:400; color:#999; cursor:pointer; position:relative; height:100%; display:flex; align-items:center; letter-spacing:1px;" onclick="switchSnoopAssetTab('bank', this)">账户</div>
+            <div class="asset-tab-btn" style="font-size:13px; font-weight:400; color:#999; cursor:pointer; position:relative; height:100%; display:flex; align-items:center; letter-spacing:1px;" onclick="switchSnoopAssetTab('invest', this)">理财</div>
+        </div>
+    `;
+
+    // 锁死区域，背景采用极淡的高级灰
+    list.style.height = '460px';
+    list.style.overflow = 'hidden';
+    list.style.position = 'relative';
+    list.style.background = '#fafafa';
+
+    const emptyState = (text) => `<div style="text-align:center; color:#ccc; font-size:12px; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:100%; font-weight:300; letter-spacing:2px;">${text}</div>`;
+
+    // ==========================================
+    // 辅助函数：生成扑克牌层叠卡片 HTML
+    // ==========================================
+    const buildDeckHTML = (items, category, imgsArray, badgeText, cardType) => {
+        if (!items || items.length === 0) return emptyState('暂无记录');
+        
+        let cardsHtml = items.map((item, idx) => {
+            let contentVisual = '';
+            
+            if (cardType === 'image') {
+                // 房产/车产 - (保留原本好看的Ins风图片卡)
+                let savedImg = localStorage.getItem(`snoop_asset_${category}_${item.name}`) || imgsArray[idx % imgsArray.length];
+                let clickAction = `event.stopPropagation(); let input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.onchange = (e) => { let f = e.target.files[0]; if(f){ let r = new FileReader(); r.onload = (ev) => { document.getElementById('img-${category}-${idx}').style.backgroundImage = 'url(' + ev.target.result + ')'; localStorage.setItem('snoop_asset_${category}_${item.name}', ev.target.result); }; r.readAsDataURL(f); } }; input.click();`;
+                
+                contentVisual = `
+                <div id="img-${category}-${idx}" style="background-image: url('${savedImg}'); background-size: cover; background-position: center; height:240px; position:relative;">
+                    <div onclick="${clickAction}" title="更换照片" style="position:absolute; top:15px; right:15px; background:rgba(255,255,255,0.8); backdrop-filter:blur(4px); color:#111; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.1);"><i class="fas fa-camera" style="font-size:12px;"></i></div>
+                </div>
+                <div style="padding:20px; background:#fff;">
+                    <div style="font-size:11px; color:#999; letter-spacing:1px; margin-bottom:6px; font-weight:500;">${badgeText}</div>
+                    <div style="font-size:16px; font-weight:600; color:#111; margin-bottom:8px; letter-spacing:0.5px;">${item.name || item.type || ''}</div>
+                    <div style="font-size:12px; color:#777; line-height:1.5; font-weight:300;">${item.location || item.plate || item.desc || '暂无详细描述'}</div>
+                </div>`;
+            } else if (cardType === 'bank') {
+                // 账户 - (保留原本好看的极致拟物黑金信用卡，文案中文化)
+                let cardDesigns = [
+                    { bg: 'linear-gradient(135deg, #1f1f22 0%, #0a0a0c 100%)', text: '#fff', chip: '#d4af37', type: '黑金卡' },
+                    { bg: 'linear-gradient(135deg, #e8e9eb 0%, #c4c5c7 100%)', text: '#111', chip: '#aaa', type: '白金卡' },
+                    { bg: 'linear-gradient(135deg, #1b3a57 0%, #0d1e2d 100%)', text: '#fff', chip: '#d4af37', type: '尊享卡' }
+                ];
+                let design = cardDesigns[idx % cardDesigns.length];
+                
+                contentVisual = `
+                <div style="background: ${design.bg}; height:100%; padding:25px; position:relative; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(0,0,0,0.2) 100%); pointer-events:none;"></div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:2;">
+                        <!-- 金属芯片 -->
+                        <div style="width: 38px; height: 28px; background: linear-gradient(135deg, ${design.chip}, rgba(255,255,255,0.3)); border-radius: 4px; box-shadow: inset 0 0 4px rgba(0,0,0,0.3); border:1px solid rgba(0,0,0,0.1);">
+                            <div style="width:100%; height:1px; background:rgba(0,0,0,0.2); margin-top:8px;"></div>
+                            <div style="width:100%; height:1px; background:rgba(0,0,0,0.2); margin-top:8px;"></div>
+                        </div>
+                        <div style="font-size:12px; font-weight:600; color:${design.text}; opacity:0.8; letter-spacing:1px;">${item.bank || '默认银行'}</div>
+                    </div>
+                    
+                    <div style="position:relative; z-index:2; margin-top:30px;">
+                        <div style="font-size:22px; color:${design.text}; font-family:'Courier New', monospace; letter-spacing:3px; text-shadow:0 1px 1px rgba(0,0,0,0.3); margin-bottom:15px;">${item.cardNum || '**** **** **** ****'}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                            <div>
+                                <div style="font-size:10px; color:${design.text}; opacity:0.6; letter-spacing:1px; margin-bottom:4px;">账户余额</div>
+                                <div style="font-size:16px; font-weight:600; color:${design.text};">${item.balance || '¥0.00'}</div>
+                            </div>
+                            <div style="font-size:13px; font-weight:700; color:${design.text}; opacity:0.9; letter-spacing:1px;">${design.type}</div>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                // 理财 - 【全中文单据风】高度自适应解决显示不全问题
+                let mockId = Math.floor(Math.random()*9000)+1000;
+                contentVisual = `
+                <div style="padding:25px; background:#fff; height:100%; display:flex; flex-direction:column; justify-content:space-between; text-align:left; box-sizing:border-box;">
+                    <div style="margin-bottom:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                            <div style="font-size:11px; color:#333; letter-spacing:1px; font-weight:700; background:#f2f2f2; padding:4px 8px; border-radius:4px;">${badgeText}</div>
+                            <div style="font-size:11px; color:#aaa; font-family:monospace; letter-spacing:1px;">单号: ${mockId}</div>
+                        </div>
+                        <div style="font-size:16px; font-weight:600; color:#111; margin-bottom:8px;">${item.name || '未命名资产'}</div>
+                        <div style="font-size:13px; color:#888; font-weight:400; line-height:1.6; padding-right:10px;">${item.desc || '暂无详细描述信息。'}</div>
+                    </div>
+                    
+                    <div style="background:#fafafa; padding:15px; border-radius:8px; border:1px solid #f0f0f0;">
+                        <div style="font-size:10px; color:#888; letter-spacing:1px; margin-bottom:6px;">当前估值</div>
+                        <div style="font-size:20px; font-weight:600; color:#111; font-family:-apple-system, sans-serif;">${item.amount || '¥0.00'}</div>
+                    </div>
+                </div>`;
+            }
+
+            // 卡片外壳容器 (注意这里 bank 限制高度200px，其他都是 auto 自适应！)
+            let cardHeight = cardType === 'bank' ? '200px' : 'auto';
+            return `
+            <div class="snoop-deck-${category}" onclick="handleSnoopDeckClick(event, '${category}', ${items.length})" style="position:absolute; top:30px; left:50%; width:82%; height:${cardHeight}; margin-left:-41%; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s; border-radius:16px; background:#fff; box-shadow:0 12px 30px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.02); overflow:hidden; cursor:pointer; border:1px solid rgba(0,0,0,0.03);">
+                ${contentVisual}
+            </div>`;
+        }).join('');
+        
+        // 极简指示器
+        let dotsHtml = items.map((_, i) => `<div class="dot-${category}-${i}" style="width:6px; height:6px; border-radius:50%; background:${i===0 ? '#111' : '#ccc'}; transition:background 0.3s;"></div>`).join('');
+        let indicatorHtml = items.length > 1 ? `
+        <div style="position:absolute; bottom:25px; width:100%; display:flex; justify-content:center; gap:6px; z-index:5;">
+            ${dotsHtml}
+        </div>` : '';
+
+        return `<div style="position:absolute; width:100%; height:100%; top:0; left:0; padding-bottom:50px;">${cardsHtml}${indicatorHtml}</div>`;
+    };
+
+    // 2. 概览区块 - 【全中文】高级财务报表排版
+    let netWorth = data.summary ? (data.summary.netWorth || '暂无') : '暂无';
+    let debt = data.summary ? (data.summary.debt || '0') : '0';
+    let overviewHtml = `
+        <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fafafa; padding:0 20px; box-sizing:border-box;">
+            
+            <div style="width:85%; max-width:320px; background:#fff; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,0.04); border:1px solid rgba(0,0,0,0.04); overflow:hidden;">
+                
+                <!-- 头部：净资产 -->
+                <div style="padding:25px 25px 20px; border-bottom:1px solid #f5f5f5;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div style="font-size:11px; color:#888; letter-spacing:1px; font-weight:600;">总计净资产</div>
+                        <!-- 呼吸绿点：表示财务状况Active -->
+                        <div style="width:6px; height:6px; background:#4CAF50; border-radius:50%; box-shadow:0 0 0 3px rgba(76, 175, 80, 0.1);"></div>
+                    </div>
+                    <div style="font-size:24px; font-weight:600; color:#111; letter-spacing:-0.5px; font-family:-apple-system, sans-serif;">
+                        ${netWorth}
+                    </div>
+                </div>
+
+                <!-- 详情区：资产与负债拆解 -->
+                <div style="padding:20px 25px; background:#fafbfc;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <div style="font-size:12px; color:#777; font-weight:500;">资产概况</div>
+                        <div style="font-size:12px; color:#ccc; font-weight:400;"><i class="fas fa-shield-alt"></i></div>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; padding-top:15px; border-top:1px dashed #e8e8e8;">
+                        <div style="font-size:12px; color:#777; font-weight:500;">负债 / 欠款</div>
+                        <div style="font-size:14px; font-weight:600; color:#d9534f; font-family:-apple-system, sans-serif;">${debt}</div>
+                    </div>
+                </div>
+                
+                <!-- 底部质感小标 -->
+                <div style="padding:12px 25px; background:#f4f5f7; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee;">
+                    <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:500;">状态：健康良好</div>
+                    <div style="font-size:10px; color:#999; letter-spacing:1px; font-weight:500;">安全已加密</div>
+                </div>
+                
+            </div>
+            
+        </div>
+    `;
+
+    // 3. 各分类区块生成
+    let estateHtml = buildDeckHTML(data.realEstate, 'estate', [
+        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80',
+        'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=600&q=80'
+    ], '房产项目', 'image');
+
+    let vehicleHtml = buildDeckHTML(data.vehicles, 'vehicle', [
+        'https://images.unsplash.com/photo-1503376713356-2eb8fbfefdd4?w=600&q=80',
+        'https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=600&q=80'
+    ], '车辆信息', 'image');
+
+    let bankHtml = buildDeckHTML(data.financials, 'bank', [], '银行账户', 'bank');
+    
+    let investHtml = buildDeckHTML(data.investments, 'invest', [], '投资理财', 'invest');
+
+    // 装载所有区块
+    list.innerHTML = `
+        <div id="asset-pane-overview" class="asset-pane active" style="width:100%; height:100%; position:absolute; top:0; left:0; animation: tr-reveal 0.3s ease;">${overviewHtml}</div>
+        <div id="asset-pane-estate" class="asset-pane" style="display:none; width:100%; height:100%; position:absolute; top:0; left:0; animation: tr-reveal 0.3s ease;">${estateHtml}</div>
+        <div id="asset-pane-vehicle" class="asset-pane" style="display:none; width:100%; height:100%; position:absolute; top:0; left:0; animation: tr-reveal 0.3s ease;">${vehicleHtml}</div>
+        <div id="asset-pane-bank" class="asset-pane" style="display:none; width:100%; height:100%; position:absolute; top:0; left:0; animation: tr-reveal 0.3s ease;">${bankHtml}</div>
+        <div id="asset-pane-invest" class="asset-pane" style="display:none; width:100%; height:100%; position:absolute; top:0; left:0; animation: tr-reveal 0.3s ease;">${investHtml}</div>
+    `;
+
+    document.getElementById('snoop-asset-view').style.display = 'block';
+    void document.getElementById('snoop-asset-view').offsetWidth;
+    document.getElementById('snoop-asset-view').classList.add('active');
+
+    // 初始化层叠
+    ['estate', 'vehicle', 'bank', 'invest'].forEach(cat => updateSnoopDeck(cat));
 }
+
+// ==========================================
+// 全局交互：Ins风左右点击翻页 与 Tab切换
+// ==========================================
+
+window.handleSnoopDeckClick = function(event, category, total) {
+    const card = event.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+
+    // 轻微点击回弹
+    card.style.transform = card.style.transform.replace(/scale\([0-9.]+\)/, '') + ' scale(0.98)';
+    setTimeout(() => updateSnoopDeck(category), 150);
+
+    // 左侧上一张，右侧下一张
+    if (clickX < rect.width / 2) {
+        window.snoopDeckIndexes[category] = (window.snoopDeckIndexes[category] - 1 + total) % total;
+    } else {
+        window.snoopDeckIndexes[category] = (window.snoopDeckIndexes[category] + 1) % total;
+    }
+
+    // 更新底部小圆点指示器
+    const currentIdx = window.snoopDeckIndexes[category];
+    for(let i=0; i<total; i++) {
+        let dot = document.querySelector(`.dot-${category}-${i}`);
+        if(dot) dot.style.background = (i === currentIdx) ? '#111' : '#ccc';
+    }
+    
+    updateSnoopDeck(category);
+}
+
+// 刷新层叠 3D 效果
+window.updateSnoopDeck = function(category) {
+    const cards = document.querySelectorAll('.snoop-deck-' + category);
+    if(cards.length === 0) return;
+    const currentIndex = window.snoopDeckIndexes[category];
+    const total = cards.length;
+    
+    cards.forEach((card, idx) => {
+        let diff = (idx - currentIndex + total) % total;
+        
+        if (diff === 0) {
+            // 第1张 (最上面)
+            card.style.transform = 'translateY(0) scale(1)';
+            card.style.opacity = '1';
+            card.style.zIndex = '20';
+            card.style.pointerEvents = 'auto';
+        } else if (diff === 1 || (total === 2 && diff === -1)) {
+            // 第2张
+            card.style.transform = 'translateY(16px) scale(0.95)';
+            card.style.opacity = '0.6';
+            card.style.zIndex = '19';
+            card.style.pointerEvents = 'none';
+        } else if (diff === 2 && total > 2) {
+            // 第3张
+            card.style.transform = 'translateY(32px) scale(0.90)';
+            card.style.opacity = '0.3';
+            card.style.zIndex = '18';
+            card.style.pointerEvents = 'none';
+        } else {
+            // 隐藏
+            card.style.transform = 'translateY(40px) scale(0.85)';
+            card.style.opacity = '0';
+            card.style.zIndex = '10';
+            card.style.pointerEvents = 'none';
+        }
+    });
+}
+
+// 顶部 Tab 切换
+window.switchSnoopAssetTab = function(tabId, el) {
+    document.querySelectorAll('.asset-tab-btn').forEach(btn => {
+        btn.style.fontWeight = '400';
+        btn.style.color = '#999';
+        let line = btn.querySelector('.tab-line');
+        if(line) line.remove();
+    });
+
+    el.style.fontWeight = '600';
+    el.style.color = '#111';
+    el.insertAdjacentHTML('beforeend', '<div class="tab-line" style="position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:16px; height:2px; background:#111; border-radius:2px;"></div>');
+
+    document.querySelectorAll('.asset-pane').forEach(pane => {
+        pane.style.display = 'none';
+    });
+    
+    const target = document.getElementById('asset-pane-' + tabId);
+    if(target) {
+        target.style.display = 'block';
+        if(tabId !== 'overview') updateSnoopDeck(tabId);
+    }
+}
+
 
 window.closeSnoopReport = function() {
     document.getElementById('snoop-report-view').classList.remove('active');
@@ -2622,7 +2969,6 @@ window.openSnoopInteractiveView = function() {
     view.classList.add('active');
     changeSnoopInteractiveArea(0); // 默认打开第一个场景
 }
-
 window.changeSnoopInteractiveArea = function(index) {
     const areas = window.currentSnoopInteractiveData || [];
     const area = areas[index];
@@ -2631,14 +2977,42 @@ window.changeSnoopInteractiveArea = function(index) {
     // 切换场景时隐藏掉当前的物品提示框
     document.getElementById('snoop-item-modal').classList.remove('active');
     
-    // 寻找匹配的背景大图
     let bgUrl = '';
+    
+    // 1. 先寻找精确匹配的背景大图 (比如预设的 home_bedroom)
     Object.values(snoopLocs).forEach(loc => {
         if (loc.name.includes(area.name) || area.name.includes(loc.name)) {
             bgUrl = loc.bg;
         }
     });
-    // 如果该区域没有特殊配图，找一个当前大类的图兜底
+
+    // ==========================================
+    // 2. 核心新增：关键词嗅探匹配动态图库
+    // ==========================================
+    if (!bgUrl) {
+        const name = area.name || '';
+        // 预设的高级感场景图库
+        const keywordBgs = [
+            { keys: ['车', '驾', '后备箱', '副驾', '座椅'], url: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&q=80' }, // 车内/座驾
+            { keys: ['办公', '公司', '工位', '会议', '电脑', '桌'], url: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=80' }, // 办公室/工位
+            { keys: ['咖啡', '茶', '饮', '餐', '吧', '酒', '迪'], url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&q=80' }, // 咖啡馆/酒吧/餐馆
+            { keys: ['健身', '房', '运动', '操', '馆', '瑜伽'], url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80' }, // 健身房
+            { keys: ['街', '巷', '道', '路', '公园', '广场'], url: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80' }, // 街道/室外/夜景
+            { keys: ['店', '商', '购', '铺', '超市', '网吧'], url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80' }, // 商店/商场
+            { keys: ['酒店', '宾馆', '旅馆', '开房', '客房'], url: 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600&q=80' }, // 酒店/客房
+            { keys: ['包', '袋', '柜', '箱', '抽屉', '夹'], url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&q=80' } // 个人财产类 (包/柜子)
+        ];
+
+        // 遍历匹配词典
+        for (let i = 0; i < keywordBgs.length; i++) {
+            if (keywordBgs[i].keys.some(k => name.includes(k))) {
+                bgUrl = keywordBgs[i].url;
+                break;
+            }
+        }
+    }
+
+    // 3. 如果连关键词都没匹配上，找一个当前大类的图兜底
     if (!bgUrl) {
         let parentBg = '';
         Object.values(snoopLocs).forEach(loc => {
@@ -2646,6 +3020,7 @@ window.changeSnoopInteractiveArea = function(index) {
         });
         bgUrl = parentBg || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&q=80';
     }
+    
     document.getElementById('snoop-inter-bg').style.backgroundImage = `url('${bgUrl}')`;
     
     // 撒布随机闪光点
@@ -2672,6 +3047,7 @@ window.changeSnoopInteractiveArea = function(index) {
         });
     }
 }
+
 
 window.closeSnoopInteractive = function() {
     document.getElementById('snoop-interactive-view').classList.remove('active');

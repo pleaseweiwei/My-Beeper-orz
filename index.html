@@ -278,7 +278,7 @@
                     </div>
                 </div>
 
-                <div class="app-cell widget-1x1 sortable-item" data-app-id="forum" onclick="openForumApp()"><div class="icon-box" style="background:#fff; color:#111;"><i class="fas fa-comments"></i></div><span class="app-label">Forum</span></div>
+                <div class="app-cell widget-1x1 sortable-item" data-app-id="forum" onclick="openForumApp()"><div class="icon-box" style="background:#fff; color:#111;"><i class="fas fa-layer-group"></i></div><span class="app-label">Forum</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="files" onclick="openFilesApp()"><div class="icon-box"><i class="far fa-folder"></i></div><span class="app-label">Files</span></div>
                 <div class="app-cell widget-1x1 sortable-item" data-app-id="backpack" onclick="openBackpackApp()"><div class="icon-box"><i class="fas fa-bag-shopping" style="color:#f59e0b;"></i></div><span class="app-label">Backpack</span></div>
                 <div class="app-cell widget-1x1 sortable-item" style="opacity:0.3;"><div class="icon-box" style="border:1px dashed #ccc; box-shadow:none;"><i class="fas fa-plus"></i></div></div>
@@ -4499,12 +4499,11 @@ function switchCsTab(id) {
   });
 }
 </script>
-
 <!-- ============================================== -->
-<!-- [全新] 社区 APP (韩系极简黑白灰 杂志风) -->
+<!-- [全新] 社区 APP (韩系极简留白 创新排版) -->
 <!-- ============================================== -->
 <div class="app-fullscreen-view" id="forumApp" style="background: #fdfdfd; font-family: 'Montserrat', 'PingFang SC', sans-serif; display: none; flex-direction: column;">
-    <!-- 顶部标题栏 -->
+    <!-- 顶部标题栏 (居中极简) -->
     <div class="forum-header">
         <i class="fas fa-chevron-left" onclick="closeForumApp()" style="cursor:pointer; padding: 10px;"></i>
         <span class="forum-header-title" id="forum-header-title">COMMUNITY</span>
@@ -4519,55 +4518,49 @@ function switchCsTab(id) {
         
         <!-- Tab 1: 首页 (Home) -->
         <div id="forum-tab-home" class="forum-tab-content active">
-            <!-- 杂志风 Header -->
-            <div class="forum-mag-header">
-                <div class="mag-headline">DAILY<br>FEED.</div>
-                <div class="mag-sub">在这个微观世界里，一切都在发生</div>
-            </div>
-
-            <!-- 分类导航 -->
+            <!-- 极简分类导航 -->
             <div class="forum-categories" id="forum-categories-scroll">
-                <div class="forum-cat-item active" onclick="forumSwitchCategory('all', this)">All / 全部</div>
-                <div class="forum-cat-item" onclick="forumSwitchCategory('hot', this)">🔥 热搜</div>
-                <div class="forum-cat-item" onclick="forumSwitchCategory('daily', this)">Daily / 日常分享</div>
-                <div class="forum-cat-item" onclick="forumSwitchCategory('creative', this)">Creative / 同人创作</div>
-                <div class="forum-cat-item" onclick="forumSwitchCategory('secret', this)">Secret / 匿名树洞</div>
-                <div class="forum-cat-item" onclick="forumSwitchCategory('market', this)">Market / 闲置黑市</div>
-                <div class="forum-cat-item" onclick="forumSwitchCategory('urban', this)">Urban / 都市怪谈</div>
+                <div class="forum-cat-item active" onclick="forumSwitchCategory('all', this)">All</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('daily', this)">Daily</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('creative', this)">Creative</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('secret', this)">Secret</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('market', this)">Market</div>
+                <div class="forum-cat-item" onclick="forumSwitchCategory('urban', this)">Urban</div>
             </div>
 
             <!-- 帖子列表 -->
             <div class="forum-feed-list" id="forum-feed-list">
-                <!-- 骨架屏占位 -->
                 <div style="text-align:center; padding:40px; color:#aaa; font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
             </div>
         </div>
 
-        <!-- Tab 2: 消息 (Inbox) -->
+        <!-- Tab 2: 热搜 (Hot) -->
+        <div id="forum-tab-hot" class="forum-tab-content" style="display:none;">
+            <div class="forum-hot-container" id="forum-hot-list-container"></div>
+        </div>
+
+        <!-- Tab 3: 消息 (Inbox) -->
         <div id="forum-tab-inbox" class="forum-tab-content" style="display:none;">
-            <div class="forum-mag-header">
-                <div class="mag-headline">INBOX<br>NOTIF.</div>
-                <div class="mag-sub">收到的回声与互动</div>
-            </div>
-            <div style="padding: 0 24px 10px;">
-                <div style="background:#111; color:#fff; padding:15px; border-radius:16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="forumOpenFanGroup()">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <i class="fas fa-users" style="font-size:20px; color:#ff7e67;"></i>
+            <div style="padding: 20px 24px 10px;">
+                <div style="background:#111; color:#fff; padding:15px 20px; border-radius:16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.1);" onclick="forumOpenFanGroup()">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; justify-content:center; align-items:center;">
+                            <i class="fas fa-users" style="font-size:16px; color:#ff7e67;"></i>
+                        </div>
                         <div>
-                            <div style="font-size:14px; font-weight:800;">我的死忠粉群</div>
-                            <div style="font-size:10px; color:#aaa; margin-top:2px;">和粉丝们一起互动</div>
+                            <div style="font-size:14px; font-weight:800; letter-spacing:1px;">我的死忠粉群</div>
+                            <div style="font-size:10px; color:#aaa; margin-top:2px;">和粉丝们一起互动 ✨</div>
                         </div>
                     </div>
-                    <i class="fas fa-chevron-right" style="color:#aaa;"></i>
+                    <i class="fas fa-chevron-right" style="color:#aaa; font-size: 12px;"></i>
                 </div>
             </div>
             <div class="forum-inbox-list" id="forum-inbox-list">
-                <!-- 消息列表 -->
                 <div style="text-align:center; padding:40px; color:#ccc; font-size:12px;">暂无新消息</div>
             </div>
         </div>
 
-        <!-- Tab 3: 个人 (My) -->
+        <!-- Tab 4: 个人 (My) -->
         <div id="forum-tab-my" class="forum-tab-content" style="display:none;">
             <div class="forum-profile-card">
                 <div class="fp-avatar">
@@ -4603,22 +4596,21 @@ function switchCsTab(id) {
     <div class="forum-bottom-nav">
         <div class="fb-nav-item active" onclick="forumSwitchMainTab('home', this)">
             <i class="fas fa-layer-group"></i>
-            <span>HOME</span>
+        </div>
+        <div class="fb-nav-item" onclick="forumSwitchMainTab('hot', this)">
+            <i class="fas fa-fire"></i>
         </div>
         <div class="fb-nav-item" onclick="forumSwitchMainTab('inbox', this)">
             <div style="position:relative;">
                 <i class="far fa-bell"></i>
                 <div class="fb-badge" id="forum-inbox-badge" style="display:none;"></div>
             </div>
-            <span>INBOX</span>
         </div>
         <div class="fb-nav-item" onclick="forumSwitchMainTab('my', this)">
             <i class="far fa-user"></i>
-            <span>MY</span>
         </div>
     </div>
 </div>
-
 <!-- ============================================== -->
 <!-- 帖子详情页面 (Forum Post Detail) -->
 <!-- ============================================== -->
@@ -5218,6 +5210,26 @@ function switchCsTab(id) {
             </div>
             <div id="snoop-item-title" class="snoop-item-title">物品名</div>
             <div id="snoop-item-desc" class="snoop-item-desc">详细描述...</div>
+        </div>
+    </div>
+        <!-- 【新增】个人资产清单视图 (韩系杂志风 横向滑动) -->
+    <div id="snoop-asset-view" class="snoop-interactive-view" style="background: #ffffff; overflow-y: auto; z-index: 2601; display: none;">
+        <!-- 极简头部 -->
+        <div class="snoop-inter-header" style="position: sticky; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #f0f0f0;">
+            <div style="font-family: 'Playfair Display', serif; font-weight: 700; font-size: 16px; letter-spacing: 1px; color: #000;">ASSET PORTFOLIO</div>
+            <div class="snoop-inter-close-btn" onclick="document.getElementById('snoop-asset-view').classList.remove('active')" style="background: transparent; color:#000; font-size: 20px;">
+                <i class="fas fa-times"></i>
+            </div>
+        </div>
+        
+        <!-- 资产总览 -->
+        <div id="snoop-asset-summary" style="padding: 30px 24px 10px;">
+            <!-- JS 注入 -->
+        </div>
+
+        <!-- 资产列表 -->
+        <div id="snoop-asset-list" style="padding-bottom: 60px;">
+            <!-- JS 注入 -->
         </div>
     </div>
 

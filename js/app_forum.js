@@ -99,6 +99,11 @@ window.forumSwitchMainTab = function(tabId, el) {
     // 动态标题
     const titleEl = document.getElementById('forum-header-title');
     if (tabId === 'home') titleEl.innerText = 'COMMUNITY';
+       if (tabId === 'hot') {
+        titleEl.innerText = 'TRENDING';
+        renderForumHotSearch();
+    }
+
     if (tabId === 'inbox') {
         titleEl.innerText = 'INBOX';
         renderForumInbox();
@@ -864,7 +869,7 @@ window.forumGenerateRandomPosts = async function() {
 // ==========================================
 async function generateInitialForumPosts() {
     // 如果没有数据，使用 AI 批量生成一些帖子
-    const listEl = document.getElementById('forum-feed-list');
+    const listEl = document.getElementById('forum-hot-list-container');
     if(listEl) listEl.innerHTML = `<div style="text-align:center; padding:40px; color:#aaa; font-size:12px;"><i class="fas fa-spinner fa-spin"></i> 正在连接虚拟社区...</div>`;
 
     const prompt = `

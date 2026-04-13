@@ -1,714 +1,262 @@
 /* ==========================================================================
-   全新社区 APP (韩系极简黑白灰 杂志风)
+   全新社区 APP - 韩系黑白灰 Ins 风格
    ========================================================================== */
 
-/* 字体设定在外层通过 style 引入: 'Montserrat', 'PingFang SC', sans-serif */
-
-/* 1. 全局容器与重置 */
+/* 全局重置 */
 #forumApp {
     color: #111;
+    background: #ffffff; /* 纯净白底 */
+    font-family: 'PingFang SC', 'Helvetica Neue', sans-serif;
 }
+#forumApp ::-webkit-scrollbar { display: none; }
 
-#forumApp ::-webkit-scrollbar {
-    width: 0px;
-    background: transparent;
-}
-
-/* ==========================================================================
-   新增 AI 标识 / 按钮样式
-   ========================================================================== */
-.forum-ai-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 9px;
-    font-weight: 800;
-    color: #ff7e67;
-    background: rgba(255, 126, 103, 0.1);
-    padding: 2px 6px;
-    border-radius: 10px;
-    letter-spacing: 0.5px;
-    margin-left: 6px;
-    vertical-align: middle;
-}
-
-/* 2. 顶部导航栏 (Header) */
+/* 1. 顶部栏 (极简留白) */
 .forum-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px 10px;
-    background: rgba(253, 253, 253, 0.95);
-    backdrop-filter: blur(10px);
+    padding: 20px 20px 10px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     position: sticky;
     top: 0;
     z-index: 100;
 }
-
 .forum-header-title {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 800;
     letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-/* 3. 杂志风大标题区 */
-.forum-mag-header {
-    padding: 20px 24px 10px;
-}
-
-.mag-headline {
-    font-size: 32px;
-    font-weight: 900;
-    line-height: 1.1;
-    letter-spacing: -1px;
-    font-family: 'Montserrat', sans-serif;
     color: #111;
 }
 
-.mag-sub {
-    font-size: 12px;
-    color: #888;
-    margin-top: 10px;
-    font-weight: 500;
-    letter-spacing: 1px;
-}
-
-/* 4. 分类导航 (Categories) */
+/* 2. 分类导航 (细线灵动感) */
 .forum-categories {
     display: flex;
     overflow-x: auto;
-    padding: 0 24px 15px;
-    gap: 15px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 10px 24px 15px;
+    gap: 24px;
+    border-bottom: 1px solid #f5f5f5;
 }
-
 .forum-cat-item {
     white-space: nowrap;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
     color: #999;
     padding-bottom: 8px;
     position: relative;
     cursor: pointer;
-    transition: 0.3s;
+    transition: 0.2s;
 }
-
 .forum-cat-item.active {
     color: #111;
     font-weight: 800;
 }
-
 .forum-cat-item.active::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    bottom: -1px;
     left: 50%;
     transform: translateX(-50%);
-    width: 20px;
+    width: 16px;
     height: 2px;
     background: #111;
-    border-radius: 2px;
 }
 
-/* 5. 帖子列表 (Feed List) */
+/* 3. 首页帖子列表 - 【Ins 大图流】 */
 .forum-body-container {
     flex: 1;
     overflow-y: auto;
-    position: relative;
-    padding-bottom: 80px; /* 给底部导航留出空间 */
+    padding-bottom: 120px; 
 }
-
-.forum-tab-content {
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
+.forum-tab-content { display: none; }
 .forum-tab-content.active {
     display: block;
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .forum-feed-list {
-    padding: 0 24px 20px;
-    display: flex;
+    display: flex !important; 
     flex-direction: column;
-    gap: 20px;
-    margin-top: 20px;
+    padding: 0;
 }
 
-/* 帖子卡片 (Post Card) */
+/* 核心：单条帖子卡片 */
 .forum-post-card {
     background: #fff;
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.03);
-    cursor: pointer;
-    transition: 0.2s;
+    padding: 20px 0;
+    border-bottom: 1px solid #f9f9f9;
 }
+.forum-post-card:active { background: #fafafa; }
 
-.forum-post-card:active {
-    transform: scale(0.98);
-}
-
-.fp-cat-tag {
-    font-size: 10px;
-    font-weight: 700;
-    color: #999;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-}
-
-.fp-title {
-    font-size: 16px;
-    font-weight: 800;
-    color: #222;
-    margin-bottom: 8px;
-    line-height: 1.4;
-}
-
-.fp-summary {
-    font-size: 13px;
-    color: #666;
-    line-height: 1.6;
-    margin-bottom: 15px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.fp-image-placeholder {
-    width: 100%;
-    height: 140px;
-    background: #f5f5f5;
-    border-radius: 12px;
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #aaa;
-    font-size: 24px;
-    background-size: cover;
-    background-position: center;
-}
-
-.fp-footer {
+/* 作者信息栏 (在图片上方) */
+.fp-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-top: 1px solid #f9f9f9;
-    padding-top: 15px;
+    padding: 0 20px 12px;
 }
-
 .fp-author-info {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+}
+.fp-author-avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #f0f0f0; object-fit: cover; }
+.fp-author-name { font-size: 13px; font-weight: 700; color: #111; }
+.fp-cat-tag { font-size: 11px; color: #888; background: #f5f5f5; padding: 4px 8px; border-radius: 4px; }
+
+/* 4:5 比例图片 (韩系胶片感微圆角) */
+.fp-image-placeholder {
+    width: 100%;
+    aspect-ratio: 4/5; 
+    background: #f5f5f5;
+    background-size: cover;
+    background-position: center;
+    border-radius: 4px; /* 极小圆角更高级 */
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
 }
 
-.fp-author-avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #eee;
-}
-
-.fp-author-name {
-    font-size: 12px;
-    font-weight: 700;
-    color: #444;
-}
-
-.fp-meta {
+/* 互动区 (爱心、评论) */
+.fp-footer-actions {
     display: flex;
-    gap: 12px;
-    font-size: 12px;
+    gap: 16px;
+    padding: 12px 20px 8px;
+    font-size: 20px;
+    color: #111;
+}
+.fp-meta-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; cursor: pointer;}
+.fp-meta-item i { font-size: 22px; }
+
+/* 标题与正文 */
+.fp-title {
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #111;
+    margin-bottom: 4px;
+}
+.fp-summary {
+    padding: 0 20px;
+    font-size: 13px;
+    color: #333;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.fp-time {
+    padding: 6px 20px 0;
+    font-size: 11px;
     color: #aaa;
     font-weight: 500;
 }
 
-.fp-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-/* 6. 底部导航栏 (Bottom Nav) */
-.forum-bottom-nav {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom);
-}
-
-.fb-nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    color: #ccc;
-    cursor: pointer;
-    transition: 0.3s;
-    width: 60px;
-}
-
-.fb-nav-item i {
-    font-size: 20px;
-}
-
-.fb-nav-item span {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1px;
-}
-
-.fb-nav-item.active {
-    color: #111;
-}
-
-.fb-badge {
-    position: absolute;
-    top: -2px;
-    right: -4px;
-    width: 8px;
-    height: 8px;
-    background: #ff4d4f;
-    border-radius: 50%;
-    border: 2px solid #fff;
-}
-
-/* 热搜样式 (Hot Search) */
+/* 4. 热搜页面 (极简黑白) */
 .forum-hot-container {
-    padding: 0 24px 20px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-top: 10px;
+    gap: 12px;
 }
 .forum-hot-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 15px;
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-    border: 1px solid rgba(0,0,0,0.03);
-    cursor: pointer;
+    padding: 16px;
+    background: #fafafa;
+    border-radius: 12px;
 }
 .forum-hot-rank {
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 900;
     font-style: italic;
     color: #ccc;
-    min-width: 24px;
+    width: 30px;
 }
-.forum-hot-item:nth-child(1) .forum-hot-rank { color: #ff4d4f; }
-.forum-hot-item:nth-child(2) .forum-hot-rank { color: #ff7a45; }
-.forum-hot-item:nth-child(3) .forum-hot-rank { color: #ffa940; }
-.forum-hot-title {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 700;
-    color: #111;
-}
-.forum-hot-heat {
-    font-size: 11px;
-    color: #888;
-    font-weight: 600;
-}
+.forum-hot-item:nth-child(1) .forum-hot-rank { color: #111; }
+.forum-hot-item:nth-child(2) .forum-hot-rank { color: #333; }
+.forum-hot-item:nth-child(3) .forum-hot-rank { color: #666; }
+.forum-hot-title { flex: 1; font-size: 14px; font-weight: 700; color: #111; margin-left: 10px; }
+.forum-hot-heat { font-size: 12px; color: #888; }
 
-/* 7. 个人主页 (My) */
-.forum-profile-card {
-    padding: 30px 24px 20px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.fp-avatar {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 1px solid rgba(0,0,0,0.05);
-}
-
-.fp-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.fp-info {
-    flex: 1;
-}
-
-.fp-name {
-    font-size: 20px;
-    font-weight: 800;
-    color: #111;
-    margin-bottom: 4px;
-}
-
-.fp-bio {
-    font-size: 12px;
-    color: #888;
-}
-
-.forum-stats-bar {
+/* 5. 底部导航栏 (悬浮磨砂黑底) */
+.forum-bottom-nav {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px;
+    height: 54px;
+    background: rgba(26, 26, 26, 0.85);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 30px;
     display: flex;
     justify-content: space-evenly;
     align-items: center;
-    padding: 0 24px 20px;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
-
-.fp-stat {
-    text-align: center;
-}
-
-.fp-stat-val {
-    font-size: 22px;
-    font-weight: 800;
-    color: #111;
-    font-family: 'Montserrat', sans-serif;
-}
-
-.fp-stat-label {
-    font-size: 10px;
-    color: #aaa;
-    font-weight: 700;
-    letter-spacing: 1px;
-}
-
-.fp-divider {
-    width: 1px;
-    height: 30px;
-    background: #eee;
-}
-
-.forum-my-sections {
-    padding: 20px 0;
-}
-
-.fp-section-title {
-    padding: 0 24px;
-    font-size: 12px;
-    font-weight: 800;
-    color: #333;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-}
-
-/* 8. 消息列表 (Inbox) */
-.forum-inbox-list {
-    padding: 0 24px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.inbox-item {
-    display: flex;
-    gap: 15px;
-    padding: 15px;
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.02);
-    border: 1px solid rgba(0,0,0,0.03);
-}
-
-.inbox-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #eee;
-    flex-shrink: 0;
-}
-
-.inbox-content {
-    flex: 1;
-}
-
-.inbox-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-}
-
-.inbox-name {
-    font-size: 13px;
-    font-weight: 800;
-    color: #111;
-}
-
-.inbox-time {
-    font-size: 10px;
-    color: #aaa;
-}
-
-.inbox-text {
-    font-size: 12px;
-    color: #555;
-    line-height: 1.5;
-    margin-bottom: 8px;
-}
-
-.inbox-post-ref {
-    background: #f9f9f9;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 11px;
-    color: #888;
-    border-left: 2px solid #ccc;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.inbox-dm-btn {
-    margin-top: 10px;
-    display: inline-block;
-    padding: 6px 12px;
-    background: #111;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    border-radius: 12px;
-}
-
-/* 9. 帖子详情页 (Post Detail) */
-.forum-detail-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 24px 80px;
-}
-
-.fd-header-area {
-    margin: 20px 0;
-}
-
-.fd-cat {
-    font-size: 11px;
-    font-weight: 700;
-    color: #888;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-}
-
-.fd-title {
-    font-size: 22px;
-    font-weight: 900;
-    color: #111;
-    line-height: 1.4;
-    margin-bottom: 20px;
-}
-
-.fd-author-row {
+.fb-nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.fd-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.fd-author-name {
-    font-size: 14px;
-    font-weight: 800;
-    color: #222;
-}
-
-.fd-author-time {
-    font-size: 11px;
-    color: #999;
-}
-
-.fd-content {
-    font-size: 15px;
-    color: #333;
-    line-height: 1.8;
-    white-space: pre-wrap;
-    margin-bottom: 30px;
-}
-
-.fd-image {
-    width: 100%;
-    border-radius: 16px;
-    margin-bottom: 20px;
-}
-
-.forum-comments-divider {
-    font-size: 12px;
-    font-weight: 800;
-    color: #111;
-    letter-spacing: 1px;
-    margin: 30px 0 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-
-/* 评论盖楼 (Comments) */
-.fc-item {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.fc-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-}
-
-.fc-main {
-    flex: 1;
-    background: #f9f9f9;
-    padding: 12px 15px;
-    border-radius: 0 16px 16px 16px;
-}
-
-.fc-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-    align-items: baseline;
-}
-
-.fc-name {
-    font-size: 13px;
-    font-weight: 800;
-    color: #222;
-}
-
-.fc-floor {
-    font-size: 10px;
-    color: #aaa;
-    font-weight: 600;
-}
-
-.fc-content {
-    font-size: 13px;
-    color: #444;
-    line-height: 1.5;
-}
-
-.fc-actions {
-    display: flex;
-    gap: 15px;
-    margin-top: 8px;
-    font-size: 11px;
-    color: #999;
-}
-
-.fc-action-btn {
+    color: #888;
+    transition: 0.3s;
+    padding: 10px;
     cursor: pointer;
-    transition: 0.2s;
 }
-
-.fc-action-btn:active {
-    color: #111;
-}
-
-/* 聊天消息气泡样式扩展 */
-#forum-chat-messages .chat-row {
-    display: flex;
-    margin-bottom: 15px;
-    align-items: flex-end;
-}
-#forum-chat-messages .chat-row.sent {
-    justify-content: flex-end;
-}
-#forum-chat-messages .chat-avatar-img {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-#forum-chat-messages .chat-row.received .chat-avatar-img {
-    margin-right: 10px;
-}
-#forum-chat-messages .chat-row.sent .chat-avatar-img {
-    margin-left: 10px;
-}
-#forum-chat-messages .message-bubble {
-    max-width: 75%;
-    padding: 12px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    line-height: 1.5;
-    word-wrap: break-word;
-}
-#forum-chat-messages .message-bubble.received {
-    background: #fff;
-    color: #111;
-    border: 1px solid rgba(0,0,0,0.05);
-    border-bottom-left-radius: 4px;
-}
-#forum-chat-messages .message-bubble.sent {
-    background: #111;
-    color: #fff;
-    border-bottom-right-radius: 4px;
-}
-
-/* 10. 底部评论输入框 */
-.forum-comment-input-bar {
+.fb-nav-item i { font-size: 20px; }
+.fb-nav-item.active { color: #fff; transform: translateY(-2px); }
+.fb-badge {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(0,0,0,0.05);
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
-}
-
-.forum-comment-input-bar input {
-    flex: 1;
-    background: #f5f5f5;
-    border: none;
-    padding: 12px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    outline: none;
-}
-
-.forum-comment-input-bar button {
-    width: 40px;
-    height: 40px;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: #ff3b30;
     border-radius: 50%;
-    background: #111;
-    color: #fff;
-    border: none;
+}
+
+/* 6. 详情页与评论 */
+.fd-header-area { padding: 0 20px; margin-bottom: 20px; display:flex; align-items:center; gap: 12px; }
+.fd-avatar { width: 36px; height: 36px; border-radius: 50%; }
+.fd-author-name { font-size: 14px; font-weight: 700; color: #111; }
+.fd-author-time { font-size: 11px; color: #888; }
+.fd-image { width: 100%; border-radius: 0; margin-bottom: 20px; }
+.fd-title { padding: 0 20px; font-size: 18px; font-weight: 800; color: #111; margin-bottom: 12px; }
+.fd-content { padding: 0 20px; font-size: 15px; line-height: 1.8; color: #333; margin-bottom: 30px; }
+
+.forum-comments-divider { padding: 20px; font-size: 12px; font-weight: 800; color: #888; border-top: 1px solid #f5f5f5; }
+.fc-item { display: flex; gap: 12px; padding: 0 20px 20px; }
+.fc-avatar { width: 32px; height: 32px; border-radius: 50%; }
+.fc-main { flex: 1; border-bottom: 1px solid #f9f9f9; padding-bottom: 15px; }
+.fc-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.fc-name { font-size: 13px; font-weight: 700; color: #555; }
+.fc-floor { font-size: 11px; color: #aaa; }
+.fc-content { font-size: 14px; color: #222; line-height: 1.5; }
+
+/* 输入框 */
+.forum-comment-input-bar {
+    position: fixed;
+    bottom: 95px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 85%;
+    background: #fff;
+    border-radius: 30px;
+    padding: 6px 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    border: 1px solid #f0f0f0;
     display: flex;
-    justify-content: center;
     align-items: center;
-    cursor: pointer;
+}
+.forum-comment-input-bar input { 
+    flex: 1; border: none; outline: none; background: transparent; padding: 10px; font-size: 14px;
+}
+.forum-comment-input-bar button {
+    background: #111; color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
 }
