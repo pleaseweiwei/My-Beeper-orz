@@ -1444,12 +1444,18 @@ textarea#custom-css-input:focus {
     transform: scale(0.9);
 }
 
+@keyframes star-spin-anim {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 #triggerAiReply.processing {
     color: #ffd700 !important;
     text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-    /* å–æ¶ˆé»˜è®¤çš„è‡ªè½¬ï¼Œä½¿ç”¨é—ªçƒæç¤ºå¯ä»¥ç‚¹å‡»åœæ­¢ */
-    animation: pulse-opacity 1.5s infinite ease-in-out;
-    /* å»æ‰äº† pointer-events: none; å…è®¸ç‚¹å‡»ä¸­æ–­ */
+    /* å˜æˆé»„è‰²çš„æ˜Ÿæ˜Ÿæ—‹è½¬ï¼Œä»£æ›¿åŸæ¥çš„çº¢åœˆ */
+    animation: star-spin-anim 1.2s linear infinite;
+    /* ä¾ç„¶å…è®¸ç”¨æˆ·ç‚¹å‡»å®ƒæ¥å¼ºè¡Œä¸­æ–­ç”Ÿæˆ */
+    pointer-events: auto;
 }
 
 
@@ -7796,24 +7802,24 @@ img.msg-sticker-img {
 }
 
 /* =========================================  
-   [ĞŞ¸´] ½â¾öÊÖ»ú¶Ë½çÃæ±»³ÅÆÆ / ×óÓÒ³öÏÖ¹ö¶¯ÌõµÄÎÊÌâ  
+   [ï¿½Ş¸ï¿½] ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½Ë½ï¿½ï¿½æ±»ï¿½ï¿½ï¿½ï¿½ / ï¿½ï¿½ï¿½Ò³ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  
    ========================================= */  
-/* 1. Ç¿ÖÆËùÓĞ Flex ²¼¾ÖÏÂµÄÊäÈë¿òÔÊĞíËõĞ¡µ½¼«Ğ¡£¬¾ø²»³ÅÆÆÆÁÄ» */  
+/* 1. Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Flex ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ¡ï¿½ï¿½ï¿½ï¿½Ğ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä» */  
 .regex-input, .preset-prompt-title, .r-flags, .r-replace, .p-name, .p-content { min-width: 0 !important; }  
-/* 2. Ô¤Éè/ÕıÔò½çÃæµÄĞĞ£¬ÔÊĞíÔÚ¼«Õ­ÆÁÄ»£¨Èç iPhone SE£©ÉÏ×Ô¶¯ÕÛĞĞ */  
+/* 2. Ô¤ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½Õ­ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ iPhone SEï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ */  
 .regex-row, .preset-prompt-header { flex-wrap: wrap; }  
-/* 3. ĞŞ¸´Ä³Ğ©±»Ó²±àÂëÁË¿í¶ÈµÄµ¯´°£¨Èç width: 340px£©£¬ÔÚÕ­ÆÁÊÖ»úÉÏÇ¿ÖÆ×ÔÊÊÓ¦ */  
+/* 3. ï¿½Ş¸ï¿½Ä³Ğ©ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½Ë¿ï¿½ï¿½ÈµÄµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ width: 340pxï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ­ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ */  
 .modal-box, .image-desc-modal-box, .g7-machine-body, .g5-contract-card { max-width: 90vw !important; box-sizing: border-box !important; }  
-/* 4. Ç¿ÖÆËùÓĞÎÄ±¾Óò£¨textarea£©²»»áºáÏò³¬³ö¸¸ÈİÆ÷ */  
+/* 4. Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½textareaï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ò³¬³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */  
 textarea { max-width: 100% !important; box-sizing: border-box !important; }  
 /* =========================================  
-   [ÖÕ¼«ĞŞ¸´] ½â¾öÒ³Ãæ±»³¤ÎÄ±¾³Å´óµ¼ÖÂÍË³öÊ±ËõĞ¡Ò»È¦µÄÎÊÌâ  
+   [ï¿½Õ¼ï¿½ï¿½Ş¸ï¿½] ï¿½ï¿½ï¿½Ò³ï¿½æ±»ï¿½ï¿½ï¿½Ä±ï¿½ï¿½Å´ï¿½ï¿½ï¿½ï¿½Ë³ï¿½Ê±ï¿½ï¿½Ğ¡Ò»È¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  
    ========================================= */  
-/* 1. Ç¿ÖÆÈ«ÆÁAPPºÍÖ÷ÆÁÄ»¾ø¶Ô²»ÄÜºáÏòÒç³ö */  
+/* 1. Ç¿ï¿½ï¿½È«ï¿½ï¿½APPï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½Ô²ï¿½ï¿½Üºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */  
 body, html, .phone, .app-fullscreen-view { max-width: 100vw !important; overflow-x: hidden !important; }  
-/* 2. Ç¿ÖÆÔ¤ÉèÁĞ±íºÍ±à¼­Æ÷ÈİÆ÷²»ÄÜ³¬³ö¸¸¼¶¿í¶È */  
+/* 2. Ç¿ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½Ğ±ï¿½ï¿½Í±à¼­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */  
 .preset-list-item, #preset-list-pane, #preset-editor-pane { max-width: 100% !important; box-sizing: border-box !important; overflow-x: hidden !important; }  
-/* 3. Ç¿ÖÆÔ¤ÉèÀïÃæËùÓĞµÄ´úÂë¿ò¡¢ÎÄ×Ö¿òÓöµ½³¤×ÖÄ¸±ØĞë±©Á¦ÕÛĞĞ */  
+/* 3. Ç¿ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ĞµÄ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½ë±©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */  
 .preset-list-item pre, .preset-list-item div, .preset-prompt-item textarea { white-space: pre-wrap !important; word-wrap: break-word !important; word-break: break-all !important; max-width: 100% !important; box-sizing: border-box !important; }  
-/* 4. ½â¾öÔ¤Éè±à¼­Æ÷¿ÉÄÜ´æÔÚµÄ¿í¶ÈÒç³ö */  
+/* 4. ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½à¼­ï¿½ï¿½ï¿½ï¿½ï¿½Ü´ï¿½ï¿½ÚµÄ¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */  
 .preset-editor-overlay { max-width: 100vw !important; overflow-x: hidden !important; } 

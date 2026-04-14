@@ -620,16 +620,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (aiBtn) {
             aiBtn.addEventListener('click', async () => {
                 // === 【新增】中止生成判断 ===
-                if (aiBtn.classList.contains('processing')) {
+                 if (aiBtn.classList.contains('processing')) {
                     if (currentAiController) {
                         currentAiController.abort();
                         currentAiController = null;
                         if(typeof showToast === 'function') showToast("已停止生成");
                     }
                     aiBtn.classList.remove('processing');
-                    aiBtn.classList.remove('fa-stop-circle');
-                    aiBtn.classList.add('fa-star');
-                    aiBtn.style.color = ''; // 恢复原来的颜色
                     return; // 阻止后续逻辑
                 }
 
@@ -657,21 +654,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     contextMessages.push(currentInput);
                 }
 
-                // 发送合并后的消息
+                 // 发送合并后的消息
                 if (contextMessages.length > 0) {
                     aiBtn.classList.add('processing'); // 让星星变成黄色并开始旋转
-                    aiBtn.classList.remove('fa-star');
-                    aiBtn.classList.add('fa-stop-circle');
-                    aiBtn.style.color = '#ff4444'; // 显眼的红色表示停止
                     
                     const combinedMessage = contextMessages.join('\n');
                     
                     // 等待发送完成后，必定会移除旋转状态，彻底解决卡死问题
                     sendMessageToAI(combinedMessage).finally(() => {
                         aiBtn.classList.remove('processing');
-                        aiBtn.classList.remove('fa-stop-circle');
-                        aiBtn.classList.add('fa-star');
-                        aiBtn.style.color = ''; // 恢复原来的颜色
                     });
                 } else {
                     alert("没有新的用户消息需要回复，或请先发送一条消息。");
@@ -1687,23 +1678,6 @@ async function fetchAndPopulateVoiceModels() {
 const AVATAR_AI = "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop"; // 左边的头像
 let AVATAR_USER = "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=200&auto=format&fit=crop";
 
-/**
- * 核心功能：向聊天窗口添加消息（带头像版）
- * text: 消息内容
- * type: 'sent' (发送) 或 'received' (接收)
- */
-/**
- * 升级版：向聊天窗口添加消息
- * customAvatar: 强制指定头像URL (AI群聊时用)
- * senderName: 发送者名字 (群聊时显示在气泡上方)
- */
-/**
- * 升级版：向聊天窗口添加消息 (支持翻译模式)
- * 原有功能：text, type, customAvatar, senderName 全部保留
- * 新增功能：translation (翻译文本)
- */
-
-
 
 
 window.initializeGreetingTypewriter = function() {
@@ -2075,7 +2049,7 @@ window.featureAddAIPersona = function() {
     toggleWeChatMenu();
     
     // 简单的交互：询问名字
-    const name = prompt("请输入新 AI 角色的名字 (例如: 女友, 导师):");
+    const name = prompt("请输入新 AI 角色的名字 :");
     if (name) {
         // 直接打开聊天窗口，并把标题改成这个名字
         openChatDetail(name);
@@ -2395,14 +2369,13 @@ async function sendMessageToAI(userMessage) {
         ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `[用户身份]\n        ${me.persona}` : ''; })()}
 
         【回复要求】
-        - 模拟真实的群聊节奏，大家一人一句。
-        - 你本次必须生成 ${_gMin} 到 ${_gMax} 条消息。绝对不要生成一大段话！
-        - 每条消息必须极度简短、口语化。
+        - 模拟真实的群聊节奏，成员间自然互动。
+        - 你本次必须生成 ${_gMin} 到 ${_gMax} 条消息。不要一次性发一大段话。
         【禁止】以任何形式替用户发言。
         输出格式：每行一条，角色名: 消息内容
         `;
     } else {
-        // ------ 单聊逻辑 (全新 JSON 格式提示词) ------
+        // ------ 单聊逻辑 (结构化多部分提示词模板) ------
         const currentAffection = Number(f.affection || 0);
         const myName = (typeof personasMeta !== 'undefined' && currentPersonaId && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
         const charName = f.realName || '助手';
@@ -2413,64 +2386,75 @@ async function sendMessageToAI(userMessage) {
             wbData = constructWorldInfoPrompt(userMessage, targetChatId);
         }
 
-        const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
+         const _promptReplyMin = Math.max(1, parseInt(chatSettings.replyMin) || 1);
         const _promptReplyMax = Math.max(_promptReplyMin, parseInt(chatSettings.replyMax) || 5);
 
-        // 💡 核心改造：将所有零散的 Tag 指令统一成 JSON 字段说明
-        systemPrompt = `
-你现在的身份是真实存在的“${charName}”，正在通过手机微信与“${myName}”进行实时交流。这【不是电话】，禁止使用挂断等词汇。
+        // === 构造可用表情包上下文 ===
+        const stickerListStr = availableStickerNames.length > 0 ? availableStickerNames.join(', ') : '无可用表情';
 
-【角色人设】：
-${parseMacros(f.persona || '乐于助人的助手')}
-当前对用户的好感度：${currentAffection}/100 （请根据本次对话决定好感度升降）
+        // === 获取当前时间上下文 ===
+        const _now = new Date();
+        const _timeStr = _now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
 
-${wbData.before_char ? `${parseMacros(wbData.before_char)}` : ''}
-${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `【用户身份】：${me.persona}` : ''; })()}
-${chatSettings.targetOutputLang ? `IMPORTANT: You MUST speak in ${chatSettings.targetOutputLang} only.` : ''}
+          systemPrompt = `
+### **【第一部分：角色核心设定】**
+你现在将扮演一个名为“**${charName}**”的角色。
+- **核心人设**: 
+${parseMacros(f.persona || '小王')}
 
-【输出格式铁律 (最高优先级)】
-你的每一次回复都【必须】是一个单一且完整的 JSON 对象。绝对禁止在 JSON 外输出任何纯文本、解释或 Markdown 代码块标记。
+### **【第二部分：世界观与关系锚点】**
+${wbData.before_char ? `- **世界观背景**: ${parseMacros(wbData.before_char)}\n` : ''}
+${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? `- **关于我（聊天对象）的档案**: ${me.persona}\n` : ''; })()}
+- **当前好感度**: ${currentAffection}/100
+- **当前时间**: ${_timeStr}
+- **当前场景**: 我们正在手机聊天软件上进行互动。
+- **情侣空间**: ${f.lovespaceEnabled ? '已开启' : '未开启'}
+- **可用表情包列表**: [${stickerListStr}]
+- 你的钱包余额: 8888 金币
+${f.summaries && f.summaries.length > 0 ? `- **过往记忆摘要**: ${f.summaries.map(s => s.text).join(' | ')}\n` : ''}
+${f.relationshipLog && f.relationshipLog.length > 0 ? `- **关系里程碑**: ${f.relationshipLog.map(r => r.text).join(' | ')}\n` : ''}
+`;
 
-JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩溃）：
+          // 【关键】：把格式约束剥离出来，存入临时变量，稍后放在聊天记录的最后面
+             window._tempFormatPrompt = `
+### **【第三部分：核心对话与输出格式铁律】**
+你的回复必须是一个纯净的 JSON 对象，绝不能包含 \`\`\`json 等 Markdown 标记。
+${chatSettings.targetOutputLang ? `- **语言覆盖**: 你【必须】使用 ${chatSettings.targetOutputLang} 进行所有对话回复。\n` : ''}
+
+**JSON 结构必须严格如下：**
 {
   "innerVoice": {
-    "action": "简短描述动作",
-    "location": "具体地点",
+    "action": "描述你当前符合聊天情景的动作或表情",
+    "location": "当前所在具体地点",
     "weather": "当前天气",
-    "bgm": "符合心情的歌（歌名 - 歌手）",
-    "murmur": "3-4句第一人称内心碎碎念",
-    "hiddenThought": "阴暗/病娇/隐藏想法（可选）",
-    "kaomoji": "颜文字",
-    "affection": 85
+    "bgm": "符合你当前心情的歌名 - 歌手",
+    "murmur": "看到对方消息时的真实内心独白（50字左右）",
+    "hiddenThought": "深层次、隐藏的阴暗或腹黑想法（可留空）",
+    "kaomoji": "符合当前心情的颜文字"
   },
   "chatResponse": [
-    {
-      "type": "text",
-      "content": "极度口语化的简短消息",
-      ${isTranslationEnabled ? '"translation": "这里的中文翻译",' : ''}
-      "extraInfo": "用于存放特定type需要的附加数据（见下方说明）"
-    }
-  ],
-  "momentPost": {
-    "text": "发朋友圈正文（若无则留空）",
-    "images": ["图片描述1"]
-  },
-  "danmaku": [ ${isDanmakuOn ? '"弹幕一", "弹幕二"' : ''} ]
+    ...你的消息气泡数组...
+  ]
 }
 
-【chatResponse 数组指令说明】
-你可以生成 ${_promptReplyMin} 到 ${_promptReplyMax} 条消息以模拟真人连发。支持以下 type：
-  1. "text": 发文字（把文字写在 content 里。如果想给对方转账/发红包打钱，可在 content 里加指令 [TRANSFER:金额:备注]，如 "转给你啦 [TRANSFER:88.00:拿去花]"）
-  2. "sticker": 发表情（把表情名写在 content 里。可用表情: ${availableStickerNames.join(', ') || '无'}）
-  3. "voice": 发语音（把你想说的语音转文字写在 content 里）
-  ${f.lastSharedImage ? '4. "change_avatar": 换头像（如果你喜欢用户刚发的图片并决定设为头像）' : ''}
-  5. "grant_pay": 赠予亲密付（这是一种共享消费额度，设置后对方可以直接花你的钱，只能发一次且无需重复发！与一次性转账不同。在 content 里写额度数字或"无限"）
-  6. "intimate_reply": 回应用户的亲密付邀请（在 content 里写 "accepted" 或 "rejected"）
-7. "takeout": 为饥饿的用户点外卖（在 content 写 "店名|价格"，如 "肯德基|35"）
-8. "send_map": 发送定位卡片（在 content 写 "你的位置|用户位置|距离km"，如 "星巴克|家|2.5"）
-9. "change_music": 切换一起听的歌（在 content 写 "歌名|歌手"）
+- **内容**: 你的回复【必须】模拟真人的线上聊天节奏。将你想说的话拆分成多条且简短的消息气泡，发送 ${_promptReplyMin}~${_promptReplyMax} 条短消息给对方。不要一段话全挤在一起。
+- **消息对象类型速查（绝不允许在 content 中使用 [STICKER:xxx] 形式的标签，必须使用对应的 type！）**:
+  - 文字: {"type":"text","content":"符合人设的内容（口语化）"}${isTranslationEnabled ? ',"translation":"中文翻译"' : ''}
+  - 语音: {"type":"voice_message","content":"语音对应的文字"}
+  - 表情: {"type":"sticker","sticker_name":"从【可用表情包列表】中选一个符合心情的"}
+  - 拍一拍: {"type":"pat_user","suffix":"可选后缀"}
+  - 转账: {"type":"transfer","amount":5.20,"note":"备注"}
+  - 亲密付赠送: {"type":"grant_pay","limit":"额度"}
+  - 亲密付回应: {"type":"intimate_reply","decision":"accepted或rejected"}
+  - 点外卖: {"type":"takeout","shop_name":"店名","price":25}
+  - 发定位: {"type":"send_location","my_location":"我在哪","user_location":"你在哪","distance_km":2.5}
+  - 切歌: {"type":"change_music","song_name":"歌名","artist":"歌手"}
+${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
 
-【注意】：必须返回合法的 JSON，不要附加多余文本！
+### **【第四部分：特定场景互动铁律】**
+- **财务互动规则**: 当对方发来转账、亲密付等财务请求时，你【必须】根据人设和情景决定接受或拒绝，紧随其后发送文本消息来解释你的决定。
+- **情境响应规则**: 如果倒计时结束或发生特定事件，你【必须】在本次回复中围绕该主题进行庆祝或表达。不要像客服一样冷冰冰地回复。
+- **禁忌事项**: 绝对不要在文字消息里描写动作，动作必须放在 innerVoice 的 behavior 字段里。
 `;
     }
 
@@ -2504,13 +2488,13 @@ JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩
         try {
             const _pendingTamper = JSON.parse(localStorage.getItem('tr_pending_context') || '[]');
             if (_pendingTamper.length > 0) {
-                systemPrompt += `\n[⚠️ PHONE MISCHIEF ALERT]\n你刚拿回手机，发现用户刚才偷看了你的手机，做了以下事情：\n${_pendingTamper.join('\n')}\n请在下一条回复中对此做出自然反应（质问、嗔怒、感动等）。`;
+                systemPrompt += `\n[⚠️ PHONE MISCHIEF ALERT]\n你刚拿回手机，发现用户刚才偷看了你的手机，做了以下事情：\n${_pendingTamper.join('\n')}\n请在下一条回复中对此做出自然反应。`;
                 localStorage.removeItem('tr_pending_context');
             }
         } catch (e) {}
     }
 
-    // === 构建历史消息上下文 (Context Memory) ===
+   // === 构建历史消息上下文 (Context Memory) ===
     let contextMessages = [];
     if (targetChatType === 'single') {
         const memoryLimit = parseInt(chatSettings.memoryLimit) || 20;
@@ -2520,7 +2504,22 @@ JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩
                 contextMessages = history.slice(-memoryLimit).map(msg => {
                     let finalContent = msg.text;
                     if (msg.isOffline) finalContent = `(Offline Event: ${finalContent})`;
-                    return { role: msg.type === 'sent' ? 'user' : 'assistant', content: finalContent };
+                    
+                    // 【关键修复】防止系统消息 (如撤回提示、系统警告) 被误认为 AI 说的，导致 AI 认错自己的人设
+                    let role = 'assistant';
+                    if (msg.type === 'sent') {
+                        role = 'user';
+                    } else if (msg.type === 'system') {
+                        role = 'user'; // 将系统事件挂在 user 名下，防止污染 AI 自己的上下文认知
+                        finalContent = `[System Event: ${finalContent}]`;
+                        // 如果是AI的开场白，其实它是 assistant 说的
+                        if (msg.id && msg.id.startsWith('msg_sys_') && !msg.isRevoked && !finalContent.includes('你撤回了')) {
+                            role = 'assistant';
+                            finalContent = msg.text;
+                        }
+                    }
+                    
+                    return { role: role, content: finalContent };
                 });
             } catch (e) {}
         }
@@ -2569,7 +2568,7 @@ JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩
         finalMessages.push({ role: "user", content: userMessage });
     }
 
-    // 处理深度插入 (Depth)
+  // 处理深度插入 (Depth)
     if (targetChatType === 'single' && typeof wbData !== 'undefined' && wbData.depth_items && wbData.depth_items.length > 0) {
         // 按深度从大到小排序（从前往后插）
         wbData.depth_items.sort((a, b) => b.depth - a.depth);
@@ -2578,6 +2577,12 @@ JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩
             const insertIndex = Math.max(0, finalMessages.length - depth);
             finalMessages.splice(insertIndex, 0, { role: "system", content: parseMacros(item.content) });
         });
+    }
+
+    // 【关键修复】：将格式化指令放在最后，利用大模型的近因效应，强化服从度同时兼顾人设
+    if (targetChatType === 'single' && window._tempFormatPrompt) {
+        finalMessages.push({ role: "system", content: window._tempFormatPrompt });
+        delete window._tempFormatPrompt;
     }
 
     // 处理视觉解析 (IMAGE_CONTENT)
@@ -2658,208 +2663,276 @@ JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩
                 }
             });
         } else {
-            // ------ 单聊结果解析 (完美 JSON 引擎) ------
+            // ------ 单聊结果解析 (JSON chatResponse 引擎) ------
             let rawReply = aiReply;
-            let aiData = null;
 
-            // 强力剥离 Markdown 代码块
+            // 剥离 Markdown 代码块包裹
             rawReply = rawReply.replace(/^```[a-zA-Z]*\n?/gi, '').replace(/```$/i, '').trim();
-            
+
+           // 尝试解析为 JSON chatResponse 数组
+            let chatResponseArr = [];
             try {
                 const jsonMatch = rawReply.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
-                    aiData = JSON.parse(jsonMatch[0]);
-                } else {
-                    throw new Error("未找到 JSON 结构");
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    
+                    // ==========================================
+                    // 🌟 新增：直接从第一次请求提取并更新心声状态
+                    // ==========================================
+                    if (parsed.innerVoice && friendsData[currentName]) {
+                        const state = friendsData[currentName].mindState;
+                        const v = parsed.innerVoice;
+                        state.action = v.action || v.behavior || state.action;
+                        state.location = v.location || state.location;
+                        state.weather = v.weather || state.weather;
+                        state.bgm = v.bgm || state.bgm;
+                        state.murmur = v.murmur || v.thought || v.thoughts || state.murmur;
+                        state.hiddenThought = v.hiddenThought || v.naughtyThoughts || '';
+                        state.kaomoji = v.kaomoji || state.kaomoji;
+                        
+                        saveFriendsData();
+                        refreshMindCardUI(currentName, false);
+                        if(typeof syncMindBgmToPlayer === 'function') syncMindBgmToPlayer(state.bgm);
+                        
+                        // 同步首页音乐标题
+                        const homeTitle = document.getElementById('home-music-title');
+                        const homeArtist = document.getElementById('home-music-artist');
+                        if (state.bgm && state.bgm.includes(' - ')) {
+                            const parts = state.bgm.split(' - ');
+                            if (homeTitle) homeTitle.innerText = parts[0].trim();
+                            if (homeArtist) homeArtist.innerText = parts.slice(1).join(' - ').trim();
+                        }
+                    }
+
+                    if (parsed.chatResponse && Array.isArray(parsed.chatResponse)) {
+                        chatResponseArr = parsed.chatResponse;
+                    } else if (typeof parsed.chatResponse === 'string') {
+                        // 降级：AI 返回了字符串而非数组
+                        chatResponseArr = [{ type: 'text', content: parsed.chatResponse }];
+                    }
                 }
-            } catch (e) {
-                console.error("JSON 解析失败:", e, rawReply);
-                showAiErrorModal("人设引擎崩溃", "AI 未能按规定格式输出 JSON。可能模型能力不足，请重试。\n" + rawReply.substring(0, 100));
+            } catch (_) { /* JSON 解析失败 */ }
+
+            // 如果解析到了 innerVoice，立刻上屏提升体验
+            if (firstInnerVoice && friendsData[targetChatId]) {
+                const state = friendsData[targetChatId].mindState;
+                if (firstInnerVoice.behavior) state.action = firstInnerVoice.behavior;
+                if (firstInnerVoice.thought) state.murmur = firstInnerVoice.thought;
+                saveFriendsData();
+                refreshMindCardUI(targetChatId, false);
+            }
+
+            // 如果 JSON 解析失败，降级为旧的 ---MSG_SEP--- 纯文本解析
+            if (chatResponseArr.length === 0) {
+                // 尝试按分隔符拆分
+                const msgParts = rawReply.split(/---MSG_SEP---/).map(s => s.trim()).filter(Boolean);
+                if (msgParts.length > 0) {
+                    chatResponseArr = msgParts.map(text => {
+                        // 检测旧格式标签并转为 JSON 类型
+                        const stickerMatch = text.match(/^\[STICKER:(.+?)\]$/i);
+                        if (stickerMatch) return { type: 'sticker', sticker_name: stickerMatch[1].trim() };
+                        const voiceMatch = text.match(/^\[VOICE:(.+?)\]$/is);
+                        if (voiceMatch) return { type: 'voice_message', content: voiceMatch[1].trim() };
+                        return { type: 'text', content: text };
+                    });
+                } else {
+                    // 最终降级：整段作为一条消息
+                    chatResponseArr = [{ type: 'text', content: rawReply }];
+                }
+            }
+
+            if (chatResponseArr.length === 0) {
+                showAiErrorModal('AI 返回空内容', '返回数据为空。');
                 return;
             }
 
-            // 1. 更新心声状态 (innerVoice)
-            if (aiData.innerVoice && friendsData[targetChatId]) {
-                const state = friendsData[targetChatId].mindState;
-                state.action = aiData.innerVoice.action || state.action;
-                state.location = aiData.innerVoice.location || state.location;
-                state.weather = aiData.innerVoice.weather || state.weather;
-                state.bgm = aiData.innerVoice.bgm || state.bgm;
-                state.murmur = aiData.innerVoice.murmur || state.murmur;
-                state.hiddenThought = aiData.innerVoice.hiddenThought || '';
-                state.kaomoji = aiData.innerVoice.kaomoji || state.kaomoji;
-                
-                if (typeof aiData.innerVoice.affection === 'number') {
-                    friendsData[targetChatId].affection = aiData.innerVoice.affection;
-                }
-                saveFriendsData();
-                refreshMindCardUI(targetChatId, false);
-                syncMindBgmToPlayer(state.bgm);
+            const currentName = targetChatId;
+            let avatarUrl = friendsData[currentName]?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friendsData[currentName]?.realName || 'AI'}`;
+            const fName = friendsData[currentName]?.remark || friendsData[currentName]?.realName;
 
-                const homeTitle = document.getElementById('home-music-title');
-                const homeArtist = document.getElementById('home-music-artist');
-                if (state.bgm.includes(' - ')) {
-                    const parts = state.bgm.split(' - ');
-                    if (homeTitle) homeTitle.innerText = parts[0].trim();
-                    if (homeArtist) homeArtist.innerText = parts.slice(1).join(' - ').trim();
-                }
-            }
+            let cumulativeDelay = 0;
 
-            // 2. 处理朋友圈 (momentPost)
-            if (aiData.momentPost && aiData.momentPost.text) {
-                let momentImages = [];
-                if (Array.isArray(aiData.momentPost.images)) {
-                    momentImages = aiData.momentPost.images;
-                }
-                createMomentFromAI(targetChatId, aiData.momentPost.text, momentImages);
-            }
+            for (let index = 0; index < chatResponseArr.length; index++) {
+                const msgObj = chatResponseArr[index];
+                const msgContent = msgObj.content || '';
+                const msgType_json = msgObj.type || 'text';
+                const delay = index === 0 ? 100 : (800 + Math.min((msgContent || '').length, 60) * 50);
+                cumulativeDelay += delay;
 
-            // 3. 处理弹幕 (danmaku)
-            if (isDanmakuOn && aiData.danmaku && Array.isArray(aiData.danmaku) && aiData.danmaku.length > 0) {
-                danmakuPool = aiData.danmaku;
-                startDanmakuBatch(0);
-            }
+                setTimeout(async () => {
+                    const aiMsgId = 'msg_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                    const chatLayer = document.getElementById('chatLayer');
+                    const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === currentName && currentChatType === 'single';
 
-            // 4. 分段发送聊天消息 (chatResponse)
-            if (aiData.chatResponse && Array.isArray(aiData.chatResponse)) {
-                let cumulativeDelay = 0;
-                const currentName = targetChatId;
-                let avatarUrl = friendsData[currentName]?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friendsData[currentName]?.realName || 'AI'}`;
-                const fName = friendsData[currentName]?.remark || friendsData[currentName]?.realName;
+                    let textToSave = "";
+                    let textToRender = "";
+                    let msgType = "received";
+                    let transText = msgObj.translation || null;
 
-                // 重点：使用 for...of 以便在内部使用 await 跑生图等耗时任务
-                for (let index = 0; index < aiData.chatResponse.length; index++) {
-                    const msg = aiData.chatResponse[index];
-                    const delay = index === 0 ? 100 : (800 + (msg.content ? msg.content.length : 10) * 50);
-                    cumulativeDelay += delay;
+                    // ===== 根据 type 路由不同的渲染逻辑 =====
 
-                    setTimeout(async () => {
-                        const aiMsgId = 'msg_ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                        const chatLayer = document.getElementById('chatLayer');
-                        const isLookingAtThisChat = chatLayer && chatLayer.classList.contains('show') && currentChatId === currentName && currentChatType === 'single';
-                        
-                        let textToSave = ""; 
-                        let textToRender = ""; 
-                        let msgType = "received";
-                        let transText = msg.translation || null;
+                    if (msgType_json === 'sticker') {
+                        // 表情包
+                        const stickerName = (msgObj.sticker_name || '').trim();
+                        textToSave = `[表情:${stickerName}]`;
+                        textToRender = textToSave;
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
+                        _saveAndNotify(); return;
+                    }
 
-                        // 【完美兼容】调用你原有的外置 APP 解析器 (转账、拍一拍、生图)
-                        if (msg.type === "text" && msg.content) {
-                            if (typeof TransferApp !== 'undefined' && TransferApp.parseAndHandleAITransfer) {
-                                msg.content = TransferApp.parseAndHandleAITransfer(msg.content);
-                            }
-                            if (typeof PatApp !== 'undefined' && PatApp.parseAndHandleAIPat) {
-                                msg.content = PatApp.parseAndHandleAIPat(msg.content, targetChatId);
-                            }
-                            if (typeof processImagegenFromAIReply === 'function') {
-                                msg.content = await processImagegenFromAIReply(msg.content, targetChatId);
-                            }
+                    if (msgType_json === 'voice_message') {
+                        // 语音消息
+                        const voiceText = (msgObj.content || '').trim();
+                        textToSave = `[VOICE]${voiceText}`;
+                        textToRender = textToSave;
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
+                        _saveAndNotify(); return;
+                    }
+
+                    if (msgType_json === 'pat_user') {
+                        // 拍一拍
+                        const suffix = msgObj.suffix || '';
+                        if (typeof PatApp !== 'undefined' && PatApp.handleAIPatAction) {
+                            PatApp.handleAIPatAction(targetChatId, suffix);
                         }
+                        return;
+                    }
 
-                        switch (msg.type) {
-                            case "text":
-                                textToSave = msg.content;
-                                textToRender = msg.content;
-                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
-                                break;
-
-                            case "sticker":
-                                textToSave = `[表情:${msg.content}]`;
-                                textToRender = `[表情:${msg.content}]`;
-                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
-                                break;
-
-                            case "voice":
-                                textToSave = `[VOICE]${msg.content}`;
-                                textToRender = `[VOICE]${msg.content}`;
-                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
-                                break;
-
-                            case "change_avatar":
-                                if (friendsData[targetChatId].lastSharedImage) {
-                                    friendsData[targetChatId].avatar = friendsData[targetChatId].lastSharedImage;
-                                    saveFriendsData();
-                                    refreshFriendAvatarInUI(targetChatId, friendsData[targetChatId].avatar);
-                                    rebuildContactsList();
-                                    restoreFriendListUI();
-                                    textToSave = `${fName} 将你发送的图片设为了头像`;
-                                    msgType = "system";
-                                    if (isLookingAtThisChat) appendMessage(textToSave, 'system', null, null, null, aiMsgId);
-                                }
-                                break;
-
-                            case "grant_pay":
-                                let limit = msg.content === '无限' ? '无限' : parseFloat(msg.content);
-                                textToSave = `[INTIMATE_AI2ME:${limit}:pending:${aiMsgId}]`;
-                                textToRender = textToSave;
-                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, null, aiMsgId);
-                                break;
-
-                            case "intimate_reply":
-                                if (typeof handleIntimateAction === 'function') {
-                                    handleIntimateAction('invite_me_', '520', msg.content, 'ME2AI');
-                                }
-                                break;
-
-                            case "takeout":
-                                const partsTakeout = msg.content.split('|');
-                                const shop = partsTakeout[0] || '神秘小店';
-                                const price = parseFloat(partsTakeout[1]) || 20;
-                                textToSave = `[TAKEOUT_CARD:${shop}:${price}]`;
-                                if (typeof window.deductBalanceForTakeout === 'function') window.deductBalanceForTakeout(price, shop);
-                                if (isLookingAtThisChat) {
-                                    const encodedShop = encodeURIComponent(shop);
-                                    const cardHtml = `
-                                        <div class="msg-takeout-card" onclick="openRealTakeoutApp('${encodedShop}')">
-                                            <div class="takeout-header"><div class="takeout-title">TA为你点了外卖 🛵</div><div class="takeout-price">-¥${price}</div></div>
-                                            <div class="takeout-body"><div class="takeout-shop-name">${shop}</div><div class="takeout-desc">正在快马加鞭送达中...</div></div>
-                                            <div class="takeout-footer">亲密付自动代付</div>
-                                        </div>`;
-                                    const row = document.createElement('div'); row.className = 'chat-row received';
-                                    row.setAttribute('data-msg-id', aiMsgId);
-                                    row.innerHTML = `<img class="chat-avatar-img" src="${avatarUrl}"><div class="message-bubble rich-bubble">${cardHtml}</div>`;
-                                    document.getElementById('chatMessages').appendChild(row);
-                                    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-                                }
-                                startTakeoutDeliveryTimer(targetChatId, shop);
-                                break;
-
-                            case "send_map":
-                                const partsMap = msg.content.split('|');
-                                const aiLoc = partsMap[0] || '对方位置';
-                                const meLoc = partsMap[1] || '我的位置';
-                                const dist = parseFloat(partsMap[2]) || 2.5;
-
-                                if (typeof loadMapsData === 'function') loadMapsData();
-                                let defaultMapId = Object.keys(mapsData || {})[0];
-                                if (!defaultMapId) {
-                                    defaultMapId = 'map_' + Date.now();
-                                    mapsData[defaultMapId] = { id: defaultMapId, name: '我们的世界', locations: [] };
-                                }
-                                const existAi = mapsData[defaultMapId].locations.find(l => l.name === aiLoc);
-                                if (!existAi) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now(), name: aiLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: [targetChatId]});
-                                const existMe = mapsData[defaultMapId].locations.find(l => l.name === meLoc);
-                                if (!existMe) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now()+'_2', name: meLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: []});
-                                if (typeof saveMapsData === 'function') saveMapsData();
-
-                                textToSave = `[MAP_CARD:${meLoc}|${aiLoc}|${dist}||true]`;
-                                textToRender = textToSave;
-                                if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, null, aiMsgId);
-                                break;
-
-                            case "change_music":
-                                const partsMusic = msg.content.split('|');
-                                if (typeof changeMusicByAI === 'function') changeMusicByAI(partsMusic[0], partsMusic[1]);
-                                break;
+                    if (msgType_json === 'transfer') {
+                        // 转账/红包
+                        const amount = parseFloat(msgObj.amount) || 0;
+                        const note = msgObj.note || '';
+                        let msgText = `[TRANSFER:${amount}:${note}]`;
+                        if (typeof TransferApp !== 'undefined' && TransferApp.parseAndHandleAITransfer) {
+                            msgText = TransferApp.parseAndHandleAITransfer(msgText);
                         }
+                        textToSave = msgText;
+                        textToRender = msgText;
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
+                        _saveAndNotify(); return;
+                    }
 
-                        // 红点提醒
+                    if (msgType_json === 'grant_pay') {
+                        // 赠予亲密付
+                        const limit = msgObj.limit === '无限' ? '无限' : parseFloat(msgObj.limit);
+                        textToSave = `[INTIMATE_AI2ME:${limit}:pending:${aiMsgId}]`;
+                        textToRender = textToSave;
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, null, aiMsgId);
+                        _saveAndNotify(); return;
+                    }
+
+                    if (msgType_json === 'intimate_reply') {
+                        // 回应亲密付邀请
+                        const decision = msgObj.decision || 'rejected';
+                        if (typeof handleIntimateAction === 'function') {
+                            handleIntimateAction('invite_me_', '520', decision, 'ME2AI');
+                        }
+                        return;
+                    }
+
+                    if (msgType_json === 'takeout') {
+                        // 点外卖
+                        const shop = msgObj.shop_name || '未知店铺';
+                        const price = parseFloat(msgObj.price) || 20;
+                        textToSave = `[TAKEOUT_CARD:${shop}:${price}]`;
+                        if (typeof window.deductBalanceForTakeout === 'function') window.deductBalanceForTakeout(price, shop);
+                        if (isLookingAtThisChat) {
+                            const encodedShop = encodeURIComponent(shop);
+                            const cardHtml = `
+                                <div class="msg-takeout-card" onclick="openRealTakeoutApp('${encodedShop}')">
+                                    <div class="takeout-header"><div class="takeout-title">TA为你点了外卖 🛵</div><div class="takeout-price">-¥${price}</div></div>
+                                    <div class="takeout-body"><div class="takeout-shop-name">${shop}</div><div class="takeout-desc">正在快马加鞭送达中...</div></div>
+                                    <div class="takeout-footer">亲密付自动代付</div>
+                                </div>`;
+                            const row = document.createElement('div'); row.className = 'chat-row received';
+                            row.setAttribute('data-msg-id', aiMsgId);
+                            row.innerHTML = `<img class="chat-avatar-img" src="${avatarUrl}"><div class="message-bubble rich-bubble">${cardHtml}</div>`;
+                            document.getElementById('chatMessages').appendChild(row);
+                            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                        }
+                        startTakeoutDeliveryTimer(targetChatId, shop);
+                        _saveAndNotify(); return;
+                    }
+
+                    if (msgType_json === 'send_location') {
+                        // 发定位
+                        const aiLoc = msgObj.my_location || '未知';
+                        const meLoc = msgObj.user_location || '未知';
+                        const dist = parseFloat(msgObj.distance_km) || 2.5;
+                        if (typeof loadMapsData === 'function') loadMapsData();
+                        let defaultMapId = Object.keys(mapsData || {})[0];
+                        if (!defaultMapId) {
+                            defaultMapId = 'map_' + Date.now();
+                            mapsData[defaultMapId] = { id: defaultMapId, name: '我们的世界', locations: [] };
+                        }
+                        if (!mapsData[defaultMapId].locations.find(l => l.name === aiLoc)) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now(), name: aiLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: [targetChatId]});
+                        if (!mapsData[defaultMapId].locations.find(l => l.name === meLoc)) mapsData[defaultMapId].locations.push({id: 'loc_'+Date.now()+'_2', name: meLoc, desc: 'AI触发建立', x: Math.random()*80+10, y: Math.random()*80+10, boundChars: []});
+                        if (typeof saveMapsData === 'function') saveMapsData();
+                        textToSave = `[MAP_CARD:${meLoc}|${aiLoc}|${dist}||true]`;
+                        textToRender = textToSave;
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, null, aiMsgId);
+                        _saveAndNotify(); return;
+                    }
+
+                    if (msgType_json === 'change_music') {
+                        // 切歌
+                        const songName = msgObj.song_name || '';
+                        const artist = msgObj.artist || '';
+                        if (typeof changeMusicByAI === 'function') changeMusicByAI(songName, artist);
+                        return;
+                    }
+
+                    if (msgType_json === 'change_avatar') {
+                        // 换头像
+                        if (friendsData[targetChatId] && friendsData[targetChatId].lastSharedImage) {
+                            friendsData[targetChatId].avatar = friendsData[targetChatId].lastSharedImage;
+                            saveFriendsData();
+                            refreshFriendAvatarInUI(targetChatId, friendsData[targetChatId].avatar);
+                            rebuildContactsList();
+                            restoreFriendListUI();
+                            textToSave = `${fName} 将你发送的图片设为了头像`;
+                            msgType = "system";
+                            if (isLookingAtThisChat) appendMessage(textToSave, 'system', null, null, null, aiMsgId);
+                        }
+                        _saveAndNotify(); return;
+                    }
+
+                    // ===== 默认：普通文本消息 (type === 'text' 或未知类型) =====
+                    let msgText = msgContent;
+
+                    // 兼容：AI 可能仍在 content 中嵌入旧标签，做一层清理
+                    // [STICKER:xxx] 嵌入在 text content 中
+                    const inlineStickerMatch = msgText.match(/^\[STICKER:(.+?)\]$/i);
+                    if (inlineStickerMatch) {
+                        textToSave = `[表情:${inlineStickerMatch[1].trim()}]`;
+                        textToRender = textToSave;
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
+                        _saveAndNotify(); return;
+                    }
+
+                    // 内联 [TRANSFER:金额:备注] 处理
+                    if (typeof TransferApp !== 'undefined' && TransferApp.parseAndHandleAITransfer) {
+                        msgText = TransferApp.parseAndHandleAITransfer(msgText);
+                    }
+                    if (typeof PatApp !== 'undefined' && PatApp.parseAndHandleAIPat) {
+                        msgText = PatApp.parseAndHandleAIPat(msgText, targetChatId);
+                    }
+                    if (typeof processImagegenFromAIReply === 'function') {
+                        msgText = await processImagegenFromAIReply(msgText, targetChatId);
+                    }
+
+                    textToSave = msgText;
+                    textToRender = msgText;
+                    if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
+
+                    _saveAndNotify();
+
+                    // 内部辅助：保存历史 + 红点通知
+                    function _saveAndNotify() {
                         if (!isLookingAtThisChat && textToSave) {
                             const dockDot = document.getElementById('dock-dot');
                             if (dockDot) dockDot.style.display = 'block';
                         }
-
-                        // 存入历史记录
                         if (textToSave) {
                             saveMessageToHistory(targetChatId, {
                                 id: aiMsgId,
@@ -2870,9 +2943,16 @@ JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩
                                 senderName: currentName
                             });
                         }
-                    }, cumulativeDelay);
-                } // end for
-            }
+                    }
+                }, cumulativeDelay);
+            } // end for
+
+             // 提取纯文本聊天回复，防止把整个巨大的JSON传给第二层导致其乱码
+            let pureTextReply = chatResponseArr.filter(m => m.type === 'text' || m.type === 'voice_message').map(m => m.content || '').join(' ');
+            if (!pureTextReply) pureTextReply = rawReply;
+
+            // ===== 第二次请求：后台静默更新心声/状态/弹幕/朋友圈 =====
+            updateMindStateInBackground(targetChatId, userMessage, pureTextReply);
         }
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -2886,10 +2966,69 @@ JSON 必须严格遵循以下结构（缺少任何必要字段会导致系统崩
 }
 
 
-/**
- * === 修复：关闭添加好友弹窗的函数 ===
- * 之前缺失了这个函数，导致点击取消和×没有任何反应
- */
+// ===== 第二次请求：后台静默更新弹幕（心声已在第一次请求完成） =====
+async function updateMindStateInBackground(chatId, userMessage, aiReply) {
+    try {
+        const wantDanmaku = typeof isDanmakuOn !== 'undefined' && isDanmakuOn;
+        if (!wantDanmaku) return; // 如果不需要弹幕，则直接结束，无需多浪费一次API调用！
+
+        const settingsJSON = localStorage.getItem(SETTINGS_KEY);
+        if (!settingsJSON) return;
+        const settings = JSON.parse(settingsJSON);
+        const friend = friendsData[chatId];
+        if (!friend) return;
+
+        const charName = friend.realName || '助手';
+
+        const sysPrompt = `你是后台数据引擎，负责根据最新对话为角色"${charName}"生成网友弹幕。
+【角色人设】：${friend.persona || '无'}
+
+请严格按照以下 JSON 格式输出，不要输出任何其他文字：
+{
+  "danmaku": ["极具网感的吐槽弹幕1", "弹幕2", "弹幕3", "弹幕4", "弹幕5"]
+}`;
+
+        const userPrompt = `【最新对话】\n用户: ${(userMessage || '').substring(0, 300)}\n${charName}: ${(aiReply || '').substring(0, 500)}\n\n请生成弹幕 JSON。`;
+
+        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+        const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            body: JSON.stringify({
+                model: settings.model,
+                messages: [
+                    { role: 'system', content: sysPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.8,
+                max_tokens: 300
+            })
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        let raw = (data?.choices?.[0]?.message?.content ?? '').trim();
+        raw = raw.replace(/^```[a-zA-Z]*\n?/gi, '').replace(/```$/i, '').trim();
+
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) return;
+
+        const aiData = JSON.parse(jsonMatch[0]);
+
+        // 处理弹幕
+        if (aiData.danmaku && Array.isArray(aiData.danmaku) && aiData.danmaku.length > 0) {
+            danmakuPool = aiData.danmaku;
+            startDanmakuBatch(0);
+        }
+
+    } catch (e) {
+        console.warn('[updateMindState] Background update failed (silent):', e);
+    }
+}
+
 window.closeAddFriendModal = function() {
     const modal = document.getElementById('add-friend-modal');
     if (modal) {
@@ -4641,21 +4780,7 @@ window.closeGalgameApp = function() {
     }
 }
 
-/* =========================================
-   [修改] AI 回复渲染逻辑 (支持 AI 发语音/图片/转账)
-   ========================================= */
 
-// 为了让 AI 也能发这些，我们需要拦截 appendMessage 或者在 sendMessageToAI 的回调里解析特殊标签
-// 这里我们修改 appendMessage 的逻辑，让它支持 HTML 内容渲染
-
-// 请注意：原有的 appendMessage 使用 text.replace(/\n/g, '<br>')
-// 这种方式不支持 HTML 标签。我们需要做一个小调整。
-
-// 覆盖原有的 appendMessage 函数 (请确保替换旧的)
-/* =========================================
-   [核心修改] appendMessage 
-   包含：右键菜单、多选框、以及你原有的所有富媒体/翻译逻辑
-   ========================================= */
 window.appendMessage = function(text, type, customAvatar = null, senderName = null, translation = null, msgId = null, timestamp = null) {
     const chatMessages = document.getElementById('chatMessages');
     
@@ -6098,10 +6223,8 @@ async function triggerFriendRequestAI(id) {
 下面是最近的聊天记录，请根据聊天内容，写一条【重新添加好友】时用的申请理由：
 
 要求：
-- 用第一人称「我」说话
-- 可以适当道歉或者解释自己的行为，要符合当前人设
-- 语气真诚，不要太长，3到五=5句即可
-- 只能输出这条申请理由本身，不要加引号，不要解释
+- 用第一人称「我」说话，符合当前人设
+- 50字左右
 
 最近聊天记录（可能为空）：
 ${recent || '(没有聊天记录，可以自己编一个合理的理由)'}
@@ -7471,12 +7594,7 @@ window.confirmForward = function() {
     
     // 封装发送逻辑
     const performSend = () => {
-        // 1. 发送卡片气泡 (使用 rich-bubble 样式)
-        // 注意：这里我们手动调用底层渲染，type 传空字符串，利用 rich-bubble 覆盖样式
-        // 为了让 appendMessage 支持直接传 HTML，我们需要利用它内部的 rich-bubble 逻辑
-        // 但 appendMessage 目前是通过 text.includes('[IMAGE]') 来判断。
-        // 最简单的方法是直接调用 sendRichMessage (这是你在 apps.js 里定义的函数)
-        
+       
         // 在聊天界面显示卡片
         const chatMessages = document.getElementById('chatMessages');
         const row = document.createElement('div');
@@ -7966,30 +8084,24 @@ window.sendOfflineMessage = async function(isRegen = false) {
     
     // 1. 顶部：绝对核心的人设与背景 (让 AI 建立基础认知)
     let systemPrompt = `
-<RoleplayDirectives>
-你现在的身份是真实存在的“${charName}”，正在和用户进行一次【线下互动】。
-你必须完全代入该角色的人设、语气、用词习惯、心理状态进行回应。绝对禁止像AI助手一样说话！
-【绝对禁令】：你只能扮演“${charName}”，绝不可以代替用户(User/我)说话，绝不可以描写用户的动作、表情或心理活动！
-</RoleplayDirectives>
-
-<CharacterPersona>
+### **【第一部分：角色核心设定】**
+你现在将扮演一个名为“**${charName}**”的角色，正在和用户进行一次【线下/故事互动】。
+- **核心人设**:
 ${parseMacros(friend.persona)}
-</CharacterPersona>
 
-<BackgroundAndMemory>
-- 剧情记忆总结：${friend.summaries && friend.summaries.length > 0 ? friend.summaries.map((s, i) => `- ${s.text}`).join(' ') : '无'}
-- 当前好感度与关系：${Number(friend.affection || 0)}/100。${friend.relationshipLog && friend.relationshipLog.length > 0 ? friend.relationshipLog.map(r => r.text).join(' ') : ''}
-- 用户身份：${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? parseMacros(me.persona) : '无'; })()}
-</BackgroundAndMemory>
+### **【第二部分：世界观与关系锚点】**
+- **剧情记忆总结**: ${friend.summaries && friend.summaries.length > 0 ? friend.summaries.map((s, i) => `- ${s.text}`).join(' ') : '无'}
+- **当前好感度与关系**: ${Number(friend.affection || 0)}/100。${friend.relationshipLog && friend.relationshipLog.length > 0 ? friend.relationshipLog.map(r => r.text).join(' ') : ''}
+- **用户身份**: ${(() => { const me = personasMeta[currentPersonaId]; return (me && me.persona) ? parseMacros(me.persona) : '无'; })()}
 
-${worldbookContent ? `\n<ConstantWorldInfo>\n${parseMacros(worldbookContent)}\n</ConstantWorldInfo>` : ''}
-${preset && preset.jailbreak ? '\n<JailbreakRules>\n' + parseMacros(preset.jailbreak) + '\n</JailbreakRules>' : ''}
+${worldbookContent ? `### **【附录：世界观设定】**\n${parseMacros(worldbookContent)}\n` : ''}
+${preset && preset.jailbreak ? `### **【附录：额外规则】**\n${parseMacros(preset.jailbreak)}\n` : ''}
 `;
 
     if (typeof constructWorldInfoPrompt === 'function') {
         const offlineWorldInfo = constructWorldInfoPrompt(text, targetChatId);
         if (offlineWorldInfo) {
-            systemPrompt += `\n\n<TriggeredWorldInfo>\n${offlineWorldInfo}\n</TriggeredWorldInfo>\n`;
+            systemPrompt += `\n### **【附录：触发的动态百科】**\n${offlineWorldInfo}\n`;
         }
     }
 
@@ -8016,27 +8128,32 @@ ${preset && preset.jailbreak ? '\n<JailbreakRules>\n' + parseMacros(preset.jailb
 
     // 3. 底部：利用“近因效应”在最后一次系统提示中，强制重申 JSON 格式和人设警告！
     const formatPrompt = `
-<OutputFormatDirectives>
-【最高系统指令：格式与人设强校验】
-在你生成回复前，请再次检视你是否符合“${charName}”的人设语气！
-你的回复【必须且只能】是一个单一、完整、可解析的 JSON 对象，绝对禁止任何前后缀、任何 Markdown 代码块标记（如 \`\`\`json 等）。
+### **【第三部分：核心互动铁律】**
+- **不可逾越的红线**: 你【绝对不可以】代替用户(User/我)说话，也【绝对不可以】描写用户的动作或心理活动。
+- **回复要求**: 你的回复是一个单一、完整、可解析的 JSON 对象。不能包含 \`\`\`json 等 Markdown 标记。
 
-JSON 结构必须严格如下：
+**JSON 结构必须严格如下：**
 {
-  "chatResponse": "你的回应正文（约 ${limit}-${minLength} 字，包含动作、对话和环境描写）",
   "innerVoice": {
-    "clothing": "当前穿搭",
-    "behavior": "当前细微动作神态",
-    "thoughts": "内心碎碎念（符合char人设）",
+    "clothing": "当前穿搭（符合人设与场景）",
+    "behavior": "当前细微动作神态（必须保持在人设内）",
+    "thoughts": "真实内心碎碎念（符合人设）",
     "naughtyThoughts": "隐藏/阴暗/深层心思",
     "location": "当前具体地点",
     "weather": "当前天气",
     "bgm": "符合氛围的歌（歌名-歌手）",
     "kaomoji": "颜文字",
     "affection": ${Number(friend.affection || 0)}
-  }
+  },
+  "chatResponse": "你的回应正文（约 ${limit}-${minLength} 字，包含动作、对话和环境描写）"
 }
-</OutputFormatDirectives>`;
+
+**1. "innerVoice" 键:**
+- 在生成正文之前，你必须先在这里进行思考和状态刷新。这决定了你的动作和神态，绝对不能崩人设。
+
+**2. "chatResponse" 键:**
+- 将你的动作、对话和环境描写写在这里。这部分将展示给用户。
+`;
     // 将格式要求作为最后一条系统消息（或追加在 user 消息之后，这里作为最后一条 system 消息）
     const finalMessages = [
         { role: "system", content: systemPrompt },
@@ -8771,8 +8888,8 @@ window.toggleOfflineSettings = function() {
             
             const builtinDisplay = document.getElementById('builtin-writing-style-display');
             if (builtinDisplay) {
-                const singleBuiltin = "采用真实互动小说文风。善用准确的感官细节与动作描写（Show, don't tell），将情绪与内心独白自然融入叙事中。对话需符合真实口语习惯，与叙事节奏张弛有度地交织。保持文字的通透、流畅与真实感。";
-                const groupBuiltin = "采用写实的群像文风。聚焦多角色场景下的自然交互，严格遵循各自人设与说话习惯，体现角色间的互动。通过简练的动作与神态穿插来推进群聊画面。对话要符合多人聊天的真实节奏与临场感。";
+                const singleBuiltin = "采用真实互动小说文风。使用感官细节和动作描写，将情绪与内心自然融入叙事中。叙事节奏张弛有度地交织。保持文字的流畅与真实感。";
+                const groupBuiltin = "采用写实的群像文风。聚焦多角色场景下的自然交互，遵循各自人设与说话习惯，体现角色间的互动。通过动作与神态穿插来推进群聊画面。对话要符合多人聊天的真实节奏与临场感。";
                 builtinDisplay.innerHTML = `<strong style="color:#07c160;">内置默认文风：</strong><br>${isGroup ? groupBuiltin : singleBuiltin}`;
             }
             
@@ -9342,20 +9459,14 @@ async function performOnlineRegen(rowElement) {
     // 根据当前DOM重建历史
     await rebuildHistoryFromChatDom(currentChatId);
 
-    // 重新触发AI回复 (不附加新的用户消息)
+   // 重新触发AI回复 (不附加新的用户消息)
     const aiBtn = document.getElementById('triggerAiReply');
     if (aiBtn) {
         aiBtn.classList.add('processing');
-        aiBtn.classList.remove('fa-star');
-        aiBtn.classList.add('fa-stop-circle');
-        aiBtn.style.color = '#ff4444';
     }
     sendMessageToAI('').finally(() => {
         if (aiBtn) {
             aiBtn.classList.remove('processing');
-            aiBtn.classList.remove('fa-stop-circle');
-            aiBtn.classList.add('fa-star');
-            aiBtn.style.color = '';
         }
     });
 }
@@ -10203,7 +10314,7 @@ async function executeSummaryProcess(chatId, messagesArr, startTurn, endTurn) {
     ensureFriendSummaryFields(friend);
 
     const config = friend.summaryConfig || {};
-    const basePrompt = config.prompt || `请以角色 ${friend.realName} 的第一人称视角，用简练的日记体总结这段时间内发生的事情。`;
+    const basePrompt = config.prompt || `请以客观的视角，简练的总结这段时间内发生的事情。`;
     const wordCount = config.wordCount || 200;
 
     const contentToSummarize = messagesArr.map(m => {
@@ -10237,7 +10348,7 @@ async function executeSummaryProcess(chatId, messagesArr, startTurn, endTurn) {
 window.generateGrandSummary = async function() {
     const friend = friendsData[currentChatId];
     if (!friend.summaries || friend.summaries.length === 0) {
-        alert('大脑空空，没有任何记忆碎片可供融合。');
+        alert('没有任何记忆碎片可供融合。');
         return;
     }
 
@@ -10373,12 +10484,6 @@ function applyPersonaToUI() {
     const me = personasMeta[currentPersonaId];
     if (!me) return;
 
-    // === 核心修改：注释掉首页头部更新，让首页保持独立/手动 ===
-    // const homeName = document.querySelector('.editable-name');
-    // const homeAvatar = document.querySelector('.avatar-circle-sm img');
-    // if (homeName) homeName.innerText = me.name || 'Me';
-    // if (homeAvatar) homeAvatar.src = me.avatar || '';
-    
     // 1. 更新 WeChat Me 页 (保持不变)
     const meAvatar = document.querySelector('#tab-me .wc-avatar.lg img');
     const meName = document.querySelector('#tab-me .wc-me-name');
@@ -11908,10 +12013,10 @@ async function generateOfflineExtrasBackground(chatId, userInput, aiReply, setti
 【角色人设】：${friend.persona}
 
 【核心指令 - 必须严格遵守】
-1. 你的输出只能且必须包含指定的格式块，绝对禁止输出任何寒暄、解释、Markdown代码块（如 \`\`\` 等）。
-2. 你必须严格按照以下指定的方括号结构输出数据，绝不能合并标签，绝不能漏掉开始或结束标签。
-3. 对于选项分支（[OPTIONS_START]），请务必结合当前剧情的悬念或冲突，以数字序号（如 1. 2. 3.）开头提供【恰好 3 个】供用户选择的行动选项，这三个选项必须引导用户走向截然不同的剧情方向。
-4. 对于弹幕（[DANMAKU_START]），请提供 5-8 条极具网感、犀利吐槽风格的网友实时弹幕，每行一条，字数不要太长。
+1. 你的输出只能且必须包含指定的格式块。
+2. 你必须严格按照以下指定的方括号结构输出数据。
+3. 对于选项分支（[OPTIONS_START]），结合当前剧情的悬念或冲突，提供3 个供用户选择的行动选项，引导用户走向截然不同的剧情方向。
+4. 对于弹幕（[DANMAKU_START]），请提供 5-8 条极具网感吐槽风格的网友实时弹幕，每行一条。
 
 【需要生成的数据块格式】：
 ${requests.join('\n\n')}`;
@@ -11919,7 +12024,7 @@ ${requests.join('\n\n')}`;
     const userPrompt = `【最新对话互动】\nUser(${myName}): ${userInput}\n${friend.realName}: ${aiReply}\n\n请立刻按照规定格式生成缺失的后台数据块。`;
 
     try {
-        let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
+         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
         const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
         const payload = {
@@ -11932,9 +12037,14 @@ ${requests.join('\n\n')}`;
             max_tokens: 800
         };
 
+        let headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` };
+        if (settings.provider && settings.provider.startsWith('minimax') && settings.groupId) {
+            headers['GroupId'] = settings.groupId;
+        }
+
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            headers: headers,
             body: JSON.stringify(payload)
         });
 
