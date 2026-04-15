@@ -2668,7 +2668,6 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
 
             // 剥离 Markdown 代码块包裹
             rawReply = rawReply.replace(/^```[a-zA-Z]*\n?/gi, '').replace(/```$/i, '').trim();
-
            // 尝试解析为 JSON chatResponse 数组
             let chatResponseArr = [];
             try {
@@ -2679,8 +2678,9 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
                     // ==========================================
                     // 🌟 新增：直接从第一次请求提取并更新心声状态
                     // ==========================================
-                    if (parsed.innerVoice && friendsData[currentName]) {
-                        const state = friendsData[currentName].mindState;
+                    // ✅ 将 currentName 修改为 targetChatId
+                    if (parsed.innerVoice && friendsData[targetChatId]) { 
+                        const state = friendsData[targetChatId].mindState;
                         const v = parsed.innerVoice;
                         state.action = v.action || v.behavior || state.action;
                         state.location = v.location || state.location;
@@ -2691,7 +2691,7 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
                         state.kaomoji = v.kaomoji || state.kaomoji;
                         
                         saveFriendsData();
-                        refreshMindCardUI(currentName, false);
+                        refreshMindCardUI(targetChatId, false); // ✅ 这里也修改了
                         if(typeof syncMindBgmToPlayer === 'function') syncMindBgmToPlayer(state.bgm);
                         
                         // 同步首页音乐标题
@@ -2711,7 +2711,9 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
                         chatResponseArr = [{ type: 'text', content: parsed.chatResponse }];
                     }
                 }
-            } catch (_) { /* JSON 解析失败 */ }
+            } catch (e) { 
+                console.error("JSON 提取状态失败:", e); // ✅ 抛出真实的错误方便以后排查
+            }
 
     
 
