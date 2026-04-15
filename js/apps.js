@@ -2713,14 +2713,7 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
                 }
             } catch (_) { /* JSON 解析失败 */ }
 
-            // 如果解析到了 innerVoice，立刻上屏提升体验
-            if (firstInnerVoice && friendsData[targetChatId]) {
-                const state = friendsData[targetChatId].mindState;
-                if (firstInnerVoice.behavior) state.action = firstInnerVoice.behavior;
-                if (firstInnerVoice.thought) state.murmur = firstInnerVoice.thought;
-                saveFriendsData();
-                refreshMindCardUI(targetChatId, false);
-            }
+    
 
             // 如果 JSON 解析失败，降级为旧的 ---MSG_SEP--- 纯文本解析
             if (chatResponseArr.length === 0) {
