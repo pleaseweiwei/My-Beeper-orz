@@ -658,15 +658,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (contextMessages.length > 0) {
                     aiBtn.classList.add('processing'); // 让星星变成黄色并开始旋转
                     
-                    const combinedMessage = contextMessages.join('\n');
-                    
-                    // 等待发送完成后，必定会移除旋转状态，彻底解决卡死问题
-                    sendMessageToAI(combinedMessage).finally(() => {
+                   sendMessageToAI("").finally(() => {
                         aiBtn.classList.remove('processing');
                     });
                 } else {
                     alert("没有新的用户消息需要回复，或请先发送一条消息。");
                 }
+
             });
         }
 
@@ -2333,6 +2331,8 @@ async function sendMessageToAI(userMessage) {
     let isTranslationEnabled = false;
     if (targetChatType !== 'group' && chatSettings.translationMode === 'ai_to_zh') {
         isTranslationEnabled = true;
+    } else if (targetChatType !== 'group' && chatSettings.translationMode === 'ai_to_en') {
+        isTranslationEnabled = 'en';
     }
 
     // --- 表情包权限判定与系统级注入 ---
@@ -2348,6 +2348,7 @@ async function sendMessageToAI(userMessage) {
     }
 
     // === 判断是群聊还是单聊 ===
+    let charName = '助手'; // Default fallback
     if (targetChatType === 'group' && targetChatId) {
         // ------ 群聊逻辑 (保持原版纯文本模式，群聊用JSON太容易崩) ------
         const group = groupsData[targetChatId];
@@ -2378,7 +2379,7 @@ async function sendMessageToAI(userMessage) {
         // ------ 单聊逻辑 (结构化多部分提示词模板) ------
         const currentAffection = Number(f.affection || 0);
         const myName = (typeof personasMeta !== 'undefined' && currentPersonaId && personasMeta[currentPersonaId]) ? personasMeta[currentPersonaId].name : 'User';
-        const charName = f.realName || '助手';
+        charName = f.realName || '助手';
         const parseMacros = (str) => str ? String(str).replace(/{{char}}/gi, charName).replace(/{{user}}/gi, myName) : '';
 
         let wbData = { before_char: '', after_char: '', depth_items: [] };
@@ -2416,48 +2417,51 @@ ${f.relationshipLog && f.relationshipLog.length > 0 ? `- **关系里程碑**: ${
 `;
 
           // 【关键】：把格式约束剥离出来，存入临时变量，稍后放在聊天记录的最后面
-             window._tempFormatPrompt = `
+                 window._tempFormatPrompt = `
 ### **【第三部分：核心对话与输出格式铁律】**
-你的回复必须是一个纯净的 JSON 对象，绝不能包含 \`\`\`json 等 Markdown 标记。
+为了保持你最自然、最拟真的人设和口语化表达，你的回复必须是纯文本结构，绝不允许使用 JSON！
 ${chatSettings.targetOutputLang ? `- **语言覆盖**: 你【必须】使用 ${chatSettings.targetOutputLang} 进行所有对话回复。\n` : ''}
 
-**JSON 结构必须严格如下：**
-{
-  "innerVoice": {
-    "action": "描述你当前符合聊天情景的动作或表情",
-    "location": "当前所在具体地点",
-    "weather": "当前天气",
-    "bgm": "符合你当前心情的歌名 - 歌手",
-    "murmur": "看到对方消息时的真实内心独白（50字左右）",
-    "hiddenThought": "深层次、隐藏的阴暗或腹黑想法（可留空）",
-    "kaomoji": "符合当前心情的颜文字"
-  },
-  "chatResponse": [
-    ...你的消息气泡数组...
-  ]
-}
+**你的回复必须严格按照以下两部分组成：**
 
-- **内容**: 你的回复【必须】模拟真人的线上聊天节奏。将你想说的话拆分成多条且简短的消息气泡，发送 ${_promptReplyMin}~${_promptReplyMax} 条短消息给对方。不要一段话全挤在一起。
-- **消息对象类型速查（绝不允许在 content 中使用 [STICKER:xxx] 形式的标签，必须使用对应的 type！）**:
-  - 文字: {"type":"text","content":"符合人设的内容（口语化）"}${isTranslationEnabled ? ',"translation":"中文翻译"' : ''}
-  - 语音: {"type":"voice_message","content":"语音对应的文字"}
-  - 表情: {"type":"sticker","sticker_name":"从【可用表情包列表】中选一个符合心情的"}
-  - 拍一拍: {"type":"pat_user","suffix":"可选后缀"}
-  - 转账: {"type":"transfer","amount":5.20,"note":"备注"}
-  - 亲密付赠送: {"type":"grant_pay","limit":"额度"}
-  - 亲密付回应: {"type":"intimate_reply","decision":"accepted或rejected"}
-  - 点外卖: {"type":"takeout","shop_name":"店名","price":25}
-  - 发定位: {"type":"send_location","my_location":"我在哪","user_location":"你在哪","distance_km":2.5}
-  - 切歌: {"type":"change_music","song_name":"歌名","artist":"歌手"}
-${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
+[STATUS_START]
+Action: 描述你当前符合聊天情景的动作或表情
+Location: 当前所在具体地点
+Weather: 当前天气
+BGM: 符合你当前心情的歌名 - 歌手
+Murmur: 看到对方消息时的真实内心独白（50字左右）
+HiddenThought: 深层次、隐藏的阴暗或腹黑想法（可留空）
+Kaomoji: 符合当前心情的颜文字
+[STATUS_END]
+
+(这里空一行，然后开始写发给我的微信消息)
+
+- **发消息规则**: 你的回复要模拟真实的线上聊天节奏。将你想说的话拆分成多条且简短的消息气泡，发送 ${_promptReplyMin}~${_promptReplyMax} 条短消息给我。不要一段话全挤在一起！
+- **消息分隔符**: 每条单独的微信消息之间，必须用 \`---MSG_SEP---\` 隔开。
+- **特殊功能标签**（如果你想触发以下特定功能，直接将标签写在某条消息的文本中即可）：
+  - 发送语音: \`[VOICE]对应的文字\`
+  - 发表情包: \`[表情:从可用列表中选一个名字]\`
+  - 拍一拍对方: \`[PAT]\`
+  - 微信转账: \`[WC_TRANSFER:金额:备注]\`
+  - 赠予亲密付: \`[INTIMATE:额度]\`
+  - 回应亲密付: 直接回复 \`[ACCEPT_INTIMATE]\` (收下) 或 \`[REJECT_INTIMATE]\` (婉拒)
+  - 点外卖: \`[TAKEOUT:店名:金额]\`
+  - 发送双人定位: \`[MAP:我的位置|你的位置|距离]\`
+  - 切歌/点歌: \`[MUSIC:歌名:歌手]\`
+${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头像，在回复里带上 `[CHANGE_AVATAR]`\n' : ''}
 
 ### **【第四部分：特定场景互动铁律】**
-- **财务互动规则**: 当对方发来转账、亲密付等财务请求时，你【必须】根据人设和情景决定接受或拒绝，紧随其后发送文本消息来解释你的决定。
-- **情境响应规则**: 如果倒计时结束或发生特定事件，你【必须】在本次回复中围绕该主题进行庆祝或表达。不要像客服一样冷冰冰地回复。
-- **禁忌事项**: 绝对不要在文字消息里描写动作，动作必须放在 innerVoice 的 behavior 字段里。
+- **财务互动规则**: 当我发来转账、亲密付等财务请求时，你【必须】根据人设和情景决定接受或拒绝，并在回复消息中自然地给出解释。
+- **禁忌事项**: 绝对不要在给我的文字消息里描写你的动作（例如不要出现 *走近*、*轻笑* 等），所有的动作和心理活动必须全部放在 \`[STATUS_START]\` 的 Action 字段里！只输出你要说的纯口语文字！
 `;
-    }
 
+        if (isTranslationEnabled === true) {
+            window._tempFormatPrompt += `\n- **翻译要求**: 你必须将你发给我的每一条微信消息正文，先输出原语言版本，然后严格使用 \`${TRANS_SEPARATOR}\` 作为分隔符，紧接着输出对应的中文翻译。例如：Hello!${TRANS_SEPARATOR}你好！`;
+        } else if (isTranslationEnabled === 'en') {
+            window._tempFormatPrompt += `\n- **翻译要求**: 你必须将你发给我的每一条微信消息正文，先输出原语言版本，然后严格使用 \`${TRANS_SEPARATOR}\` 作为分隔符，紧接着输出对应的英文翻译。例如：你好！${TRANS_SEPARATOR}Hello!`;
+        }
+
+    }
     // ============================================
     // [插入] 注入手机密码自我感知（来自查手机 APP）
     // ============================================
@@ -2494,36 +2498,39 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
         } catch (e) {}
     }
 
-   // === 构建历史消息上下文 (Context Memory) ===
+       // === 构建历史消息上下文 (Context Memory) ===
     let contextMessages = [];
     if (targetChatType === 'single') {
         const memoryLimit = parseInt(chatSettings.memoryLimit) || 20;
         if (memoryLimit > 0) {
             try {
                 const history = await loadChatHistory(currentChatId);
-                contextMessages = history.slice(-memoryLimit).map(msg => {
+                       contextMessages = history.slice(-memoryLimit).map(msg => {
                     let finalContent = msg.text;
                     if (msg.isOffline) finalContent = `(Offline Event: ${finalContent})`;
                     
-                    // 【关键修复】防止系统消息 (如撤回提示、系统警告) 被误认为 AI 说的，导致 AI 认错自己的人设
                     let role = 'assistant';
+
                     if (msg.type === 'sent') {
                         role = 'user';
                     } else if (msg.type === 'system') {
-                        role = 'user'; // 将系统事件挂在 user 名下，防止污染 AI 自己的上下文认知
+                        role = 'user'; 
                         finalContent = `[System Event: ${finalContent}]`;
-                        // 如果是AI的开场白，其实它是 assistant 说的
+                        // 识别是不是 AI 自己的系统系统开场白
                         if (msg.id && msg.id.startsWith('msg_sys_') && !msg.isRevoked && !finalContent.includes('你撤回了')) {
                             role = 'assistant';
                             finalContent = msg.text;
                         }
                     }
                     
+                    // 坚决不加名字前缀！直接返回纯内容
                     return { role: role, content: finalContent };
                 });
+
             } catch (e) {}
         }
     }
+
 
     // === [一起听] & 记忆引擎 ===
     if (typeof getMusicContext === 'function') {
@@ -2563,6 +2570,17 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
     if (targetChatType === 'single' && typeof wbData !== 'undefined' && wbData.after_char) {
         finalMessages.push({ role: "system", content: parseMacros(wbData.after_char) });
     }
+    // 【最关键的一步】：把“要求分段发微信、把动作放进innerVoice、输出JSON”的指令发给AI！
+    if (targetChatType === 'single' && window._tempFormatPrompt) {
+        finalMessages.push({ role: "system", content: window._tempFormatPrompt });
+        
+        // 👇【保命补丁】强行把 AI 的注意力从 JSON 格式拉回到“角色扮演”上！模拟酒馆的 Post-History 锚点
+        const charNameFallback = f.realName || '助手';
+        finalMessages.push({ 
+            role: "system", 
+            content: `[CRITICAL REMINDER] Format is important, but YOUR PERSONA IS THE ABSOLUTE PRIORITY. You MUST STRICTLY stay in character as ${charNameFallback}. Maintain your exact personality, tone, vocabulary, and worldview in the "chatResponse" array. Do NOT break character just to sound like a normal modern chatter.` 
+        });
+    }
 
     if (userMessage && userMessage.trim() !== '') {
         finalMessages.push({ role: "user", content: userMessage });
@@ -2579,11 +2597,7 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
         });
     }
 
-    // 【关键修复】：将格式化指令放在最后，利用大模型的近因效应，强化服从度同时兼顾人设
-    if (targetChatType === 'single' && window._tempFormatPrompt) {
-        finalMessages.push({ role: "system", content: window._tempFormatPrompt });
-        delete window._tempFormatPrompt;
-    }
+
 
     // 处理视觉解析 (IMAGE_CONTENT)
     finalMessages = finalMessages.map(msg => {
@@ -2663,78 +2677,144 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
                 }
             });
         } else {
-            // ------ 单聊结果解析 (JSON chatResponse 引擎) ------
+                      // ------ 单聊结果解析 (Tag标签+纯文本 引擎) ------
             let rawReply = aiReply;
 
             // 剥离 Markdown 代码块包裹
             rawReply = rawReply.replace(/^```[a-zA-Z]*\n?/gi, '').replace(/```$/i, '').trim();
-           // 尝试解析为 JSON chatResponse 数组
+
             let chatResponseArr = [];
-            try {
-                const jsonMatch = rawReply.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    
-                    // ==========================================
-                    // 🌟 新增：直接从第一次请求提取并更新心声状态
-                    // ==========================================
-                    // ✅ 将 currentName 修改为 targetChatId
-                    if (parsed.innerVoice && friendsData[targetChatId]) { 
-                        const state = friendsData[targetChatId].mindState;
-                        const v = parsed.innerVoice;
-                        state.action = v.action || v.behavior || state.action;
-                        state.location = v.location || state.location;
-                        state.weather = v.weather || state.weather;
-                        state.bgm = v.bgm || state.bgm;
-                        state.murmur = v.murmur || v.thought || v.thoughts || state.murmur;
-                        state.hiddenThought = v.hiddenThought || v.naughtyThoughts || '';
-                        state.kaomoji = v.kaomoji || state.kaomoji;
-                        
-                        saveFriendsData();
-                        refreshMindCardUI(targetChatId, false); // ✅ 这里也修改了
-                        if(typeof syncMindBgmToPlayer === 'function') syncMindBgmToPlayer(state.bgm);
-                        
-                        // 同步首页音乐标题
-                        const homeTitle = document.getElementById('home-music-title');
-                        const homeArtist = document.getElementById('home-music-artist');
-                        if (state.bgm && state.bgm.includes(' - ')) {
-                            const parts = state.bgm.split(' - ');
-                            if (homeTitle) homeTitle.innerText = parts[0].trim();
-                            if (homeArtist) homeArtist.innerText = parts.slice(1).join(' - ').trim();
+
+            // 1. 优先提取并应用心声模块 [STATUS_START]...[STATUS_END]
+            const statusRegex = /\[STATUS_START\]([\s\S]*?)\[STATUS_END\]/i;
+            const statusMatch = rawReply.match(statusRegex);
+            if (statusMatch) {
+                // 利用原有函数解析状态块
+                parseAndApplyMindStateBlock(targetChatId, statusMatch[0]);
+                // 把状态块从正文中删掉，剩下的就是聊天内容
+                rawReply = rawReply.replace(statusRegex, '').trim();
+            } else {
+                // 兼容补丁：如果有些老模型依然顽固输出了 JSON，尝试容错解析
+                try {
+                    const jsonMatch = rawReply.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        const parsed = JSON.parse(jsonMatch[0]);
+                        if (parsed.innerVoice && friendsData[targetChatId]) { 
+                            const state = friendsData[targetChatId].mindState;
+                            const v = parsed.innerVoice;
+                            state.action = v.action || v.behavior || state.action;
+                            state.location = v.location || state.location;
+                            state.weather = v.weather || state.weather;
+                            state.bgm = v.bgm || state.bgm;
+                            state.murmur = v.murmur || v.thought || v.thoughts || state.murmur;
+                            state.hiddenThought = v.hiddenThought || v.naughtyThoughts || '';
+                            state.kaomoji = v.kaomoji || state.kaomoji;
+                            
+                            saveFriendsData();
+                            refreshMindCardUI(targetChatId, false); 
+                            if(typeof syncMindBgmToPlayer === 'function') syncMindBgmToPlayer(state.bgm);
                         }
+                        if (parsed.chatResponse && Array.isArray(parsed.chatResponse)) {
+                            chatResponseArr = parsed.chatResponse;
+                        } else if (typeof parsed.chatResponse === 'string') {
+                            chatResponseArr = [{ type: 'text', content: parsed.chatResponse }];
+                        }
+                        rawReply = ''; // JSON处理完毕，清空纯文本流
+                    }
+                } catch(e){}
+            }
+            // 2. 纯文本转气泡数组 (如果上面的JSON没生效，说明是纯文本格式)
+            if (rawReply) {
+                const msgParts = rawReply.split(/---MSG_SEP---/).map(s => s.trim()).filter(Boolean);
+                
+                chatResponseArr = msgParts.flatMap(text => {
+                    let items = [];
+                    
+                    // === 提前提取翻译，防止被功能正则吃掉 ===
+                    let transText = null;
+                    if (text.includes('___TRANSLATION_SEP___')) {
+                        const parts = text.split('___TRANSLATION_SEP___');
+                        text = parts[0].trim();
+                        transText = parts[1] ? parts[1].trim() : null;
                     }
 
-                    if (parsed.chatResponse && Array.isArray(parsed.chatResponse)) {
-                        chatResponseArr = parsed.chatResponse;
-                    } else if (typeof parsed.chatResponse === 'string') {
-                        // 降级：AI 返回了字符串而非数组
-                        chatResponseArr = [{ type: 'text', content: parsed.chatResponse }];
+                    // 提取隐藏功能指令
+                    if (text.match(/\[CHANGE_AVATAR\]/i)) {
+                        items.push({ type: 'change_avatar', translation: transText });
+                        text = text.replace(/\[CHANGE_AVATAR\]/gi, '').trim();
+                        if (!text) return items;
                     }
-                }
-            } catch (e) { 
-                console.error("JSON 提取状态失败:", e); // ✅ 抛出真实的错误方便以后排查
+
+                    const stickerMatch = text.match(/^\[表情:(.+?)\]$/i);
+                    if (stickerMatch) { items.push({ type: 'sticker', sticker_name: stickerMatch[1].trim(), translation: transText }); return items; }
+                    
+                    const voiceMatch = text.match(/^\[VOICE\]([\s\S]*)$/is) || text.match(/^\[VOICE:(.+?)\]$/is);
+                    if (voiceMatch) { items.push({ type: 'voice_message', content: voiceMatch[1].trim(), translation: transText }); return items; }
+
+                    const patMatch = text.match(/\[PAT\]/i);
+                    if (patMatch) { items.push({ type: 'pat_user', translation: transText }); return items; }
+
+                    const transferMatch = text.match(/\[WC_TRANSFER:([\d.]+):(.*?)\]/i);
+                    if (transferMatch) { items.push({ type: 'transfer', amount: transferMatch[1], note: transferMatch[2], translation: transText }); return items; }
+
+                    const intimateMatch = text.match(/\[INTIMATE:(.+?)\]/i);
+                    if (intimateMatch) { items.push({ type: 'grant_pay', limit: intimateMatch[1], translation: transText }); return items; }
+
+                    const acceptIntimate = text.match(/\[ACCEPT_INTIMATE\]/i);
+                    if (acceptIntimate) { items.push({ type: 'intimate_reply', decision: 'accepted', translation: transText }); return items; }
+
+                    const rejectIntimate = text.match(/\[REJECT_INTIMATE\]/i);
+                    if (rejectIntimate) { items.push({ type: 'intimate_reply', decision: 'rejected', translation: transText }); return items; }
+
+                    const takeoutMatch = text.match(/\[TAKEOUT:(.+?):([\d.]+)\]/i);
+                    if (takeoutMatch) { items.push({ type: 'takeout', shop_name: takeoutMatch[1], price: takeoutMatch[2], translation: transText }); return items; }
+
+                    const mapMatch = text.match(/\[MAP:(.*?)\|(.*?)\|([\d.]+)\]/i);
+                    if (mapMatch) { items.push({ type: 'send_location', user_location: mapMatch[1].trim(), my_location: mapMatch[2].trim(), distance_km: mapMatch[3], translation: transText }); return items; }
+
+                    const musicMatch = text.match(/\[MUSIC:(.+?):(.*?)\]/i);
+                    if (musicMatch) { items.push({ type: 'change_music', song_name: musicMatch[1], artist: musicMatch[2], translation: transText }); return items; }
+
+                    items.push({ type: 'text', content: text, translation: transText });
+                    return items;
+                });
             }
 
-    
+
+            if (chatResponseArr.length === 0) {
+                showAiErrorModal('AI 返回空内容', '解析后没有发现有效的消息体。');
+                return;
+            }
 
             // 如果 JSON 解析失败，降级为旧的 ---MSG_SEP--- 纯文本解析
             if (chatResponseArr.length === 0) {
-                // 尝试按分隔符拆分
                 const msgParts = rawReply.split(/---MSG_SEP---/).map(s => s.trim()).filter(Boolean);
                 if (msgParts.length > 0) {
                     chatResponseArr = msgParts.map(text => {
-                        // 检测旧格式标签并转为 JSON 类型
+                        let transText = null;
+                        if (text.includes('___TRANSLATION_SEP___')) {
+                            const parts = text.split('___TRANSLATION_SEP___');
+                            text = parts[0].trim();
+                            transText = parts[1] ? parts[1].trim() : null;
+                        }
                         const stickerMatch = text.match(/^\[STICKER:(.+?)\]$/i);
-                        if (stickerMatch) return { type: 'sticker', sticker_name: stickerMatch[1].trim() };
+                        if (stickerMatch) return { type: 'sticker', sticker_name: stickerMatch[1].trim(), translation: transText };
                         const voiceMatch = text.match(/^\[VOICE:(.+?)\]$/is);
-                        if (voiceMatch) return { type: 'voice_message', content: voiceMatch[1].trim() };
-                        return { type: 'text', content: text };
+                        if (voiceMatch) return { type: 'voice_message', content: voiceMatch[1].trim(), translation: transText };
+                        return { type: 'text', content: text, translation: transText };
                     });
                 } else {
-                    // 最终降级：整段作为一条消息
-                    chatResponseArr = [{ type: 'text', content: rawReply }];
+                    let transText = null;
+                    let fText = rawReply;
+                    if (fText.includes('___TRANSLATION_SEP___')) {
+                        const parts = fText.split('___TRANSLATION_SEP___');
+                        fText = parts[0].trim();
+                        transText = parts[1] ? parts[1].trim() : null;
+                    }
+                    chatResponseArr = [{ type: 'text', content: fText, translation: transText }];
                 }
             }
+
 
             if (chatResponseArr.length === 0) {
                 showAiErrorModal('AI 返回空内容', '返回数据为空。');
@@ -2807,12 +2887,12 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
                         _saveAndNotify(); return;
                     }
 
-                    if (msgType_json === 'grant_pay') {
+                                       if (msgType_json === 'grant_pay') {
                         // 赠予亲密付
                         const limit = msgObj.limit === '无限' ? '无限' : parseFloat(msgObj.limit);
                         textToSave = `[INTIMATE_AI2ME:${limit}:pending:${aiMsgId}]`;
                         textToRender = textToSave;
-                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, null, aiMsgId);
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, transText, aiMsgId); // 将 null 替换为 transText
                         _saveAndNotify(); return;
                     }
 
@@ -2825,31 +2905,22 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
                         return;
                     }
 
-                    if (msgType_json === 'takeout') {
+                                     if (msgType_json === 'takeout') {
                         // 点外卖
                         const shop = msgObj.shop_name || '未知店铺';
                         const price = parseFloat(msgObj.price) || 20;
                         textToSave = `[TAKEOUT_CARD:${shop}:${price}]`;
+                        textToRender = textToSave;
                         if (typeof window.deductBalanceForTakeout === 'function') window.deductBalanceForTakeout(price, shop);
                         if (isLookingAtThisChat) {
-                            const encodedShop = encodeURIComponent(shop);
-                            const cardHtml = `
-                                <div class="msg-takeout-card" onclick="openRealTakeoutApp('${encodedShop}')">
-                                    <div class="takeout-header"><div class="takeout-title">TA为你点了外卖 🛵</div><div class="takeout-price">-¥${price}</div></div>
-                                    <div class="takeout-body"><div class="takeout-shop-name">${shop}</div><div class="takeout-desc">正在快马加鞭送达中...</div></div>
-                                    <div class="takeout-footer">亲密付自动代付</div>
-                                </div>`;
-                            const row = document.createElement('div'); row.className = 'chat-row received';
-                            row.setAttribute('data-msg-id', aiMsgId);
-                            row.innerHTML = `<img class="chat-avatar-img" src="${avatarUrl}"><div class="message-bubble rich-bubble">${cardHtml}</div>`;
-                            document.getElementById('chatMessages').appendChild(row);
-                            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                            appendMessage(textToRender, 'received', avatarUrl, fName, transText, aiMsgId);
                         }
                         startTakeoutDeliveryTimer(targetChatId, shop);
                         _saveAndNotify(); return;
                     }
 
-                    if (msgType_json === 'send_location') {
+
+                                       if (msgType_json === 'send_location') {
                         // 发定位
                         const aiLoc = msgObj.my_location || '未知';
                         const meLoc = msgObj.user_location || '未知';
@@ -2865,9 +2936,10 @@ ${f.lastSharedImage ? '  - 换头像: {"type":"change_avatar"}\n' : ''}
                         if (typeof saveMapsData === 'function') saveMapsData();
                         textToSave = `[MAP_CARD:${meLoc}|${aiLoc}|${dist}||true]`;
                         textToRender = textToSave;
-                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, null, aiMsgId);
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, transText, aiMsgId); // 将 null 替换为 transText
                         _saveAndNotify(); return;
                     }
+
 
                     if (msgType_json === 'change_music') {
                         // 切歌
