@@ -7171,209 +7171,74 @@ img.msg-sticker-img {
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); 
 }
 /* =========================================
-   [NEW] USER 人设生成器 (灵动便当盒 / 手账风)
+   [人设档案馆] 横向滑动 3页终极版 (带标签)
    ========================================= */
-
 #personaBuilderApp {
-    display: flex;
-    flex-direction: column;
+    background-color: #f4f4f5; font-family: 'Playfair Display', 'PingFang SC', sans-serif; color: #111;
+    overflow: hidden; display: flex; flex-direction: column;
+}
+.pb-magazine-slider {
+    flex: 1; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+    scroll-behavior: smooth; -ms-overflow-style: none; scrollbar-width: none; margin-top: 80px;
+}
+.pb-magazine-slider::-webkit-scrollbar { display: none; }
+.pb-slide-wrapper { min-width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start; scroll-snap-align: center; }
+.pb-mag-page {
+    width: 100%; height: 100%; border-radius: 0; background: #fff;
+    position: relative; overflow: hidden; display: flex; flex-direction: column;
 }
 
-/* 悬浮毛玻璃头部 */
-.pb-magic-header {
-    background: rgba(244, 245, 247, 0.85);
-    backdrop-filter: blur(20px);
-    height: 70px;
-    padding: 0 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 100;
-    flex-shrink: 0;
-}
-.pb-back-btn {
-    width: 36px; height: 36px;
-    background: #fff; border-radius: 50%;
-    display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    color: #111; cursor: pointer; transition: 0.2s;
-}
-.pb-back-btn:active { transform: scale(0.9); }
+/* 封面区 */
+.pb-page-cover { background: #000; }
+.pb-cover-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; opacity: 0.8; }
+.pb-cover-gradient { position: absolute; bottom: 0; left: 0; width: 100%; height: 80%; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0) 100%); z-index: 2; }
+.pb-cover-content { position: absolute; bottom: 0; left: 0; width: 100%; height: 65%; overflow-y: auto; padding: 20px 25px 40px; z-index: 3; color: #fff; box-sizing: border-box; -ms-overflow-style: none; scrollbar-width: none; }
+.pb-cover-content::-webkit-scrollbar { display: none; }
+.pb-cover-subtitle { font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 4px; color: rgba(255,255,255,0.7); margin-bottom: 5px; text-transform: uppercase; }
+.pb-cover-name-input { background: transparent; border: none; color: #fff; font-family: 'Playfair Display', 'Songti SC', serif; font-size: 36px; font-weight: 900; width: 100%; outline: none; margin-bottom: 5px; }
+.pb-cover-name-input::placeholder { color: rgba(255,255,255,0.3); }
 
-.pb-title-box { text-align: center; display: flex; flex-direction: column; }
-.pb-title-main { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 900; letter-spacing: 2px; color: #111; }
-.pb-title-sub { font-size: 9px; font-weight: 600; color: #aaa; letter-spacing: 1px; }
-
-.pb-save-btn {
-    width: 36px; height: 36px;
-    background: #111; color: #fff; border-radius: 50%;
-    display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    cursor: pointer; transition: 0.2s;
+/* 封面输入框 */
+.pb-cover-input-group { margin-bottom: 15px; }
+.pb-cover-input-group label { display: block; font-size: 10px; color: rgba(255,255,255,0.6); margin-bottom: 6px; letter-spacing: 1px; }
+.pb-cover-input-group input, .pb-cover-input-group textarea {
+    width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;
+    color: #fff; padding: 12px; font-size: 13px; outline: none; backdrop-filter: blur(10px); box-sizing: border-box; font-family: inherit;
 }
-.pb-save-btn:active { transform: scale(0.9); }
+.pb-cover-input-group input::placeholder, .pb-cover-input-group textarea::placeholder { color: rgba(255,255,255,0.3); }
+.pb-cover-row { display: flex; gap: 10px; }
 
-/* 容器隐藏滚动条 */
-.pb-scroll-container {
-    flex: 1; overflow-y: auto; padding: 20px 24px;
-    display: flex; flex-direction: column; gap: 25px;
-    -ms-overflow-style: none; scrollbar-width: none;
-}
-.pb-scroll-container::-webkit-scrollbar { display: none; }
+/* 换图按钮 */
+.pb-cam-btn { position: absolute; top: 25px; right: 25px; z-index: 10; width: 40px; height: 40px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #fff; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); }
 
-/* --- 流光魔法 AI 区域 --- */
-.pb-ai-magic-card {
-    background: linear-gradient(135deg, #ffffff 0%, #fffcfb 100%);
-    border-radius: 28px;
-    padding: 24px;
-    box-shadow: 0 15px 35px rgba(255, 126, 103, 0.08), inset 0 0 0 1px rgba(255, 126, 103, 0.15);
-    position: relative;
-    animation: fadeUpBento 0.5s ease backwards;
-}
-.pb-ai-badge {
-    display: inline-block; background: #ff7e67; color: #fff;
-    padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 800;
-    margin-bottom: 12px; box-shadow: 0 4px 10px rgba(255, 126, 103, 0.3);
-}
-.pb-ai-textarea {
-    width: 100%; border: none; background: transparent;
-    font-size: 14px; line-height: 1.6; color: #333; resize: none; outline: none;
-}
-.pb-ai-textarea::placeholder { color: #fca593; font-weight: 300; }
+/* 内页区 */
+.pb-inner-header { padding: 25px 25px 15px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #bbb; text-transform: uppercase; border-bottom: 1px solid #f0f0f0; margin-bottom: 15px; }
+.pb-inner-content { flex: 1; padding: 0 25px 25px; overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+.pb-inner-content::-webkit-scrollbar { display: none; }
 
-.pb-ai-selects { 
-    display: flex; 
-    gap: 10px; 
-    margin-top: 15px; 
-    width: 100%; 
-}
-.pb-ai-selects select {
-    flex: 1; 
-    padding: 10px 12px; 
-    border-radius: 16px; 
-    border: none;
-    background: rgba(255, 126, 103, 0.05); 
-    color: #ff7e67; 
-    font-size: 11px; 
-    font-weight: 700; 
-    outline: none;
-    
-    /* === 核心修复：防止内容过长撑爆父容器 === */
-    min-width: 0; 
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-}
+.pb-mag-input-group { margin-bottom: 22px; position: relative; }
+.pb-mag-input-group label { display: block; font-size: 13px; font-weight: 800; color: #111; margin-bottom: 6px; }
+.pb-mag-input-group .sub-label { font-size: 10px; color: #888; font-weight: 400; margin-left: 5px; }
+.pb-mag-input-group input, .pb-mag-input-group textarea { width: 100%; border: none; background: #f6f6f7; border-radius: 14px; padding: 14px; font-size: 13px; color: #333; outline: none; transition: 0.3s; box-sizing: border-box; font-family: inherit; line-height: 1.5; }
+.pb-mag-input-group input:focus, .pb-mag-input-group textarea:focus { background: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #ddd; }
+.pb-mag-input-group textarea { min-height: 70px; resize: vertical; }
 
+/* 快捷标签区 */
+.pb-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pb-tag { background: #eee; color: #555; padding: 4px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: 0.2s; }
+.pb-tag:hover { background: #111; color: #fff; }
+.pb-tag.nsfw { background: #ffe4e6; color: #e11d48; }
+.pb-tag.nsfw:hover { background: #e11d48; color: #fff; }
+.pb-btn-random { background: #111; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 
-.pb-btn-magic {
-    width: 100%; margin-top: 15px; padding: 16px; border-radius: 20px; border: none;
-    background: linear-gradient(135deg, #ff7e67, #ff4d4f); color: #fff;
-    font-size: 13px; font-weight: 800; letter-spacing: 1px;
-    box-shadow: 0 8px 25px rgba(255, 77, 79, 0.3); cursor: pointer; transition: 0.2s;
-}
-.pb-btn-magic:active { transform: scale(0.96); box-shadow: 0 4px 10px rgba(255, 77, 79, 0.2); }
-
-/* --- 模块分类标题 --- */
-.pb-section-label {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 12px; font-weight: 800; color: #999;
-    letter-spacing: 2px; margin-bottom: -10px;
-    padding-left: 5px;
-}
-
-/* --- 便当盒网格 (Bento Grid) --- */
-.pb-bento-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-}
-.col-span-2 { grid-column: span 2; }
-
-/* --- 灵动输入框 (Hover & Focus 交互) --- */
-.pb-input-wrapper {
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 14px 16px;
-    border: 1px solid rgba(0,0,0,0.02);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    overflow: hidden;
-    animation: fadeUpBento 0.5s ease backwards;
-}
-
-/* 给各个模块加上轻微延迟，实现瀑布流加载感 */
-.pb-bento-grid:nth-of-type(1) .pb-input-wrapper { animation-delay: 0.1s; }
-.pb-bento-grid:nth-of-type(2) .pb-input-wrapper { animation-delay: 0.2s; }
-.pb-bento-grid:nth-of-type(3) .pb-input-wrapper { animation-delay: 0.3s; }
-.pb-bento-grid:nth-of-type(4) .pb-input-wrapper { animation-delay: 0.4s; }
-
-/* 核心：点击输入时的浮起效果 */
-.pb-input-wrapper:focus-within {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.06);
-    border-color: #2b2b2b;
-    z-index: 10;
-}
-
-.pb-input-wrapper label {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 10px; font-weight: 700; color: #a0a0a0;
-    margin-bottom: 6px; letter-spacing: 0.5px;
-}
-.pb-input-wrapper label i { color: #ccc; font-size: 12px; }
-
-/* 聚焦时图标变黑 */
-.pb-input-wrapper:focus-within label i,
-.pb-input-wrapper:focus-within label {
-    color: #111;
-}
-
-/* --- 灵动输入框 (Hover & Focus 交互) --- */
-.pb-input-wrapper input {
-    width: 100%; border: none; background: transparent;
-    font-size: 13px; font-weight: 600; color: #222;
-    outline: none; line-height: 1.5; font-family: inherit;
-    padding: 0;
-}
-
-/* --- 灵动多行输入框 (自动隐藏滚动条) --- */
-.pb-input-wrapper textarea {
-    width: 100%; border: none; background: transparent;
-    font-size: 13px; font-weight: 600; color: #222;
-    outline: none; line-height: 1.5; font-family: inherit;
-    padding: 0; min-height: 44px; 
-    
-    /* 1. 禁止手动拉伸破坏排版 */
-    resize: none; 
-    
-    /* 2. 彻底隐藏丑陋的系统滚动条，但保留滑动能力 */
-    -ms-overflow-style: none;  /* IE / Edge */
-    scrollbar-width: none;     /* Firefox */
-}
-
-/* 3. 针对 Chrome/Safari 的专属隐藏 */
-.pb-input-wrapper textarea::-webkit-scrollbar {
-    display: none;
-}
-
-
-/* --- AI 填装成功的呼吸发光动画 --- */
-@keyframes bentoHighlight {
-    0% { background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transform: scale(1); }
-    50% { background: #fffdf5; box-shadow: 0 10px 30px rgba(255, 126, 103, 0.15); transform: scale(1.02); border-color: #ff7e67; }
-    100% { background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transform: scale(1); border-color: rgba(0,0,0,0.02); }
-}
-.ai-filled-flash {
-    animation: bentoHighlight 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-@keyframes fadeUpBento {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
+/* 底部区域 */
+.pb-bottom-area { padding: 10px 20px 20px; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+.pb-pagination { display: flex; gap: 8px; justify-content: center; align-items: center; }
+.pb-dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; transition: 0.3s; cursor: pointer; }
+.pb-dot.active { width: 20px; background: #111; border-radius: 4px; }
+.pb-mag-bottom-bar { width: 100%; background: #fff; border-radius: 30px; display: flex; align-items: center; padding: 6px 6px 6px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #eaeaea; box-sizing: border-box; }
+#pb-ai-prompt { flex: 1; background: transparent; border: none; font-size: 13px; color: #111; outline: none; }
+.pb-mag-ai-btn { width: 40px; height: 40px; border-radius: 50%; background: #111; color: #fff; display: flex; justify-content: center; align-items: center; cursor: pointer; }
 
 
 /* =========================================
@@ -7823,3 +7688,151 @@ body, html, .phone, .app-fullscreen-view { max-width: 100vw !important; overflow
 .preset-list-item pre, .preset-list-item div, .preset-prompt-item textarea { white-space: pre-wrap !important; word-wrap: break-word !important; word-break: break-all !important; max-width: 100% !important; box-sizing: border-box !important; }  
 /* 4. ���Ԥ��༭�����ܴ��ڵĿ������ */  
 .preset-editor-overlay { max-width: 100vw !important; overflow-x: hidden !important; } 
+/* =========================================
+   人设档案馆 - 扑克牌画廊 (Ins 杂志风)
+   ========================================= */
+#pb-gallery-view::-webkit-scrollbar { display: none; }
+
+.pb-mag-card {
+    min-width: 78vw;
+    height: 70vh;
+    border-radius: 40px; /* 大圆角 */
+    background: #eee;
+    position: relative;
+    scroll-snap-align: center;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+.pb-mag-card:active { transform: scale(0.96); }
+
+.pb-mag-card img {
+    width: 100%; height: 100%; object-fit: cover;
+}
+
+/* 底部黑色渐变，凸显白色杂志字 */
+.pb-mag-card-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 50%);
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 35px 30px; color: #fff;
+    pointer-events: none;
+}
+
+.pb-mag-card-name {
+    font-family: 'Playfair Display', 'Songti SC', serif;
+    font-size: 42px; font-weight: 900; line-height: 1; margin-bottom: 8px;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.pb-mag-card-desc {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px; letter-spacing: 3px; color: rgba(255,255,255,0.8);
+    font-weight: 600; text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+/* 最后一个加号卡片 */
+.pb-mag-card-add {
+    min-width: 78vw; height: 70vh; border-radius: 40px;
+    background: #fff; border: 2px dashed #ccc;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    scroll-snap-align: center; cursor: pointer; flex-shrink: 0;
+}
+.pb-mag-card-add i { font-size: 60px; color: #111; margin-bottom: 20px; }
+.pb-mag-card-add span { font-family: 'Montserrat', sans-serif; font-weight: 800; color: #888; letter-spacing: 2px; }
+/* =========================================
+   人设馆：扑克牌滑动 & 杂志封面重排
+   ========================================= */
+/* 1. 扑克牌画廊 (叠加滑动效果) */
+#pb-gallery-view {
+    padding: 0 calc(50vw - 120px) !important; /* 让第一张卡片居中 */
+    perspective: 1000px;
+}
+#pb-gallery-view::-webkit-scrollbar { display: none; }
+
+.pb-mag-card, .pb-mag-card-add {
+    width: 240px !important;       /* 强制锁死宽度，所有牌一模一样 */
+    min-width: 240px !important;
+    max-width: 240px !important;
+    height: 65vh;                  
+    flex-shrink: 0;                /* 绝对不允许被挤压变窄 */
+    border-radius: 32px;
+    margin: 0 -20px;               /* 负边距让它们像扑克牌叠起来 */
+    box-shadow: -15px 0 30px rgba(0,0,0,0.3); 
+    position: relative;
+    overflow: hidden;
+    scroll-snap-align: center;
+    cursor: pointer;
+    background: #111;
+    box-sizing: border-box;
+}
+
+/* 确保加号卡片也没有多余的边距影响宽度 */
+.pb-mag-card-add { 
+    background: #fff; 
+    border: 2px dashed #ccc; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center; 
+    box-shadow: none; 
+    /* 删掉了之前的 margin-left: 10px，保证完全对齐 */
+}
+
+
+.pb-mag-card img { width: 100%; height: 100%; object-fit: cover; }
+
+.pb-mag-card-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 50%);
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 30px 20px; color: #fff; pointer-events: none;
+}
+.pb-mag-card-name { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+.pb-mag-card-desc { font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 3px; color: rgba(255,255,255,0.7); }
+
+.pb-mag-card-add { background: #fff; border: 2px dashed #ccc; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: none; margin-left: 10px;}
+.pb-mag-card-add i { font-size: 50px; color: #111; margin-bottom: 15px; }
+.pb-mag-card-add span { font-family: 'Montserrat', sans-serif; font-weight: 800; color: #888; letter-spacing: 2px; font-size: 12px;}
+
+/* 2. 第一页：极简杂志封面 */
+.pb-cover-gradient-v2 {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 100%);
+    pointer-events: none; z-index: 2;
+}
+
+.mag-cover-top {
+    position: absolute; top: 30px; left: 25px; right: 25px;
+    display: flex; justify-content: space-between;
+    font-family: 'Montserrat', sans-serif; font-size: 10px; color: #fff;
+    font-weight: 700; letter-spacing: 2px; z-index: 3;
+}
+
+.mag-cover-bottom {
+    position: absolute; bottom: 40px; left: 25px; right: 25px;
+    z-index: 3; display: flex; flex-direction: column;
+}
+
+/* 名字输入框 */
+.mag-title-huge {
+    font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 900;
+    color: #fff; background: transparent; border: none; outline: none;
+    width: 100%; text-shadow: 0 4px 15px rgba(0,0,0,0.3); padding: 0; margin-bottom: 5px;
+}
+.mag-title-huge::placeholder { color: rgba(255,255,255,0.5); }
+
+/* 昵称输入框 */
+.mag-subtitle {
+    font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 2px; color: #f59e0b; background: transparent; border: none;
+    outline: none; width: 100%; padding: 0; margin-bottom: 25px;
+}
+
+/* 年龄和性别网格 */
+.mag-info-grid { display: flex; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 15px; }
+.mag-info-cell { flex: 1; display: flex; flex-direction: column; }
+.mag-info-cell label { font-family: 'Montserrat', sans-serif; font-size: 9px; color: rgba(255,255,255,0.6); letter-spacing: 2px; margin-bottom: 4px; }
+.mag-info-cell input { background: transparent; border: none; color: #fff; font-size: 16px; font-weight: 700; outline: none; padding: 0; }
+.mag-info-cell input::placeholder { color: rgba(255,255,255,0.3); }

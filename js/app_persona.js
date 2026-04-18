@@ -16,14 +16,16 @@ window.openPersonaBuilder = function() {
     const app = document.getElementById('personaBuilderApp');
     if (!app) return;
     
-    // 1. 加载下拉框：世界书 和 已有AI角色
-    renderPbWorldbooksAndChars();
+    // 显示画廊，隐藏表单
+    document.getElementById('pb-gallery-view').style.display = 'flex';
+    document.getElementById('pb-slider').style.display = 'none';
+    // 隐藏底部的页码和AI生成栏
+    document.querySelector('.pb-bottom-area').style.display = 'none';
     
-    // 2. 加载当前用户的存档数据
-    loadDataIntoBuilder();
-    
+    renderPersonaGallery(); // 渲染扑克牌
     app.classList.add('open');
 };
+
 
 window.closePersonaBuilder = function() {
     document.getElementById('personaBuilderApp').classList.remove('open');
@@ -150,78 +152,109 @@ Romance: ${d.pb_romance}`;
     if(typeof applyPersonaToUI === 'function') applyPersonaToUI();
     showToast("<i class='fas fa-check'></i> User人设档案已保存成功！");
 };
+// ==========================================
+// 🌟 辅助功能：快捷标签填入 & 随机地点
+// ==========================================
+window.addPbTag = function(inputId, text) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    // 如果已有文字，则加个逗号拼接；否则直接填入
+    if (el.value.trim() !== '') {
+        if (!el.value.includes(text)) el.value = el.value.trim() + '，' + text;
+    } else {
+        el.value = text;
+    }
+};
 
-// 🌟 核心：AI 一键自动扩写生成逻辑 (附带阶梯发光特效)
+window.randomLocation = function() {
+    const locations = ["赛博朋克地下街区", "顶层豪华复式公寓", "海边废弃灯塔", "常年下雨的江南小镇", "一辆改装过的末日房车", "被遗忘的欧式古堡", "繁华市中心的隐秘茶室"];
+    const rnd = locations[Math.floor(Math.random() * locations.length)];
+    document.getElementById('pb_location').value = rnd;
+};
+
+// ==========================================
+// 🌟 滑动翻页指示器联动
+// ==========================================
+window.updatePbPagination = function() {
+    const slider = document.getElementById('pb-slider');
+    const dots = document.querySelectorAll('.pb-dot');
+    if (!slider || !dots.length) return;
+    
+    const index = Math.round(slider.scrollLeft / slider.offsetWidth);
+    dots.forEach((dot, i) => {
+        if (i === index) dot.classList.add('active');
+        else dot.classList.remove('active');
+    });
+};
+
+window.scrollToPbPage = function(index) {
+    const slider = document.getElementById('pb-slider');
+    if (slider) slider.scrollTo({ left: index * slider.offsetWidth, behavior: 'smooth' });
+};
+
+// ==========================================
+// 🌟 AI 一键自动生成海量设定
+// ==========================================
 window.generatePersonaByAI = async function() {
     const brief = document.getElementById('pb-ai-prompt').value.trim();
-    const wb = document.getElementById('pb-ai-worldbook').value;
-    const charPersona = document.getElementById('pb-ai-character').value;
-    
     if (!brief) {
         alert("至少写一句你的人设想法吧！");
-        return;}
+        return;
+    }
 
     const btn = document.getElementById('pb-btn-ai');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在注入灵魂，请稍候...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.style.pointerEvents = 'none';
 
-    // 构造严格的 JSON 请求结构
+    // 构建涵盖所有新字段的 JSON 结构
     const jsonFormat = `{
-  "pb_name": "", "pb_realName": "", "pb_gender": "", "pb_age": "", "pb_occupation": "", "pb_tags": "",
-  "pb_physique": "", "pb_face": "", "pb_hair": "", "pb_style": "", "pb_voice": "", "pb_aura": "",
-  "pb_family": "", "pb_pastExp": "", "pb_turningPoint": "",
-  "pb_coreTrait": "", "pb_apparentTrait": "", "pb_hiddenTrait": "", "pb_weakness": "", "pb_values": "", "pb_desire": "", "pb_fear": "", "pb_secret": "",
-  "pb_hobbies": "", "pb_likesDislikes": "", "pb_quirks": "", "pb_romance": ""
+  "pb_name": "名字/昵称", "pb_gender": "性别", "pb_age": "年龄", "pb_occupation": "职业/身份",
+  "pb_worldview": "世界观", "pb_location": "居住地",
+  "pb_appearance": "外貌(含体型面容)", "pb_style": "穿衣打扮风格",
+  "pb_personality": "内在性格与外在气场", "pb_values": "核心价值观", "pb_nsfw": "感情与NSFW亲密偏好",
+  "pb_background": "成长经历背景", "pb_hobbies": "爱好",
+  "pb_emo_happy": "开心时的表现", "pb_emo_angry": "生气时的表现", "pb_emo_sad": "悲伤吃醋时的表现",
+  "pb_details": "生活小细节(饮食/作息/癖好)"
 }`;
 
     const megaPrompt = `
-You are an expert character designer and writer. Based on the brief ideas provided by the user, please flesh out a COMPLETE, incredibly detailed and vivid character profile (User Identity).[User's Brief Idea]: 
-"${brief}"
+你是顶级的小说角色架构师。请根据用户的简单设想，极其细致地丰满这个角色，创作一份高维度的档案。
+[用户想法]: "${brief}"
 
-${wb ? `[World Setting Reference]:\n${wb}\nMake sure the occupation, style, and background fit this world.` : ''}
-${charPersona ? `[Interaction Target Reference]:\n${charPersona}\nThis is the AIcharacter the user will interact with. Design the user's personality and secrets so they have interesting chemistry/conflict with this character.` : ''}
-
-[Task]
-Expand the brief idea into a fully detailed profile. Fill in creative, logically consistent, and charming details. 
-- UseSimplified Chinese (简体中文).
-- Be specific (e.g. instead of "Likes music", write "Always wears wired earphones listening to city pop").
-- STRICT REQUIREMENT: Output NOTHING ELSE BUT a pure JSON object matching this exact structure:
+要求：
+1. 语言使用简体中文。描写要有质感、张力，细节拉满。
+2. 必须严格输出纯 JSON 格式，包含以下全部键名，缺一不可：
 ${jsonFormat}
     `;
 
-    try {const result = await callAiForSpecialTask(megaPrompt);
+    try {
+        const result = await callAiForSpecialTask(megaPrompt);
         if (result) {
             const jsonStr = result.replace(/```json/gi, '').replace(/```/gi, '').trim();
             const data = JSON.parse(jsonStr);
             
-            let delay= 0;
-            // 自动回填并加入阶梯发光特效，像魔法注入一样
-            PB_KEYS.forEach(key => {
+            // 自动回填所有数据
+            const keys = ["pb_name", "pb_gender", "pb_age", "pb_occupation", "pb_worldview", "pb_location", 
+                          "pb_appearance", "pb_style", "pb_personality", "pb_values", "pb_nsfw", 
+                          "pb_background", "pb_hobbies", "pb_emo_happy", "pb_emo_angry", "pb_emo_sad", "pb_details"];
+            
+            keys.forEach(key => {
                 const el = document.getElementById(key);
                 if (el && data[key]) {
                     el.value = data[key];
-                    
-                    // 获取外层的包裹 div 加上动画
-                    const wrapper = el.closest('.pb-input-wrapper');
-                    if (wrapper) {
-                        setTimeout(() => {
-                            wrapper.classList.remove('ai-filled-flash');
-                            void wrapper.offsetWidth;// 触发重绘
-                            wrapper.classList.add('ai-filled-flash');
-                        }, delay);
-                        delay += 25; // 错开 25ms，形成多米诺骨牌一样的流光效果
+                    if (el.tagName.toLowerCase() === 'textarea') {
+                        el.style.height = 'auto';
+                        el.style.height = el.scrollHeight + 'px';
                     }
                 }
             });
-            showToast("<i class='fas fa-sparkles' style='color:#ff7e67;'></i> 灵魂注入完毕！");
             
-            // 自动往下滚动展示结果，然后再滚回顶部
-            const scrollBox = document.querySelector('.pb-scroll-container');
-            scrollBox.scrollTo({ top: scrollBox.scrollHeight, behavior: 'smooth' });
-            setTimeout(() => {
-                scrollBox.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 1200);
+            if(typeof showToast === 'function') {
+                showToast("<i class='fas fa-check'></i> 灵魂注入完毕！");
+            }
+
+            // AI生成后，自动滚动回第一页
+            scrollToPbPage(0);
 
         } else {
             alert("生成失败，请检查网络或更换 API。");
@@ -229,10 +262,12 @@ ${jsonFormat}
     } catch (e) {
         alert("解析失败，AI 返回格式异常: " + e.message);
     } finally {
-        btn.innerHTML = originalText;
+        btn.innerHTML = '<i class="fas fa-magic"></i>';
         btn.style.pointerEvents = 'auto';
     }
-};window.handlePbAvatarUpload = function(input) {
+};
+
+window.handlePbAvatarUpload = function(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = async function(e) {
@@ -425,3 +460,78 @@ document.addEventListener('click', function(e) {
         pbMenu.classList.remove('active');
     }
 });
+
+// --- 进入具体身份设置页 ---
+window.enterPersonaDetail = function(id) {
+    currentPersonaId = id;
+    localStorage.setItem('myCoolPhone_currentPersonaId', id);
+    
+    const galleryView = document.getElementById('pb-gallery-view');
+    const slider = document.getElementById('pb-slider');
+    const bottomArea = document.querySelector('.pb-bottom-area');
+    
+    if (galleryView) galleryView.style.display = 'none';
+    if (slider) slider.style.display = 'flex';
+    if (bottomArea) bottomArea.style.display = 'flex';
+    
+    loadDataIntoBuilder();
+    if (typeof renderPbWorldbooksAndChars === 'function') renderPbWorldbooksAndChars();
+    if (typeof updatePbPagination === 'function') updatePbPagination();
+    
+    // 如果有返回按钮，可能需要显示（取决于页面结构，这里先保持基本功能）
+};
+
+// --- 渲染扑克牌画廊 ---
+function renderPersonaGallery() {
+    const gallery = document.getElementById('pb-gallery-view');
+    gallery.innerHTML = '';
+    
+    // 插入卡片
+    Object.values(personasMeta || {}).forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'pb-mag-card';
+        card.onclick = () => enterPersonaDetail(p.id);
+        
+        card.innerHTML = `
+            <img src="${p.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&auto=format&fit=crop'}">
+            <div class="pb-mag-card-overlay">
+                <div class="pb-mag-card-name">${p.name || 'Unknown'}</div>
+                <div class="pb-mag-card-desc">PERSONALITY FILE.</div>
+            </div>
+        `;
+        gallery.appendChild(card);
+    });
+
+    // 加号卡片
+    const addCard = document.createElement('div');
+    addCard.className = 'pb-mag-card-add';
+    addCard.onclick = () => {
+        const id = 'p_' + Date.now();
+        personasMeta[id] = { id: id, name: '新身份', avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}` };
+        IDB.set(PERSONA_META_KEY, personasMeta);
+        enterPersonaDetail(id); 
+    };
+    addCard.innerHTML = `<i class="fas fa-plus"></i><span>CREATE NEW</span>`;
+    gallery.appendChild(addCard);
+
+      // === 核心：扑克牌滑动叠加效果 (大小严格一致) ===
+    gallery.onscroll = () => {
+        const cards = gallery.querySelectorAll('.pb-mag-card, .pb-mag-card-add');
+        const center = gallery.scrollLeft + gallery.clientWidth / 2; // 屏幕中心点
+        
+        cards.forEach(card => {
+            const cardCenter = card.offsetLeft + card.offsetWidth / 2; // 卡片中心点
+            const dist = Math.abs(center - cardCenter); // 距离中心的距离
+            
+            // 取消大小缩放，锁定 scale(1) 保持原大小
+            card.style.transform = `scale(1)`;
+            
+            // 只保留层级计算，确保滑到中间的牌始终压在最上面
+            card.style.zIndex = Math.round(1000 - dist);
+        });
+    };
+    
+    // 初始化触发一次计算
+    setTimeout(() => gallery.onscroll(), 50);
+
+}
