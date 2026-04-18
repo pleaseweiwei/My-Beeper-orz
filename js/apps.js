@@ -1907,15 +1907,36 @@ window.openChatDetail = async function(name) {
 
     const history = await loadChatHistory(name);
 
-    if (history.length > 0) {
-        chatMessages.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">History</span></div>`;
-        
-        let currentRealAvatar = null;
-        if (friendsData[name] && friendsData[name].avatar) {
-            currentRealAvatar = friendsData[name].avatar;
-        }
+    // 虚拟列表/截断：只渲染最后50条，滚动到顶部时加载更多
+    window._currentChatHistory = history;
+    window._currentChatRenderedCount = 0;
+    const CHAT_BATCH_SIZE = 50;
 
-        history.forEach(msg => {
+    let currentRealAvatar = null;
+    if (friendsData[name] && friendsData[name].avatar) {
+        currentRealAvatar = friendsData[name].avatar;
+    }
+
+    const renderChatBatch = (isInitial = false) => {
+        if (!window._currentChatHistory || window._currentChatRenderedCount >= window._currentChatHistory.length) return;
+
+        const total = window._currentChatHistory.length;
+        const startIndex = Math.max(0, total - window._currentChatRenderedCount - CHAT_BATCH_SIZE);
+        const batch = window._currentChatHistory.slice(startIndex, total - window._currentChatRenderedCount);
+
+        const oldScrollHeight = chatMessages.scrollHeight;
+        
+        // 我们需要把新批次插在最前面，但要保持顺序
+        // 因为 appendMessage 是在末尾追加，所以我们先用一个临时容器渲染，再把它插到 chatMessages 前面
+        const tempContainer = document.createElement('div');
+        
+        // 覆盖原始的 appendMessage 等操作，重定向到 tempContainer
+        const originalAppendChild = chatMessages.appendChild.bind(chatMessages);
+        chatMessages.appendChild = (node) => tempContainer.appendChild(node);
+        
+        // 暂存和重置 _lastChatMsgTimestamp 以防时间错乱，最好不重置
+        
+        batch.forEach(msg => {
             if (msg.isOffline) {
                 // 离线消息不渲染，但仍需更新时间戳以保证后续消息的5分钟间隔判断正确
                 if (msg.timestamp && msg.timestamp > 0) _lastChatMsgTimestamp = msg.timestamp;
@@ -1948,7 +1969,39 @@ window.openChatDetail = async function(name) {
             // 【核心修复】必须传入 msg.id 才能保证与数据库挂钩，同时传入 msg.timestamp 让时间气泡显示正确时间
             appendMessage(msg.text, msg.type, displayAvatar, msg.senderName, msg.translation, msg.id, msg.timestamp);
         });
-        setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 100);
+
+        // 还原 appendChild
+        chatMessages.appendChild = originalAppendChild;
+        
+        // 把渲染好的批次插入到列表最前面
+        chatMessages.insertBefore(tempContainer, chatMessages.firstChild);
+        
+        window._currentChatRenderedCount += batch.length;
+        
+        if (window._currentChatRenderedCount >= total) {
+             const historyLabel = document.createElement('div');
+             historyLabel.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">History</span></div>`;
+             chatMessages.insertBefore(historyLabel, chatMessages.firstChild);
+        }
+
+        if (isInitial) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else {
+            // 保持滚动位置
+            chatMessages.scrollTop = chatMessages.scrollHeight - oldScrollHeight;
+        }
+    };
+
+
+    if (history.length > 0) {
+        renderChatBatch(true);
+        
+        // 添加滚动监听
+        chatMessages.onscroll = () => {
+            if (chatMessages.scrollTop === 0) {
+                renderChatBatch(false);
+            }
+        };
 
     } else {
         const friend = friendsData[name];
@@ -3321,16 +3374,34 @@ function resetDefaultFriendData() {
 }
 
 
-// [修改版] 异步保存好友数据 (无限制)
+// [修改版] 异步保存好友数据 (防抖保护，避免高频写入卡顿)
+let _friendsDataSaveTimer = null;
 async function saveFriendsData() {
-    try {
-        // 使用 IDB.set 保存
-        await IDB.set(scopedLSKey(FRIENDS_DATA_KEY), friendsData);
-
-        // console.log("好友数据已保存 (IndexedDB)");
-    } catch (e) {
-        console.error("保存好友数据失败:", e);
+    if (_friendsDataSaveTimer) {
+        clearTimeout(_friendsDataSaveTimer);
     }
+    
+    // 如果返回 Promise，虽然实际上是延迟执行，但可以让调用方不报错
+    return new Promise((resolve) => {
+        _friendsDataSaveTimer = setTimeout(async () => {
+            try {
+                await IDB.set(scopedLSKey(FRIENDS_DATA_KEY), friendsData);
+                _friendsDataSaveTimer = null;
+                resolve(true);
+            } catch (e) {
+                console.error("保存好友数据失败:", e);
+                resolve(false);
+            }
+        }, 800); // 800ms 防抖
+    });
+}
+
+// 提供一个强制立即保存的方法（以防页面卸载等特殊情况）
+window.forceSaveFriendsDataSync = async function() {
+    if (_friendsDataSaveTimer) clearTimeout(_friendsDataSaveTimer);
+    try {
+        await IDB.set(scopedLSKey(FRIENDS_DATA_KEY), friendsData);
+    } catch(e) {}
 }
 
 // =========================================
@@ -4233,18 +4304,54 @@ const ONLINE_VOICE_KEY = 'myCoolPhone_onlineVoiceConfig';
 // autoSendAI=false：避免和你现有“点星星回复”冲突（不重复触发）
 
 
+// 聊天记录内存缓存，避免频繁读写数据库
+let chatHistoryCache = {};
+let chatHistorySaveTimers = {};
+
 // 1. 保存单条消息到 IndexedDB (已集成自动总结与动态未读触发器)
 async function saveMessageToHistory(chatId, msgData) {
     if (!chatId) return;
     
-    let chatHistory = (await IDB.get(scopedChatKey(chatId))) || [];
+    if (!chatHistoryCache[chatId]) {
+        chatHistoryCache[chatId] = (await IDB.get(scopedChatKey(chatId))) || [];
+    }
+    let chatHistory = chatHistoryCache[chatId];
 
     // 生成唯一ID并保存
     msgData.id = msgData.id || 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     msgData.timestamp = new Date().getTime();
     chatHistory.push(msgData);
     
-    await IDB.set(scopedChatKey(chatId), chatHistory);
+    // 防抖保存到 IDB
+    if (chatHistorySaveTimers[chatId]) {
+        clearTimeout(chatHistorySaveTimers[chatId]);
+    }
+    chatHistorySaveTimers[chatId] = setTimeout(() => {
+        IDB.set(scopedChatKey(chatId), chatHistoryCache[chatId]);
+        delete chatHistorySaveTimers[chatId];
+    }, 500);
+
+    // 如果当前正在查看这个聊天，同步渲染计数，并动态裁剪 DOM 节点，解决越聊越卡的问题
+    if (chatId === window.currentChatId && typeof window._currentChatRenderedCount !== 'undefined') {
+        window._currentChatRenderedCount++;
+        
+        const chatMessages = document.getElementById('chatMessages');
+        // 当会话气泡过多时 (超过 150 个) 触发裁剪
+        if (chatMessages && chatMessages.children.length > 150) {
+            let removedRows = 0;
+            // 移除顶部的气泡，直到保留最新的 80 个左右
+            while (chatMessages.children.length > 80) {
+                const first = chatMessages.firstElementChild;
+                if (!first) break;
+                if (first.classList.contains('chat-row')) {
+                    removedRows++;
+                }
+                chatMessages.removeChild(first);
+            }
+            // 同步扣除被裁剪掉的渲染计数，使得向上滑动时能重新将其无缝加载回来
+            window._currentChatRenderedCount = Math.max(0, window._currentChatRenderedCount - removedRows);
+        }
+    }
 
     // 【新增核心】未读数统计逻辑：只有收到的消息，并且当前没看着这个聊天，才增加未读
     if (msgData.senderName !== 'ME') {
@@ -4267,44 +4374,37 @@ async function saveMessageToHistory(chatId, msgData) {
     
     updateDockUnreadDot();
 
-    // 更新列表预览和红点气泡
-    const allChatItems = document.querySelectorAll('.wc-chat-item');
-    allChatItems.forEach(item => {
-        const targetId = item.getAttribute('data-chat-id');
-        const nameTag = item.querySelector('.wc-name');
-        
-        // 双重保险验证是这个角色的列表项
-        if (targetId === chatId || (nameTag && nameTag.innerText.trim() === chatId)) {
-            
-            const previewTag = item.querySelector('.wc-msg-preview');
-            if (previewTag) {
-                previewTag.innerText = formatChatPreviewText(msgData.text, !!msgData.isOffline);
-            }
+    // 更新列表预览和红点气泡 (优化性能：由 querySelectorAll 遍历改为精确查找)
+    const item = document.querySelector(`.wc-chat-item[data-chat-id="${chatId}"]`);
+    if (item) {
+        const previewTag = item.querySelector('.wc-msg-preview');
+        if (previewTag) {
+            previewTag.innerText = formatChatPreviewText(msgData.text, !!msgData.isOffline);
+        }
 
-            const timeTag = item.querySelector('.wc-time');
-            if (timeTag) timeTag.innerText = 'Just now';
+        const timeTag = item.querySelector('.wc-time');
+        if (timeTag) timeTag.innerText = 'Just now';
 
-            // 读取未读数据并渲染气泡
-            let unreadCount = 0;
-            if (friendsData[chatId]) unreadCount = friendsData[chatId].unreadCount || 0;
-            else if (groupsData && groupsData[chatId]) unreadCount = groupsData[chatId].unreadCount || 0;
+        // 读取未读数据并渲染气泡
+        let unreadCount = 0;
+        if (friendsData[chatId]) unreadCount = friendsData[chatId].unreadCount || 0;
+        else if (groupsData && groupsData[chatId]) unreadCount = groupsData[chatId].unreadCount || 0;
 
-            let avatarBox = item.querySelector('.wc-avatar');
-            if (avatarBox) {
-                let badge = avatarBox.querySelector('.wc-badge');
-                if (unreadCount > 0) {
-                    let displayCount = unreadCount > 99 ? '99+' : unreadCount;
-                    if (badge) {
-                        badge.innerText = displayCount;
-                    } else {
-                        avatarBox.insertAdjacentHTML('beforeend', `<div class="wc-badge">${displayCount}</div>`);
-                    }
+        let avatarBox = item.querySelector('.wc-avatar');
+        if (avatarBox) {
+            let badge = avatarBox.querySelector('.wc-badge');
+            if (unreadCount > 0) {
+                let displayCount = unreadCount > 99 ? '99+' : unreadCount;
+                if (badge) {
+                    badge.innerText = displayCount;
                 } else {
-                    if (badge) badge.remove();
+                    avatarBox.insertAdjacentHTML('beforeend', `<div class="wc-badge">${displayCount}</div>`);
                 }
+            } else {
+                if (badge) badge.remove();
             }
         }
-    });
+    }
     
     // === 自动总结触发逻辑 ===
     const friend = friendsData[chatId];
@@ -4329,9 +4429,43 @@ async function saveMessageToHistory(chatId, msgData) {
 
 // 2. 加载指定好友的聊天记录 (异步)
 async function loadChatHistory(chatId) {
+    if (chatHistoryCache[chatId]) {
+        return chatHistoryCache[chatId];
+    }
     const history = await IDB.get(scopedChatKey(chatId));
+    chatHistoryCache[chatId] = history || [];
+    return chatHistoryCache[chatId];
+}
 
-    return history || [];
+// 清理特定聊天的缓存并同步到 IDB
+async function flushChatHistoryCache(chatId) {
+    if (chatHistorySaveTimers[chatId]) {
+        clearTimeout(chatHistorySaveTimers[chatId]);
+        delete chatHistorySaveTimers[chatId];
+        if (chatHistoryCache[chatId]) {
+            await IDB.set(scopedChatKey(chatId), chatHistoryCache[chatId]);
+        }
+    }
+}
+
+// 同步设置整个聊天记录
+async function setChatHistory(chatId, history) {
+    chatHistoryCache[chatId] = history;
+    if (chatHistorySaveTimers[chatId]) {
+        clearTimeout(chatHistorySaveTimers[chatId]);
+        delete chatHistorySaveTimers[chatId];
+    }
+    await IDB.set(scopedChatKey(chatId), history);
+}
+
+// 同步删除整个聊天记录
+async function deleteChatHistory(chatId) {
+    delete chatHistoryCache[chatId];
+    if (chatHistorySaveTimers[chatId]) {
+        clearTimeout(chatHistorySaveTimers[chatId]);
+        delete chatHistorySaveTimers[chatId];
+    }
+    await IDB.delete(scopedChatKey(chatId));
 }
 
 // [BUG修复版] 页面加载时，把保存的好友重新画到列表上

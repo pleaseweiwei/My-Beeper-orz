@@ -161,9 +161,25 @@ window.openGroupChat = async function (groupId) {
     const history = await loadChatHistory(groupId);
     if (currentChatId !== groupId || currentChatType !== 'group') return;
 
-    if (history && history.length > 0) {
-        chatMessages.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">历史消息</span></div>`;
-        history.forEach(msg => {
+    // 虚拟列表/截断：只渲染最后50条，滚动到顶部时加载更多
+    window._currentChatHistory = history || [];
+    window._currentChatRenderedCount = 0;
+    const CHAT_BATCH_SIZE = 50;
+
+    const renderGroupChatBatch = (isInitial = false) => {
+        if (!window._currentChatHistory || window._currentChatRenderedCount >= window._currentChatHistory.length) return;
+
+        const total = window._currentChatHistory.length;
+        const startIndex = Math.max(0, total - window._currentChatRenderedCount - CHAT_BATCH_SIZE);
+        const batch = window._currentChatHistory.slice(startIndex, total - window._currentChatRenderedCount);
+
+        const oldScrollHeight = chatMessages.scrollHeight;
+        
+        const tempContainer = document.createElement('div');
+        const originalAppendChild = chatMessages.appendChild.bind(chatMessages);
+        chatMessages.appendChild = (node) => tempContainer.appendChild(node);
+        
+        batch.forEach(msg => {
             if (msg.type === 'system') {
                 const sysDiv = document.createElement('div');
                 sysDiv.style.cssText = 'text-align:center; margin:10px 0;';
@@ -185,7 +201,35 @@ window.openGroupChat = async function (groupId) {
                 appendMessage(msg.text, msg.type, avatar, msg.senderName, msg.translation, msg.id);
             }
         });
-        setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 100);
+
+        chatMessages.appendChild = originalAppendChild;
+        chatMessages.insertBefore(tempContainer, chatMessages.firstChild);
+        
+        window._currentChatRenderedCount += batch.length;
+        
+        if (window._currentChatRenderedCount >= total) {
+             const historyLabel = document.createElement('div');
+             historyLabel.innerHTML = `<div style="text-align:center; margin: 10px 0;"><span style="background:rgba(0,0,0,0.04); padding:4px 12px; border-radius:12px; font-size:10px; color:#999; font-weight:500;">历史消息</span></div>`;
+             chatMessages.insertBefore(historyLabel, chatMessages.firstChild);
+        }
+
+        if (isInitial) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else {
+            chatMessages.scrollTop = chatMessages.scrollHeight - oldScrollHeight;
+        }
+    };
+
+
+    if (history && history.length > 0) {
+        renderGroupChatBatch(true);
+        
+        chatMessages.onscroll = () => {
+            if (chatMessages.scrollTop === 0) {
+                renderGroupChatBatch(false);
+            }
+        };
+
     } else {
         // 显示群公告或欢迎消息
         const sysDiv = document.createElement('div');
@@ -716,17 +760,20 @@ ${worldStr}${longTermMemoryStr}${linkedMemoryCtx}
 ${historyText || '(暂无历史记录)'}
 
 [最高优先级规则]
-1. 输出格式: JSON 数组，每项 {"name":"角色群昵称","content":"消息内容"} 
-   - 可选附加: {"name":"xxx","content":"...","cmd":{"type":"create_private_group","invitees":["user","角色名"],"reason":"..."}} 当某成员想私下聊时使用
+1. 输出格式: 纯文本格式，每一行代表一个角色的发言。格式为：角色群昵称: 消息内容
+   - 示例：
+     张三: 哈哈哈太好笑了
+     李四: 确实
+   - 可选附加: 如果某成员想私下聊，在消息末尾加上 [CMD:create_private_group:invitee1,invitee2:reason]
 2. 消息数量: 2~6 条，根据话题热度决定。只让合适的几个角色发言，不一定每个人都说话。
 3. 真实感: 角色可相互回复、打断。
 4. 每条消息 ≤ 30 字，像真实微信群一样碎片化。
 5. 被@的角色必须优先且强制回复。
 6. 你绝对不能扮演用户（${myName}），严禁生成用户的对话！
-7. 只输出 JSON，不要任何多余文字。${groupDanmakuInstr}
+7. 只输出对话文本，不要任何多余文字。${groupDanmakuInstr}
 
 现在，用户${groupAnonymousMode ? `（化名"${myAnonName}"）` : `（${myName}）`}发送了: "${userMessage}"
-请生成群聊回复（纯 JSON 数组）:
+请生成群聊回复:
 `;
 
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
@@ -762,7 +809,7 @@ ${historyText || '(暂无历史记录)'}
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        let rawReply = data?.choices?.[0]?.message?.content || '[]';
+        let rawReply = data?.choices?.[0]?.message?.content || '';
 
         // 清理 markdown 代码块
         rawReply = rawReply.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
@@ -784,18 +831,43 @@ ${historyText || '(暂无历史记录)'}
         }
 
         let messages = [];
-        try {
-            messages = JSON.parse(rawReply);
-            if (!Array.isArray(messages)) messages = [];
-        } catch (e) {
-            console.warn('群聊JSON解析失败，尝试逐行解析:', rawReply);
-            // 备用：逐行解析 "名字: 内容" 格式
-            rawReply.split('\n').forEach(line => {
-                line = line.trim();
-                const match = line.match(/^([^:：]+)[:：](.*)/);
-                if (match) messages.push({ name: match[1].trim(), content: match[2].trim() });
-            });
-        }
+        // 逐行解析 "名字: 内容" 格式
+        rawReply.split('\n').forEach(line => {
+            line = line.trim();
+            if (!line) return;
+            const match = line.match(/^([^:：]+)[:：]\s*(.*)/);
+            if (match) {
+                let name = match[1].trim();
+                let content = match[2].trim();
+                
+                // 解析附带的命令
+                let cmd = null;
+                const cmdMatch = content.match(/\[CMD:(create_private_group):([^:]+):([^\]]+)\]/i);
+                if (cmdMatch) {
+                    cmd = {
+                        type: cmdMatch[1],
+                        invitees: cmdMatch[2].split(',').map(s => s.trim()),
+                        reason: cmdMatch[3].trim()
+                    };
+                    content = content.replace(/\[CMD:[^\]]+\]/gi, '').trim();
+                }
+                
+                messages.push({ name, content, cmd });
+            } else {
+                // 如果没有冒号，尝试检查是不是继续上一句话，或者是单纯的命令
+                if (line.match(/\[CMD:/i) && messages.length > 0) {
+                    const lastMsg = messages[messages.length - 1];
+                    const cmdMatch = line.match(/\[CMD:(create_private_group):([^:]+):([^\]]+)\]/i);
+                    if (cmdMatch) {
+                        lastMsg.cmd = {
+                            type: cmdMatch[1],
+                            invitees: cmdMatch[2].split(',').map(s => s.trim()),
+                            reason: cmdMatch[3].trim()
+                        };
+                    }
+                }
+            }
+        });
 
         // 过滤掉非群成员的消息（防止 AI 幻觉凭空造人）
         messages = messages.filter(msg => {
@@ -1092,10 +1164,10 @@ ${linkedMemoryCtx}
 ${recent || '(暂无)'}
 
 规则:
-- 输出 JSON 数组，2-5 条消息
+- 输出格式: 纯文本，每一行代表一个角色的发言。格式为：角色群昵称: 消息内容
 - 消息要符合当前时间和成员人设
 - 角色可相互回复、打断。
-- 纯 JSON，无多余文字
+- 只要对话文本，无多余文字
 
 输出:
 `;
@@ -1115,11 +1187,17 @@ ${recent || '(暂无)'}
         });
         if (!res.ok) return;
         const data = await res.json();
-        let rawReply = (data?.choices?.[0]?.message?.content || '[]').replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+        let rawReply = (data?.choices?.[0]?.message?.content || '').replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
 
         let messages = [];
-        try { messages = JSON.parse(rawReply); } catch (e) { return; }
-        if (!Array.isArray(messages) || messages.length === 0) return;
+        rawReply.split('\n').forEach(line => {
+            line = line.trim();
+            const match = line.match(/^([^:：]+)[:：]\s*(.*)/);
+            if (match) {
+                messages.push({ name: match[1].trim(), content: match[2].trim() });
+            }
+        });
+        if (messages.length === 0) return;
 
         let unreadAdded = 0;
         for (const msg of messages) {
@@ -3584,13 +3662,16 @@ ${historyText || '（刚刚开始聚会）'}
    - 每位角色视当前剧情自然叙事即可，总长度建议不超过${maxLen}字。
    - 【严禁堆砌逗号】，每个角色的回复中，动作描写或长句必须多用句号“。”进行断句，保持清爽的节奏感。
    - 该停顿时自然结束，无需凑字数。
-5. 【输出格式】：必须输出纯 JSON 数组，每项格式：{"name":"角色名","content":"叙事正文"}
-   - 不要在 JSON 数组外添加任何多余文字。
+5. 【输出格式】：必须输出纯文本格式，每一行代表一个角色的动作/发言。格式为：角色名: 叙事正文
+   - 示例：
+     张三: *笑着拍了拍手* 「哈哈，太有意思了！」
+     李四: *摇头叹息* 「哎，你们啊……」
+   - 不要在正文外添加任何多余文字。
 6. 【防出戏死命令】：你绝对不能扮演用户（${myName}），严禁生成用户的对话！
 
 ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n` : ''}
 用户（${myName}）刚才说/做了："${cleanText}"
-请生成本次聚会的多角色沉浸叙事（纯 JSON 数组）：`;
+请生成本次聚会的多角色沉浸叙事：`;
 
     // ── Loading 条目 ──
     const container = document.getElementById('offline-log-container');
@@ -3679,31 +3760,14 @@ ${userInstruction ? `\n[System: User Instruction - ${userInstruction.trim()}]\n`
 
         let messages = [];
 
-        try {
-            const aiData = JSON.parse(rawReply);
-            
-            if (aiData.messages && Array.isArray(aiData.messages)) {
-                messages = aiData.messages;
-            } else if (Array.isArray(aiData)) {
-                messages = aiData;
+        rawReply.split('\n').forEach(line => {
+            line = line.trim();
+            if (!line) return;
+            const m = line.match(/^([^:：\[{]+)[:：]\s*(.*)/);
+            if (m && m[2].trim() && !line.startsWith('{') && !line.startsWith('[')) {
+                messages.push({ name: m[1].trim(), content: m[2].trim() });
             }
-
-        } catch (e) {
-            console.warn('群聊线下模式 JSON 解析失败，尝试备用解析逻辑:', rawReply);
-
-            try {
-                messages = JSON.parse(rawReply);
-                if (!Array.isArray(messages)) messages = [];
-            } catch (e2) {
-                rawReply.split('\n').forEach(line => {
-                    line = line.trim();
-                    const m = line.match(/^([^:：\[{]+)[:：](.*)/);
-                    if (m && m[2].trim() && !line.startsWith('{') && !line.startsWith('[')) {
-                        messages.push({ name: m[1].trim(), content: m[2].trim() });
-                    }
-                });
-            }
-        }
+        });
 
         if (messages.length === 0) {
             if (typeof showAiErrorModal === 'function')
