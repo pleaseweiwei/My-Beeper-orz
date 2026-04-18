@@ -2326,14 +2326,15 @@ async function sendMessageToAI(userMessage) {
         }).join('\n');
     }
 
-    // --- 翻译模式检查 ---
-    const TRANS_SEPARATOR = "___TRANSLATION_SEP___";
-    let isTranslationEnabled = false;
-    if (targetChatType !== 'group' && chatSettings.translationMode === 'ai_to_zh') {
-        isTranslationEnabled = true;
-    } else if (targetChatType !== 'group' && chatSettings.translationMode === 'ai_to_en') {
-        isTranslationEnabled = 'en';
-    }
+   // --- 翻译模式检查 ---
+const TRANS_SEPARATOR = "___TRANSLATION_SEP___";
+let isTranslationEnabled = false;
+if (targetChatType !== 'group') {
+    if (chatSettings.translationMode === 'ai_to_zh') isTranslationEnabled = true;
+    else if (chatSettings.translationMode === 'ai_to_en') isTranslationEnabled = 'en';
+    else if (chatSettings.translationMode === 'auto_dialect') isTranslationEnabled = 'auto'; // 新增：智能同传模式
+}
+
 
     // --- 表情包权限判定与系统级注入 ---
     let stickerPrompt = "";
@@ -2436,7 +2437,7 @@ Kaomoji: 符合当前心情的颜文字
 
 (这里空一行，然后开始写发给我的微信消息)
 
-- **发消息规则**: 你的回复要模拟真实的线上聊天节奏。将你想说的话拆分成多条且简短的消息气泡，发送 ${_promptReplyMin}~${_promptReplyMax} 条短消息给我。不要一段话全挤在一起！
+- **【对话节奏铁律 (至关重要！)】**: 你的回复【必须】模拟真人的打字和思考习惯。不要一次性发送一大段文字，你应该将你想说的话，拆分成 ${_promptReplyMin}~${_promptReplyMax} 条消息气泡来发送，**每条消息最好不要超过 20 到 30 个字**。这会让对话看起来更自然、更真实。碎片化、口语化，严禁长篇大论！
 - **消息分隔符**: 每条单独的微信消息之间，必须用 \`---MSG_SEP---\` 隔开。
 - **特殊功能标签**（如果你想触发以下特定功能，直接将标签写在某条消息的文本中即可）：
   - 发送语音: \`[VOICE]对应的文字\`
@@ -2454,12 +2455,15 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
 - **财务互动规则**: 当我发来转账、亲密付等财务请求时，你【必须】根据人设和情景决定接受或拒绝，并在回复消息中自然地给出解释。
 - **禁忌事项**: 绝对不要在给我的文字消息里描写你的动作（例如不要出现 *走近*、*轻笑* 等），所有的动作和心理活动必须全部放在 \`[STATUS_START]\` 的 Action 字段里！只输出你要说的纯口语文字！
 `;
+if (isTranslationEnabled === true) {
+    window._tempFormatPrompt += `\n- **翻译要求**: 你必须将你发给我的每一条微信消息正文，先输出原语言版本，然后严格使用 \`${TRANS_SEPARATOR}\` 作为分隔符，紧接着输出对应的中文翻译。例如：Hello!${TRANS_SEPARATOR}你好！`;
+} else if (isTranslationEnabled === 'en') {
+    window._tempFormatPrompt += `\n- **翻译要求**: 你必须将你发给我的每一条微信消息正文，先输出原语言版本，然后严格使用 \`${TRANS_SEPARATOR}\` 作为分隔符，紧接着输出对应的英文翻译。例如：你好！${TRANS_SEPARATOR}Hello!`;
+} else if (isTranslationEnabled === 'auto') {
+    // 新增：智能方言/外语同传要求
+    window._tempFormatPrompt += `\n- **智能同传要求**: 你的主要交流语言是标准普通话。但如果你在回复中为了维持人设使用了非标准普通话（包括但不限于粤语、英语、日语、文言文等），你【必须】在该条消息末尾加上 \`${TRANS_SEPARATOR}\` 分隔符，并紧跟对应的标准普通话翻译。\n示例1：Bonjour!${TRANS_SEPARATOR}你好！\n示例2：食咗饭未啊？${TRANS_SEPARATOR}吃饭了吗？\n注意：如果全句都是普通话，严禁使用此分隔符！`;
+}
 
-        if (isTranslationEnabled === true) {
-            window._tempFormatPrompt += `\n- **翻译要求**: 你必须将你发给我的每一条微信消息正文，先输出原语言版本，然后严格使用 \`${TRANS_SEPARATOR}\` 作为分隔符，紧接着输出对应的中文翻译。例如：Hello!${TRANS_SEPARATOR}你好！`;
-        } else if (isTranslationEnabled === 'en') {
-            window._tempFormatPrompt += `\n- **翻译要求**: 你必须将你发给我的每一条微信消息正文，先输出原语言版本，然后严格使用 \`${TRANS_SEPARATOR}\` 作为分隔符，紧接着输出对应的英文翻译。例如：你好！${TRANS_SEPARATOR}Hello!`;
-        }
 
     }
     // ============================================
@@ -2827,7 +2831,7 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
 
             let cumulativeDelay = 0;
 
-            for (let index = 0; index < chatResponseArr.length; index++) {
+                      for (let index = 0; index < chatResponseArr.length; index++) {
                 const msgObj = chatResponseArr[index];
                 const msgContent = msgObj.content || '';
                 const msgType_json = msgObj.type || 'text';
@@ -2847,7 +2851,7 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                     // ===== 根据 type 路由不同的渲染逻辑 =====
 
                     if (msgType_json === 'sticker') {
-                        // 表情包
+                        transText = null; // 【新增】表情包不需要翻译
                         const stickerName = (msgObj.sticker_name || '').trim();
                         textToSave = `[表情:${stickerName}]`;
                         textToRender = textToSave;
@@ -2856,7 +2860,7 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                     }
 
                     if (msgType_json === 'voice_message') {
-                        // 语音消息
+                        // 【保留】语音消息保留翻译
                         const voiceText = (msgObj.content || '').trim();
                         textToSave = `[VOICE]${voiceText}`;
                         textToRender = textToSave;
@@ -2865,7 +2869,6 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                     }
 
                     if (msgType_json === 'pat_user') {
-                        // 拍一拍
                         const suffix = msgObj.suffix || '';
                         if (typeof PatApp !== 'undefined' && PatApp.handleAIPatAction) {
                             PatApp.handleAIPatAction(targetChatId, suffix);
@@ -2874,7 +2877,7 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                     }
 
                     if (msgType_json === 'transfer') {
-                        // 转账/红包
+                        transText = null; // 【新增】转账不需要翻译
                         const amount = parseFloat(msgObj.amount) || 0;
                         const note = msgObj.note || '';
                         let msgText = `[TRANSFER:${amount}:${note}]`;
@@ -2887,17 +2890,16 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                         _saveAndNotify(); return;
                     }
 
-                                       if (msgType_json === 'grant_pay') {
-                        // 赠予亲密付
+                    if (msgType_json === 'grant_pay') {
+                        transText = null; // 【新增】赠予亲密付不需要翻译
                         const limit = msgObj.limit === '无限' ? '无限' : parseFloat(msgObj.limit);
                         textToSave = `[INTIMATE_AI2ME:${limit}:pending:${aiMsgId}]`;
                         textToRender = textToSave;
-                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, transText, aiMsgId); // 将 null 替换为 transText
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, transText, aiMsgId); 
                         _saveAndNotify(); return;
                     }
 
                     if (msgType_json === 'intimate_reply') {
-                        // 回应亲密付邀请
                         const decision = msgObj.decision || 'rejected';
                         if (typeof handleIntimateAction === 'function') {
                             handleIntimateAction('invite_me_', '520', decision, 'ME2AI');
@@ -2905,8 +2907,8 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                         return;
                     }
 
-                                     if (msgType_json === 'takeout') {
-                        // 点外卖
+                    if (msgType_json === 'takeout') {
+                        transText = null; // 【新增】点外卖不需要翻译
                         const shop = msgObj.shop_name || '未知店铺';
                         const price = parseFloat(msgObj.price) || 20;
                         textToSave = `[TAKEOUT_CARD:${shop}:${price}]`;
@@ -2919,9 +2921,8 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                         _saveAndNotify(); return;
                     }
 
-
-                                       if (msgType_json === 'send_location') {
-                        // 发定位
+                    if (msgType_json === 'send_location') {
+                        transText = null; // 【新增】发定位不需要翻译
                         const aiLoc = msgObj.my_location || '未知';
                         const meLoc = msgObj.user_location || '未知';
                         const dist = parseFloat(msgObj.distance_km) || 2.5;
@@ -2936,13 +2937,11 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                         if (typeof saveMapsData === 'function') saveMapsData();
                         textToSave = `[MAP_CARD:${meLoc}|${aiLoc}|${dist}||true]`;
                         textToRender = textToSave;
-                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, transText, aiMsgId); // 将 null 替换为 transText
+                        if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, fName, transText, aiMsgId); 
                         _saveAndNotify(); return;
                     }
 
-
                     if (msgType_json === 'change_music') {
-                        // 切歌
                         const songName = msgObj.song_name || '';
                         const artist = msgObj.artist || '';
                         if (typeof changeMusicByAI === 'function') changeMusicByAI(songName, artist);
@@ -2950,7 +2949,7 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                     }
 
                     if (msgType_json === 'change_avatar') {
-                        // 换头像
+                        transText = null; // 【新增】换头像文字提示不需要翻译
                         if (friendsData[targetChatId] && friendsData[targetChatId].lastSharedImage) {
                             friendsData[targetChatId].avatar = friendsData[targetChatId].lastSharedImage;
                             saveFriendsData();
@@ -2971,6 +2970,7 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                     // [STICKER:xxx] 嵌入在 text content 中
                     const inlineStickerMatch = msgText.match(/^\[STICKER:(.+?)\]$/i);
                     if (inlineStickerMatch) {
+                        transText = null; // 【新增】内联表情包不需要翻译
                         textToSave = `[表情:${inlineStickerMatch[1].trim()}]`;
                         textToRender = textToSave;
                         if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
@@ -2990,6 +2990,7 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
 
                     textToSave = msgText;
                     textToRender = msgText;
+                    // 【保留】如果是普通文本，这里的 transText 会保留并上屏
                     if (isLookingAtThisChat) appendMessage(textToRender, 'received', avatarUrl, null, transText, aiMsgId);
 
                     _saveAndNotify();
@@ -3006,13 +3007,14 @@ ${f.lastSharedImage ? '  - 换头像: 如果你想把我刚刚发的图设为头
                                 text: textToSave,
                                 type: msgType,
                                 customAvatar: avatarUrl,
-                                translation: transText,
+                                translation: transText, // 存入数据库
                                 senderName: currentName
                             });
                         }
                     }
                 }, cumulativeDelay);
             } // end for
+
 
              // 提取纯文本聊天回复，防止把整个巨大的JSON传给第二层导致其乱码
             let pureTextReply = chatResponseArr.filter(m => m.type === 'text' || m.type === 'voice_message').map(m => m.content || '').join(' ');
