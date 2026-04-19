@@ -70,7 +70,50 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js" crossorigin="anonymous"></script>
 
     <!-- [新增] 这里专门用来放你输入的自定义CSS -->
-    <style id="dynamic-custom-css"></style>
+    <style id="dynamic-custom-css">
+        .pb-clean-input {
+            width: 100%;
+            border: none;
+            background: #f6f6f7;
+            border-radius: 14px;
+            padding: 14px;
+            font-size: 13px;
+            outline: none;
+            box-sizing: border-box;
+            transition: background 0.3s;
+        }
+        .pb-clean-input:focus {
+            background: #f0f0f2;
+        }
+        .pb-clean-textarea {
+            width: 100%;
+            border: none;
+            background: #f6f6f7;
+            border-radius: 14px;
+            padding: 14px;
+            font-size: 13px;
+            outline: none;
+            resize: vertical;
+            min-height: 80px;
+            box-sizing: border-box;
+            transition: background 0.3s;
+        }
+        .pb-clean-textarea:focus {
+            background: #f0f0f2;
+        }
+                /* 强制每次滑动只能翻一页，拒绝太滑 */
+        .pb-magazine-slider {
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+        .pb-slide-wrapper {
+            scroll-snap-align: center;
+            scroll-snap-stop: always; /* 核心：强制刹车 */
+            width: 100vw;
+            flex-shrink: 0;
+        }
+
+    </style>
     <!-- [新增] 全局聊天 CSS (作用于所有聊天界面) -->
     <style id="dynamic-global-chat-css"></style>
 
@@ -8062,40 +8105,108 @@ function switchCsTab(id) {
 <!-- [人设档案馆] 横向 3页终极版 (带标签分类) -->
 <!-- ============================================== -->
 <div class="app-fullscreen-view" id="personaBuilderApp">
-    <!-- 新增：首屏扑克牌画廊视图 -->
-<div id="pb-gallery-view" style="flex:1; display:flex; align-items:center; overflow-x:auto; scroll-snap-type:x mandatory; z-index:40; position:relative; height: 100%;">
-    <!-- JS 将在这里动态插入杂志卡片 -->
-</div>
+    
+    <!-- 🌟 固定在左上角的返回按钮 (加上了 ID) 🌟 -->
+    <div id="pb-gallery-back-btn" style="position:absolute; top:40px; left:24px; width:44px; height:44px; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer; z-index: 100;" onclick="closePersonaBuilder()">
+        <i class="fas fa-chevron-left" style="font-size: 18px; color:#111; margin-right:2px;"></i>
+    </div>
 
-    <!-- 顶部透明导航栏 -->
-    <div style="padding: 20px 24px; display:flex; justify-content:space-between; align-items:center; position:absolute; top:0; left:0; width:100%; z-index:50; box-sizing:border-box;">
-        <div style="background:rgba(255,255,255,0.9); box-shadow: 0 4px 15px rgba(0,0,0,0.05); width:36px; height:36px; border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer;" onclick="closePersonaBuilder()">
-            <i class="fas fa-chevron-left" style="color:#111;"></i>
+    <!-- 首屏扑克牌画廊视图 -->
+    <div id="pb-gallery-view" style="flex:1; display:flex; align-items:center; overflow-x:auto; scroll-snap-type:x mandatory; z-index:40; position:relative; height: 100%;">
+        <!-- JS 将在这里动态插入扑克卡片 -->
+    </div>
+
+    <!-- 详情页顶部导航栏 (默认隐藏) -->
+    <div id="pb-detail-header" style="display:none; padding: 15px 20px; justify-content:space-between; align-items:center; position:relative; width:100%; background:#fff; border-bottom:1px solid #f0f0f0; z-index:50; box-sizing:border-box;">
+        <!-- 详情页的返回键是回到画廊 -->
+        <div style="background:rgba(255,255,255,0.9); box-shadow: 0 4px 15px rgba(0,0,0,0.05); width:40px; height:40px; border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer;" onclick="backToPersonaGallery()">
+            <i class="fas fa-chevron-left" style="font-size: 18px; color:#111;"></i>
         </div>
-        <div style="background:rgba(255,255,255,0.9); box-shadow: 0 4px 15px rgba(0,0,0,0.05); height:36px; border-radius:18px; padding:0 15px; display:flex; align-items:center; gap:15px; position:relative;">
-            <i class="fas fa-ellipsis-h" onclick="togglePbMenu(event)" style="cursor:pointer; color:#111;"></i>
-            <i class="fas fa-check" onclick="savePersonaBuilder()" style="cursor:pointer; color:#111;"></i>
-            <div id="pb-more-menu" class="wc-plus-dropdown" style="right:0; top:45px; width:140px; background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
-                <div class="wc-menu-option" onclick="clearPersonaBuilderInputs(); togglePbMenu(event)"><i class="fas fa-broom"></i> 清空重填</div>
-                <div class="wc-menu-option" onclick="openIdentityModal(event); togglePbMenu(event)"><i class="fas fa-sync-alt"></i> 切换档案</div>
+        <div style="background:rgba(255,255,255,0.9); box-shadow: 0 4px 15px rgba(0,0,0,0.05); height:40px; border-radius:20px; padding:0 20px; display:flex; align-items:center; gap:20px; position:relative;">
+            <i class="fas fa-ellipsis-h" onclick="togglePbMenu(event)" style="cursor:pointer; color:#111; font-size: 18px;"></i>
+            <i class="fas fa-check" onclick="savePersonaBuilder()" style="cursor:pointer; color:#111; font-size: 18px;"></i>
+            <div id="pb-more-menu" class="wc-plus-dropdown" style="right:0; top:45px; width:150px; background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
+                <div class="wc-menu-option" onclick="clearPersonaBuilderInputs(); togglePbMenu(event)"><i class="fas fa-broom"></i> 一键清空</div>
+                <div class="wc-menu-option" onclick="openIdentityModal(event); togglePbMenu(event)"><i class="fas fa-sync-alt"></i> 切换身份</div>
                 <div class="wc-menu-option" onclick="exportPersonaTxt(); togglePbMenu(event)"><i class="fas fa-file-export"></i> 导出 TXT</div>
+                <div class="wc-menu-option" onclick="importPersonaAsFriend(); togglePbMenu(event)"><i class="fas fa-user-plus"></i> 导入为微信好友</div>
             </div>
         </div>
     </div>
 
     <!-- 🌟 滑动容器 -->
     <div class="pb-magazine-slider" id="pb-slider" onscroll="updatePbPagination()" style="margin-top: 0;">
-               <!-- === 第 1 页: 封面与坐标 === -->
+        <!-- === 第 0 页: 极简核心档案 === -->
+        <div class="pb-slide-wrapper">
+            <div class="pb-mag-page" style="padding: 30px 20px; background: #fdfdfd;">
+                <div style="font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; color: #aaa; letter-spacing: 2px; text-align: center; margin-bottom: 30px;">IDENTITY FILE</div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; height: 100%;">
+                    
+                    <!-- 头像 (点击整个大区域都能弹相册) -->
+                    <div style="position: relative; margin-bottom: 25px; cursor: pointer;" onclick="document.getElementById('pb_avatar_upload').click()">
+                        <div style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid #fff; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.08);">
+                            <img id="pb_avatar_preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <div style="position: absolute; bottom: 0; right: 0; width: 36px; height: 36px; background: #111; color: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                            <i class="fas fa-camera" style="font-size: 14px;"></i>
+                        </div>
+                        <input type="file" id="pb_avatar_upload" style="display:none" accept="image/*" onchange="handlePbAvatarUpload(this)">
+                    </div>
+
+                    <!-- 姓名 -->
+                    <input type="text" id="pb_realName" placeholder="Name / 名字" style="width: 100%; text-align: center; border: none; padding: 10px; font-size: 28px; font-weight: 900; color: #111; background: transparent; outline: none; font-family: 'Montserrat', sans-serif; margin-bottom: 20px;">
+
+                    <!-- 手写人设 (悬浮卡片风) -->
+                    <div style="width: 100%; flex: 1; display: flex; flex-direction: column; background: #fff; border-radius: 24px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <i class="fas fa-pen-nib" style="color: #111;"></i>
+                            <span style="font-size: 12px; font-weight: 800; color: #111; letter-spacing: 1px;">CORE PERSONA</span>
+                        </div>
+                        <textarea id="pb_manual_persona" style="width: 100%; flex: 1; font-size: 14px; line-height: 1.8; color: #444; border: none; background: transparent; outline: none; resize: none;" placeholder="在此手写一句话人设...&#10;&#10;例如：高冷腹黑的总裁，表面上不近人情，实际上只对你温柔。&#10;&#10;* 此处设定优先级最高，AI 会优先遵循。"></textarea>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- === 第 0.5 页: AI 智能丰满 === -->
+        <div class="pb-slide-wrapper">
+            <div class="pb-mag-page" style="padding: 30px 20px; background: #fdfdfd;">
+                <div style="font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; color: #aaa; letter-spacing: 2px; text-align: center; margin-bottom: 30px;">AI GENERATOR</div>
+                
+                <div style="display: flex; flex-direction: column; height: 100%;">
+                    
+                    <div style="text-align: center; margin: 20px 0 30px;">
+                        <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #111, #333); color: #fff; border-radius: 20px; display: flex; justify-content: center; align-items: center; font-size: 24px; margin: 0 auto 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+                            <i class="fas fa-magic"></i>
+                        </div>
+                        <div style="font-size: 18px; font-weight: 800; color: #111; letter-spacing: 1px; margin-bottom: 8px;">智能档案补全</div>
+                        <div style="font-size: 12px; color: #888; line-height: 1.6;">输入简单的灵感碎片<br>让 AI 为你丰满后续所有的详细资料</div>
+                    </div>
+
+                    <!-- 灵感输入框 -->
+                    <div style="width: 100%; flex: 1; display: flex; flex-direction: column; background: #fff; border-radius: 24px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);">
+                        <textarea id="pb-ai-prompt" style="width: 100%; flex: 1; border: none; background: transparent; font-size: 14px; line-height: 1.8; color: #444; outline: none; resize: none;" placeholder="💡 在这里输入灵感...&#10;&#10;例如：一个末日废土的流浪者，沉默寡言但身手敏捷，总是随身带着一只坏掉的怀表..."></textarea>
+                    </div>
+
+                    <button id="pb-btn-ai" onclick="generatePersonaByAI()" style="margin-top: 20px; width: 100%; background: #111; color: #fff; border: none; padding: 18px; border-radius: 20px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.15); letter-spacing: 1px; transition: 0.2s;">
+                        START GENERATE
+                    </button>
+
+                </div>
+            </div>
+        </div>
+
+
+        
+        <!-- === 第 1 页: 封面与坐标 === -->
         <div class="pb-slide-wrapper">
             <div class="pb-mag-page pb-page-cover">
                 <!-- 封面底图 -->
-                <img id="pb_avatar_preview" class="pb-cover-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80">
+                <img id="pb_cover_preview" class="pb-cover-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80">
                 <div class="pb-cover-gradient-v2"></div>
                 
-                <!-- 右上角相机按钮 -->
-                <div class="pb-cam-btn" onclick="document.getElementById('pb_avatar_upload').click()"><i class="fas fa-camera"></i></div>
-                <input type="file" id="pb_avatar_upload" style="display:none" accept="image/*" onchange="handlePbAvatarUpload(this)">
-
                 <!-- 杂志顶部小标题 -->
                 <div class="mag-cover-top">
                     <span>PROFILE</span>
@@ -8104,7 +8215,7 @@ function switchCsTab(id) {
 
                 <!-- 杂志底部排版 (纯文字输入) -->
                 <div class="mag-cover-bottom">
-                    <input type="text" id="pb_realName" class="mag-title-huge" placeholder="REAL NAME">
+                    <input type="text" id="pb_realName_cover" class="mag-title-huge" placeholder="REAL NAME">
                     <input type="text" id="pb_name" class="mag-subtitle" placeholder="NICKNAME / 昵称">
                     
                     <div class="mag-info-grid">
@@ -8129,97 +8240,39 @@ function switchCsTab(id) {
 
                     <div class="pb-mag-input-group">
                         <label>职业/身份 <span class="sub-label">Occupation & Role</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-tag" onclick="addPbTag('pb_occupation', '财阀继承人')">财阀继承人</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_occupation', '自由摄影师')">自由摄影师</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_occupation', '地下偶像')">地下偶像</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_occupation', '天才骇客')">天才骇客</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_occupation', '赏金猎人')">赏金猎人</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_occupation', '咖啡师')">咖啡师</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_occupation', '落魄贵族')">落魄贵族</span>
-                        </div>
-                        <input type="text" id="pb_occupation" placeholder="如：自由摄影师、财阀继承人">
+                        <input type="text" id="pb_occupation" placeholder="如：自由摄影师、财阀继承人" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
                     </div>
 
                     <div class="pb-mag-input-group">
                         <label>所处世界观 <span class="sub-label">Worldview</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-tag" onclick="addPbTag('pb_worldview', '现代都市')">现代都市</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_worldview', '赛博朋克')">赛博朋克</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_worldview', '欧式西幻')">欧式西幻</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_worldview', '废土末日')">废土末日</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_worldview', '修仙玄幻')">修仙玄幻</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_worldview', '星际科幻')">星际科幻</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_worldview', '无限流')">无限流</span>
-                        </div>
-                        <input type="text" id="pb_worldview" placeholder="自己写或点击上方标签">
+                        <input type="text" id="pb_worldview" placeholder="如：现代都市、赛博朋克" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
                     </div>
                     
                     <div class="pb-mag-input-group">
                         <label>外貌特征 <span class="sub-label">Face & Body</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '宽肩窄腰')">宽肩窄腰</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '清冷厌世脸')">清冷厌世脸</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '肌肉线条流畅')">线条流畅</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '桃花眼')">桃花眼</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '异色瞳')">异色瞳</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '眼角泪痣')">眼角泪痣</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '金发红眼')">金发红眼</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '战损病弱')">战损病弱</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '银发高马尾')">银发高马尾</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_appearance', '金丝眼镜')">金丝眼镜</span>
-                        </div>
                         <input type="text" id="pb_physique" placeholder="身材 (如：宽肩窄腰 / 娇小玲珑)" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
-<input type="text" id="pb_face" placeholder="面容 (如：清冷厌世脸 / 桃花眼)" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
-<input type="text" id="pb_hair" placeholder="发型 (如：银发高马尾 / 齐肩短发)" style="width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
-
+                        <input type="text" id="pb_face" placeholder="面容 (如：清冷厌世脸 / 桃花眼)" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
+                        <input type="text" id="pb_hair" placeholder="发型 (如：银发高马尾 / 齐肩短发)" style="width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
                     </div>
 
                     <div class="pb-mag-input-group">
                         <label>穿衣风格 <span class="sub-label">Fashion Style</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-tag" onclick="addPbTag('pb_style', '极简高定风')">极简高定</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_style', '暗黑废土风')">暗黑废土</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_style', '慵懒家居服')">慵懒家居</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_style', 'Y2K亚逼风')">Y2K亚逼风</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_style', '纯欲白月光')">纯欲白月光</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_style', '西装暴徒')">西装暴徒</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_style', '禁欲系制服')">禁欲系制服</span>
-                        </div>
-                        <input type="text" id="pb_style" placeholder="平时偏爱什么打扮？">
+                        <input type="text" id="pb_style" placeholder="平时偏爱什么打扮？" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
                     </div>
 
                     <div class="pb-mag-input-group">
                         <label>主要性格 <span class="sub-label">Core Personality</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-tag" onclick="addPbTag('pb_personality', '外冷内热')">外冷内热</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_personality', '疯批美人')">疯批美人</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_personality', '腹黑')">腹黑</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_personality', '阳光修勾')">阳光修勾</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_personality', '傲娇毒舌')">傲娇毒舌</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_personality', '温柔爹系')">温柔爹系</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_personality', '病娇偏执')">病娇偏执</span>
-                        </div>
-                        <textarea id="pb_personality" placeholder="外在给人的感觉？内在最真实的性格是？"></textarea>
+                        <textarea id="pb_personality" placeholder="外在给人的感觉？内在最真实的性格是？" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none; resize:vertical; min-height:80px;"></textarea>
                     </div>
 
                     <div class="pb-mag-input-group">
                         <label>核心价值观 <span class="sub-label">Values</span></label>
-                        <input type="text" id="pb_values" placeholder="最看重什么？(如：利益至上、绝对自由、极度护短)">
+                        <input type="text" id="pb_values" placeholder="最看重什么？(如：利益至上、绝对自由、极度护短)" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
                     </div>
 
                     <div class="pb-mag-input-group">
                         <label>NSFW 偏好 <span class="sub-label">Intimacy / NSFW</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-tag nsfw" onclick="addPbTag('pb_nsfw', '控制欲极强')">控制欲极强</span>
-                            <span class="pb-tag nsfw" onclick="addPbTag('pb_nsfw', '纯情反差')">纯情反差</span>
-                            <span class="pb-tag nsfw" onclick="addPbTag('pb_nsfw', '花样百出')">花样百出</span>
-                            <span class="pb-tag nsfw" onclick="addPbTag('pb_nsfw', '只对你有反应')">只对你有反应</span>
-                            <span class="pb-tag nsfw" onclick="addPbTag('pb_nsfw', '极度黏人')">极度黏人</span>
-                            <span class="pb-tag nsfw" onclick="addPbTag('pb_nsfw', '强制爱倾向')">强制爱倾向</span>
-                            <span class="pb-tag nsfw" onclick="addPbTag('pb_nsfw', '温柔缱绻')">温柔缱绻</span>
-                        </div>
-                        <textarea id="pb_nsfw" placeholder="感情或亲密互动中的特殊偏好、XP、底线..."></textarea>
+                        <textarea id="pb_nsfw" placeholder="感情或亲密互动中的特殊偏好、XP、底线..." style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none; resize:vertical; min-height:80px;"></textarea>
                     </div>
 
                 </div>
@@ -8233,57 +8286,33 @@ function switchCsTab(id) {
                 <div class="pb-inner-content">
 
                     <div class="pb-mag-input-group">
-                        <label>居住地 <span class="sub-label">Location</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-btn-random" onclick="randomLocation()"><i class="fas fa-dice"></i> 随机地点</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_location', '市中心大平层')">市中心大平层</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_location', '郊区独栋别墅')">郊区独栋</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_location', '拥挤的出租屋')">拥挤的出租屋</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_location', '赛博地下城')">赛博地下城</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_location', '海边废弃灯塔')">海边废弃灯塔</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_location', '古老洋房')">古老洋房</span>
-                        </div>
-                        <input type="text" id="pb_location" placeholder="目前住在哪里？">
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>居住地 <span class="sub-label">Location</span></span>
+                            <i class="fas fa-dice" onclick="randomLocation()" style="cursor:pointer; color:#888;"></i>
+                        </label>
+                        <input type="text" id="pb_location" placeholder="目前住在哪里？" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
                     </div>
                     
                     <div class="pb-mag-input-group">
                         <label>成长背景 <span class="sub-label">Background</span></label>
-                        <textarea id="pb_background" style="min-height:90px;" placeholder="童年经历、家庭背景，或导致现在性格的重大转折点..."></textarea>
+                        <textarea id="pb_background" style="min-height:90px;" placeholder="童年经历、家庭背景，或导致现在性格的重大转折点..." style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none; resize:vertical; min-height:80px;"></textarea>
                     </div>
 
                     <div class="pb-mag-input-group">
                         <label>兴趣爱好 <span class="sub-label">Hobbies</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-tag" onclick="addPbTag('pb_hobbies', '深夜飙车')">深夜飙车</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_hobbies', '调酒')">调酒</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_hobbies', '养稀有植物')">养稀有植物</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_hobbies', '打电玩')">打电玩</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_hobbies', '收集黑胶唱片')">收集黑胶</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_hobbies', '独自看午夜场电影')">看午夜场</span>
-                        </div>
-                        <input type="text" id="pb_hobbies" placeholder="闲暇时喜欢做什么？">
+                        <input type="text" id="pb_hobbies" placeholder="闲暇时喜欢做什么？" style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none;">
                     </div>
 
                     <div class="pb-mag-input-group" style="background:#f9f9fa; padding:15px; border-radius:14px; margin-bottom:20px;">
                         <label style="margin-bottom:10px;"><i class="fas fa-theater-masks"></i> 情绪表现 <span class="sub-label">Emotions</span></label>
-                        <input type="text" id="pb_emo_happy" placeholder="开心时会怎样？(如：嘴角微扬但死不承认)" style="margin-bottom:10px;">
-                        <input type="text" id="pb_emo_angry" placeholder="生气时会怎样？(如：突然沉默，冷暴力压迫)" style="margin-bottom:10px;">
-                        <input type="text" id="pb_emo_sad" placeholder="悲伤/吃醋时会怎样？(如：眼眶发红，拼命抽烟)">
+                        <input type="text" id="pb_emo_happy" placeholder="开心时会怎样？(如：嘴角微扬但死不承认)" style="margin-bottom:10px; width:100%; border:none; background:#fff; border-radius:14px; padding:14px; font-size:13px; outline:none;">
+                        <input type="text" id="pb_emo_angry" placeholder="生气时会怎样？(如：突然沉默，冷暴力压迫)" style="margin-bottom:10px; width:100%; border:none; background:#fff; border-radius:14px; padding:14px; font-size:13px; outline:none;">
+                        <input type="text" id="pb_emo_sad" placeholder="悲伤/吃醋时会怎样？(如：眼眶发红，拼命抽烟)" style="width:100%; border:none; background:#fff; border-radius:14px; padding:14px; font-size:13px; outline:none;">
                     </div>
 
                     <div class="pb-mag-input-group">
                         <label>生活小细节 <span class="sub-label">Life Details</span></label>
-                        <div class="pb-tags">
-                            <span class="pb-tag" onclick="addPbTag('pb_details', '严重洁癖')">严重洁癖</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_details', '嗜甜如命')">嗜甜如命</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_details', '熬夜狂魔')">熬夜狂魔</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_details', '习惯揉眉心')">习惯揉眉心</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_details', '紧张时咬下唇')">紧张时咬下唇</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_details', '随身带薄荷糖')">随身带薄荷糖</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_details', '怕黑怕打雷')">怕黑怕打雷</span>
-                            <span class="pb-tag" onclick="addPbTag('pb_details', '极度路痴')">极度路痴</span>
-                        </div>
-                        <textarea id="pb_details" style="min-height:90px;" placeholder="饮食偏好、睡眠作息、口头禅、下意识的小动作..."></textarea>
+                        <textarea id="pb_details" style="min-height:90px;" placeholder="饮食偏好、睡眠作息、口头禅、下意识的小动作..." style="margin-bottom:10px; width:100%; border:none; background:#f6f6f7; border-radius:14px; padding:14px; font-size:13px; outline:none; resize:vertical; min-height:80px;"></textarea>
                     </div>
 
                 </div>
@@ -8292,18 +8321,6 @@ function switchCsTab(id) {
 
     </div>
 
-    <!-- 🌟 底部区域 -->
-    <div class="pb-bottom-area">
-        <div class="pb-pagination">
-            <div class="pb-dot active" onclick="scrollToPbPage(0)"></div>
-            <div class="pb-dot" onclick="scrollToPbPage(1)"></div>
-            <div class="pb-dot" onclick="scrollToPbPage(2)"></div>
-        </div>
-        <div class="pb-mag-bottom-bar">
-            <input type="text" id="pb-ai-prompt" placeholder="💡 一句话描述人设，让 AI 填满这三页..." onkeydown="if(event.key==='Enter') generatePersonaByAI()">
-            <div class="pb-mag-ai-btn" id="pb-btn-ai" onclick="generatePersonaByAI()"><i class="fas fa-magic"></i></div>
-        </div>
-    </div>
 
 </div>
 

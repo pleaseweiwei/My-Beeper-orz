@@ -2508,7 +2508,13 @@ window.performGroupChatSearch = async function () {
 
 window.clearGroupChatHistory = async function () {
     if (!confirm('确定要清空群聊记录吗？此操作不可恢复。')) return;
-    try { await IDB.delete(scopedChatKey(_currentGroupSettingsId)); } catch (e) {}
+    try { 
+        if (typeof window.deleteChatHistory === 'function') {
+            await window.deleteChatHistory(_currentGroupSettingsId);
+        } else {
+            await IDB.delete(scopedChatKey(_currentGroupSettingsId));
+        }
+    } catch (e) {}
     const chatMessages = document.getElementById('chatMessages');
     if (chatMessages && currentChatId === _currentGroupSettingsId) chatMessages.innerHTML = '';
     if (typeof showToast === 'function') showToast('聊天记录已清空');
@@ -2991,7 +2997,8 @@ window.clearGroupChatHistory = async function () {
     const groupId = currentGroupSettingsId || currentChatId;
     const group = groupsData[groupId];
     if (!confirm(`确定清空 "${group ? group.name : ''}" 的所有聊天记录吗？此操作不可恢复！`)) return;
-    await IDB.set(scopedChatKey(groupId), []);
+    await window.deleteChatHistory(groupId);
+
     if (groupsData[groupId]) {
         groupsData[groupId].lastMessage = '';
         await saveGroupsData();

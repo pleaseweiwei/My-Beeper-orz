@@ -16,11 +16,11 @@ window.openPersonaBuilder = function() {
     const app = document.getElementById('personaBuilderApp');
     if (!app) return;
     
-    // 显示画廊，隐藏表单
+    // 显示画廊，隐藏表单和顶栏
     document.getElementById('pb-gallery-view').style.display = 'flex';
     document.getElementById('pb-slider').style.display = 'none';
-    // 隐藏底部的页码和AI生成栏
-    document.querySelector('.pb-bottom-area').style.display = 'none';
+    const header = document.getElementById('pb-detail-header');
+    if (header) header.style.display = 'none';
     
     renderPersonaGallery(); // 渲染扑克牌
     app.classList.add('open');
@@ -85,7 +85,12 @@ function loadDataIntoBuilder() {
     if (avatarImg) {
         avatarImg.src = p.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPersonaId}`;
     }
-    
+        // 渲染第一页的杂志大封面
+    const coverImg = document.getElementById('pb_cover_preview');
+    if (coverImg) {
+        coverImg.src = p.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPersonaId}`;
+    }
+
     // 渲染标题处的动态名称指示器
     const titleName = document.getElementById('pb-current-persona-name');
     if (titleName) {
@@ -278,8 +283,12 @@ window.handlePbAvatarUpload = function(input) {
             }
             
             document.getElementById('pb_avatar_preview').src = base64;
+            // 同步更新第三页的大封面
+            const coverImg = document.getElementById('pb_cover_preview');
+            if (coverImg) coverImg.src = base64;
             
             // 实时保存到全局
+
             if (personasMeta[currentPersonaId]) {
                 personasMeta[currentPersonaId].avatar = base64;
                 await IDB.set(PERSONA_META_KEY, personasMeta);
@@ -290,6 +299,99 @@ window.handlePbAvatarUpload = function(input) {
     }
     input.value = '';
 }
+
+// --- 5. 导入为微信好友 ---
+window.importPersonaAsFriend = function() {
+    const p = personasMeta[currentPersonaId];
+    if (!p || !p.persona) {
+        alert("请先填写并保存当前人设！");
+        return;
+    }
+
+    const rName = p.pbData?.pb_realName || p.name || '新角色';
+    const nickname = p.pbData?.pb_name || rName;
+    
+    // 直接复用 apps.js 里的好友添加逻辑
+    const chatId = nickname || rName;
+    
+    if (friendsData[chatId]) {
+        if (!confirm(`好友列表已存在 "${chatId}"，是否覆盖其人设？`)) {
+            return;
+        }
+    }
+
+    friendsData[chatId] = {
+        realName: rName,
+        remark: nickname,
+        persona: p.persona,
+        worldbook: '', // 可以后续在设置里绑
+        greetingList: ["你好，我是" + rName],
+        greetingSelected: 0,
+        tavernGreeting: "你好，我是" + rName,
+        greetingMode: 'tavern',
+        greetingCustom: '',
+        greeting: "你好，我是" + rName,
+        avatar: p.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(rName)}`,
+        mindState: {
+            action: "刚刚被导入通讯录",
+            location: "聊天界面",
+            weather: "未知",
+            murmur: "你好啊，未来的旅伴。",
+            hiddenThought: "",
+            kaomoji: "( ˙W˙ )",
+            bgm: "No BGM"
+        },
+        chatSettings: {},
+        summaryConfig: {
+            turnCount: 20,
+            wordCount: 200,
+            prompt: ''
+        },
+        summaries: [],
+        relationshipLog: []
+    };
+
+    if (typeof saveFriendsData === 'function') {
+        saveFriendsData();
+    }
+    
+    // UI 更新
+    if (typeof rebuildContactsList === 'function') rebuildContactsList();
+    
+    // 在聊天列表插入
+    const chatList = document.querySelector('#tab-chats');
+    if (chatList) {
+        const existingItem = chatList.querySelector(`.wc-chat-item[data-chat-id="${chatId}"]`);
+        if (!existingItem) {
+            // 复用 apps.js 的 addChatListEntry (如果是单聊)
+            if (typeof addChatListEntry === 'function') {
+                addChatListEntry(chatId, nickname, "你好，我是" + rName, friendsData[chatId].avatar, 'single');
+            } else {
+                 // Fallback 
+                 const searchBar = chatList.querySelector('.wc-search-container');
+                 const newItem = document.createElement('div');
+                 newItem.className = 'wc-chat-item widget-1x1 sortable-item';
+                 newItem.setAttribute('data-chat-id', chatId); 
+                 newItem.onclick = function() { openChatDetail(chatId); }; 
+                 newItem.innerHTML = `
+                     <div class="wc-avatar"><img src="${friendsData[chatId].avatar}"></div>
+                     <div class="wc-info">
+                         <div class="wc-top-row"><span class="wc-name">${nickname}</span><span class="wc-time">Just now</span></div>
+                         <div class="wc-msg-preview">你好，我是${rName}</div>
+                     </div>
+                 `;
+                 if(searchBar && searchBar.nextSibling) chatList.insertBefore(newItem, searchBar.nextSibling);
+                 else chatList.appendChild(newItem);
+            }
+        }
+    }
+
+    if (typeof showToast === 'function') {
+        showToast(`<i class="fas fa-check"></i> 已成功将 "${nickname}" 导入为微信好友！`);
+    } else {
+        alert(`已成功将 "${nickname}" 导入为微信好友！`);
+    }
+};
 
 // === 追加：一键导出 TXT 文本 ===
 window.exportPersonaTxt= async function() {
@@ -468,18 +570,31 @@ window.enterPersonaDetail = function(id) {
     
     const galleryView = document.getElementById('pb-gallery-view');
     const slider = document.getElementById('pb-slider');
-    const bottomArea = document.querySelector('.pb-bottom-area');
+    const header = document.getElementById('pb-detail-header');
+    const galleryBackBtn = document.getElementById('pb-gallery-back-btn'); // 找到外层的返回键
     
     if (galleryView) galleryView.style.display = 'none';
+    if (galleryBackBtn) galleryBackBtn.style.display = 'none'; // 进详情页时隐藏它
     if (slider) slider.style.display = 'flex';
-    if (bottomArea) bottomArea.style.display = 'flex';
+    if (header) header.style.display = 'flex'; 
     
     loadDataIntoBuilder();
     if (typeof renderPbWorldbooksAndChars === 'function') renderPbWorldbooksAndChars();
     if (typeof updatePbPagination === 'function') updatePbPagination();
-    
-    // 如果有返回按钮，可能需要显示（取决于页面结构，这里先保持基本功能）
 };
+
+// --- 从详情页退回扑克牌画廊 ---
+window.backToPersonaGallery = function() {
+    document.getElementById('pb-gallery-view').style.display = 'flex';
+    document.getElementById('pb-slider').style.display = 'none';
+    const header = document.getElementById('pb-detail-header');
+    const galleryBackBtn = document.getElementById('pb-gallery-back-btn'); // 找到外层的返回键
+    
+    if (header) header.style.display = 'none';
+    if (galleryBackBtn) galleryBackBtn.style.display = 'flex'; // 退回画廊时重新显示它
+    renderPersonaGallery();
+};
+
 
 // --- 渲染扑克牌画廊 ---
 function renderPersonaGallery() {
@@ -514,20 +629,34 @@ function renderPersonaGallery() {
     addCard.innerHTML = `<i class="fas fa-plus"></i><span>CREATE NEW</span>`;
     gallery.appendChild(addCard);
 
-      // === 核心：扑克牌滑动叠加效果 (大小严格一致) ===
+      // === 🌟 核心：扑克牌 3D 扇形滑动效果 🌟 ===
     gallery.onscroll = () => {
         const cards = gallery.querySelectorAll('.pb-mag-card, .pb-mag-card-add');
-        const center = gallery.scrollLeft + gallery.clientWidth / 2; // 屏幕中心点
+        const center = gallery.scrollLeft + gallery.clientWidth / 2; 
         
         cards.forEach(card => {
-            const cardCenter = card.offsetLeft + card.offsetWidth / 2; // 卡片中心点
-            const dist = Math.abs(center - cardCenter); // 距离中心的距离
+            const cardCenter = card.offsetLeft + card.offsetWidth / 2; 
+            const dist = Math.abs(center - cardCenter); 
+            const maxDist = gallery.clientWidth;
+            const progress = Math.min(dist / maxDist, 1);
             
-            // 取消大小缩放，锁定 scale(1) 保持原大小
-            card.style.transform = `scale(1)`;
+            // 越靠近中心越大
+            const scale = 1 - progress * 0.15;
+            // 离中心越远，卡牌往下沉
+            const translateY = progress * 60;
+            // 像扇子一样向两侧倾斜
+            const rotateZ = ((cardCenter - center) / maxDist) * 18;
+            // 立体的侧边翻转
+            const rotateY = ((cardCenter - center) / maxDist) * -35;
+
+            // 综合应用 3D 变形
+            card.style.transform = `scale(${scale}) translateY(${translateY}px) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`;
             
-            // 只保留层级计算，确保滑到中间的牌始终压在最上面
+            // 越靠近中心的牌压在最上面
             card.style.zIndex = Math.round(1000 - dist);
+            
+            // 旁边的牌加上阴影变暗，凸显中间的牌
+            card.style.filter = `brightness(${1 - progress * 0.4})`;
         });
     };
     

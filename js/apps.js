@@ -4053,8 +4053,19 @@ window.saveChatSettings = async function () {
     if (oldGreeting !== newGreeting) {
         // --- 开场白变了，执行清空逻辑 ---
         
-        // a. 从数据库删除历史记录
-        await IDB.delete(scopedChatKey(currentChatId));
+        // a. 从数据库和缓存删除历史记录
+        if (typeof window.deleteChatHistory === 'function') {
+            await window.deleteChatHistory(currentChatId);
+        } else {
+            chatHistoryCache[currentChatId] = [];
+            if (chatHistorySaveTimers[currentChatId]) {
+                clearTimeout(chatHistorySaveTimers[currentChatId]);
+                delete chatHistorySaveTimers[currentChatId];
+            }
+            await IDB.delete(scopedChatKey(currentChatId));
+            window._currentChatHistory = [];
+            window._currentChatRenderedCount = 0;
+        }
 
         // b. 清空聊天界面DOM
         const chatMessages = document.getElementById('chatMessages');
@@ -4458,15 +4469,31 @@ async function setChatHistory(chatId, history) {
     await IDB.set(scopedChatKey(chatId), history);
 }
 
-// 同步删除整个聊天记录
-async function deleteChatHistory(chatId) {
-    delete chatHistoryCache[chatId];
+// 同步设置整个聊天记录 (替换这段)
+window.setChatHistory = async function(chatId, history) {
+    chatHistoryCache[chatId] = history;
+    if (chatHistorySaveTimers[chatId]) {
+        clearTimeout(chatHistorySaveTimers[chatId]);
+        delete chatHistorySaveTimers[chatId];
+    }
+    await IDB.set(scopedChatKey(chatId), history);
+};
+
+// 同步删除整个聊天记录 (替换这段)
+window.deleteChatHistory = async function(chatId) {
+    chatHistoryCache[chatId] = []; // 避免 delete 后重新获取到旧数据的竞态问题
     if (chatHistorySaveTimers[chatId]) {
         clearTimeout(chatHistorySaveTimers[chatId]);
         delete chatHistorySaveTimers[chatId];
     }
     await IDB.delete(scopedChatKey(chatId));
-}
+    if (chatId === window.currentChatId) {
+        window._currentChatHistory = [];
+        if (typeof window._currentChatRenderedCount !== 'undefined') {
+            window._currentChatRenderedCount = 0;
+        }
+    }
+};
 
 // [BUG修复版] 页面加载时，把保存的好友重新画到列表上
 function restoreFriendListUI() {
@@ -10169,10 +10196,22 @@ window.clearCurrentChatHistory = async function() {
     const friend = friendsData[currentChatId];
     const friendName = friend ? (friend.remark || friend.realName) : currentChatId;
 
-    if (confirm(`⚠️ 警告！\n\n你确定要清空与 "${friendName}" 的所有聊天记录吗？\n\n聊天记录、剧情总结、关系进度、好感度等 AI 记忆将全部清除，此操作不可恢复。`)) {
+    if (confirm(`⚠️ 警告！\n\n你确定要清空与"${friendName}" 的所有聊天记录吗？\n\n聊天记录、剧情总结、关系进度、好感度及 AI 记忆将全部清除，此操作不可恢复。`)) {
         try {
-            // 1. 从 IndexedDB 中删除聊天记录
-            await IDB.delete(scopedChatKey(currentChatId));
+           // 1. 从 IndexedDB 和内存中删除聊天记录
+            if (typeof window.deleteChatHistory === 'function') {
+                await window.deleteChatHistory(currentChatId);
+            } else {
+                chatHistoryCache[currentChatId] = [];
+                if (chatHistorySaveTimers[currentChatId]) {
+                    clearTimeout(chatHistorySaveTimers[currentChatId]);
+                    delete chatHistorySaveTimers[currentChatId];
+                }
+                await IDB.delete(scopedChatKey(currentChatId));
+                window._currentChatHistory = [];
+                window._currentChatRenderedCount = 0;
+            }
+
 
             // 2. 清除 AI 的所有记忆数据（剧情总结、关系进度、好感度、心声状态）
             if (friend) {
