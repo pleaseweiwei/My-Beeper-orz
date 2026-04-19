@@ -3041,6 +3041,13 @@ if (isTranslationEnabled === true) {
                         msgText = await processImagegenFromAIReply(msgText, targetChatId);
                     }
 
+                    // ===============================================
+                    // 【关键修复】：如果经过各种处理后，文本完全为空，则跳过不渲染空的气泡！
+                    // ===============================================
+                    if (!msgText.trim() && !transText) {
+                        return; // 结束当前气泡的渲染，直接跳过
+                    }
+
                     textToSave = msgText;
                     textToRender = msgText;
                     // 【保留】如果是普通文本，这里的 transText 会保留并上屏
@@ -3115,9 +3122,15 @@ async function updateMindStateInBackground(chatId, userMessage, aiReply) {
         let baseUrl = (settings.endpoint || '').replace(/\/$/, '');
         const apiUrl = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
 
+        // 【关键修复部分：补全 API Key 和 MiniMax 需要的 GroupId】
+        let headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` };
+        if (settings.provider && settings.provider.startsWith('minimax') && settings.groupId) {
+            headers['GroupId'] = settings.groupId;
+        }
+
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+            headers: headers,
             body: JSON.stringify({
                 model: settings.model,
                 messages: [
@@ -3129,27 +3142,34 @@ async function updateMindStateInBackground(chatId, userMessage, aiReply) {
             })
         });
 
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.warn('[updateMindState] 弹幕请求失败，HTTP状态码:', response.status);
+            return;
+        }
 
         const data = await response.json();
         let raw = (data?.choices?.[0]?.message?.content ?? '').trim();
         raw = raw.replace(/^```[a-zA-Z]*\n?/gi, '').replace(/```$/i, '').trim();
 
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) return;
+        if (!jsonMatch) {
+            console.warn('[updateMindState] 弹幕无法解析为 JSON，AI返回原文:', raw);
+            return;
+        }
 
         const aiData = JSON.parse(jsonMatch[0]);
 
-        // 处理弹幕
+        // 处理弹幕并上屏
         if (aiData.danmaku && Array.isArray(aiData.danmaku) && aiData.danmaku.length > 0) {
             danmakuPool = aiData.danmaku;
             startDanmakuBatch(0);
         }
 
     } catch (e) {
-        console.warn('[updateMindState] Background update failed (silent):', e);
+        console.warn('[updateMindState] 弹幕后台更新出错 (silent):', e);
     }
 }
+
 
 window.closeAddFriendModal = function() {
     const modal = document.getElementById('add-friend-modal');
@@ -5990,14 +6010,43 @@ window.openChatSettingsFromProfile = function() {
 // 删除好友的通用函数
 async function deleteFriendInternal(id) {
     if (!friendsData[id]) return;
-    if (!confirm(`确定要删除 "${id}" 这个好友吗？此 AI 人设将被永久删除。`)) return;
+    
+    const friendName = friendsData[id].remark || friendsData[id].realName || id;
+    if (!confirm(`确定要删除 "${friendName}" 这个好友吗？此操作不可恢复，但该同名的新角色不会受到影响。`)) return;
+
+    // 不删除整个角色数据，而是给原数据打上特殊标记使其不再显示在通讯录和聊天列表中。
+    // 但是考虑到可能需要真的删除释放空间，或者如果仅仅是改个 id 可以规避同名问题。
+    // 由于应用内所有对好友的引用都是基于这个 id (作为 key 的 id)，因此如果不删除而是修改 ID 也能解决同名问题。
+    // 更好的方式是直接生成一个唯一的内部 ID 来替代之前的名字。不过应用当前以 name 作为 id。
+    
+    // 这里我们彻底删除，但是聊天记录那些是基于 id 的。同名再加的时候，id 一样。
+    // 要让同名再加记录不再，说明之前的记录被删除了。
+    // 原代码是 await IDB.delete(scopedChatKey(id)); 理论上删除了聊天记录。
+    // 但可能有些缓存或未清理的地方。
+    
+    // 这里我们增加彻底清理所有与该 id 相关的数据。
+    // 例如：chatHistoryCache, chatHistorySaveTimers
+
+    if (typeof chatHistoryCache !== 'undefined' && chatHistoryCache[id]) {
+        delete chatHistoryCache[id];
+    }
+    if (typeof chatHistorySaveTimers !== 'undefined' && chatHistorySaveTimers[id]) {
+        clearTimeout(chatHistorySaveTimers[id]);
+        delete chatHistorySaveTimers[id];
+    }
 
     // 删内存
     delete friendsData[id];
-    saveFriendsData();
+    await saveFriendsData();
 
     // 删聊天记录
     await IDB.delete(scopedChatKey(id));
+
+    // 删除朋友圈相关记录
+    if (typeof momentsFeed !== 'undefined') {
+        momentsFeed = momentsFeed.filter(m => m.authorId !== id && !m.allowedViewers?.includes(id) && !(m.comments && m.comments.some(c => c.authorId === id)));
+        if (typeof saveMomentsFeed === 'function') saveMomentsFeed();
+    }
 
     // 删聊天列表 UI
     const chatItem = document.querySelector(`.wc-chat-item[data-chat-id="${id}"]`);
