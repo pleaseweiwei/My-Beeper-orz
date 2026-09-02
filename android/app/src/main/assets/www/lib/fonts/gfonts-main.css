@@ -1,0 +1,6 @@
+﻿/* Offline fallback for Google Fonts used by the Android WebView. */
+:root { --offline-font-sans: "Montserrat", "Arial", sans-serif; }
+@font-face { font-family: "Montserrat"; src: local("Arial"); font-weight: 200 700; font-style: normal; }
+@font-face { font-family: "Playfair Display"; src: local("serif"); font-weight: 400 700; font-style: normal; }
+@font-face { font-family: "Playfair Display"; src: local("serif"); font-weight: 400 700; font-style: italic; }
+@font-face { font-family: "Alex Brush"; src: local("cursive"); font-style: normal; }

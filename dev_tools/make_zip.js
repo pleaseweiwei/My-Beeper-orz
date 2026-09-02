@@ -4,8 +4,9 @@ const fs   = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const SRC = path.join(__dirname, 'android', 'app', 'src', 'main', 'assets', 'www');
-const DST = path.join(__dirname, 'web_update.zip');
+const projectRoot = path.resolve(__dirname, '..');
+const SRC = path.join(projectRoot, 'android', 'app', 'src', 'main', 'assets', 'www');
+const DST = path.join(projectRoot, 'web_update.zip');
 
 // CRC-32 table
 const crcTable = (() => {

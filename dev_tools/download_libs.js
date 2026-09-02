@@ -2,7 +2,8 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const base = path.join(__dirname, 'android', 'app', 'src', 'main', 'assets', 'www', 'lib');
+const projectRoot = path.resolve(__dirname, '..');
+const base = path.join(projectRoot, 'android', 'app', 'src', 'main', 'assets', 'www', 'lib');
 console.log('base:', base);
 
 fs.mkdirSync(path.join(base, 'fontawesome', 'css'), { recursive: true });
@@ -12,25 +13,39 @@ console.log('dirs OK');
 
 function dl(url, dest) {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
+    const temp = dest + '.part';
+    const file = fs.createWriteStream(temp);
+    const request = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         file.close();
+        res.resume();
+        fs.unlink(temp, () => {});
         dl(res.headers.location, dest).then(resolve).catch(reject);
+        return;
+      }
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        file.close();
+        res.resume();
+        fs.unlink(temp, () => {});
+        console.log('FAIL', url, 'HTTP ' + res.statusCode);
+        resolve();
         return;
       }
       res.pipe(file);
       file.on('finish', () => {
         file.close();
+        fs.renameSync(temp, dest);
         const size = fs.statSync(dest).size;
         console.log('OK', path.basename(dest), size);
         resolve();
       });
     }).on('error', err => {
-      fs.unlink(dest, () => {});
+      file.destroy();
+      fs.unlink(temp, () => {});
       console.log('FAIL', url, err.message);
       resolve();
     });
+    request.setTimeout(12000, () => request.destroy(new Error('timeout')));
   });
 }
 

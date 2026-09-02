@@ -1,0 +1,2 @@
+﻿/* Offline fallback for the Quicksand font used by the Android WebView. */
+@font-face { font-family: "Quicksand"; src: local("Arial"); font-weight: 500 700; font-style: normal; }
